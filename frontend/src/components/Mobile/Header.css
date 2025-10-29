@@ -1,0 +1,66 @@
+.mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.header-safe-area {
+  height: 0;
+  /* Safe Area for iOS notch */
+  padding-top: env(safe-area-inset-top);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 16px;
+}
+
+.header-left,
+.header-right {
+  width: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  justify-content: flex-end;
+}
+
+.header-back-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #007aff;
+  cursor: pointer;
+  padding: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.header-back-btn:active {
+  opacity: 0.6;
+}
+
+.header-title {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 600;
+  color: #000000;
+  text-align: center;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Safe Area Support */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobile-header {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+

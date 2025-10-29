@@ -1,0 +1,168 @@
+/* 移动端专用样式 */
+
+/* 移动端字体大小优化 */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  body {
+    font-size: 15px;
+  }
+  
+  /* 标题大小 */
+  h1 { font-size: 28px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 20px; }
+}
+
+/* 移动端触摸优化 */
+@media (max-width: 768px) {
+  /* 按钮最小触摸目标 */
+  button,
+  a,
+  .ant-btn {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* 输入框优化 */
+  input,
+  textarea,
+  .ant-input {
+    font-size: 16px !important; /* 防止iOS自动缩放 */
+    min-height: 44px;
+  }
+  
+  /* 卡片间距调整 */
+  .ant-card {
+    margin-bottom: 12px;
+  }
+  
+  /* 移除桌面端hover效果 */
+  .ant-card:hover {
+    transform: none;
+  }
+}
+
+/* 移动端特殊布局 */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* 骨架屏动画 */
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* 列表项动画 */
+.list-fade-in {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 下拉刷新指示器 */
+.pull-to-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: #8e8e93;
+  font-size: 13px;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #8e8e93;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-state-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 4px;
+}
+
+.empty-state-description {
+  font-size: 15px;
+  color: #8e8e93;
+  text-align: center;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+/* 安全区域适配 */
+.has-safe-area {
+  /* iOS notch support */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 防止iOS下拉刷新背景变白 */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* 优化滚动性能 */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+

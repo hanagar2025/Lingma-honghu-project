@@ -1,0 +1,383 @@
+/* 苹果风格极简设计 */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: #f2f2f7;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overscroll-behavior-y: contain;
+}
+
+/* 苹果风格滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 卡片样式 - 苹果风格 */
+.ant-card {
+  border-radius: 18px;
+  border: none;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+}
+
+.ant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 按钮样式 - 苹果风格 */
+.ant-btn {
+  border-radius: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  height: 44px;
+  padding: 0 24px;
+  font-size: 15px;
+}
+
+.ant-btn-primary {
+  background: #007aff;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+}
+
+.ant-btn-primary:hover {
+  background: #0051d5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.ant-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* 输入框样式 - 苹果风格 */
+.ant-input {
+  border-radius: 12px;
+  border: 1px solid #d2d2d7;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 44px;
+  font-size: 15px;
+}
+
+.ant-input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+.ant-input:hover {
+  border-color: #8e8e93;
+}
+
+/* 标签页样式 - 苹果风格 */
+.ant-tabs > .ant-tabs-nav .ant-tabs-tab {
+  border-radius: 10px;
+  margin-right: 8px;
+  padding: 8px 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-tabs > .ant-tabs-nav .ant-tabs-tab-active {
+  background: #f5f5f7;
+}
+
+.ant-tabs > .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #007aff;
+  font-weight: 600;
+}
+
+/* 统计数字样式 */
+.ant-statistic-title {
+  color: #86868b;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.ant-statistic-content {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* 标签样式 - 苹果风格 */
+.ant-tag {
+  border-radius: 8px;
+  font-weight: 500;
+  border: none;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+/* 菜单样式 - 苹果风格 */
+.ant-menu {
+  background: transparent;
+  border: none;
+}
+
+.ant-menu-item {
+  border-radius: 10px;
+  margin: 4px 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 44px;
+  line-height: 44px;
+}
+
+.ant-menu-item:hover {
+  background: #f5f5f7;
+}
+
+.ant-menu-item-selected {
+  background: #007aff;
+  color: white;
+}
+
+.ant-menu-item-selected .ant-menu-item-icon {
+  color: white;
+}
+
+/* 表格样式 - 苹果风格 */
+.ant-table {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: #f5f5f7;
+  border: none;
+  font-weight: 600;
+  color: #1d1d1f;
+  font-size: 14px;
+}
+
+.ant-table-tbody > tr > td {
+  border: none;
+  border-bottom: 1px solid #f5f5f7;
+  font-size: 15px;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f5f5f7;
+}
+
+/* 模态框样式 - 苹果风格 */
+.ant-modal-content {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.ant-modal-header {
+  background: white;
+  border-bottom: 1px solid #f5f5f7;
+  padding: 20px 24px;
+}
+
+.ant-modal-title {
+  color: #1d1d1f;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.ant-modal-close {
+  color: #86868b;
+}
+
+.ant-modal-close:hover {
+  color: #1d1d1f;
+}
+
+/* 加载动画 */
+.ant-spin-dot {
+  color: #007aff;
+}
+
+/* 消息提示样式 - 苹果风格 */
+.ant-message {
+  z-index: 9999;
+}
+
+.ant-message-success .ant-message-notice-content {
+  background: #ffffff;
+  border: 1px solid #34c759;
+  border-radius: 12px;
+  color: #1d1d1f;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.ant-message-error .ant-message-notice-content {
+  background: #ffffff;
+  border: 1px solid #ff3b30;
+  border-radius: 12px;
+  color: #1d1d1f;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 股票卡片样式 - 苹果风格 */
+.stock-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: none;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stock-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 股票涨跌颜色 */
+.stock-up {
+  color: #ff3b30;
+}
+
+.stock-down {
+  color: #34c759;
+}
+
+.stock-flat {
+  color: #86868b;
+}
+
+/* 苹果风格色彩 */
+.apple-blue {
+  color: #007aff;
+}
+
+.apple-green {
+  color: #34c759;
+}
+
+.apple-red {
+  color: #ff3b30;
+}
+
+.apple-orange {
+  color: #ff9500;
+}
+
+.apple-purple {
+  color: #af52de;
+}
+
+.apple-pink {
+  color: #ff2d55;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ant-card {
+    margin: 8px;
+    border-radius: 16px;
+  }
+  
+  .ant-statistic-title {
+    font-size: 12px;
+  }
+  
+  .ant-statistic-content {
+    font-size: 16px;
+  }
+  
+  /* 移动端隐藏侧边栏 */
+  .ant-layout-sider {
+    display: none !important;
+  }
+  
+  /* 内容区全屏 */
+  .ant-layout-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #f2f2f7 !important;
+  }
+  
+  /* Header隐藏 */
+  .ant-layout-header {
+    display: none !important;
+  }
+}
+
+/* 动画效果 - 苹果风格 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 毛玻璃效果 */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}

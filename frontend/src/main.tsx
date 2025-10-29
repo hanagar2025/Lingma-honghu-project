@@ -1,0 +1,22 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { Provider } from 'react-redux'
+import { BrowserRouter } from 'react-router-dom'
+import { ConfigProvider } from 'antd'
+import zhCN from 'antd/locale/zh_CN'
+import App from './App.tsx'
+import { store } from './store/index.ts'
+import ErrorBoundary from './components/ErrorBoundary.tsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <ErrorBoundary>
+    <Provider store={store}>
+      <BrowserRouter>
+        <ConfigProvider locale={zhCN}>
+          <App />
+        </ConfigProvider>
+      </BrowserRouter>
+    </Provider>
+  </ErrorBoundary>
+)
