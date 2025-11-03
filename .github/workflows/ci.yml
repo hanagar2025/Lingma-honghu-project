@@ -7,18 +7,16 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  install:
+    name: Install dependencies (workspaces)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20]
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20
 
       - name: Cache npm
         uses: actions/cache@v4
@@ -26,68 +24,66 @@ jobs:
           path: |
             ~/.npm
             ~/.npm/_cacache
-            node_modules
-          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-${{ matrix.node-version }}-
+          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
 
-      - name: Install root deps
+      - name: Install (workspaces)
         run: |
-          echo "Attempting npm ci (fast, reproducible)"
-          npm ci --prefer-offline --no-audit --progress=false || (
-            echo "npm ci failed, trying fallback: npm install --legacy-peer-deps" && \
-            npm install --legacy-peer-deps
+          echo "Installing all workspaces using root package-lock.json"
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || (
+            echo "npm ci failed, trying fallback: npm install --workspaces --include-workspace-root --legacy-peer-deps" && \
+            npm install --workspaces --include-workspace-root --legacy-peer-deps
           )
-        env:
-          CI: true
 
-      - name: Install backend deps
-        run: |
-          echo "Installing backend dependencies"
-          npm ci --prefix backend --prefer-offline --no-audit --progress=false || (
-            echo "npm ci for backend failed, trying fallback: npm install --prefix backend --legacy-peer-deps" && \
-            npm install --prefix backend --legacy-peer-deps
-          )
-        env:
-          CI: true
+  backend-test:
+    name: Backend tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run backend tests
+        run: npm -w backend test -- --coverage
 
-      - name: Install frontend deps (alipay if present, else top-level)
+  frontend-test:
+    name: Frontend tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run frontend tests (detect workspace)
         run: |
-          echo "Installing frontend dependencies (prefers frontend/honghu-alipay if present)"
           if [ -f frontend/honghu-alipay/package.json ]; then
-            echo "Found frontend/honghu-alipay/package.json -> installing there"
-            npm ci --prefix frontend/honghu-alipay --prefer-offline --no-audit --progress=false || (
-              echo "npm ci for frontend/honghu-alipay failed, trying fallback: npm install --prefix frontend/honghu-alipay --legacy-peer-deps" && \
-              npm install --prefix frontend/honghu-alipay --legacy-peer-deps
-            )
+            echo "Running tests in frontend/honghu-alipay"
+            npm -w frontend/honghu-alipay test -- --run
           elif [ -f frontend/package.json ]; then
-            echo "frontend/honghu-alipay not found, using frontend/package.json -> installing top-level frontend"
-            npm ci --prefix frontend --prefer-offline --no-audit --progress=false || (
-              echo "npm ci for frontend failed, trying fallback: npm install --prefix frontend --legacy-peer-deps" && \
-              npm install --prefix frontend --legacy-peer-deps
-            )
+            echo "Running tests in frontend"
+            npm -w frontend test -- --run
           else
-            echo "No frontend package.json found under frontend/honghu-alipay or frontend; skipping frontend install"
-          fi
-        env:
-          CI: true
-
-      - name: Backend test
-        # Use --passWithNoTests so CI does not fail when there are no backend tests yet.
-        run: npm run test:backend --if-present -- --passWithNoTests
-
-      - name: Frontend tests
-        run: |
-          echo "Running frontend tests (prefer frontend/honghu-alipay if present)"
-          if [ -f frontend/honghu-alipay/package.json ]; then
-            echo "Found frontend/honghu-alipay/package.json -> running tests there"
-            npm test --prefix frontend/honghu-alipay -- --run
-          elif [ -f frontend/package.json ]; then
-            echo "frontend/honghu-alipay not found, running tests under frontend/package.json"
-            npm test --prefix frontend -- --run
-          else
-            echo "No frontend package.json found under frontend/honghu-alipay or frontend; skipping frontend tests"
+            echo "No frontend workspace found; skipping frontend tests"
           fi
 
-      - name: Build Taro Alipay
-        run: npm run build:alipay
+  build-alipay:
+    name: Build Taro Alipay
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build alipay (if present)
+        run: |
+          if [ -f frontend/honghu-alipay/package.json ]; then
+            echo "Building frontend/honghu-alipay (Alipay)"
+            npm -w frontend/honghu-alipay run build
+          else
+            echo "frontend/honghu-alipay not present; skipping Alipay build"
+          fi
