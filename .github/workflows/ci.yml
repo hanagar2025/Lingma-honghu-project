@@ -73,7 +73,8 @@ jobs:
           CI: true
 
       - name: Backend test
-        run: npm run test:backend --if-present
+        # Use --passWithNoTests so CI does not fail when there are no backend tests yet.
+        run: npm run test:backend --if-present -- --passWithNoTests
 
       - name: Frontend tests
         run: npm run test:frontend --silent -- --run
