@@ -77,7 +77,17 @@ jobs:
         run: npm run test:backend --if-present -- --passWithNoTests
 
       - name: Frontend tests
-        run: npm run test:frontend --silent -- --run
+        run: |
+          echo "Running frontend tests (prefer frontend/honghu-alipay if present)"
+          if [ -f frontend/honghu-alipay/package.json ]; then
+            echo "Found frontend/honghu-alipay/package.json -> running tests there"
+            npm test --prefix frontend/honghu-alipay -- --run
+          elif [ -f frontend/package.json ]; then
+            echo "frontend/honghu-alipay not found, running tests under frontend/package.json"
+            npm test --prefix frontend -- --run
+          else
+            echo "No frontend package.json found under frontend/honghu-alipay or frontend; skipping frontend tests"
+          fi
 
       - name: Build Taro Alipay
         run: npm run build:alipay
