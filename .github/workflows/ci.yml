@@ -51,13 +51,24 @@ jobs:
         env:
           CI: true
 
-      - name: Install frontend (alipay) deps
+      - name: Install frontend deps (alipay if present, else top-level)
         run: |
-          echo "Installing frontend/honghu-alipay dependencies"
-          npm ci --prefix frontend/honghu-alipay --prefer-offline --no-audit --progress=false || (
-            echo "npm ci for frontend failed, trying fallback: npm install --prefix frontend/honghu-alipay --legacy-peer-deps" && \
-            npm install --prefix frontend/honghu-alipay --legacy-peer-deps
-          )
+          echo "Installing frontend dependencies (prefers frontend/honghu-alipay if present)"
+          if [ -f frontend/honghu-alipay/package.json ]; then
+            echo "Found frontend/honghu-alipay/package.json -> installing there"
+            npm ci --prefix frontend/honghu-alipay --prefer-offline --no-audit --progress=false || (
+              echo "npm ci for frontend/honghu-alipay failed, trying fallback: npm install --prefix frontend/honghu-alipay --legacy-peer-deps" && \
+              npm install --prefix frontend/honghu-alipay --legacy-peer-deps
+            )
+          elif [ -f frontend/package.json ]; then
+            echo "frontend/honghu-alipay not found, using frontend/package.json -> installing top-level frontend"
+            npm ci --prefix frontend --prefer-offline --no-audit --progress=false || (
+              echo "npm ci for frontend failed, trying fallback: npm install --prefix frontend --legacy-peer-deps" && \
+              npm install --prefix frontend --legacy-peer-deps
+            )
+          else
+            echo "No frontend package.json found under frontend/honghu-alipay or frontend; skipping frontend install"
+          fi
         env:
           CI: true
 
