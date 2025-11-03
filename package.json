@@ -15,6 +15,11 @@
     "test:frontend": "npm test --prefix frontend/honghu-alipay",
     "test:backend": "npm test --prefix backend"
   },
+  "workspaces": [
+    "backend",
+    "frontend",
+    "frontend/*"
+  ],
   "keywords": [
     "stock",
     "trading",
