@@ -41,6 +41,26 @@ jobs:
         env:
           CI: true
 
+      - name: Install backend deps
+        run: |
+          echo "Installing backend dependencies"
+          npm ci --prefix backend --prefer-offline --no-audit --progress=false || (
+            echo "npm ci for backend failed, trying fallback: npm install --prefix backend --legacy-peer-deps" && \
+            npm install --prefix backend --legacy-peer-deps
+          )
+        env:
+          CI: true
+
+      - name: Install frontend (alipay) deps
+        run: |
+          echo "Installing frontend/honghu-alipay dependencies"
+          npm ci --prefix frontend/honghu-alipay --prefer-offline --no-audit --progress=false || (
+            echo "npm ci for frontend failed, trying fallback: npm install --prefix frontend/honghu-alipay --legacy-peer-deps" && \
+            npm install --prefix frontend/honghu-alipay --legacy-peer-deps
+          )
+        env:
+          CI: true
+
       - name: Backend test
         run: npm run test:backend --if-present
 
