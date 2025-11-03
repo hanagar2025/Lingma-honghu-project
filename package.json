@@ -9,9 +9,19 @@
     "dev:backend": "cd backend && npm run dev",
     "build": "cd frontend && npm run build",
     "start": "cd backend && npm start",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev:alipay": "npm run dev:alipay --prefix frontend/honghu-alipay",
+    "build:alipay": "npm run build:alipay --prefix frontend/honghu-alipay",
+    "test:frontend": "npm test --prefix frontend/honghu-alipay",
+    "test:backend": "npm test --prefix backend"
   },
-  "keywords": ["stock", "trading", "decision", "ai", "portfolio"],
+  "keywords": [
+    "stock",
+    "trading",
+    "decision",
+    "ai",
+    "portfolio"
+  ],
   "author": "Stock Decision Team",
   "license": "MIT",
   "devDependencies": {
