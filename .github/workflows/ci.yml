@@ -20,6 +20,17 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.npm/_cacache
+            node_modules
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+
       - name: Install root deps
         run: |
           echo "Attempting npm ci (fast, reproducible)"
@@ -31,10 +42,10 @@ jobs:
           CI: true
 
       - name: Backend test
-        run: npm run test:backend --if-present || echo "Backend tests skipped or failed" 
+        run: npm run test:backend --if-present
 
       - name: Frontend tests
-        run: npm run test:frontend --silent -- --run || echo "Frontend tests failed or were skipped"
+        run: npm run test:frontend --silent -- --run
 
       - name: Build Taro Alipay
-        run: npm run build:alipay || echo "Taro build failed"
+        run: npm run build:alipay
