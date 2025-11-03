@@ -1,0 +1,9 @@
+node_modules
+
+# Taro / 小程序 构建产物
+/frontend/honghu-alipay/dist
+
+# Archive of old native mini pages
+/archive
+
+.DS_Store
