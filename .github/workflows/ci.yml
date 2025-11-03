@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Backend test
+        run: npm run test:backend
+
+      - name: Frontend tests
+        run: npm run test:frontend --silent -- --run
+
+      - name: Build Taro Alipay
+        run: npm run build:alipay

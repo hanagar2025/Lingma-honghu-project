@@ -1,0 +1,8 @@
+{
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/dist": true,
+    "/archive": true
+  }
+}
