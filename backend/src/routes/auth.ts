@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken'
 import { v4 as uuidv4 } from 'uuid'
 import { getConnection } from '../config/database'
 import { asyncHandler, createError } from '../middleware/errorHandler'
+import { authenticateToken } from '../middleware/auth'
+import type { AuthRequest } from '../middleware/auth'
 import { logger } from '../utils/logger'
 
 const router = Router()
@@ -37,17 +39,14 @@ router.post('/register', asyncHandler(async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10)
   const userId = uuidv4()
 
-  // 创建用户
+  // 创建用户与账户状态
   await connection.execute(
     'INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)',
     [userId, username, email, passwordHash]
   )
-
-  // 创建用户设置
-  const settingsId = uuidv4()
   await connection.execute(
-    'INSERT INTO user_settings (id, user_id) VALUES (?, ?)',
-    [settingsId, userId]
+    'INSERT INTO account_state (user_id) VALUES (?)',
+    [userId]
   )
 
   // 生成JWT令牌
@@ -125,15 +124,10 @@ router.post('/login', asyncHandler(async (req, res) => {
 }))
 
 // 获取用户信息
-router.get('/profile', asyncHandler(async (req, res) => {
-  // 这里需要认证中间件，暂时返回模拟数据
+router.get('/profile', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
   res.json({
     success: true,
-    data: {
-      id: '1',
-      username: 'testuser',
-      email: 'test@example.com'
-    }
+    data: req.user
   })
 }))
 

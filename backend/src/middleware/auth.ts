@@ -24,7 +24,7 @@ export const authenticateToken = async (
       throw createError('访问令牌缺失', 401)
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userId: string }
     
     // 验证用户是否存在
     const connection = getConnection()
@@ -37,12 +37,13 @@ export const authenticateToken = async (
       throw createError('用户不存在', 401)
     }
 
-    req.user = rows[0] as any
+    req.user = rows[0] as AuthRequest['user']
     next()
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
+    const name = error instanceof Error ? error.name : ''
+    if (name === 'JsonWebTokenError') {
       next(createError('无效的访问令牌', 401))
-    } else if (error.name === 'TokenExpiredError') {
+    } else if (name === 'TokenExpiredError') {
       next(createError('访问令牌已过期', 401))
     } else {
       next(error)

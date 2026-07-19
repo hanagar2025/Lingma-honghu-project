@@ -25,6 +25,8 @@ router.get('/positions', authenticateToken, asyncHandler(async (req: AuthRequest
       profit_loss_rate as profitLossRate, 
       position_ratio as positionRatio, 
       category,
+      sector,
+      theme,
       created_at as createdAt, 
       updated_at as updatedAt
     FROM positions 
@@ -47,11 +49,13 @@ router.post('/positions', authenticateToken, asyncHandler(async (req: AuthReques
     quantity,
     costPrice,
     currentPrice,
-    category
+    category,
+    sector,
+    theme
   } = req.body
 
   if (!stockCode || !stockName || !quantity || !costPrice || !currentPrice || !category) {
-    throw createError('所有字段都是必填项', 400)
+    throw createError('股票代码、名称、数量、成本价、现价、分类都是必填项', 400)
   }
 
   const connection = getConnection()
@@ -78,11 +82,12 @@ router.post('/positions', authenticateToken, asyncHandler(async (req: AuthReques
   await connection.execute(
     `INSERT INTO positions (
       id, user_id, stock_code, stock_name, quantity, cost_price, current_price,
-      market_value, profit_loss, profit_loss_rate, position_ratio, category
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      market_value, profit_loss, profit_loss_rate, position_ratio, category, sector, theme
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       positionId, userId, stockCode, stockName, quantity, costPrice, currentPrice,
-      marketValue, profitLoss, profitLossRate, positionRatio, category
+      marketValue, profitLoss, profitLossRate, positionRatio, category,
+      sector || '未分类', theme || '未分类'
     ]
   )
 
@@ -108,6 +113,8 @@ router.post('/positions', authenticateToken, asyncHandler(async (req: AuthReques
     profitLossRate,
     positionRatio,
     category,
+    sector: sector || '未分类',
+    theme: theme || '未分类',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
@@ -139,25 +146,40 @@ router.put('/positions/:id', authenticateToken, asyncHandler(async (req: AuthReq
 
   // 如果更新了价格相关字段，重新计算
   if (updateData.currentPrice || updateData.quantity) {
-    const currentPosition = positions[0] as any
-    const newQuantity = updateData.quantity || currentPosition.quantity
-    const newCurrentPrice = updateData.currentPrice || currentPosition.current_price
+    const currentPosition = positions[0] as { quantity: number; current_price: number; cost_price: number }
+    const newQuantity = Number(updateData.quantity || currentPosition.quantity)
+    const newCurrentPrice = Number(updateData.currentPrice || currentPosition.current_price)
     const newMarketValue = newQuantity * newCurrentPrice
-    const newProfitLoss = newMarketValue - (newQuantity * currentPosition.cost_price)
-    const newProfitLossRate = (newProfitLoss / (newQuantity * currentPosition.cost_price)) * 100
+    const newProfitLoss = newMarketValue - (newQuantity * Number(currentPosition.cost_price))
+    const newProfitLossRate = (newProfitLoss / (newQuantity * Number(currentPosition.cost_price))) * 100
 
     updateData.market_value = newMarketValue
     updateData.profit_loss = newProfitLoss
     updateData.profit_loss_rate = newProfitLossRate
   }
 
-  // 构建更新SQL
-  const updateFields = []
-  const updateValues = []
+  // 构建更新SQL（白名单列，防注入）
+  const columnMap: Record<string, string> = {
+    stockCode: 'stock_code',
+    stockName: 'stock_name',
+    quantity: 'quantity',
+    costPrice: 'cost_price',
+    currentPrice: 'current_price',
+    category: 'category',
+    sector: 'sector',
+    theme: 'theme',
+    market_value: 'market_value',
+    profit_loss: 'profit_loss',
+    profit_loss_rate: 'profit_loss_rate',
+    position_ratio: 'position_ratio',
+  }
+  const updateFields: string[] = []
+  const updateValues: unknown[] = []
 
   Object.keys(updateData).forEach(key => {
-    if (updateData[key] !== undefined) {
-      updateFields.push(`${key} = ?`)
+    const column = columnMap[key]
+    if (column && updateData[key] !== undefined) {
+      updateFields.push(`${column} = ?`)
       updateValues.push(updateData[key])
     }
   })
