@@ -1,9 +1,13 @@
 node_modules
 
-# Taro / 小程序 构建产物
-/frontend/honghu-alipay/dist
+# 构建产物
+/frontend/dist
+/backend/dist
 
-# Archive of old native mini pages
-/archive
+# 环境变量与日志
+.env
+.env.*
+!env.example
+/backend/logs
 
 .DS_Store
