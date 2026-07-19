@@ -74,7 +74,7 @@ export const authAPI = {
   login: (credentials: { username: string; password: string }) =>
     apiClient.post<{ user: any; token: string }>('/auth/login', credentials),
 
-  register: (userData: { username: string; email: string; password: string }) =>
+  register: (userData: { username: string; password: string; email?: string }) =>
     apiClient.post<{ user: any; token: string }>('/auth/register', userData),
 
   getProfile: () => apiClient.get<any>('/auth/profile'),

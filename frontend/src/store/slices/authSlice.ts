@@ -42,7 +42,7 @@ export const login = createAsyncThunk(
 
 export const register = createAsyncThunk(
   'auth/register',
-  async (userData: { username: string; email: string; password: string }) => {
+  async (userData: { username: string; password: string; email?: string }) => {
     const response = await authAPI.register(userData)
     console.log('register response:', response)
     // apiClient已经自动提取了data字段，response直接就是数据对象

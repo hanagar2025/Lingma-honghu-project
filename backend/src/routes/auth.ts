@@ -10,13 +10,13 @@ import { logger } from '../utils/logger'
 
 const router = Router()
 
-// 注册
+// 注册（只需用户名+密码；邮箱可选，未填则自动占位）
 router.post('/register', asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body
+  const { username, password } = req.body
+  const email = (req.body.email && String(req.body.email).trim()) || `${username}@local.tios`
 
-  // 验证输入
-  if (!username || !email || !password) {
-    throw createError('用户名、邮箱和密码都是必填项', 400)
+  if (!username || !password) {
+    throw createError('用户名和密码都是必填项', 400)
   }
 
   if (password.length < 6) {
@@ -32,7 +32,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   )
 
   if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-    throw createError('用户名或邮箱已存在', 400)
+    throw createError('用户名已存在', 400)
   }
 
   // 加密密码

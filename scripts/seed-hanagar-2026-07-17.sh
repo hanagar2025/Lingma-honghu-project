@@ -3,14 +3,14 @@
 # 用法：
 #   cd "/Users/muscap/投资助理"
 #   bash scripts/seed-hanagar-2026-07-17.sh
-# 可选环境变量：API_BASE（默认 http://localhost:5001/api）、PASSWORD（默认 test123456）
+# 可选环境变量：API_BASE（默认 http://localhost:5001/api）
+# 默认账号：hanagar / hanagar（无需邮箱）
 
 set -euo pipefail
 
 API_BASE="${API_BASE:-http://localhost:5001/api}"
 USER_NAME="${USER_NAME:-hanagar}"
-EMAIL="${EMAIL:-hanagar@163.com}"
-PASSWORD="${PASSWORD:-test123456}"
+PASSWORD="${PASSWORD:-hanagar}"
 
 # 账户：总资产384.1万，仓位63.4% → 持仓市值合计243.4万，现金140.7万
 # 净值高点按体系日志估算430万（精确值待券商App回填后改）
@@ -32,10 +32,10 @@ RESP="$(login || true)"
 TOKEN="$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print((d.get("data") or {}).get("token") or "")' "$RESP" 2>/dev/null || true)"
 
 if [ -z "$TOKEN" ]; then
-  echo "==> 登录失败，尝试注册..."
+  echo "==> 登录失败，尝试注册（无需邮箱）..."
   curl -sS -X POST "$API_BASE/auth/register" \
     -H 'Content-Type: application/json' \
-    -d "{\"username\":\"$USER_NAME\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" >/dev/null || true
+    -d "{\"username\":\"$USER_NAME\",\"password\":\"$PASSWORD\"}" >/dev/null || true
   RESP="$(login)"
   TOKEN="$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["data"]["token"])' "$RESP")"
 fi

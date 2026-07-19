@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Form, Input, Button, Card, Typography, Tabs, message } from 'antd'
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { login, register } from '../store/slices/authSlice'
 
@@ -23,14 +23,12 @@ const Login: React.FC = () => {
     }
   }
 
-  const handleRegister = async (values: { username: string; email: string; password: string }) => {
+  const handleRegister = async (values: { username: string; password: string }) => {
     try {
-      console.log('尝试注册:', values)
       const result = await dispatch(register(values)).unwrap()
-      console.log('注册成功:', result)
       message.success('注册成功')
+      console.log('注册成功:', result)
     } catch (err: any) {
-      console.error('注册失败:', err)
       message.error(`注册失败: ${err?.message || '未知错误'}`)
     }
   }
@@ -93,19 +91,6 @@ const Login: React.FC = () => {
       </Form.Item>
 
       <Form.Item
-        name="email"
-        rules={[
-          { required: true, message: '请输入邮箱' },
-          { type: 'email', message: '请输入有效的邮箱地址' }
-        ]}
-      >
-        <Input
-          prefix={<MailOutlined />}
-          placeholder="邮箱"
-        />
-      </Form.Item>
-
-      <Form.Item
         name="password"
         rules={[
           { required: true, message: '请输入密码' },
@@ -150,10 +135,10 @@ const Login: React.FC = () => {
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <Title level={2} style={{ color: '#007aff', marginBottom: 8 }}>
-            股票投资系统
+            TIOS 投资助理
           </Title>
           <Text type="secondary">
-            专业投资管理平台
+            科技投资操作系统
           </Text>
         </div>
 
