@@ -17,6 +17,7 @@ import decisionsRoutes from './routes/decisions'
 import systemRoutes from './routes/system'
 import smartRecommendationRoutes from './routes/smartRecommendation'
 import portfolioStrategyRoutes from './routes/portfolioStrategy'
+import tiosRoutes from './routes/tios'
 import { errorHandler } from './middleware/errorHandler'
 import { setupWebSocket } from './services/websocket'
 import { setupCronJobs } from './services/cron'
@@ -50,6 +51,7 @@ app.use('/api/decisions', decisionsRoutes)
 app.use('/api/system', systemRoutes)
 app.use('/api/smart-recommendation', smartRecommendationRoutes)
 app.use('/api/portfolio-strategy', portfolioStrategyRoutes)
+app.use('/api/tios', tiosRoutes)
 
 // 健康检查
 app.get('/health', (req, res) => {
