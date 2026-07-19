@@ -7,63 +7,33 @@ on:
     branches: [ main ]
 
 jobs:
-  install:
-    name: Install dependencies (workspaces)
+  backend:
+    name: Backend (typecheck + selftest + tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Cache npm
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.npm
-            ~/.npm/_cacache
+          path: ~/.npm
           key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
-
       - name: Install (workspaces)
         run: |
-          echo "Installing all workspaces using root package-lock.json"
-          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || (
-            echo "npm ci failed, trying fallback: npm install --workspaces --include-workspace-root --legacy-peer-deps" && \
-            npm install --workspaces --include-workspace-root --legacy-peer-deps
-          )
-
-  backend-test:
-    name: Backend tests
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            ~/.npm/_cacache
-          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
-      - name: Install (workspaces) in backend job
-        run: |
-          echo "Installing workspaces for backend job"
-          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || (
-            echo "npm ci failed, trying fallback: npm install --workspaces --include-workspace-root --legacy-peer-deps" && \
-            npm install --workspaces --include-workspace-root --legacy-peer-deps
-          )
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
+          npm install --workspaces --include-workspace-root --legacy-peer-deps
+      - name: Typecheck
+        run: npx --workspace backend tsc --noEmit -p backend/tsconfig.json
+      - name: TIOS engine selftest
+        run: npm -w backend run tios:selftest
       - name: Run backend tests
         run: npm -w backend run test -- --coverage
 
-  frontend-test:
-    name: Frontend tests
-    needs: install
+  frontend:
+    name: Frontend (typecheck + build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,58 +44,13 @@ jobs:
       - name: Cache npm
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.npm
-            ~/.npm/_cacache
+          path: ~/.npm
           key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
-      - name: Install (workspaces) in frontend job
+      - name: Install (workspaces)
         run: |
-          echo "Installing workspaces for frontend job"
-          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || (
-            echo "npm ci failed, trying fallback: npm install --workspaces --include-workspace-root --legacy-peer-deps" && \
-            npm install --workspaces --include-workspace-root --legacy-peer-deps
-          )
-      - name: Run frontend tests (detect workspace)
-        run: |
-          if [ -f frontend/honghu-alipay/package.json ]; then
-            echo "Running tests in frontend/honghu-alipay"
-            npm -w frontend/honghu-alipay run test --if-present -- --run
-          elif [ -f frontend/package.json ]; then
-            echo "Running tests in frontend"
-            npm -w frontend run test --if-present -- --run
-          else
-            echo "No frontend workspace found; skipping frontend tests"
-          fi
-
-  build-alipay:
-    name: Build Taro Alipay
-    needs: install
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            ~/.npm/_cacache
-          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
-      - name: Install (workspaces) in build job
-        run: |
-          echo "Installing workspaces for build job"
-          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || (
-            echo "npm ci failed, trying fallback: npm install --workspaces --include-workspace-root --legacy-peer-deps" && \
-            npm install --workspaces --include-workspace-root --legacy-peer-deps
-          )
-      - name: Build alipay (if present)
-        run: |
-          if [ -f frontend/honghu-alipay/package.json ]; then
-            echo "Building frontend/honghu-alipay (Alipay)"
-            npm -w frontend/honghu-alipay run build
-          else
-            echo "frontend/honghu-alipay not present; skipping Alipay build"
-          fi
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
+          npm install --workspaces --include-workspace-root --legacy-peer-deps
+      - name: Typecheck
+        run: npx --workspace frontend tsc --noEmit -p frontend/tsconfig.json
+      - name: Build
+        run: npm -w frontend run build

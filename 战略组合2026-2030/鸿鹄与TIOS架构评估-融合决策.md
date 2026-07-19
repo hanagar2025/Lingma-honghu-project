@@ -78,3 +78,19 @@
 预测型五件套在本阶段路由下线。试运行一个月后（8月修订窗口+一个完整月度周期），评估是否扩展P2（估值自动化）。
 
 *本文件为架构决策记录（ADR）。软件层面的一切设计服从投资体系的最高原则：单一决策源、规则先于观点、执行可追溯。*
+
+---
+
+## 五、决议更新（2026-07-19）：从「封存」升级为「删除」，精炼版落地
+
+经决策，原「同仓分舱、封存不删」方案升级为**彻底删除**：预测型五件套（decisionEngine、smartPositionRecommendation、portfolioStrategy、sectorAnalysis、reportGenerator）及其全部支撑服务（技术/基本面/时序分析、websocket、systemOptimization、userExperience、mock版dataProvider）、对应路由与前端页面全部移除。系统只剩一个大脑：TIOS规则引擎。
+
+实际落地与P1方案的差异：
+
+1. **数据源**：未用Tushare（需token），改用**腾讯行情**（免费、无需注册）：实时报价 `qt.gtimg.cn`、前复权日K `web.ifzq.gtimg.cn`、股票搜索 `smartbox.gtimg.cn`。已实测可用。
+2. **Redis 移除**：无缓存层，MySQL为唯一外部依赖，7张表覆盖闭环（users / positions / stock_daily / rule_cards / account_state / decision_reports / trade_executions）。
+3. **闭环已跑通**（真实行情端到端验证）：同步320根真实日K → 刷新持仓市值 → 阶段判定（科创50基准）→ 盘前四问入库 → 卖出指令生成待执行记录 → 盘后回填 → 铁律执行率统计。
+4. **定时任务**：工作日17:00（北京时间）自动运行全流程；页面可手动触发。
+5. **前端只剩两页**：盘前四问（主页：决策单+执行回填+规则卡+账户状态）、持仓管理（含板块/主题字段供仓位闸门使用）。
+
+至此，P1「小规模试运行」的软件部分全部就绪，剩余为使用层面：录入7只真实持仓与净值高点，开始每日执行与回填。
