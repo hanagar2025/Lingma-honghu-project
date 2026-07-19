@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, message, Typography, Row, Col, Statistic, Tabs, Tag, Alert } from 'antd'
-import { PlusOutlined, UploadOutlined, WalletOutlined, RiseOutlined, FallOutlined, LineChartOutlined, RightCircleOutlined, LeftCircleOutlined, BulbOutlined } from '@ant-design/icons'
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, message, Typography, Row, Col, Statistic, Tabs, Alert } from 'antd'
+import { PlusOutlined, UploadOutlined, WalletOutlined, RiseOutlined, FallOutlined, LineChartOutlined, RightCircleOutlined, LeftCircleOutlined } from '@ant-design/icons'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { fetchPositions, addPosition, updatePosition, deletePosition, clearError } from '../store/slices/portfolioSlice'
 import { Position } from '../store/slices/portfolioSlice'
@@ -294,13 +294,6 @@ const Portfolio: React.FC = () => {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />
-                <div style={{ marginTop: 16 }}>
-                  <Button type="primary" icon={<BulbOutlined />} onClick={() => {
-                    window.location.href = '/smart-recommendation'
-                  }}>
-                    获取AI推荐最新方向
-                  </Button>
-                </div>
               </Card>
             )
           },
@@ -408,6 +401,22 @@ const Portfolio: React.FC = () => {
               <Option value="right">右仓（补充）</Option>
               <Option value="left">左仓（方向）</Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="sector"
+            label="板块（用于30%板块上限闸门）"
+            tooltip="申万一级口径，如：通信、电子、计算机"
+          >
+            <Input placeholder="如：通信" />
+          </Form.Item>
+
+          <Form.Item
+            name="theme"
+            label="主题（用于45%主题上限闸门）"
+            tooltip="如：AI、半导体、机器人、军工"
+          >
+            <Input placeholder="如：AI" />
           </Form.Item>
         </Form>
       </Modal>

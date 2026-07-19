@@ -1,16 +1,10 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Layout, Menu, Button, Avatar, Dropdown, Space } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  DashboardOutlined,
+  ThunderboltOutlined,
   WalletOutlined,
-  BarChartOutlined,
-  FileTextOutlined,
-  CheckCircleOutlined,
-  BulbOutlined,
-  ClusterOutlined,
-  SettingOutlined,
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
@@ -35,43 +29,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const menuItems = [
     {
       key: '/',
-      icon: <DashboardOutlined />,
-      label: '投资概览',
+      icon: <ThunderboltOutlined />,
+      label: '盘前四问',
     },
     {
       key: '/portfolio',
       icon: <WalletOutlined />,
       label: '持仓管理',
-    },
-    {
-      key: '/analysis',
-      icon: <BarChartOutlined />,
-      label: '数据分析',
-    },
-    {
-      key: '/reports',
-      icon: <FileTextOutlined />,
-      label: '智能报表',
-    },
-    {
-      key: '/decisions',
-      icon: <CheckCircleOutlined />,
-      label: 'AI决策',
-    },
-    {
-      key: '/smart-recommendation',
-      icon: <BulbOutlined />,
-      label: '智能推荐',
-    },
-    {
-      key: '/portfolio-strategy',
-      icon: <ClusterOutlined />,
-      label: '组合策略',
-    },
-    {
-      key: '/settings',
-      icon: <SettingOutlined />,
-      label: '设置',
     },
   ]
 
@@ -124,7 +88,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {sidebarCollapsed ? (
             <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>📈</div>
           ) : (
-            <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>股票投资系统</div>
+            <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>TIOS 交易操作系统</div>
           )}
         </div>
         <Menu

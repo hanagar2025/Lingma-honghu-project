@@ -12,7 +12,9 @@ export interface Position {
   profitLoss: number
   profitLossRate: number
   positionRatio: number
-  category: 'left' | 'right' | 'defensive' | 'observation'
+  category: string
+  sector?: string
+  theme?: string
   createdAt: string
   updatedAt: string
 }

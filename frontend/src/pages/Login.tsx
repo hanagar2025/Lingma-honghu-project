@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Form, Input, Button, Card, Typography, Tabs, message } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { login, register, clearError } from '../store/slices/authSlice'
+import { login, register } from '../store/slices/authSlice'
 
 const { Title, Text } = Typography
 
