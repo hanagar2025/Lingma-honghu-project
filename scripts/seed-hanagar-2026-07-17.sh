@@ -46,10 +46,22 @@ AUTH="Authorization: Bearer $TOKEN"
 
 # 清空旧持仓
 echo "==> 清空旧持仓..."
-IDS="$(curl -sS "$API_BASE/portfolio/positions" -H "$AUTH" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(" ".join(p["id"] for p in (d.get("data") or d or [])))')"
-for id in $IDS; do
-  curl -sS -X DELETE "$API_BASE/portfolio/positions/$id" -H "$AUTH" >/dev/null
-done
+IDS="$(curl -sS "$API_BASE/portfolio/positions" -H "$AUTH" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+data=d.get("data") if isinstance(d, dict) else d
+if not isinstance(data, list):
+    data=[]
+print(" ".join(p["id"] for p in data if isinstance(p, dict) and p.get("id")))
+')"
+if [ -n "${IDS// }" ]; then
+  for id in $IDS; do
+    curl -sS -X DELETE "$API_BASE/portfolio/positions/$id" -H "$AUTH" >/dev/null
+  done
+  echo "  已清空"
+else
+  echo "  当前无旧持仓"
+fi
 
 # 写入7只持仓（板块/主题供仓位闸门使用；成本价由 市值-盈亏 反推）
 # 格式: code|name|qty|cost|price|category|sector|theme
