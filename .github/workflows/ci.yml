@@ -31,6 +31,10 @@ jobs:
         run: npm -w backend run tios:selftest
       - name: MSR radar selftest (执行债务闸门不变量)
         run: npm -w backend run msr:selftest
+      # 驾驶舱自检守的是"观察指标不得产生动作"这条不变量。
+      # 它必须在 CI 里跑 —— 否则该约束只是注释里的一句承诺。
+      - name: Cockpit selftest (观察指标不得产生动作)
+        run: npm -w backend run cockpit:selftest
       - name: Run backend tests
         run: npm -w backend run test -- --coverage
 
