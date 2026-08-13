@@ -310,16 +310,31 @@ export function stageAdvances(ledger: DiscoveryLedger, sinceDate?: string): {
 
 // ── 落盘 ──
 
+/**
+ * 每条记录占一行的紧凑 JSON。
+ *
+ * 不用 `JSON.stringify(x, null, 2)`：那样一天的快照是 3800 余行，
+ * 30 个交易日就有 11 万行生成文件进版本库，git diff 会彻底不可读 ——
+ * 而这份档案的全部价值在于**三十天后还能看清哪一天变了什么**。
+ * 每条一行既保持合法 JSON，又让变化在 diff 里逐行显形。
+ */
+function compactArray(key: string, items: unknown[], head: Record<string, unknown>): string {
+  const headText = Object.entries(head).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)},`).join('\n')
+  const body = items.map(x => `    ${JSON.stringify(x)}`).join(',\n')
+  return `{\n${headText}\n  ${JSON.stringify(key)}: [\n${body}\n  ]\n}\n`
+}
+
 export function saveSnapshot(snap: DailySnapshot, dir = CHANGELOG_DIR): string {
   mkdirSync(dir, { recursive: true })
   const f = join(dir, `${snap.date}.json`)
-  writeFileSync(f, `${JSON.stringify(snap, null, 2)}\n`, 'utf-8')
+  writeFileSync(f, compactArray('readings', snap.readings, { date: snap.date }), 'utf-8')
   return f
 }
 
 export function saveDiscovery(ledger: DiscoveryLedger, file = DISCOVERY_FILE): void {
   mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, `${JSON.stringify(ledger, null, 2)}\n`, 'utf-8')
+  // 台账的每个节点占一行：新增一次闸门跃迁只产生一行 diff，而不是重排整个文件
+  writeFileSync(file, compactArray('entries', ledger.entries, { updatedAt: ledger.updatedAt }), 'utf-8')
 }
 
 /** 读取指定日期之前最近的一份快照，用于求差 */
