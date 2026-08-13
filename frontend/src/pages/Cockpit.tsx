@@ -10,10 +10,11 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover, Progress,
-  Space, Statistic, Table, Tag, Typography,
+  Segmented, Space, Statistic, Table, Tag, Typography,
 } from 'antd'
 import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/icons'
 import { cockpitAPI, tiosAPI } from '../services/api'
+import FiveLayerDashboard from '../components/FiveLayerDashboard'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -117,17 +118,19 @@ const Cockpit: React.FC = () => {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [marking, setMarking] = useState<number | null>(null)
+  const [session, setSession] = useState<'pre' | 'post'>('post')
 
-  const load = useCallback(async (live = false) => {
+  const load = useCallback(async (live = false, s: 'pre' | 'post' = session) => {
     setLoading(true)
     try {
-      setData(await cockpitAPI.getToday(live))
+      setData(await cockpitAPI.getToday(live, s))
+      setSession(s)
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || err.message || '驾驶舱加载失败')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [session])
 
   // 标记执行 —— 清偿执行债务是当前第一优先级，因此这个按钮直接放在驾驶舱里，
   // 不必跳到别的页面。执行时间由后端回填，用于 KPI E4。
@@ -183,15 +186,28 @@ const Cockpit: React.FC = () => {
         }
       />
 
-      {/* ── 首页唯一的那张表 ── */}
+      {/* ── 会话切换：盘前只看必办，盘后看完整报告 ── */}
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <Segmented
+            value={session}
+            onChange={v => load(false, v as 'pre' | 'post')}
+            options={[
+              { label: '盘前 09:20–09:25', value: 'pre' },
+              { label: '盘后 15:10–15:30', value: 'post' },
+            ]}
+          />
+          <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
+          <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>
+        </Space>
+      </Card>
+
+      {/* ── 五层驾驶舱：四张研究表 + 隔离的动作区 ── */}
+      <FiveLayerDashboard dashboard={data.dashboard} />
+
+      {/* ── 首页单表（六问汇总） ── */}
       <Card
-        title={<Space><Title level={5} style={{ margin: 0 }}>今日驾驶舱</Title><Text type="secondary">{data.date}</Text></Space>}
-        extra={
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
-            <Button onClick={() => load(true)} loading={loading}>盘后复跑（直连行情）</Button>
-          </Space>
-        }
+        title={<Space><Title level={5} style={{ margin: 0 }}>六问汇总</Title><Text type="secondary">{data.date}</Text></Space>}
         style={{ marginBottom: 16 }}
       >
         <Table

@@ -140,7 +140,10 @@ export const tiosAPI = {
 // 每日驾驶舱（六问）
 export const cockpitAPI = {
   /** live=true 直连行情源复跑（盘后用），否则优先读库 */
-  getToday: (live = false) => apiClient.get<any>('/cockpit/today', live ? { live: 1 } : undefined),
+  getToday: (live = false, session?: 'pre' | 'post') => apiClient.get<any>('/cockpit/today', {
+    ...(live ? { live: 1 } : {}),
+    ...(session === 'pre' ? { session: 'pre' } : {}),
+  }),
 
   /** 阈值与口径说明，用于核对规则 */
   getSpec: () => apiClient.get<any>('/cockpit/spec'),

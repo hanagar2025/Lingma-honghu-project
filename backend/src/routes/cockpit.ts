@@ -11,6 +11,11 @@ import { asyncHandler } from '../middleware/errorHandler'
 import { countPendingSells, listPendingSells, listAllRequiredActions } from '../services/executionLedger'
 import { fetchDailyBars, getBarsFromDB } from '../services/marketData'
 import { runCockpit } from '../services/cockpit'
+import { buildDashboard, type SessionKind } from '../services/cockpit/dashboard'
+import { renderDashboard } from '../services/cockpit/renderDashboard'
+import type { MomentumRow } from '../services/cockpit/momentum'
+import { buildProfitMap, type ProfitMap } from '../services/research/profitRadar'
+import type { MsrReport } from '../services/msr'
 import { buildAudit, computeKpis, renderAuditMarkdown, type CostSnapshot } from '../services/governance/audit'
 import { saveAudit, loadAudits, loadAuditMarkdown } from '../services/governance/auditStore'
 import { fingerprint } from '../services/governance/ruleRegistry'
@@ -147,10 +152,40 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
     },
   })
 
+  // ── 五层驾驶舱 ──
+  // 利润结构地图按季更新，取不到时降级为"数据缺失"而不是静默省略整张表：
+  // 少一张表读者不会察觉，写着"缺失"才会去补数据。
+  let profit: ProfitMap | null = null
+  try {
+    profit = buildProfitMap(date)
+  } catch (e) {
+    logger.warn(`利润结构地图不可用（先跑 profit:fetch）：${e instanceof Error ? e.message : String(e)}`)
+  }
+  const internals = report.internals as
+    | { momentumRows: MomentumRow[]; msr: MsrReport; nodes: unknown[] }
+    | undefined
+  const session: SessionKind = req.query.session === 'pre' ? 'PRE_OPEN' : 'POST_CLOSE'
+  const dashboard = internals
+    ? buildDashboard({
+      date, session, positions, totalAssets: snapshot.totalAssets,
+      barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
+      valuationByCode,
+      momentumRows: internals.momentumRows,
+      msr: internals.msr,
+      profit,
+      actions: report.actions,
+      pendingSellCount,
+      noNewEntryReasons: report.noNewEntry.reasons,
+      dataGaps: report.dataGaps,
+    })
+    : null
+
   res.json({
     success: true,
     data: {
       ...report,
+      dashboard,
+      dashboardText: dashboard ? renderDashboard(dashboard) : null,
       pendingSells,
       audit,
       auditMarkdown: auditMd,
