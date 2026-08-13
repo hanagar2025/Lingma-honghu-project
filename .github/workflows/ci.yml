@@ -3,8 +3,10 @@ name: CI
 on:
   push:
     branches: [ main ]
+  # 不限定 base 分支：叠在别的 PR 之上的 PR（stacked PR）base 不是 main，
+  # 若限定 branches: [main]，这类 PR 会**一次检查都不跑**而界面上只显示"无检查"。
+  # 与今天修掉的两处同类：一个不运行的守卫和没有守卫是一回事。
   pull_request:
-    branches: [ main ]
 
 jobs:
   backend:
