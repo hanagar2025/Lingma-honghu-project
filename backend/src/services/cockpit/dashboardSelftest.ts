@@ -205,6 +205,16 @@ if (profit) {
     !dash.headline.mostWorthResearching.includes('兆易创新'), dash.headline.mostWorthResearching)
   ok('清退节点改为记入"禁止动作"（覆盖缺口，不是藏起来）',
     dash.actionZone.forbidden.some(f => f.label.includes('存储') && f.detail.includes('冠军替换')))
+  // 覆盖缺口 ≠ 战略否决：两者需要的后续动作完全不同（补标的 vs 走冠军替换）
+  const noMember = dash.nextLayer.filter(r => r.members.length === 0)
+  ok('存在无在册标的的节点（覆盖缺口）', noMember.length > 0)
+  ok('无在册标的的节点阻断原因写"无在册标的"而非"战略层不允许"',
+    noMember.every(r =>
+      r.actionBlockedBy.some(b => b.includes('无在册标的')) &&
+      !r.actionBlockedBy.some(b => b.includes('战略层不允许'))))
+  const rendered = renderDashboard(dash)
+  ok('文本渲染把覆盖缺口与战略否决标成两种不同标记',
+    rendered.includes('⚠无在册标的') && rendered.includes('⚠战略层不允许'))
   ok('允许研究项均通过战略层闸门',
     dash.nextLayer.filter(r => dash.actionZone.allowedResearch.some(a => a.label.startsWith(r.node)))
       .every(r => r.strategyAllows))

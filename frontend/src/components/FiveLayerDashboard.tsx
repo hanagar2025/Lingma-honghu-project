@@ -482,9 +482,15 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({ dashboard: d })
             {
               title: '阶段', dataIndex: 'stage', width: 84, fixed: 'right',
               render: (v: string, r: any) => (
+                // 「无在册标的」是覆盖缺口，「战略层不允许」是战略层已关闭仓位资格。
+                // 共用一个标记会让"该补标的"与"该走冠军替换"两件事看起来一样。
                 <Space direction="vertical" size={0}>
                   <Tag color={v === '观察' ? 'orange' : 'default'}>{v}</Tag>
-                  {r.strategyAllows === false && <Tag color="red" style={{ marginTop: 2 }}>战略层不允许</Tag>}
+                  {r.members?.length === 0
+                    ? <Tag color="default" style={{ marginTop: 2 }}>无在册标的</Tag>
+                    : r.strategyAllows === false
+                      ? <Tag color="red" style={{ marginTop: 2 }}>战略层不允许</Tag>
+                      : null}
                 </Space>
               ),
             },

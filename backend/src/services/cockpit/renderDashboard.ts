@@ -187,7 +187,7 @@ export function renderDashboard(d: Dashboard): string {
   w('═'.repeat(W))
   w(
     `  ${pad('节点', 18)}${pad('产业', 8)}${pad('利润', 8)}${pad('节点份额', 10)}${pad('资金', 8)}` +
-    `${pad('相对强度', 10)}${pad('估值', 16)}${pad('证据', 8)}${pad('S0/S1/S2/S3/资金', 20)}阶段`
+    `${pad('相对强度', 10)}${pad('估值', 16)}${pad('证据', 10)}${pad('S0/S1/S2/S3/资金', 22)}阶段`
   )
   w(`  ${'─'.repeat(W - 2)}`)
   for (const r of d.nextLayer) {
@@ -195,8 +195,13 @@ export function renderDashboard(d: Dashboard): string {
     w(
       `  ${pad(r.node, 18)}${pad(r.industryTrend, 8)}${pad(r.profitTrend, 8)}` +
       `${pad(r.nodeShare === null ? '缺失' : `${(r.nodeShare * 100).toFixed(1)}%`, 10)}${pad(r.money, 8)}` +
-      `${pad(r.relStrength, 10)}${pad(r.valuation, 16)}${pad(r.evidenceTier, 8)}` +
-      `${pad(`${gate(g.s0Discovered)} / ${gate(g.s1Industry)} / ${gate(g.s2Earnings)} / ${gate(g.s3Valuation)} / ?`, 20)}${r.stage}`
+      `${pad(r.relStrength, 10)}${pad(r.valuation, 16)}${pad(r.evidenceTier, 10)}` +
+      `${pad(`${gate(g.s0Discovered)} / ${gate(g.s1Industry)} / ${gate(g.s2Earnings)} / ${gate(g.s3Valuation)} / ?`, 22)}` +
+      // 「无在册标的」与「战略层不允许」是两回事，不能共用一个标记：
+      // 前者是覆盖缺口（需补研究标的），后者是战略层已关闭仓位资格（需走冠军替换）。
+      `${r.stage}${r.members.length === 0
+        ? ' ⚠无在册标的'
+        : r.strategyAllows === false ? ' ⚠战略层不允许' : ''}`
     )
   }
   w()

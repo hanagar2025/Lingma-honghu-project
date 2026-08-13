@@ -541,9 +541,7 @@ export function buildDashboard(input: DashboardInput): Dashboard {
         valuation: vals.length && vals[0]?.percentile3y !== null
           ? `历史分位 ${(vals[0]!.percentile3y! * 100).toFixed(0)}%`
           : '不可用',
-        evidenceTier: members.length
-          ? members.map(m => m.evidence).sort()[0]
-          : '无在册标的',
+        evidenceTier: members.length ? members.map(m => m.evidence).sort()[0] : '无标的',
         gates: { s0Discovered: !!cand, s1Industry: s1, s2Earnings: s2, s3Valuation: s3, moneyRadar: null },
         // 只有"观察"与"研究"两级 —— "候选"以上须 S3 全过，当前无一满足
         stage: r.direction === '↑早期' || r.direction === '↑' || r.direction === '↑↑' ? '观察' : '研究',
