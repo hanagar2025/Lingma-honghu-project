@@ -174,6 +174,63 @@ ok('确实无数据时才判 NO_DATA',
   emptyMap.nodes.find(n => n.node === '光模块')?.status === 'NO_DATA')
 
 ok('地图带数据新鲜度声明', map.freshness.warning.includes('利润雷达一年只更新四次'))
+
+// ── 绝对增量：与增长率必须并存，且不得互相替代 ──
+const recDelta: ProfitRecord = {
+  code: '300308', name: '大基数', scope: 'DECISION',
+  periods: [p(2025, 1, 1000, 100), p(2026, 1, 1000, 200)],
+}
+const recSmall: ProfitRecord = {
+  code: '688498', name: '小基数', scope: 'DECISION',
+  periods: [p(2025, 1, 10, 1), p(2026, 1, 20, 13)],
+}
+const big = computeMemberProfit(recDelta, '光模块', 'optical', '2026-08-13')
+const small = computeMemberProfit(recSmall, '光芯片', 'optical', '2026-08-13')
+ok('大基数标的：同比 +100%，绝对增量 100',
+  Math.abs((big.latestSingle?.netProfitYoy ?? 0) - 1) < 1e-9 && big.npAbsDelta === 100)
+ok('小基数标的：同比 +1200%，绝对增量仅 12',
+  Math.abs((small.latestSingle?.netProfitYoy ?? 0) - 12) < 1e-9 && small.npAbsDelta === 12)
+ok('增长率与绝对增量给出相反排序（这正是必须并列呈现的原因）',
+  (small.latestSingle?.netProfitYoy ?? 0) > (big.latestSingle?.netProfitYoy ?? 0) &&
+  (small.npAbsDelta ?? 0) < (big.npAbsDelta ?? 0))
+
+// 基期为负时增量仍可算，而同比留空
+const recNegBase: ProfitRecord = {
+  code: '000003', name: '基期亏损', scope: 'RESEARCH',
+  periods: [p(2025, 1, 100, -50), p(2026, 1, 200, 30)],
+}
+const negBase = computeMemberProfit(recNegBase, '光模块', 'optical', '2026-08-13')
+ok('基期为负：同比留空但绝对增量仍算出（+80）',
+  negBase.latestSingle?.netProfitYoy === null && negBase.npAbsDelta === 80,
+  `yoy=${negBase.latestSingle?.netProfitYoy} delta=${negBase.npAbsDelta}`)
+
+// ── 披露顺序伪影：财报季只有少数节点出报表时，份额分母不完整 ──
+const artifactFile: ProfitFile = {
+  ...fakeFile,
+  records: [
+    { code: '688313', name: '早披露', scope: 'DECISION', periods: [p(2025, 2, 50, 5), p(2026, 2, 100, 15)] },
+    { code: '300308', name: '未披露', scope: 'DECISION', periods: [p(2025, 2, 500, 50)] },
+  ],
+}
+const artifactMap = buildProfitMap('2026-08-13', artifactFile)
+const early = artifactMap.nodes.find(n => n.members.some(m => m.code === '688313'))
+const q2 = early?.deltaShareHistory.find(h => h.label === '2026Q2')
+ok('财报季首个披露者不会显示成 100% 份额（披露顺序伪影已屏蔽）',
+  q2 === undefined || q2.share === null, `2026Q2 share=${q2?.share}`)
+
+// 真实数据的份额趋势
+try {
+  const realMap = buildProfitMap('2026-08-13')
+  const optical = realMap.nodes.filter(n => n.mainlineId === 'optical')
+  const mod = optical.find(n => n.node === '光模块')
+  ok('份额历史有多季读数（趋势可判）',
+    (mod?.deltaShareHistory.filter(h => h.share !== null).length ?? 0) >= 4,
+    String(mod?.deltaShareHistory.filter(h => h.share !== null).length))
+  const shares = optical.map(n => n.deltaShareHistory[n.deltaShareHistory.length - 2]?.share ?? 0)
+  const total = shares.reduce((a, b) => a + b, 0)
+  ok('同一主线同一季度的份额合计约为 1',
+    Math.abs(total - 1) < 0.02, String(total))
+} catch { /* 需先跑 profit:fetch */ }
 ok('地图列出不可得字段', map.unavailableFields.length > 0)
 
 // 地图在类型上不含任何动作字段 —— 它不可能产出买入建议

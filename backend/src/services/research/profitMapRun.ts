@@ -45,20 +45,38 @@ function main(): void {
     if (!nodes.length) continue
     out.write(`${'─'.repeat(W)}\n【${MAINLINE_NAME[mlId] ?? mlId}】\n${'─'.repeat(W)}\n`)
     out.write(
-      `  ${'节点'.padEnd(12)}${'状态'.padEnd(14)}${'单季净利同比中位'.padEnd(12)}` +
-      `${'加速数'.padEnd(8)}${'数据滞后'.padEnd(10)}覆盖\n`
+      `  ${'节点'.padEnd(12)}${'状态'.padEnd(14)}${'同比中位'.padEnd(11)}` +
+      `${'净利增量'.padEnd(10)}${'增量份额'.padEnd(9)}${'滞后'.padEnd(7)}覆盖\n`
     )
-    // 按单季净利同比中位数降序，仅为阅读方便，不构成排序推荐
-    const sorted = [...nodes].sort((a, b) => (b.medianNpYoy ?? -Infinity) - (a.medianNpYoy ?? -Infinity))
+    // 按**绝对增量**降序 —— 这才是"利润池的钱去了哪里"。
+    // 早前按同比增长率排序会把小基数标的顶到最前，与迁移问题的答案相反。
+    const sorted = [...nodes].sort((a, b) => (b.npAbsDeltaSum ?? -Infinity) - (a.npAbsDeltaSum ?? -Infinity))
     for (const n of sorted) {
       const cov = n.researchOnly ? '仅研究域' : `${n.members.filter(m => m.scope === 'DECISION').length}只决策域`
       out.write(
         `  ${n.node.padEnd(12)}${STATUS_TEXT[n.status].padEnd(14)}` +
-        `${pct(n.medianNpYoy).padEnd(14)}${`${n.accelerating}/${n.members.length}`.padEnd(9)}` +
-        `${(n.maxReportAgeDays === null ? '—' : `${n.maxReportAgeDays}天`).padEnd(10)}${cov}\n`
+        `${pct(n.medianNpYoy).padEnd(11)}${yi(n.npAbsDeltaSum).padEnd(10)}` +
+        `${(n.deltaShareOfMainline === null ? '—' : `${(n.deltaShareOfMainline * 100).toFixed(1)}%`).padEnd(9)}` +
+        `${(n.maxReportAgeDays === null ? '—' : `${n.maxReportAgeDays}天`).padEnd(7)}${cov}\n`
       )
     }
     out.write('\n')
+
+    // ── 增量份额趋势 ──
+    // 迁移的直接证据是份额的变化方向，不是单季快照。份额上升=这一块蛋糕分得更多。
+    const withHist = sorted.filter(n => n.deltaShareHistory.some(h => h.share !== null))
+    if (withHist.length) {
+      const labels = withHist[0].deltaShareHistory.map(h => h.label)
+      out.write(`  利润增量份额趋势（%）—— 迁移的直接证据是份额方向，不是单季快照\n`)
+      out.write(`  ${'节点'.padEnd(14)}${labels.map(l => l.padStart(8)).join('')}\n`)
+      for (const n of withHist) {
+        const cells = n.deltaShareHistory
+          .map(h => (h.share === null ? '—' : (h.share * 100).toFixed(0)).padStart(8))
+          .join('')
+        out.write(`  ${n.node.padEnd(14)}${cells}\n`)
+      }
+      out.write('\n')
+    }
 
     // 逐标的明细
     for (const n of sorted) {
@@ -74,7 +92,8 @@ function main(): void {
           `  单季净利 ${yi(m.latestSingle?.netProfit ?? null)}（同比 ${pct(m.latestSingle?.netProfitYoy ?? null)}）\n`
         )
         out.write(
-          `        同比加速 ${pp(m.npYoyAccelPct)}  毛利率 ${m.grossMargin === null ? '—' : `${m.grossMargin.toFixed(1)}%`}` +
+          `        净利绝对增量 ${yi(m.npAbsDelta)}  同比加速 ${pp(m.npYoyAccelPct)}  ` +
+          `毛利率 ${m.grossMargin === null ? '—' : `${m.grossMargin.toFixed(1)}%`}` +
           `（同比 ${pp(m.grossMarginYoyPct)}）  扣非占比 ${m.deductRatio === null ? '—' : `${(m.deductRatio * 100).toFixed(0)}%`}` +
           `${m.deductRatioAsOf ? `@${m.deductRatioAsOf}` : ''}  现金含量 ${m.cashMatch === null ? '—' : m.cashMatch.toFixed(2)}\n`
         )

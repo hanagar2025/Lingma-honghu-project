@@ -94,6 +94,16 @@ export interface MemberProfit {
   prevSingle: QuarterPoint | null
   /** 单季净利同比的变化（pct点）。>0 表示同比增速本季高于上季 —— 事实，不是预测 */
   npYoyAccelPct: number | null
+  /**
+   * 单季净利润的**绝对同比增量**（元）= 本季净利 − 去年同季净利。
+   *
+   * ⚠ 这一项是"利润池迁移"唯一正确的度量口径，与增长率不是一回事，且常常方向相反。
+   * 2026Q1 实例：源杰净利同比 +1153%，绝对增量约 1.7 亿；中际同比 +262%，绝对增量约 41.5 亿。
+   * 按增长率排名会把源杰排在中际之前并称其为"新核心"，
+   * 而实际上该季度光通信利润池的增量绝大部分落在光模块，不在光芯片。
+   * 增长率衡量"这家公司变化多大"，增量衡量"利润池的钱去了哪里"。后者才是迁移问题的答案。
+   */
+  npAbsDelta: number | null
   /** 累计毛利率及其同比变化（pct点） */
   grossMargin: number | null
   grossMarginYoyPct: number | null
@@ -153,12 +163,23 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
     ? (latestSq.netProfitYoy - prevSq.netProfitYoy) * 100 : null
   if (accel === null) gaps.push('单季净利同比加速度不可算（基期为负或缺失）')
 
+  // 绝对增量：与去年同季的单季净利之差。基期为负时仍可算（增量本身有意义），
+  // 这与同比增长率不同 —— 后者在基期为负时无可解释含义。
+  let npAbsDelta: number | null = null
+  if (latestSq?.netProfit != null) {
+    const sqAll = toSingleQuarter(rec.periods)
+    const base = sqAll.find(x => x.year === latestSq.year - 1 && x.quarter === latestSq.quarter)
+    if (base?.netProfit != null) npAbsDelta = latestSq.netProfit - base.netProfit
+    else gaps.push('净利绝对增量不可算（去年同季缺失）')
+  }
+
   return {
     code: rec.code, name: rec.name, scope: rec.scope, node, mainlineId,
     latestReport: latest?.reportDate ?? null,
     reportAgeDays: latest ? daysSince(latest.reportDate, today) : null,
     latestSingle: latestSq, prevSingle: prevSq,
     npYoyAccelPct: accel,
+    npAbsDelta,
     grossMargin: latest?.grossMarginCum ?? null,
     grossMarginYoyPct: gmYoy,
     deductRatio, deductRatioAsOf: deductAsOf,
@@ -182,6 +203,25 @@ export interface NodeProfit {
   usable: number
   /** 单季净利同比中位数 */
   medianNpYoy: number | null
+  /**
+   * 节点净利绝对增量合计（元）。**这一项才是"利润池迁移"的答案。**
+   * 与增长率中位数常常方向相反，两者必须并列呈现，不得只显示其一。
+   */
+  npAbsDeltaSum: number | null
+  /** 该节点增量占本主线全部正增量的份额。负增量节点为 null */
+  deltaShareOfMainline: number | null
+  /**
+   * 增量份额的历史序列（按季升序）。**这一项才是"迁移"的直接证据。**
+   *
+   * 单季份额只是快照。真正的迁移应表现为：某节点的份额在连续几个季度里持续上升，
+   * 而原核心节点的份额持续下降。若两者份额都稳定，则不存在迁移，只是全链同时扩张。
+   *
+   * 为什么必须看份额而不是增长率或增量本身：
+   *   - 增长率偏袒小基数：新节点从 0.1 亿到 1 亿是 +900%，但只拿到主线增量的 2%；
+   *   - 绝对增量偏袒在位者：光模块基数最大，几乎总会拿走最大增量；
+   *   - **份额的变化方向**同时消掉这两种偏袒，因为它问的是"这一块蛋糕分配比例在怎么变"。
+   */
+  deltaShareHistory: { label: string; share: number | null }[]
   /** 加速的标的数 */
   accelerating: number
   /** 最旧的报告期距今天数 —— 节点整体的数据新鲜度 */
@@ -194,6 +234,9 @@ export interface NodeProfit {
   /** 该节点是否只有研究域标的（即决策域尚未覆盖） */
   researchOnly: boolean
 }
+
+/** 份额历史回溯的季度数。8 季 = 两年，足以区分趋势与单季噪声 */
+export const SHARE_HISTORY_QUARTERS = 8
 
 function median(xs: number[]): number | null {
   if (!xs.length) return null
@@ -244,16 +287,73 @@ export function buildProfitMap(today: string, file?: ProfitFile): ProfitMap {
       ? (yoys.length ? 'LEVEL_ONLY' : 'NO_DATA')
       : accelerating === accels.length ? 'ACCELERATING'
       : accelerating === 0 ? 'DECELERATING' : 'MIXED'
+    const deltas = ms.map(m => m.npAbsDelta).filter((x): x is number => x != null)
     return {
       mainlineId, node, members: ms,
       usable: yoys.length,
       medianNpYoy: median(yoys),
+      npAbsDeltaSum: deltas.length ? deltas.reduce((a, b) => a + b, 0) : null,
+      deltaShareOfMainline: null,
+      deltaShareHistory: [],
       accelerating,
       maxReportAgeDays: ages.length ? Math.max(...ages) : null,
       status,
       researchOnly: ms.length > 0 && ms.every(m => m.scope === 'RESEARCH'),
     }
   })
+
+  // 增量份额：分母取本主线全部**正**增量之和。用净额做分母会让一个亏损节点
+  // 把其他节点的份额推过 100%，读起来像"某节点吃掉了全部利润"。
+  for (const mlId of new Set(nodes.map(n => n.mainlineId))) {
+    const inMl = nodes.filter(n => n.mainlineId === mlId)
+    const posTotal = inMl.reduce((s, n) => s + Math.max(0, n.npAbsDeltaSum ?? 0), 0)
+    if (posTotal <= 0) continue
+    for (const n of inMl) {
+      if (n.npAbsDeltaSum != null && n.npAbsDeltaSum > 0) n.deltaShareOfMainline = n.npAbsDeltaSum / posTotal
+    }
+  }
+
+  // ── 增量份额的历史序列 ──
+  // 对每个季度重算一次"节点增量 ÷ 主线正增量合计"。份额的变化方向才是迁移证据。
+  const sqByCode = new Map<string, QuarterPoint[]>()
+  for (const r of f.records) sqByCode.set(r.code, toSingleQuarter(r.periods))
+
+  const allLabels = [...new Set([...sqByCode.values()].flat().map(q => q.label))].sort()
+  const recentLabels = allLabels.slice(-SHARE_HISTORY_QUARTERS)
+
+  for (const label of recentLabels) {
+    const [yStr, qStr] = label.split('Q')
+    const year = +yStr
+    const quarter = +qStr
+    const nodeDelta = new Map<string, number>()
+    for (const n of nodes) {
+      let sum: number | null = null
+      for (const m of n.members) {
+        const sq = sqByCode.get(m.code) ?? []
+        const cur = sq.find(x => x.year === year && x.quarter === quarter)
+        const base = sq.find(x => x.year === year - 1 && x.quarter === quarter)
+        if (cur?.netProfit != null && base?.netProfit != null) {
+          sum = (sum ?? 0) + (cur.netProfit - base.netProfit)
+        }
+      }
+      if (sum !== null) nodeDelta.set(`${n.mainlineId}|${n.node}`, sum)
+    }
+    for (const mlId of new Set(nodes.map(n => n.mainlineId))) {
+      const inMl = nodes.filter(n => n.mainlineId === mlId)
+      const reporting = inMl.filter(n => nodeDelta.has(`${n.mainlineId}|${n.node}`)).length
+      const posTotal = inMl.reduce((s, n) => s + Math.max(0, nodeDelta.get(`${n.mainlineId}|${n.node}`) ?? 0), 0)
+      // 财报披露期内只有少数节点出报表时，份额分母不完整 —— 首个披露者会显示接近 100%，
+      // 那是披露顺序的伪影，不是利润迁移。少于 3 个节点有数据时整季置空。
+      const usableSeason = reporting >= 3
+      for (const n of inMl) {
+        const d = nodeDelta.get(`${n.mainlineId}|${n.node}`)
+        n.deltaShareHistory.push({
+          label,
+          share: usableSeason && d != null && posTotal > 0 ? Math.max(0, d) / posTotal : null,
+        })
+      }
+    }
+  }
 
   const ages = members.map(m => m.reportAgeDays).filter((x): x is number => x != null)
   const withH1 = members.filter(m => m.latestReport && m.latestReport >= `${today.slice(0, 4)}-06-30`).length
