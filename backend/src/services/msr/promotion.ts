@@ -22,12 +22,13 @@ export const STAGE_TEXT: Record<PromotionStage, string> = {
   STAGE_3_PRICE_WINDOW: 'S3价格窗口·可建仓',
 }
 
-export type PriceWindow = 'GREEN' | 'YELLOW' | 'RED'
+export type PriceWindow = 'GREEN' | 'YELLOW' | 'RED' | 'RED_EXTREME'
 
 export const WINDOW_COLOR_TEXT: Record<PriceWindow, string> = {
-  GREEN: '绿灯·候选',
-  YELLOW: '黄灯·观察',
-  RED: '红灯·禁止追入',
+  GREEN: '绿灯·结构平缓',
+  YELLOW: '黄灯·结构一般',
+  RED: '红灯·已偏离（不否决，仅降规模）',
+  RED_EXTREME: '深红·极端急涨（唯一硬否决）',
 }
 
 export interface PriceWindowResult {
@@ -35,25 +36,44 @@ export interface PriceWindowResult {
   /** 触发红灯的具体项，用于复盘 */
   redFlags: string[]
   greenFlags: string[]
+  /**
+   * 仓位规模系数。价格窗口自 2026-08-13 回测后**不再具有否决权**（深红除外），
+   * 只影响首次建仓的规模。
+   */
+  sizeMultiplier: number
   detail: string
 }
 
 /**
  * 价格窗口判定。
  *
- * 与"禁用涨幅否决法"条款（2026-08-13）的关系必须说清楚，二者不冲突：
- *   - 被禁止的是把涨幅当作**否决候选资格**的理由（研究/战略层）——"它涨了60%所以不是好资产"。
- *   - 本函数是**战术层时点工具**，输出为"等窗口"，不是"淘汰"。红灯标的仍完整保留在
- *     Stage2 候选池里，价格回到绿灯即可买入，资格不受损。
+ * ⚠ 本函数的收益主张已于 2026-08-13 被自有回测**证伪**，且方向相反。必须先读这段再改代码。
  *
- * 实测代价（2026-08-13 以中际旭创三段主升浪回测，脚本 scripts/analysis-0813-greengate-cost.py）：
- *   第一段 2025-04-07 起点 RED（长上影），3日后首个绿灯 79.29（+8.3%）→ 放弃 14.5pct / 88.6%
- *   第二段 2025-07-04 起点 YELLOW，3日后首个绿灯 133.75（**低于起点 3.1%**）→ 反而多得 9.6pct / 198.7%
- *   第三段 2026-02-04 起点即 GREEN → 代价 0
- *   三段合计净代价约 4.9pct，样本内绿灯日占比 36.2%。
+ * 回测设定：27只标的（AI光通信/半导体/算力/电力）、2023-05 ~ 2026-08、13500 个观测，
+ * 前瞻超额对创业板指，日期区块自助抽样 3000 次修正重叠窗口。
+ * 脚本：scripts/backtest-0813-signals.py、-regime.py、-significance.py
  *
- *   注意：立项时曾假设"绿灯闸门会错过第二段"，实测否证 —— 急涨段内部通常会出现回踩绿灯窗口，
- *   等待成本远低于直觉。该假设已删除，勿再引用。
+ *   20日前瞻超额：绿灯 +3.53%（胜率50.7%）  黄灯 +5.07%  红灯 +6.14%（胜率56.6%）
+ *   绿灯减红灯 = **-2.61pct**，95%区间 [-5.62, -0.37]，P(绿≥红)=0.012
+ *   → 不是"无差异"，是**红灯显著优于绿灯**。等绿灯建仓平均少赚，不是多赚。
+ *
+ *   分期复核（想找出"闸门只在转折期有效"的辩解，未找到）：
+ *     基准在MA60上方（上行期）：绿减红 -1.96pct
+ *     基准在MA60下方（下行期）：绿减红 -1.54pct
+ *     2026-06-20 以来本轮回撤期：绿减红 -0.38pct
+ *   三个子样本无一支持闸门。原先"急涨段内会回踩绿灯，等待几乎免费"的结论
+ *   （基于中际旭创三段共 3 个样本）属于极小样本偶然，已作废。
+ *
+ *   唯一还有方向性支持的是极端尾部：10日涨幅 >50% 时，20日前瞻超额 -2.70%（全样本 +4.56%）。
+ *   但 n=138 且高度重叠，有效样本约 7，t=-0.4 —— 统计上什么都没证明。
+ *
+ * 因此本次改造遵循一条原则：**被证伪的部分不许再以收益为理由存在。**
+ *   - 除深红（10日>50% 或 10日超额>40%）外，红灯**不再否决建仓**，只压缩规模。
+ *   - 深红保留硬否决，理由写明是**集中度与行为风险**，不是超额收益。
+ *     本账户的 80万 回撤来自单票 16% 仓位在急涨末端建仓后无法持有，
+ *     回测用等权分散度量均值，测不到这种破产风险，故此处保留一条不靠回测支撑的护栏，
+ *     并明码标价：代价约 2.6pct/20日 的均值让渡。
+ *   - 规模系数本身**未经回测检验**（回测是等权的，没测过仓位调节），属于设计判断，勿宣称有据。
  */
 export function evaluatePriceWindow(bars: DailyBar[], r: RadarResult): PriceWindowResult {
   const m = r.metrics
@@ -83,19 +103,35 @@ export function evaluatePriceWindow(bars: DailyBar[], r: RadarResult): PriceWind
     if (Math.abs(b) < Math.abs(a)) greenFlags.push('回调递浅')
   }
 
+  // 深红：唯一保留硬否决的极端区。阈值取自回测中唯一出现负超额的尾部。
+  const extremeFlags: string[] = []
+  if (m.ret10 !== null && m.ret10 > 0.5) extremeFlags.push(`10日涨幅 +${(m.ret10 * 100).toFixed(1)}%（>50%极端区）`)
+  if (m.excess10 !== null && m.excess10 > 0.4) extremeFlags.push(`10日超额 +${(m.excess10 * 100).toFixed(1)}pct（>40pct极端区）`)
+
   const color: PriceWindow =
-    redFlags.length > 0 ? 'RED' : greenFlags.length >= 3 ? 'GREEN' : 'YELLOW'
+    extremeFlags.length > 0
+      ? 'RED_EXTREME'
+      : redFlags.length > 0
+        ? 'RED'
+        : greenFlags.length >= 3
+          ? 'GREEN'
+          : 'YELLOW'
+
+  const sizeMultiplier = color === 'RED_EXTREME' ? 0 : color === 'RED' ? 0.5 : color === 'YELLOW' ? 0.7 : 1
 
   return {
     color,
-    redFlags,
+    redFlags: color === 'RED_EXTREME' ? [...extremeFlags, ...redFlags] : redFlags,
     greenFlags,
+    sizeMultiplier,
     detail:
-      color === 'RED'
-        ? `红灯：${redFlags.join('；')} → 禁止追入（资格保留，等窗口）`
-        : color === 'GREEN'
-          ? `绿灯：${greenFlags.join('；')}`
-          : `黄灯：绿灯项${greenFlags.length}/3未达标${greenFlags.length > 0 ? `（${greenFlags.join('；')}）` : ''} → 观察`,
+      color === 'RED_EXTREME'
+        ? `深红：${extremeFlags.join('；')} → 禁止建仓（行为护栏，非收益理由；资格保留）`
+        : color === 'RED'
+          ? `红灯：${redFlags.join('；')} → 可建仓但规模减半（回测显示此区收益并不更差，仅控集中度）`
+          : color === 'GREEN'
+            ? `绿灯：${greenFlags.join('；')} → 全额规模（注意：回测中绿灯收益低于红灯 2.6pct/20日）`
+            : `黄灯：绿灯项${greenFlags.length}/3未达标${greenFlags.length > 0 ? `（${greenFlags.join('；')}）` : ''} → 规模七折`,
   }
 }
 
@@ -162,7 +198,9 @@ export function evaluatePromotion(
     blockedBy.push(`PE历史分位${(m.peHistoryPercentile * 100).toFixed(0)}%，高于80%上限（S3未达）`)
     return { stage: 'STAGE_2_EARNINGS', priceWindow, blockedBy }
   }
-  if (priceWindow.color !== 'GREEN') {
+  // 价格窗口只在深红区否决。绿/黄/红一律放行，仅由 sizeMultiplier 决定规模。
+  // 改动依据：2026-08-13 回测证伪"等绿灯能提高收益"，见 evaluatePriceWindow 注释。
+  if (priceWindow.color === 'RED_EXTREME') {
     blockedBy.push(`价格窗口${WINDOW_COLOR_TEXT[priceWindow.color]}（S3未达，资格保留）`)
     return { stage: 'STAGE_2_EARNINGS', priceWindow, blockedBy }
   }

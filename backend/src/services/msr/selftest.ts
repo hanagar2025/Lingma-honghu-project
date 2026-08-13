@@ -110,7 +110,8 @@ check('清零后 只研究主线仍被 RESEARCH_ONLY_MAINLINE 阻断',
     .filter(c => c.mainlineId === 'power')
     .every(c => c.blocks.includes('RESEARCH_ONLY_MAINLINE')))
 
-process.stdout.write('\n【四】反追涨对抗测试（回答"MSR会不会变成漂亮的追涨机器"）\n')
+process.stdout.write('\n【四】价格窗口：深红硬否决 vs 普通红灯只降规模\n')
+process.stdout.write('     （2026-08-13 回测证伪"等绿灯提高收益"后的新语义，见 promotion.ts 注释）\n')
 
 /**
  * 造一个典型追涨陷阱：长期横盘后10日暴涨70%，爆量，当日长上影。
@@ -147,12 +148,41 @@ const trapPromo = evaluatePromotion(trapMember, trapRadar, trap, { marketAllows:
 
 check(`追涨样本资金/趋势确实打高分（资${trapRadar.capital.score} 趋${trapRadar.trend.score}）—— 说明样本有效`,
   trapRadar.capital.score >= 2 || trapRadar.relativeStrength.score >= 3)
-check(`追涨样本价格窗口判为 RED（实际 ${trapWindow.color}）`, trapWindow.color === 'RED',
-  trapWindow.detail)
+check(`追涨样本（10日+70%）判为 RED_EXTREME（实际 ${trapWindow.color}）`,
+  trapWindow.color === 'RED_EXTREME', trapWindow.detail)
+check('深红样本规模系数为 0（唯一硬否决）', trapWindow.sizeMultiplier === 0)
 check('追涨样本红灯项 ≥ 3（涨幅/偏离/爆量/上影多项同时命中）',
   trapWindow.redFlags.length >= 3, trapWindow.redFlags.join(' | '))
 check(`追涨样本即便产业+盈利+估值全部满分，也停在 S2 不得建仓（实际 ${trapPromo.stage}）`,
   trapPromo.stage === 'STAGE_2_EARNINGS', trapPromo.blockedBy.join(' | '))
+
+/** 普通红灯：10日涨34%（越过30%红线但未入>50%极端区），无长上影、无爆量 */
+function moderateRedBars(n = 200): DailyBar[] {
+  const out: DailyBar[] = []
+  let px = 100
+  for (let i = 0; i < n - 10; i++) {
+    px = px * (1 + (i % 2 === 0 ? 0.001 : -0.001))
+    out.push({ date: `2026-01-${String(1 + (i % 28)).padStart(2, '0')}`, open: px, high: px * 1.005, low: px * 0.995, close: px, volume: 100000 })
+  }
+  for (let i = 0; i < 10; i++) {
+    px = px * 1.03
+    out.push({
+      date: `2026-08-${String(1 + i).padStart(2, '0')}`,
+      open: px * 0.995, high: px * 1.002, low: px * 0.99, close: px, volume: 150000,
+    })
+  }
+  return out
+}
+
+const modRed = moderateRedBars()
+const modRadar = runRadar(trapMember, modRed, flatBars())
+const modWindow = evaluatePriceWindow(modRed, modRadar)
+const modPromo = evaluatePromotion(trapMember, modRadar, modRed, { marketAllows: true, executionCleared: true })
+check(`普通红灯样本（10日+34%）判为 RED（实际 ${modWindow.color}）`, modWindow.color === 'RED', modWindow.detail)
+check('普通红灯规模系数为 0.5（缩规模而非否决）', modWindow.sizeMultiplier === 0.5)
+check(`普通红灯不再阻断 S3（实际 ${modPromo.stage}）—— 回测证伪后的新语义`,
+  modPromo.stage === 'STAGE_3_PRICE_WINDOW', modPromo.blockedBy.join(' | '))
+check('普通红灯的阻断清单里不含价格窗口理由', !modPromo.blockedBy.some(b => b.includes('价格窗口')))
 
 // 对照：同样全部字段满分，但价格贴近均线 —— 必须能晋级 S3，否则闸门是恒假的死锁
 const healthyEntry = (() => {
@@ -192,6 +222,16 @@ const total = cleared.reduceCandidates.length + cleared.potentialCores.length + 
 const codes = [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction].map(c => c.radar.code)
 check('三类输出无重复标的', new Set(codes).size === codes.length)
 check('三类输出覆盖全部有效样本', total === codes.length && total > 0)
+
+process.stdout.write('\n【七】实测能力披露必须随报告输出（防止"发现"被读成"已验证"）\n')
+check('报告带 backtest 字段', cleared.backtest !== undefined)
+check('披露中入场优势标记为不显著', cleared.backtest.entryEdge20d.significant === false)
+check('披露中置信区间确实跨0',
+  cleared.backtest.entryEdge20d.ci95[0] < 0 && cleared.backtest.entryEdge20d.ci95[1] > 0)
+check('结论文本包含实测披露字样', cleared.conclusion.includes('实测披露'))
+check('每个候选都带 sizeMultiplier',
+  [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
+    .every(c => typeof c.sizeMultiplier === 'number'))
 
 process.stdout.write(`\n=== 结果：${failures === 0 ? '全部通过' : `${failures} 项失败`} ===\n\n`)
 if (failures > 0) process.exit(1)

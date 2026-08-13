@@ -61,6 +61,30 @@ export const BLOCK_TEXT: Record<BlockReason, string> = {
   TREND_NOT_STARTED: '趋势未启动',
 }
 
+/**
+ * MSR 择时能力的实测读数。**必须随每份报告输出**，不得只在文档里提。
+ *
+ * 理由：2026-08-13 回测显示 MSR 的择时增量为 -14.5pct（劣于同域始终满仓），
+ * 入场信号相对基准的 20 日超额优势 +1.05pct 的 95% 区间为 [-0.89, +3.40]，跨 0。
+ * 若报告不带这行字，"雷达选出的第一名"极易被读成"经过验证的机会"——
+ * 这正是第10条教训（研究替代执行）的变体：用模型的复杂度冒充模型的有效性。
+ */
+export const MSR_BACKTEST_EVIDENCE = {
+  asOf: '2026-08-13',
+  sample: '27只标的 / 2023-05~2026-08 / 13500观测 / 日期区块自助抽样3000次',
+  entryEdge20d: { point: 0.0105, ci95: [-0.0089, 0.034] as [number, number], significant: false },
+  timingContribution: -0.145,
+  universeSelectionBias: 3.81,
+  verdict:
+    'MSR择时增量为负（-14.5pct，且最大回撤反而更深）；入场信号优势无法与噪声区分。' +
+    '当前 MSR 只应被当作"缩小观察范围的工具"，不得当作"已验证的选股能力"。',
+  scripts: [
+    'scripts/backtest-0813-signals.py',
+    'scripts/backtest-0813-regime.py',
+    'scripts/backtest-0813-significance.py',
+  ],
+} as const
+
 export interface MsrCandidate {
   radar: RadarResult
   mainlineId: string
@@ -71,6 +95,8 @@ export interface MsrCandidate {
   promotion: PromotionResult
   /** 可建仓：须同时满足 blocks 为空、窗口态为建仓/轮动、且晋级至 Stage3 */
   actionable: boolean
+  /** 首次建仓规模系数（来自价格窗口）。深红为0=禁止；其余仅缩放，不否决 */
+  sizeMultiplier: number
 }
 
 export interface MsrInput {
@@ -95,6 +121,8 @@ export interface MsrReport {
   /** 输出三：暂不行动 */
   noAction: MsrCandidate[]
   conclusion: string
+  /** 实测能力披露 —— 强制随报告输出，防止"发现"被读成"已验证" */
+  backtest: typeof MSR_BACKTEST_EVIDENCE
 }
 
 function classifyWindow(r: RadarResult, health: MainlineHealthResult): WindowState {
@@ -153,6 +181,7 @@ export function runMsr(input: MsrInput): MsrReport {
           blocks.length === 0 &&
           (window === 'ENTRY_WINDOW' || window === 'ROTATION_WINDOW') &&
           promotion.stage === 'STAGE_3_PRICE_WINDOW',
+        sizeMultiplier: promotion.priceWindow.sizeMultiplier,
       })
     }
   }
@@ -188,13 +217,19 @@ export function runMsr(input: MsrInput): MsrReport {
   const stageLine =
     `晋级分布：S0=${stageCount('STAGE_0_RADAR')} S1=${stageCount('STAGE_1_INDUSTRY')} ` +
     `S2=${stageCount('STAGE_2_EARNINGS')} S3=${stageCount('STAGE_3_PRICE_WINDOW')}`
-  const conclusion = locked
+  const caveat =
+    `［实测披露］MSR择时增量 ${(MSR_BACKTEST_EVIDENCE.timingContribution * 100).toFixed(1)}pct，` +
+    `入场优势95%区间[${(MSR_BACKTEST_EVIDENCE.entryEdge20d.ci95[0] * 100).toFixed(1)},` +
+    `${(MSR_BACKTEST_EVIDENCE.entryEdge20d.ci95[1] * 100).toFixed(1)}]pct跨0 —— ` +
+    `本表是观察范围，不是已验证的机会。`
+  const body = locked
     ? `执行未清零（${input.pendingSellCount}条卖出指令未执行）→ 建仓输出全部锁定。` +
       `本期发现${potentialCores.length}个势能改善位置，全部记为研究结论，0个可执行。${stageLine}。` +
       `解锁条件：卖出指令执行完毕并回报成交单。`
     : actionableCount === 0
       ? `无可执行建仓候选（${potentialCores.length}个位置进入窗口但未晋级至S3）。${stageLine}。`
       : `${actionableCount}个候选晋级S3，仍须经四道闸门与价格区间放行后方可买入。${stageLine}。`
+  const conclusion = `${body} ${caveat}`
 
   return {
     date: input.date,
@@ -210,5 +245,6 @@ export function runMsr(input: MsrInput): MsrReport {
     potentialCores,
     noAction,
     conclusion,
+    backtest: MSR_BACKTEST_EVIDENCE,
   }
 }
