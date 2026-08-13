@@ -36,6 +36,10 @@ export interface UniverseMember {
   peHistoryPercentile?: number
   /** 收入主线归因是否已核验（委员会 2026-08-12 强制字段） */
   mainlineAttributionVerified?: boolean
+  /** Stage1 产业验证：客户/产品/订单/竞争格局是否已建档 */
+  industryVerified?: boolean
+  /** Stage2 盈利验证：扣非利润/现金流/毛利率是否已核验 */
+  earningsVerified?: boolean
   note?: string
 }
 
@@ -60,9 +64,9 @@ export const MAINLINES: Mainline[] = [
     strategicStars: 5,
     benchmark: 'sz399006',
     members: [
-      { code: '300308', name: '中际旭创', tier: 1, node: '光模块', evidence: 'S', champion: true, mainlineAttributionVerified: true },
-      { code: '300502', name: '新易盛', tier: 1, node: '光模块', evidence: 'S', champion: true, mainlineAttributionVerified: true },
-      { code: '300394', name: '天孚通信', tier: 2, node: '光器件/光引擎', evidence: 'A', note: '2026H1预告净利11.24–13.04亿(+25%~45%)；扣非口径待中报' },
+      { code: '300308', name: '中际旭创', tier: 1, node: '光模块', evidence: 'S', industryVerified: true, earningsVerified: true, champion: true, mainlineAttributionVerified: true },
+      { code: '300502', name: '新易盛', tier: 1, node: '光模块', evidence: 'S', industryVerified: true, earningsVerified: true, champion: true, mainlineAttributionVerified: true },
+      { code: '300394', name: '天孚通信', tier: 2, node: '光器件/光引擎', evidence: 'A', industryVerified: true, earningsVerified: false, note: '2026H1预告净利11.24–13.04亿(+25%~45%)；扣非口径待中报' },
       { code: '300620', name: '光库科技', tier: 2, node: '光器件/调制器', evidence: 'B', note: '2026H1预告扣非+199%~219%；AI收入占比待核' },
       { code: '002281', name: '光迅科技', tier: 2, node: '光模块/光器件', evidence: 'B' },
       { code: '688313', name: '仕佳光子', tier: 3, node: '光芯片/AWG/FAU', evidence: 'B', mainlineAttributionVerified: false, note: '2025扣非+670%主体为电信复苏与连接器，非AI；CPO FAU仅小批量。8/12裁定研究通过投资暂缓' },
@@ -75,8 +79,8 @@ export const MAINLINES: Mainline[] = [
     strategicStars: 5,
     benchmark: 'sh000688',
     members: [
-      { code: '002371', name: '北方华创', tier: 1, node: '设备平台', evidence: 'S', champion: true },
-      { code: '688012', name: '中微公司', tier: 1, node: '刻蚀/MOCVD', evidence: 'S', champion: true },
+      { code: '002371', name: '北方华创', tier: 1, node: '设备平台', evidence: 'S', industryVerified: true, earningsVerified: true, mainlineAttributionVerified: true, champion: true },
+      { code: '688012', name: '中微公司', tier: 1, node: '刻蚀/MOCVD', evidence: 'S', industryVerified: true, earningsVerified: true, mainlineAttributionVerified: true, champion: true },
       { code: '688072', name: '拓荆科技', tier: 2, node: '薄膜沉积', evidence: 'A' },
       { code: '688120', name: '华海清科', tier: 2, node: 'CMP', evidence: 'A' },
       { code: '300567', name: '精测电子', tier: 3, node: '量测/检测', evidence: 'B' },
@@ -92,10 +96,10 @@ export const MAINLINES: Mainline[] = [
     strategicStars: 5,
     benchmark: 'sh000688',
     members: [
-      { code: '688041', name: '海光信息', tier: 1, node: 'CPU/DCU', evidence: 'S', champion: true },
-      { code: '603019', name: '中科曙光', tier: 1, node: '系统集成', evidence: 'A', champion: true, note: '研究席位；是否持仓属战术层' },
-      { code: '002463', name: '沪电股份', tier: 2, node: '互连PCB', evidence: 'S', champion: true },
-      { code: '002916', name: '深南电路', tier: 2, node: '互连PCB', evidence: 'A', champion: true },
+      { code: '688041', name: '海光信息', tier: 1, node: 'CPU/DCU', evidence: 'S', industryVerified: true, earningsVerified: true, mainlineAttributionVerified: true, champion: true },
+      { code: '603019', name: '中科曙光', tier: 1, node: '系统集成', evidence: 'A', industryVerified: true, earningsVerified: true, mainlineAttributionVerified: true, champion: true, note: '研究席位；是否持仓属战术层' },
+      { code: '002463', name: '沪电股份', tier: 2, node: '互连PCB', evidence: 'S', industryVerified: true, earningsVerified: true, mainlineAttributionVerified: true, champion: true },
+      { code: '002916', name: '深南电路', tier: 2, node: '互连PCB', evidence: 'A', industryVerified: true, earningsVerified: true, mainlineAttributionVerified: true, champion: true },
       { code: '600183', name: '生益科技', tier: 2, node: 'CCL材料', evidence: 'A' },
       { code: '002384', name: '东山精密', tier: 3, node: 'PCB/精密制造', evidence: 'B' },
     ],

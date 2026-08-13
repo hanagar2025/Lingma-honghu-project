@@ -3,7 +3,8 @@
 // 该不变量若被破坏，等于第10条教训（研究替代执行）在代码层失效。
 
 import { runMsr } from './index'
-import { pullbackDepths, upDownVolumeRatio, scoreTrend } from './radar'
+import { pullbackDepths, upDownVolumeRatio, scoreTrend, runRadar } from './radar'
+import { evaluatePriceWindow, evaluatePromotion } from './promotion'
 import { MAINLINES, allBenchmarks } from './universe'
 import type { DailyBar } from '../tios/types'
 
@@ -93,7 +94,7 @@ for (const pending of [1, 3, 7, 99]) {
 }
 
 process.stdout.write('\n【三】清零后仍受其余闸门约束（不得因解锁而放行）\n')
-const cleared = runMsr({ date: '2026-08-13', barsByCode, indexBarsByCode, pendingSellCount: 0 })
+const cleared = runMsr({ date: '2026-08-13', barsByCode, indexBarsByCode, pendingSellCount: 0, marketAllows: true })
 check('清零后闸门解锁', !cleared.executionGate.locked)
 check('清零后仍无标的带 EXECUTION_DEBT',
   [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
@@ -109,7 +110,84 @@ check('清零后 只研究主线仍被 RESEARCH_ONLY_MAINLINE 阻断',
     .filter(c => c.mainlineId === 'power')
     .every(c => c.blocks.includes('RESEARCH_ONLY_MAINLINE')))
 
-process.stdout.write('\n【四】输出只有三类，且互斥、完备\n')
+process.stdout.write('\n【四】反追涨对抗测试（回答"MSR会不会变成漂亮的追涨机器"）\n')
+
+/**
+ * 造一个典型追涨陷阱：长期横盘后10日暴涨70%，爆量，当日长上影。
+ * 这是资金/相对强度/趋势三维都会打高分的形态 —— 若 MSR 会追涨，这里必然放行。
+ */
+function chaseTrapBars(n = 200): DailyBar[] {
+  const out: DailyBar[] = []
+  let px = 100
+  for (let i = 0; i < n - 10; i++) {
+    px = px * (1 + (i % 2 === 0 ? 0.001 : -0.001))
+    out.push({ date: `2026-01-${String(1 + (i % 28)).padStart(2, '0')}`, open: px, high: px * 1.005, low: px * 0.995, close: px, volume: 100000 })
+  }
+  for (let i = 0; i < 10; i++) {
+    px = px * 1.055
+    const isLast = i === 9
+    out.push({
+      date: `2026-08-${String(1 + i).padStart(2, '0')}`,
+      open: px * 0.98, high: isLast ? px * 1.09 : px * 1.02, low: px * 0.97, close: px,
+      volume: isLast ? 900000 : 500000,
+    })
+  }
+  return out
+}
+
+const trap = chaseTrapBars()
+const trapMember = {
+  code: '300308', name: '追涨陷阱样本', tier: 2 as const, node: '测试',
+  evidence: 'S' as const, industryVerified: true, earningsVerified: true,
+  mainlineAttributionVerified: true, peHistoryPercentile: 0.1,
+}
+const trapRadar = runRadar(trapMember, trap, flatBars())
+const trapWindow = evaluatePriceWindow(trap, trapRadar)
+const trapPromo = evaluatePromotion(trapMember, trapRadar, trap, { marketAllows: true, executionCleared: true })
+
+check(`追涨样本资金/趋势确实打高分（资${trapRadar.capital.score} 趋${trapRadar.trend.score}）—— 说明样本有效`,
+  trapRadar.capital.score >= 2 || trapRadar.relativeStrength.score >= 3)
+check(`追涨样本价格窗口判为 RED（实际 ${trapWindow.color}）`, trapWindow.color === 'RED',
+  trapWindow.detail)
+check('追涨样本红灯项 ≥ 3（涨幅/偏离/爆量/上影多项同时命中）',
+  trapWindow.redFlags.length >= 3, trapWindow.redFlags.join(' | '))
+check(`追涨样本即便产业+盈利+估值全部满分，也停在 S2 不得建仓（实际 ${trapPromo.stage}）`,
+  trapPromo.stage === 'STAGE_2_EARNINGS', trapPromo.blockedBy.join(' | '))
+
+// 对照：同样全部字段满分，但价格贴近均线 —— 必须能晋级 S3，否则闸门是恒假的死锁
+const healthyEntry = (() => {
+  const b = strongBars(200, 100)
+  // 尾部做一次回踩，使价格回到 MA20 附近
+  const px = b[b.length - 1].close
+  for (let i = 0; i < 8; i++) {
+    b.push({ date: `2026-08-${String(20 + i).padStart(2, '0')}`, open: px * 0.99, high: px * 0.995, low: px * 0.96, close: px * (0.985 - i * 0.004), volume: 95000 })
+  }
+  return b
+})()
+const heRadar = runRadar(trapMember, healthyEntry, flatBars())
+const hePromo = evaluatePromotion(trapMember, heRadar, healthyEntry, { marketAllows: true, executionCleared: true })
+check(`健康回踩样本可晋级 S3（实际 ${hePromo.stage}，窗口${hePromo.priceWindow.color}）—— 证明S3不是恒假死锁`,
+  hePromo.stage === 'STAGE_3_PRICE_WINDOW', hePromo.blockedBy.join(' | '))
+
+process.stdout.write('\n【五】晋级制不可跳级\n')
+const noIndustry = { ...trapMember, industryVerified: false }
+const noEarnings = { ...trapMember, earningsVerified: false }
+const noAttr = { ...trapMember, mainlineAttributionVerified: false }
+const noPe = { ...trapMember, peHistoryPercentile: undefined }
+check('产业未验证 → 停在 S0',
+  evaluatePromotion(noIndustry, heRadar, healthyEntry, { marketAllows: true, executionCleared: true }).stage === 'STAGE_0_RADAR')
+check('盈利未验证 → 停在 S1',
+  evaluatePromotion(noEarnings, heRadar, healthyEntry, { marketAllows: true, executionCleared: true }).stage === 'STAGE_1_INDUSTRY')
+check('主线归因未核验 → 停在 S1',
+  evaluatePromotion(noAttr, heRadar, healthyEntry, { marketAllows: true, executionCleared: true }).stage === 'STAGE_1_INDUSTRY')
+check('PE历史分位缺失 → 停在 S2',
+  evaluatePromotion(noPe, heRadar, healthyEntry, { marketAllows: true, executionCleared: true }).stage === 'STAGE_2_EARNINGS')
+check('市场阶段不允许 → 停在 S2',
+  evaluatePromotion(trapMember, heRadar, healthyEntry, { marketAllows: false, executionCleared: true }).stage === 'STAGE_2_EARNINGS')
+check('执行未清零 → 停在 S2',
+  evaluatePromotion(trapMember, heRadar, healthyEntry, { marketAllows: true, executionCleared: false }).stage === 'STAGE_2_EARNINGS')
+
+process.stdout.write('\n【六】输出只有三类，且互斥、完备\n')
 const total = cleared.reduceCandidates.length + cleared.potentialCores.length + cleared.noAction.length
 const codes = [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction].map(c => c.radar.code)
 check('三类输出无重复标的', new Set(codes).size === codes.length)

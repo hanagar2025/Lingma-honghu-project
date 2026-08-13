@@ -4,6 +4,7 @@
 
 import { fetchDailyBars } from '../marketData'
 import { runMsr, WINDOW_TEXT, BLOCK_TEXT, type MsrCandidate } from './index'
+import { STAGE_TEXT, WINDOW_COLOR_TEXT } from './promotion'
 import { MAINLINES, allBenchmarks, allCodes } from './universe'
 import type { DailyBar } from '../tios/types'
 
@@ -20,8 +21,10 @@ function line(c: MsrCandidate): string {
     `[资${s.capital.score.toFixed(1)} 强${s.relativeStrength.score.toFixed(1)} ` +
     `趋${s.trend.score.toFixed(1)} 据${s.evidence.score.toFixed(1)} 估${s.valuation.score.toFixed(1)}] ` +
     `距MA20 ${pct(m.distMa20).padStart(7)} 距MA60 ${pct(m.distMa60).padStart(7)} ` +
-    `20日超额 ${pct(m.excess20).padStart(7)} → ${WINDOW_TEXT[c.window]}` +
-    (c.blocks.length > 0 ? `｜阻断: ${c.blocks.map(b => BLOCK_TEXT[b]).join('、')}` : '｜✅ 无阻断')
+    `20日超额 ${pct(m.excess20).padStart(7)} ` +
+    `→ ${STAGE_TEXT[c.promotion.stage]}｜${WINDOW_COLOR_TEXT[c.promotion.priceWindow.color]}｜${WINDOW_TEXT[c.window]}` +
+    (c.blocks.length > 0 ? `\n      阻断: ${c.blocks.map(b => BLOCK_TEXT[b]).join('、')}` : '｜✅ 无阻断') +
+    (c.promotion.blockedBy.length > 0 ? `\n      晋级卡点: ${c.promotion.blockedBy.join('；')}` : '')
   )
 }
 
@@ -53,7 +56,8 @@ async function main(): Promise<void> {
   const anyBars = Object.values(barsByCode).find(b => b.length > 0)
   const date = anyBars ? anyBars[anyBars.length - 1].date : new Date().toISOString().slice(0, 10)
 
-  const rep = runMsr({ date, barsByCode, indexBarsByCode, pendingSellCount: pendingSells })
+  const marketAllows = process.env.MARKET_ALLOWS === '1'
+  const rep = runMsr({ date, barsByCode, indexBarsByCode, pendingSellCount: pendingSells, marketAllows })
 
   process.stdout.write(`\n${'='.repeat(112)}\nMSR 报告 ${rep.date}\n${'='.repeat(112)}\n`)
   process.stdout.write(`\n【执行债务闸门】${rep.executionGate.locked ? '🔒 已锁定' : '🔓 已解锁'} —— ${rep.executionGate.detail}\n`)

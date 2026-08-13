@@ -11,6 +11,7 @@
 import type { DailyBar } from '../tios/types'
 import { runRadar, type RadarResult } from './radar'
 import { evaluateMainlineHealth, type MainlineHealthResult } from './health'
+import { evaluatePromotion, type PromotionResult } from './promotion'
 import {
   MAINLINES, MIN_EVIDENCE_FOR_CANDIDATE, RESEARCH_ONLY_MAINLINE_IDS,
   type Mainline, type UniverseMember,
@@ -66,7 +67,9 @@ export interface MsrCandidate {
   mainlineName: string
   window: WindowState
   blocks: BlockReason[]
-  /** 只有 blocks 为空且 window 为 ENTRY_WINDOW/ROTATION_WINDOW 才是真候选 */
+  /** 四阶段晋级结果 —— 只有 STAGE_3_PRICE_WINDOW 才可能 actionable */
+  promotion: PromotionResult
+  /** 可建仓：须同时满足 blocks 为空、窗口态为建仓/轮动、且晋级至 Stage3 */
   actionable: boolean
 }
 
@@ -76,8 +79,8 @@ export interface MsrInput {
   indexBarsByCode: Record<string, DailyBar[]>
   /** 未执行的卖出指令条数 —— 来自 TIOS 执行台账。>0 即锁死全部建仓输出 */
   pendingSellCount: number
-  /** 组合是否处于熔断降仓期 */
-  portfolioCircuitActive?: boolean
+  /** 市场阶段是否允许建仓（下跌期/熔断期为 false）。缺省按不允许处理 —— 默认从严 */
+  marketAllows?: boolean
 }
 
 export interface MsrReport {
@@ -139,9 +142,17 @@ export function runMsr(input: MsrInput): MsrReport {
       const r = runRadar(m, bars, index)
       const window = classifyWindow(r, h)
       const blocks = collectBlocks(m, ml, r, h, input, window)
+      const promotion = evaluatePromotion(m, r, bars, {
+        marketAllows: input.marketAllows === true,
+        executionCleared: input.pendingSellCount === 0,
+      })
       all.push({
-        radar: r, mainlineId: ml.id, mainlineName: ml.name, window, blocks,
-        actionable: blocks.length === 0 && (window === 'ENTRY_WINDOW' || window === 'ROTATION_WINDOW'),
+        radar: r, mainlineId: ml.id, mainlineName: ml.name, window, blocks, promotion,
+        // 三重条件同时成立才可建仓。晋级制是最后一道，且不可被高评分绕过。
+        actionable:
+          blocks.length === 0 &&
+          (window === 'ENTRY_WINDOW' || window === 'ROTATION_WINDOW') &&
+          promotion.stage === 'STAGE_3_PRICE_WINDOW',
       })
     }
   }
@@ -173,13 +184,17 @@ export function runMsr(input: MsrInput): MsrReport {
 
   const locked = input.pendingSellCount > 0
   const actionableCount = potentialCores.filter(c => c.actionable).length
+  const stageCount = (s: PromotionResult['stage']): number => all.filter(c => c.promotion.stage === s).length
+  const stageLine =
+    `晋级分布：S0=${stageCount('STAGE_0_RADAR')} S1=${stageCount('STAGE_1_INDUSTRY')} ` +
+    `S2=${stageCount('STAGE_2_EARNINGS')} S3=${stageCount('STAGE_3_PRICE_WINDOW')}`
   const conclusion = locked
     ? `执行未清零（${input.pendingSellCount}条卖出指令未执行）→ 建仓输出全部锁定。` +
-      `本期发现${potentialCores.length}个势能改善位置，全部记为研究结论，0个可执行。` +
+      `本期发现${potentialCores.length}个势能改善位置，全部记为研究结论，0个可执行。${stageLine}。` +
       `解锁条件：卖出指令执行完毕并回报成交单。`
     : actionableCount === 0
-      ? `无可执行建仓候选（${potentialCores.length}个位置进入窗口但被闸门阻断）。`
-      : `${actionableCount}个候选通过MSR闸门，仍须经四道闸门与价格区间放行后方可买入。`
+      ? `无可执行建仓候选（${potentialCores.length}个位置进入窗口但未晋级至S3）。${stageLine}。`
+      : `${actionableCount}个候选晋级S3，仍须经四道闸门与价格区间放行后方可买入。${stageLine}。`
 
   return {
     date: input.date,
