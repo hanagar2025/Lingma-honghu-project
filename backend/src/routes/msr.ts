@@ -3,9 +3,9 @@
 // 建仓输出受执行台账约束：未执行卖出指令数由 trade_executions 实时统计，不接受客户端传入。
 
 import { Router } from 'express'
-import { getConnection } from '../config/database'
 import { authenticateToken, type AuthRequest } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
+import { countPendingSells } from '../services/executionLedger'
 import { fetchDailyBars, getBarsFromDB } from '../services/marketData'
 import { runMsr, WINDOW_TEXT, BLOCK_TEXT } from '../services/msr'
 import { loadValuationMap, VALUATION_FILE } from '../services/msr/valuation'
@@ -30,18 +30,6 @@ router.get('/universe', (_req, res) => {
     },
   })
 })
-
-/** 统计未执行的卖出指令数 —— MSR 建仓闸门的唯一输入，不可由外部覆盖 */
-async function countPendingSells(userId: string): Promise<number> {
-  const conn = getConnection()
-  const [rows] = await conn.execute(
-    `SELECT COUNT(*) AS cnt FROM trade_executions
-     WHERE user_id = ? AND action <> 'NONE' AND executed = 0`,
-    [userId]
-  )
-  const r = (rows as { cnt: number | string }[])[0]
-  return Number(r?.cnt ?? 0)
-}
 
 /**
  * 运行 MSR 扫描。
