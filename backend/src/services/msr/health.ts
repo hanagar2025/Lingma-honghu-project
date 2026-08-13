@@ -73,13 +73,21 @@ export function evaluateMainlineHealth(
   })
 
   // ② 板块总成交额是否保持：以全部成员成交额合成
-  const dates = barsByCode[withBars[0].code].map(b => b.date)
+  // 用 Map 而非逐日 find：一是 O(n·m) 变 O(n+m)，二是 find 会在日期重复时静默取到首个匹配
+  // （自检造数曾因日期循环生成而命中此坑，板块成交额被算成萎缩）。同一日期重复时保留最后一条。
+  const byDate = new Map<string, Map<string, DailyBar>>()
+  for (const m of withBars) {
+    const inner = new Map<string, DailyBar>()
+    for (const b of barsByCode[m.code]) inner.set(b.date, b)
+    byDate.set(m.code, inner)
+  }
+  const dates = [...new Set(barsByCode[withBars[0].code].map(b => b.date))]
   const sectorSeries: DailyBar[] = dates.slice(-70).map(d => {
     let amt = 0
     let close = 0
     let cnt = 0
     for (const m of withBars) {
-      const hit = barsByCode[m.code].find(b => b.date === d)
+      const hit = byDate.get(m.code)?.get(d)
       if (hit) { amt += hit.close * hit.volume; close += hit.close; cnt++ }
     }
     return { date: d, open: 0, high: 0, low: 0, close: cnt > 0 ? close / cnt : 0, volume: cnt > 0 ? amt / Math.max(close / cnt, 1) : 0 }

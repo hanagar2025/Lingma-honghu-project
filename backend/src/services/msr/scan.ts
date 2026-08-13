@@ -6,6 +6,7 @@ import { fetchDailyBars } from '../marketData'
 import { runMsr, WINDOW_TEXT, BLOCK_TEXT, type MsrCandidate } from './index'
 import { STAGE_TEXT, WINDOW_COLOR_TEXT } from './promotion'
 import { MAINLINES, allBenchmarks, allCodes } from './universe'
+import { loadValuationMap, VALUATION_FILE } from './valuation'
 import type { DailyBar } from '../tios/types'
 
 function pct(v: number | null | undefined, digits = 1): string {
@@ -57,7 +58,16 @@ async function main(): Promise<void> {
   const date = anyBars ? anyBars[anyBars.length - 1].date : new Date().toISOString().slice(0, 10)
 
   const marketAllows = process.env.MARKET_ALLOWS === '1'
-  const rep = runMsr({ date, barsByCode, indexBarsByCode, pendingSellCount: pendingSells, marketAllows })
+  const valuationByCode = loadValuationMap(VALUATION_FILE)
+  const vCount = Object.values(valuationByCode).filter(v => v.usable).length
+  process.stdout.write(
+    Object.keys(valuationByCode).length === 0
+      ? '⚠ 未找到 data/valuation.json，估值维度将全部记0并阻断S3。先跑 npm run msr:valuation\n'
+      : `PE历史分位已加载：${vCount}/${Object.keys(valuationByCode).length} 只可用于闸门\n`
+  )
+  const rep = runMsr({
+    date, barsByCode, indexBarsByCode, pendingSellCount: pendingSells, marketAllows, valuationByCode,
+  })
 
   process.stdout.write(`\n${'='.repeat(112)}\nMSR 报告 ${rep.date}\n${'='.repeat(112)}\n`)
   process.stdout.write(`\n【执行债务闸门】${rep.executionGate.locked ? '🔒 已锁定' : '🔓 已解锁'} —— ${rep.executionGate.detail}\n`)

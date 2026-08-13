@@ -12,6 +12,7 @@ import type { DailyBar } from '../tios/types'
 import { runRadar, type RadarResult } from './radar'
 import { evaluateMainlineHealth, type MainlineHealthResult } from './health'
 import { evaluatePromotion, type PromotionResult } from './promotion'
+import type { ValuationInjection } from './valuation'
 import {
   MAINLINES, MIN_EVIDENCE_FOR_CANDIDATE, RESEARCH_ONLY_MAINLINE_IDS,
   type Mainline, type UniverseMember,
@@ -107,6 +108,11 @@ export interface MsrInput {
   pendingSellCount: number
   /** 市场阶段是否允许建仓（下跌期/熔断期为 false）。缺省按不允许处理 —— 默认从严 */
   marketAllows?: boolean
+  /**
+   * PE历史分位，由 `npm run msr:valuation` 生成的 data/valuation.json 注入。
+   * 缺失或 usable=false 时估值维度记 0 分并阻断 S3 —— 没有数据就不许买，不静默放行。
+   */
+  valuationByCode?: Record<string, ValuationInjection>
 }
 
 export interface MsrReport {
@@ -164,9 +170,14 @@ export function runMsr(input: MsrInput): MsrReport {
   for (const ml of MAINLINES) {
     const h = healthById.get(ml.id)!
     const index = input.indexBarsByCode[ml.benchmark]
-    for (const m of ml.members) {
-      const bars = input.barsByCode[m.code]
+    for (const raw of ml.members) {
+      const bars = input.barsByCode[raw.code]
       if (!bars || bars.length < 65 || !index) continue
+      // 注入实测PE历史分位。usable=false（TTM亏损/PE极端/样本不足）时不注入，
+      // 让估值维度维持"缺失"状态并继续阻断 S3 —— 坏数据与无数据同等对待。
+      const v = input.valuationByCode?.[raw.code]
+      const m: UniverseMember =
+        v?.usable && v.percentile3y !== null ? { ...raw, peHistoryPercentile: v.percentile3y } : raw
       const r = runRadar(m, bars, index)
       const window = classifyWindow(r, h)
       const blocks = collectBlocks(m, ml, r, h, input, window)

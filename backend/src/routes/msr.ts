@@ -8,6 +8,7 @@ import { authenticateToken, type AuthRequest } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
 import { fetchDailyBars, getBarsFromDB } from '../services/marketData'
 import { runMsr, WINDOW_TEXT, BLOCK_TEXT } from '../services/msr'
+import { loadValuationMap, VALUATION_FILE } from '../services/msr/valuation'
 import { EVIDENCE_DEFINITION, MAINLINES, allBenchmarks, allCodes } from '../services/msr/universe'
 import type { DailyBar } from '../services/tios/types'
 import { logger } from '../utils/logger'
@@ -80,8 +81,17 @@ router.post('/scan', authenticateToken, asyncHandler(async (req: AuthRequest, re
   const anyBars = Object.values(barsByCode).find(b => b.length > 0)
   const date = anyBars ? anyBars[anyBars.length - 1].date : new Date().toISOString().slice(0, 10)
 
-  const report = runMsr({ date, barsByCode, indexBarsByCode, pendingSellCount })
-  res.json({ success: true, data: { ...report, missing, windowText: WINDOW_TEXT, blockText: BLOCK_TEXT } })
+  // PE历史分位由 npm run msr:valuation 离线生成。文件缺失时估值维度记0并阻断S3，不静默放行。
+  const valuationByCode = loadValuationMap(VALUATION_FILE)
+  const report = runMsr({ date, barsByCode, indexBarsByCode, pendingSellCount, valuationByCode })
+  res.json({
+    success: true,
+    data: {
+      ...report, missing, windowText: WINDOW_TEXT, blockText: BLOCK_TEXT,
+      valuationLoaded: Object.keys(valuationByCode).length,
+      valuationUsable: Object.values(valuationByCode).filter(v => v.usable).length,
+    },
+  })
 }))
 
 export default router

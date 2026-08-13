@@ -5,6 +5,7 @@
 import { runMsr } from './index'
 import { pullbackDepths, upDownVolumeRatio, scoreTrend, runRadar } from './radar'
 import { evaluatePriceWindow, evaluatePromotion } from './promotion'
+import { buildPeTtmSeries, computeTtmEps, pePercentile, type FinancialReport } from './valuation'
 import { MAINLINES, allBenchmarks } from './universe'
 import type { DailyBar } from '../tios/types'
 
@@ -18,6 +19,17 @@ function check(name: string, cond: boolean, extra = ''): void {
   }
 }
 
+/**
+ * 造数日期必须**严格递增且唯一**。
+ * 曾用 `2026-${1+(i%12)}-${1+(i%28)}` 生成，200个bar里日期循环重复，
+ * 导致 health.ts 按日期取值时取到早期低价bar，四条主线全被误判为 BROAD_RETREAT，
+ * 进而 potentialCores 恒为空、多条 .every() 断言空集通过。造数错误会让断言静默失效。
+ */
+function seqDate(i: number): string {
+  const d = new Date(Date.UTC(2025, 0, 1) + i * 86400000)
+  return d.toISOString().slice(0, 10)
+}
+
 /** 造一段强势上行K线：稳定上涨、上涨日放量 */
 function strongBars(n = 200, start = 100): DailyBar[] {
   const out: DailyBar[] = []
@@ -26,7 +38,7 @@ function strongBars(n = 200, start = 100): DailyBar[] {
     const up = i % 3 !== 0
     px = px * (up ? 1.012 : 0.994)
     out.push({
-      date: `2026-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`,
+      date: seqDate(i),
       open: px, high: px * 1.01, low: px * 0.99, close: px,
       volume: up ? 200000 : 90000,
     })
@@ -42,7 +54,7 @@ function weakBars(n = 200, start = 200): DailyBar[] {
     const up = i % 3 === 0
     px = px * (up ? 1.006 : 0.99)
     out.push({
-      date: `2026-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`,
+      date: seqDate(i),
       open: px, high: px * 1.01, low: px * 0.99, close: px,
       volume: up ? 90000 : 220000,
     })
@@ -52,9 +64,18 @@ function weakBars(n = 200, start = 200): DailyBar[] {
 
 function flatBars(n = 200, start = 100): DailyBar[] {
   return Array.from({ length: n }, (_, i) => ({
-    date: `2026-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`,
+    date: seqDate(i),
     open: start, high: start * 1.005, low: start * 0.995, close: start, volume: 100000,
   }))
+}
+
+/**
+ * 非空断言 —— 对集合做 .every() 前必须先过这一关。
+ * 空数组的 .every() 恒为 true，会让断言看起来通过却什么都没测。
+ */
+function nonEmpty<T>(name: string, arr: T[]): T[] {
+  check(`${name}（非空前提，${arr.length}项）`, arr.length > 0)
+  return arr
 }
 
 process.stdout.write('\n=== MSR 自检 ===\n\n【一】指标函数\n')
@@ -100,14 +121,14 @@ check('清零后仍无标的带 EXECUTION_DEBT',
   [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
     .every(c => !c.blocks.includes('EXECUTION_DEBT')))
 check('清零后 PE历史分位缺失仍导致评分不完整阻断',
-  [...cleared.potentialCores].every(c => c.blocks.includes('SCORE_INCOMPLETE')))
+  nonEmpty('潜在新核心', cleared.potentialCores).every(c => c.blocks.includes('SCORE_INCOMPLETE')))
 check('清零后 C级清退标的仍被 RETIRED_C_TIER 阻断',
-  [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
-    .filter(c => ['603986', '688008'].includes(c.radar.code))
+  nonEmpty('C级清退标的', [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
+    .filter(c => ['603986', '688008'].includes(c.radar.code)))
     .every(c => c.blocks.includes('RETIRED_C_TIER')))
 check('清零后 只研究主线仍被 RESEARCH_ONLY_MAINLINE 阻断',
-  [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
-    .filter(c => c.mainlineId === 'power')
+  nonEmpty('只研究主线标的', [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleared.noAction]
+    .filter(c => c.mainlineId === 'power'))
     .every(c => c.blocks.includes('RESEARCH_ONLY_MAINLINE')))
 
 process.stdout.write('\n【四】价格窗口：深红硬否决 vs 普通红灯只降规模\n')
@@ -247,7 +268,91 @@ const codes = [...cleared.reduceCandidates, ...cleared.potentialCores, ...cleare
 check('三类输出无重复标的', new Set(codes).size === codes.length)
 check('三类输出覆盖全部有效样本', total === codes.length && total > 0)
 
-process.stdout.write('\n【七】实测能力披露必须随报告输出（防止"发现"被读成"已验证"）\n')
+process.stdout.write('\n【七】PE历史分位：TTM推算、公告日对齐（无未来函数）、坏数据不得放行\n')
+
+const rpt = (
+  year: number, quarter: 1 | 2 | 3 | 4, noticeDate: string, basicEps: number | null
+): FinancialReport => ({
+  reportDate: `${year}-${['03-31', '06-30', '09-30', '12-31'][quarter - 1]}`,
+  noticeDate, basicEps, deductEps: null, revenue: null, netProfit: null, quarter, year,
+})
+
+// 用中际旭创真实数据校验 TTM 公式：
+// 2026Q1 TTM = 2025年报9.80 + 2026Q1累计5.18 - 2025Q1累计1.44 = 13.54
+const zjReports: FinancialReport[] = [
+  rpt(2026, 1, '2026-04-17', 5.18),
+  rpt(2025, 4, '2026-03-31', 9.80),
+  rpt(2025, 1, '2025-04-21', 1.44),
+  rpt(2024, 4, '2025-04-21', 4.72),
+]
+const ttmQ1 = computeTtmEps(zjReports, 0)
+check(`TTM推算正确：2026Q1 = 9.80+5.18-1.44 = 13.54（实际 ${ttmQ1?.toFixed(2)}）`,
+  ttmQ1 !== null && Math.abs(ttmQ1 - 13.54) < 0.005)
+check('年报期TTM直接取累计值（2025Q4 = 9.80）', computeTtmEps(zjReports, 1) === 9.8)
+check('缺上年同期数据时TTM返回null（宁缺勿估）',
+  computeTtmEps([rpt(2026, 2, '2026-08-01', 8.0)], 0) === null)
+
+// 无未来函数：报告期2025-12-31、公告日2026-03-31。
+// 2026-02-01 的PE绝不允许使用该期利润 —— 那是三个月后才公布的数字。
+const priceBars: DailyBar[] = [
+  { date: '2026-02-01', open: 100, high: 100, low: 100, close: 100, volume: 1 },
+  { date: '2026-03-30', open: 100, high: 100, low: 100, close: 100, volume: 1 },
+  { date: '2026-04-01', open: 100, high: 100, low: 100, close: 100, volume: 1 },
+]
+const series = buildPeTtmSeries(priceBars, [rpt(2025, 4, '2026-03-31', 5.0), rpt(2024, 4, '2025-03-28', 4.0)])
+const before = series.find(p => p.date === '2026-02-01')
+const after = series.find(p => p.date === '2026-04-01')
+check('公告日前一日不得使用该期财报（2026-02-01 应取上一期年报4.00）',
+  before !== undefined && Math.abs(before.ttmEps - 4.0) < 1e-9, `实际 ${before?.ttmEps}`)
+check('公告日后使用新财报（2026-04-01 应取5.00 → PE=20）',
+  after !== undefined && Math.abs((after.pe ?? 0) - 20) < 1e-9, `实际 PE=${after?.pe}`)
+check('公告日当日边界：<=当日即可见（2026-03-30 仍取旧期）',
+  series.find(p => p.date === '2026-03-30')?.ttmEps === 4.0)
+
+// 坏数据不得产出分位：TTM亏损时必须返回 null，不得退用窗口内最后一个有效PE
+const lossBars: DailyBar[] = Array.from({ length: 200 }, (_, i) => ({
+  date: `2026-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`,
+  open: 100, high: 100, low: 100, close: 100, volume: 1,
+}))
+const lossSeries = buildPeTtmSeries(lossBars, [rpt(2020, 4, '2021-01-01', 5.0)])
+const lossSeriesTail = [...lossSeries]
+lossSeriesTail[lossSeriesTail.length - 1] = {
+  ...lossSeriesTail[lossSeriesTail.length - 1], ttmEps: -0.02, pe: null,
+}
+check('最新PE为空（TTM亏损）时分位必须为null，不得退用陈旧PE',
+  pePercentile(lossSeriesTail, 750) === null)
+check('有效样本不足60个时分位为null', pePercentile(lossSeries.slice(0, 30), 750) === null)
+
+// 坏数据注入 MSR 时，必须继续阻断 S3（坏数据与无数据同等对待）
+const badVal = { peTtm: 16810, percentile3y: 0.96, usable: false, note: 'PE极端' }
+const withBad = runMsr({
+  date: '2026-08-13', barsByCode, indexBarsByCode, pendingSellCount: 0, marketAllows: true,
+  valuationByCode: Object.fromEntries(MAINLINES.flatMap(ml => ml.members).map(m => [m.code, badVal])),
+})
+check('usable=false 的估值数据不得注入，S3 仍被阻断',
+  nonEmpty('全部候选', [...withBad.reduceCandidates, ...withBad.potentialCores, ...withBad.noAction])
+    .every(c => c.promotion.stage !== 'STAGE_3_PRICE_WINDOW'))
+
+// 正常数据注入后，S3 必须可达（否则闸门是恒假死锁）
+const goodVal = { peTtm: 30, percentile3y: 0.15, usable: true, note: 'ok' }
+const withGood = runMsr({
+  date: '2026-08-13', barsByCode, indexBarsByCode, pendingSellCount: 0, marketAllows: true,
+  valuationByCode: Object.fromEntries(MAINLINES.flatMap(ml => ml.members).map(m => [m.code, goodVal])),
+})
+check('注入低分位估值后估值维度不再为0分（应得满分5）',
+  nonEmpty('全部候选', [...withGood.reduceCandidates, ...withGood.potentialCores, ...withGood.noAction])
+    .every(c => c.radar.valuation.score === 5))
+check('高分位（>80%）估值必须触发 VALUATION_PERCENTILE_HIGH 阻断', (() => {
+  const high = { peTtm: 200, percentile3y: 0.96, usable: true, note: 'ok' }
+  const rep = runMsr({
+    date: '2026-08-13', barsByCode, indexBarsByCode, pendingSellCount: 0, marketAllows: true,
+    valuationByCode: Object.fromEntries(MAINLINES.flatMap(ml => ml.members).map(m => [m.code, high])),
+  })
+  return nonEmpty('全部候选', [...rep.reduceCandidates, ...rep.potentialCores, ...rep.noAction])
+    .every(c => c.blocks.includes('VALUATION_PERCENTILE_HIGH'))
+})())
+
+process.stdout.write('\n【八】实测能力披露必须随报告输出（防止"发现"被读成"已验证"）\n')
 check('报告带 backtest 字段', cleared.backtest !== undefined)
 check('披露中入场优势标记为不显著', cleared.backtest.entryEdge20d.significant === false)
 check('披露中置信区间确实跨0',
