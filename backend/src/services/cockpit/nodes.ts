@@ -53,15 +53,35 @@ export const NODE_TAXONOMY: NodeSpec[] = [
   { mainlineId: 'compute', name: '系统集成', aliases: ['系统集成'] },
   { mainlineId: 'compute', name: '高速互联PCB', aliases: ['互连PCB', 'PCB/精密制造'] },
   { mainlineId: 'compute', name: 'CCL材料', aliases: ['CCL材料'] },
-  { mainlineId: 'compute', name: '液冷', aliases: ['液冷'] },
   // ── AI电力 ──
   { mainlineId: 'power', name: '变压器', aliases: ['变压器'] },
   { mainlineId: 'power', name: '配电', aliases: ['配电'] },
   { mainlineId: 'power', name: '电网', aliases: ['电网升级', '电网设备'] },
+  // 液冷归在 AI电力（委员会原始清单口径），且 universe.ts 里英维克确实挂在 power 下。
+  // 曾把它错列在 AI算力 名下，后果是英维克在第③问里被整条漏掉 ——
+  // 节点清单与扫描域不一致时，标的会静默消失而不是报错，故下方增设覆盖率不变量。
+  { mainlineId: 'power', name: '液冷', aliases: ['液冷'] },
   { mainlineId: 'power', name: 'UPS', aliases: ['UPS'] },
   { mainlineId: 'power', name: '储能', aliases: ['储能'] },
   { mainlineId: 'power', name: '电源管理', aliases: ['AI服务器电源', '电源管理'] },
 ]
+
+/**
+ * 覆盖率自检：扫描域里每个标的都必须被某个节点认领。
+ *
+ * 节点清单与 universe.ts 是两份独立维护的配置，一旦对不上，
+ * 标的会从第③问里**静默消失**而不是报错 —— 静默丢标的比报错危险得多。
+ */
+export function findUnclaimedMembers(): { code: string; name: string; mainline: string; node: string }[] {
+  const out: { code: string; name: string; mainline: string; node: string }[] = []
+  for (const ml of MAINLINES) {
+    for (const m of ml.members) {
+      const claimed = NODE_TAXONOMY.some(s => s.mainlineId === ml.id && s.aliases.includes(m.node))
+      if (!claimed) out.push({ code: m.code, name: m.name, mainline: ml.name, node: m.node })
+    }
+  }
+  return out
+}
 
 export interface NodeMomentum {
   mainlineId: string

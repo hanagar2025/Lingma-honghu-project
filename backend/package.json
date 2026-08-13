@@ -10,7 +10,9 @@
     "tios:selftest": "tsx src/services/tios/selftest.ts",
     "msr:scan": "tsx src/services/msr/scan.ts",
     "msr:selftest": "tsx src/services/msr/selftest.ts",
-    "msr:valuation": "tsx src/services/msr/valuationFetch.ts"
+    "msr:valuation": "tsx src/services/msr/valuationFetch.ts",
+    "cockpit": "tsx src/services/cockpit/run.ts",
+    "cockpit:selftest": "tsx src/services/cockpit/selftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

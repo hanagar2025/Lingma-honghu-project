@@ -174,6 +174,14 @@ export function evaluateMomentum(input: MomentumInput): { answer: Answer; rows: 
       triggers.push(`PE历史分位${(v.percentile3y * 100).toFixed(0)}%（>80%）`)
     }
 
+    // ⑦ C级清退标的仍在持仓 —— 只提示复核，不自动生成卖出。
+    // 清退是战略层"关闭仓位资格"的裁定，退出须走冠军替换四步程序；
+    // 若在这里自动转成减仓单，等于让执行层替战略层做决定。但也不能不显示 ——
+    // 不显示会让清退标的在驾驶舱里与正常持仓毫无区别。
+    if (hit?.member.retiredC) {
+      triggers.push('C级清退标的仍在持仓，退出须走冠军替换四步程序（战略层裁定，非本系统自动执行）')
+    }
+
     const breach = breachByCode.get(p.code)
     rows.push({
       code: p.code, name: p.name,

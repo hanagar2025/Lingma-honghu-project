@@ -11,7 +11,7 @@ import type { DailyBar, Position, AccountSnapshot } from '../tios/types'
 import { runCockpit } from './index'
 import { evaluateSafety, findLimitBreaches, worstLight } from './safety'
 import { evaluateMomentum } from './momentum'
-import { evaluateNodes, NODE_TAXONOMY } from './nodes'
+import { evaluateNodes, findUnclaimedMembers, NODE_TAXONOMY } from './nodes'
 import {
   makeAction, IllegalActionError, FORBIDDEN_REASON_PHRASES, LEGAL_REASON_TEXT,
   type Action, type LegalReason,
@@ -212,6 +212,16 @@ console.log('\n【第③问】节点聚合与研究缺口')
 
 const nodes = evaluateNodes({ barsByCode, indexBarsByCode, asOf: '2026-08-13' })
 ok('节点分类表覆盖委员会列出的全部节点', NODE_TAXONOMY.length >= 28, String(NODE_TAXONOMY.length))
+
+// 关键不变量：节点清单与扫描域是两份独立配置，对不上会让标的静默消失
+const unclaimed = findUnclaimedMembers()
+ok('扫描域内每个标的都被某个节点认领（无静默丢失）',
+  unclaimed.length === 0,
+  unclaimed.map(u => `${u.name}@${u.mainline}/${u.node}`).join('、'))
+
+ok('液冷节点归属 AI电力，且英维克被它认领',
+  nodes.nodes.some(n => n.node === '液冷' && n.mainlineId === 'power' &&
+    n.members.some(m => m.name === '英维克')))
 
 const covered = nonEmpty('有覆盖的节点', nodes.nodes.filter(n => n.coverage === 'COVERED'))
 ok('节点势能分数在 0–10 之间', covered.every(n => n.score !== null && n.score >= 0 && n.score <= 10))
