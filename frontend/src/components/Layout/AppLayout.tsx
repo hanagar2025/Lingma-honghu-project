@@ -3,6 +3,7 @@ import { Layout, Menu, Button, Avatar, Dropdown, Space } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  DashboardOutlined,
   ThunderboltOutlined,
   WalletOutlined,
   UserOutlined,
@@ -29,6 +30,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const menuItems = [
     {
       key: '/',
+      icon: <DashboardOutlined />,
+      label: '每日驾驶舱',
+    },
+    {
+      key: '/daily',
       icon: <ThunderboltOutlined />,
       label: '盘前四问',
     },

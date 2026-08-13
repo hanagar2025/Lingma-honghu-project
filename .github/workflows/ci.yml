@@ -25,10 +25,20 @@ jobs:
         run: |
           npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
           npm install --workspaces --include-workspace-root --legacy-peer-deps
+      # 用工作区自己的 script，而不是 npx --workspace + -p 路径：
+      # 后者会把 cwd 切到 backend/ 却仍按仓库根解析 backend/tsconfig.json，
+      # 结果 typecheck 一直以 TS5058 失败，**后面的自检步骤从未执行过**。
+      # 一个不运行的守卫和没有守卫是一回事。
       - name: Typecheck
-        run: npx --workspace backend tsc --noEmit -p backend/tsconfig.json
+        run: npm -w backend run typecheck
       - name: TIOS engine selftest
         run: npm -w backend run tios:selftest
+      - name: MSR radar selftest (执行债务闸门不变量)
+        run: npm -w backend run msr:selftest
+      # 驾驶舱自检守的是"观察指标不得产生动作"这条不变量。
+      # 它必须在 CI 里跑 —— 否则该约束只是注释里的一句承诺。
+      - name: Cockpit selftest (观察指标不得产生动作)
+        run: npm -w backend run cockpit:selftest
       - name: Run backend tests
         run: npm -w backend run test -- --coverage
 
@@ -51,6 +61,6 @@ jobs:
           npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
           npm install --workspaces --include-workspace-root --legacy-peer-deps
       - name: Typecheck
-        run: npx --workspace frontend tsc --noEmit -p frontend/tsconfig.json
+        run: npm -w frontend run typecheck
       - name: Build
         run: npm -w frontend run build

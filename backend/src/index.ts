@@ -12,6 +12,8 @@ import authRoutes from './routes/auth'
 import portfolioRoutes from './routes/portfolio'
 import marketRoutes from './routes/market'
 import tiosRoutes from './routes/tios'
+import msrRoutes from './routes/msr'
+import cockpitRoutes from './routes/cockpit'
 import { errorHandler } from './middleware/errorHandler'
 import { setupScheduler } from './services/scheduler'
 
@@ -33,6 +35,8 @@ app.use('/api/auth', authRoutes)
 app.use('/api/portfolio', portfolioRoutes)
 app.use('/api/market', marketRoutes)
 app.use('/api/tios', tiosRoutes)
+app.use('/api/msr', msrRoutes)
+app.use('/api/cockpit', cockpitRoutes)
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
