@@ -16,7 +16,10 @@
     "cockpit:selftest": "tsx src/services/cockpit/selftest.ts",
     "freeze:check": "tsx src/services/governance/freeze.ts check",
     "freeze:baseline": "tsx src/services/governance/freeze.ts baseline",
-    "audit:selftest": "tsx src/services/governance/selftest.ts"
+    "audit:selftest": "tsx src/services/governance/selftest.ts",
+    "profit:fetch": "tsx src/services/research/profitFetch.ts",
+    "profit:map": "tsx src/services/research/profitMapRun.ts",
+    "research:selftest": "tsx src/services/research/selftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",
