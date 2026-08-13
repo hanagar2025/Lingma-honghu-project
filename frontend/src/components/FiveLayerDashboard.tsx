@@ -80,11 +80,126 @@ const Completeness: React.FC<{ v: number | null | undefined; judgable?: boolean;
 
 const SECTION: React.CSSProperties = { marginBottom: 16 }
 
-export interface FiveLayerDashboardProps {
-  dashboard: any
+const SCOPE_TEXT: Record<string, string> = {
+  STRUCTURE: '市场结构', HOLDING: '持仓', MAINLINE: '主线',
+  NODE: '产业节点', NEXT_LAYER: '下一观察层',
 }
 
-const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({ dashboard: d }) => {
+const CHANGE_KIND_TEXT: Record<string, { color: string; label: string }> = {
+  VALUE: { color: 'blue', label: '数值变化' },
+  STATE: { color: 'purple', label: '状态变化' },
+  APPEARED: { color: 'green', label: '由缺失变为有值' },
+  DISAPPEARED: { color: 'orange', label: '由有值变为缺失' },
+}
+
+/**
+ * 今日变化 —— 委员会 2026-08-13：核心输出从「谁可以买」改成「谁正在发生变化」。
+ *
+ * 预测能力未被证明，变化检测能力可以建立。因此这一区放在四张表之前。
+ * 组内不排序、不加权：任何"重要性排序"都需要一个重要性评分，而评分已被写死禁止。
+ */
+const TodayChanges: React.FC<{ changes: any; discovery: any }> = ({ changes, discovery }) => {
+  const items: any[] = changes?.items ?? []
+  const prevDate: string | null = changes?.prevDate ?? null
+  const advances: any[] = discovery?.advances ?? []
+
+  return (
+    <Card
+      style={SECTION}
+      title={<Title level={5} style={{ margin: 0 }}>今日变化 —— 谁正在发生变化？</Title>}
+      extra={
+        <Space>
+          <Tag>{prevDate ? `对比 ${prevDate}` : '首次快照'}</Tag>
+          <Tag color={items.length ? 'blue' : 'default'}>{items.length} 项变化</Tag>
+          <Tag color={advances.length ? 'green' : 'default'}>闸门跃迁 {advances.length} 次</Tag>
+        </Space>
+      }
+    >
+      {!prevDate ? (
+        <Alert
+          type="info"
+          showIcon
+          message="首次建立快照，无可比较基准"
+          description="明日起本区显示逐项变化。变化台账是 Discovery KPI 的唯一数据来源：30 天后要回答「当时我们看到了什么，后来发生了什么」，只能靠每天存下来。"
+        />
+      ) : items.length === 0 ? (
+        <Alert
+          type="success"
+          showIcon
+          message="今日无变化"
+          description="这不是故障。多数交易日大部分读数确实不变；系统没有义务每天制造新发现。"
+        />
+      ) : (
+        <Space direction="vertical" size={10} style={{ width: '100%' }}>
+          {['STRUCTURE', 'HOLDING', 'MAINLINE', 'NODE', 'NEXT_LAYER'].map(scope => {
+            const group = items.filter(c => c.scope === scope)
+            if (!group.length) return null
+            return (
+              <div key={scope}>
+                <Text strong style={{ fontSize: 13 }}>{SCOPE_TEXT[scope]}</Text>
+                <div style={{ marginTop: 4 }}>
+                  {group.map((c, i) => (
+                    <div key={i} style={{ fontSize: 13, lineHeight: 1.9, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Text type="secondary" style={{ minWidth: 200 }}>{c.key} · {c.field}</Text>
+                      <Text delete type="secondary">{c.from}</Text>
+                      <Text>→</Text>
+                      <Text strong>{c.to}</Text>
+                      {c.delta !== null && c.delta !== undefined && (
+                        <Text style={{ color: c.delta > 0 ? '#ff3b30' : '#0a84ff' }}>
+                          （{c.delta > 0 ? '+' : ''}
+                          {c.from?.endsWith?.('%') && c.to?.endsWith?.('%')
+                            ? `${(c.delta * 100).toFixed(1)}pct`
+                            : Math.abs(c.delta) >= 1 ? c.delta.toFixed(2) : c.delta.toFixed(3)}）
+                        </Text>
+                      )}
+                      <Tooltip title={CHANGE_KIND_TEXT[c.kind]?.label}>
+                        <Tag color={CHANGE_KIND_TEXT[c.kind]?.color} style={{ marginInlineEnd: 0 }}>
+                          {CHANGE_KIND_TEXT[c.kind]?.label ?? c.kind}
+                        </Tag>
+                      </Tooltip>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </Space>
+      )}
+
+      {advances.length > 0 && (
+        <Alert
+          type="success"
+          showIcon
+          style={{ marginTop: 12 }}
+          message="闸门跃迁 —— 谁从 S0 → S1 → S2"
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.9 }}>
+              {advances.slice(-8).map((a: any, i: number) => (
+                <div key={i}>{a.date} · {a.key}：通过闸门 {a.from} → {a.to}（{a.gates}）</div>
+              ))}
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                跃迁只表示验证链上前进了一步，不表示获得行动资格。
+              </Text>
+            </div>
+          }
+        />
+      )}
+      {prevDate && advances.length === 0 && (
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 10 }}>
+          尚无闸门跃迁。这本身是信息：说明没有任何节点在验证链上前进。
+        </Text>
+      )}
+    </Card>
+  )
+}
+
+export interface FiveLayerDashboardProps {
+  dashboard: any
+  changes?: any
+  discovery?: any
+}
+
+const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({ dashboard: d, changes, discovery }) => {
   if (!d) {
     return (
       <Alert
@@ -131,6 +246,9 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({ dashboard: d })
           {d.sessionNote}
         </Text>
       </Card>
+
+      {/* ══ 今日变化：核心输出，放在四张表之前 ══ */}
+      <TodayChanges changes={changes} discovery={discovery} />
 
       {/* ══ 市场结构：切主线 还是 打深一层 ══ */}
       <Alert

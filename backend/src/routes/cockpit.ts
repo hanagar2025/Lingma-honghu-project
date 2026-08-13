@@ -14,6 +14,11 @@ import { runCockpit } from '../services/cockpit'
 import { buildDashboard, type SessionKind } from '../services/cockpit/dashboard'
 import { renderDashboard } from '../services/cockpit/renderDashboard'
 import type { MomentumRow } from '../services/cockpit/momentum'
+import {
+  snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
+  loadDiscovery, updateDiscovery, saveDiscovery, stageAdvances,
+  type Change, type DiscoveryLedger,
+} from '../services/governance/changeLog'
 import { buildProfitMap, type ProfitMap } from '../services/research/profitRadar'
 import type { MsrReport } from '../services/msr'
 import { buildAudit, computeKpis, renderAuditMarkdown, type CostSnapshot } from '../services/governance/audit'
@@ -180,12 +185,40 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
     })
     : null
 
+  // ── 变化台账 ──
+  // 只在盘后落档：盘中读数会污染日间序列。接口调用不写盘也不影响决策，
+  // 但会让 Discovery KPI 少一天样本，所以失败要记日志而不是静默跳过。
+  let changes: Change[] = []
+  let prevDate: string | null = null
+  let discovery: DiscoveryLedger = { updatedAt: '', entries: [] }
+  if (dashboard) {
+    try {
+      const snap = snapshotOf(dashboard)
+      const prev = loadPrevSnapshot(snap.date)
+      prevDate = prev?.date ?? null
+      changes = prev ? diffSnapshots(prev, snap) : []
+      discovery = updateDiscovery(loadDiscovery(), dashboard)
+      if (session === 'POST_CLOSE') {
+        saveSnapshot(snap)
+        saveDiscovery(discovery)
+      }
+    } catch (e) {
+      logger.warn(`变化台账写入失败（不影响当日决策输出）：${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   res.json({
     success: true,
     data: {
       ...report,
       dashboard,
       dashboardText: dashboard ? renderDashboard(dashboard) : null,
+      changes: { prevDate, items: changes },
+      discovery: {
+        nodeCount: discovery.entries.length,
+        advances: stageAdvances(discovery),
+        firstSeenToday: discovery.entries.filter(e => e.firstSeen === date).map(e => e.key),
+      },
       pendingSells,
       audit,
       auditMarkdown: auditMd,

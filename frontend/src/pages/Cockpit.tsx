@@ -203,7 +203,7 @@ const Cockpit: React.FC = () => {
       </Card>
 
       {/* ── 五层驾驶舱：四张研究表 + 隔离的动作区 ── */}
-      <FiveLayerDashboard dashboard={data.dashboard} />
+      <FiveLayerDashboard dashboard={data.dashboard} changes={data.changes} discovery={data.discovery} />
 
       {/* ── 首页单表（六问汇总） ── */}
       <Card

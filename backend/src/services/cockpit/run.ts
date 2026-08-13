@@ -21,6 +21,10 @@ import type { DailyBar, Position } from '../tios/types'
 import { runCockpit } from './index'
 import { buildDashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
+import {
+  snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
+  loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
+} from '../governance/changeLog'
 import { buildProfitMap } from '../research/profitRadar'
 import type { ProfitMap } from '../research/profitRadar'
 import type { MsrReport } from '../msr'
@@ -195,6 +199,23 @@ async function main(): Promise<void> {
       dataGaps: rep.dataGaps,
     })
     process.stdout.write(`${renderDashboard(dash)}\n`)
+
+    // ── 变化台账 ──
+    // 盘前不落档：盘中读数会污染日间序列，而这份档案要连续读 30 个交易日。
+    if (session === 'POST_CLOSE') {
+      const snap = snapshotOf(dash)
+      const prev = loadPrevSnapshot(snap.date)
+      const changes = prev ? diffSnapshots(prev, snap) : []
+      const snapFile = saveSnapshot(snap)
+      const ledger = updateDiscovery(loadDiscovery(), dash)
+      saveDiscovery(ledger)
+
+      process.stdout.write(`\n${'═'.repeat(122)}\n`)
+      process.stdout.write(`${renderChanges(changes, prev?.date ?? null, snap.date)}\n`)
+      process.stdout.write(`\n${renderDiscovery(ledger, snap.date)}\n`)
+      process.stdout.write(`\n快照已归档 ${snapFile}（${snap.readings.length} 项读数）\n`)
+    }
+
     if (session === 'POST_CLOSE' && process.env.SIX === '1') printReport(rep)
   }
 

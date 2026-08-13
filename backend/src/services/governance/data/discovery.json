@@ -1,0 +1,756 @@
+{
+  "updatedAt": "2026-08-13",
+  "entries": [
+    {
+      "key": "optical/光纤",
+      "mainlineId": "optical",
+      "node": "光纤",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.12915738968915275,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/硅光",
+      "mainlineId": "optical",
+      "node": "硅光",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.051768620105677766,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/光器件/光引擎",
+      "mainlineId": "optical",
+      "node": "光器件/光引擎",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✓/✗/✓/?",
+          "gatesPassed": 3,
+          "nodeShare": 0.03972125373726874,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 4.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/高速连接",
+      "mainlineId": "optical",
+      "node": "高速连接",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.02258219451315417,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 2.3%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/光模块/光器件",
+      "mainlineId": "optical",
+      "node": "光模块/光器件",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.019362091188833995,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 1.9%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/光芯片/AWG/FAU",
+      "mainlineId": "optical",
+      "node": "光芯片/AWG/FAU",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.016027405815684292,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 1.6%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/CPO",
+      "mainlineId": "optical",
+      "node": "CPO",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.015804461311322272,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 1.6%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/光芯片/CW激光器",
+      "mainlineId": "optical",
+      "node": "光芯片/CW激光器",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.01448067167701924,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 1.4%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/光器件/调制器",
+      "mainlineId": "optical",
+      "node": "光器件/调制器",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.0036101538447218784,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.4%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "optical/EML",
+      "mainlineId": "optical",
+      "node": "EML",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.0003614991018709647,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/存储",
+      "mainlineId": "semi",
+      "node": "存储",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.2361642727575684,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "战略层不允许：在册标的兆易创新均为C级清退。节点份额上升只能记为覆盖缺口，须走冠军替换四步程序或补入新标的",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/刻蚀/MOCVD",
+      "mainlineId": "semi",
+      "node": "刻蚀/MOCVD",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✓/✓/✓/?",
+          "gatesPassed": 4,
+          "nodeShare": 0.15038365010214783,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/互连芯片",
+      "mainlineId": "semi",
+      "node": "互连芯片",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.1369512370943584,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "战略层不允许：在册标的澜起科技均为C级清退。节点份额上升只能记为覆盖缺口，须走冠军替换四步程序或补入新标的",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/薄膜沉积",
+      "mainlineId": "semi",
+      "node": "薄膜沉积",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.09221969461677586,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/材料",
+      "mainlineId": "semi",
+      "node": "材料",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.07412183110662567,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/CMP",
+      "mainlineId": "semi",
+      "node": "CMP",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.03996895857108031,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 4.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/零部件",
+      "mainlineId": "semi",
+      "node": "零部件",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.005228081328096117,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.5%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/检测装备",
+      "mainlineId": "semi",
+      "node": "检测装备",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.0007587543535627139,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.1%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/清洗",
+      "mainlineId": "semi",
+      "node": "清洗",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": null,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "semi/量测/检测",
+      "mainlineId": "semi",
+      "node": "量测/检测",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/?/?",
+          "gatesPassed": 1,
+          "nodeShare": null,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "compute/CCL材料",
+      "mainlineId": "compute",
+      "node": "CCL材料",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.2031979542650952,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "compute/CPU/DCU",
+      "mainlineId": "compute",
+      "node": "CPU/DCU",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✓/✓/✓/?",
+          "gatesPassed": 4,
+          "nodeShare": 0.19499280730692162,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "compute/PCB/精密制造",
+      "mainlineId": "compute",
+      "node": "PCB/精密制造",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.19473302612409413,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "compute/系统集成",
+      "mainlineId": "compute",
+      "node": "系统集成",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✓/✓/✓/?",
+          "gatesPassed": 4,
+          "nodeShare": 0.03997568967466613,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 4.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/电网设备",
+      "mainlineId": "power",
+      "node": "电网设备",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.10505981557139384,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/电网升级",
+      "mainlineId": "power",
+      "node": "电网升级",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.10046350147740372,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/配电",
+      "mainlineId": "power",
+      "node": "配电",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.04275813472333313,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 4.3%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/UPS",
+      "mainlineId": "power",
+      "node": "UPS",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "观察",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.04138789509073326,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 4.1%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/变压器",
+      "mainlineId": "power",
+      "node": "变压器",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✗/?/?/?/?",
+          "gatesPassed": 0,
+          "nodeShare": 0.026177858394955827,
+          "strategyAllows": false,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "无在册标的（仅研究域覆盖）",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 2.6%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/AI服务器电源",
+      "mainlineId": "power",
+      "node": "AI服务器电源",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/✓/?",
+          "gatesPassed": 2,
+          "nodeShare": 0.019513458720914225,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 2.0%"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "power/液冷",
+      "mainlineId": "power",
+      "node": "液冷",
+      "firstSeen": "2026-08-13",
+      "lastSeen": "2026-08-13",
+      "history": [
+        {
+          "date": "2026-08-13",
+          "stage": "研究",
+          "gates": "✓/✗/✗/?/?",
+          "gatesPassed": 1,
+          "nodeShare": null,
+          "strategyAllows": true,
+          "blockedBy": [
+            "执行债务 7 笔未清偿",
+            "S1产业验证未完成",
+            "S2盈利验证未完成",
+            "S3估值分位不可用",
+            "Money Radar 数据不可得（真实资金流免费源缺失）",
+            "节点利润份额仅 0.0%"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -11,8 +11,14 @@
 import { buildRuleRegistry, detectDrift, fingerprint, type FreezeBaseline } from './ruleRegistry'
 import { loadBaseline } from './freeze'
 import { buildAudit, computeE3, computeKpis, renderAuditMarkdown, type CostSnapshot, type E3Input } from './audit'
+import {
+  snapshotOf, diffSnapshots, renderChanges,
+  updateDiscovery, stageAdvances, renderDiscovery,
+} from './changeLog'
 import { LEGAL_REASON_TEXT } from '../cockpit/types'
 import type { CockpitReport } from '../cockpit/types'
+import type { Dashboard } from '../cockpit/dashboard'
+import { readFileSync } from 'node:fs'
 
 let failed = 0
 let passed = 0
@@ -270,6 +276,148 @@ ok('缺 KPI 时仍写出 KPI 小节并说明缺在哪里',
 // 法定理由文本表不得出现在审计里被改写
 ok('审计中的法定理由取自枚举文本表',
   audit.actions.legalReduces[0].reason === LEGAL_REASON_TEXT.POSITION_LIMIT)
+
+// ───────────────────────────────────────────────────────────────
+console.log('\n【变化台账】把核心输出从「谁可以买」改成「谁正在发生变化」')
+// ───────────────────────────────────────────────────────────────
+
+// 最小驾驶舱替身：只含变化检测会读到的字段
+function fakeDash(over: Partial<Record<string, unknown>> = {}): Dashboard {
+  const base = {
+    date: '2026-08-13', session: 'POST_CLOSE' as const, sessionNote: '',
+    headline: {} as Dashboard['headline'],
+    marketStructure: {
+      kind: 'DEEPENING' as const, headline: '', evidence: [], switchEvidence: '',
+      tier: 'ACCOUNTING' as const, canGenerateAction: false as const,
+    },
+    holdings: [{
+      code: '300308', name: '中际旭创', posPct: 0.098, ret1: 0, ret5: 0, ret20: -0.172,
+      relMainline: -0.144, aboveMa20: false, aboveMa60: false, pePercentile: 0.6, peUsable: true,
+      nodeShareArrow: '↑↑' as const, shareWithinNode: 0.673, industryPosition: '光模块',
+      reviewTriggers: ['a', 'b'], legalReason: null, status: '观察' as const,
+      systemAction: '不动作，仅复核', metrics: [],
+    }],
+    mainlines: [{
+      mainlineId: 'optical', name: 'AI光通信', trend: '↓' as const, relStrength: '→' as const,
+      volumeProxy: '↓' as const, profitStructure: '↑↑' as const, leaderStatus: '龙头承压',
+      completeness: 0.33, verdict: '主线未失效', judgable: true, blockers: [], metrics: [],
+    }],
+    nodeStructure: {
+      optical: [{
+        mainlineId: 'optical', node: '光模块', npLevel: 8.51e9, levelShare: 0.687, delta4Q: 10.2,
+        leaders: [], direction: '↑↑' as const, researchOnly: false, maxReportAgeDays: 135,
+      }],
+    },
+    nextLayer: [{
+      mainlineId: 'optical', node: '光芯片/CW激光器', members: [{ code: '688498', name: '源杰科技' }],
+      strategyAllows: true, retiredMembers: [],
+      industryTrend: '↓↓' as const, profitTrend: '↑↑' as const, nodeShare: 0.014,
+      money: '?' as const, relStrength: '↓↓' as const, valuation: '历史分位 46%', evidenceTier: 'A',
+      gates: { s0Discovered: true, s1Industry: false, s2Earnings: false, s3Valuation: true, moneyRadar: null },
+      stage: '观察' as const, actionAllowed: false as const,
+      actionBlockedBy: ['执行债务 7 笔未清偿', 'S1产业验证未完成'],
+    }],
+    actionZone: { mustExecute: [{ label: 'x', detail: 'y' }], allowedResearch: [], forbidden: [], newEntryCount: 0 },
+    dataGaps: [], noCompositeScoreNote: '',
+  }
+  return { ...base, ...over } as unknown as Dashboard
+}
+
+const s1 = snapshotOf(fakeDash())
+ok('快照覆盖五个 scope',
+  new Set(s1.readings.map(r => r.scope)).size === 5,
+  String(new Set(s1.readings.map(r => r.scope)).size))
+ok('快照记录节点存量份额', s1.readings.some(r => r.field === '存量份额' && r.value === 0.687))
+ok('快照记录S闸门通过数（缺失不计为通过）',
+  s1.readings.find(r => r.field === 'S闸门')?.value === 2,
+  String(s1.readings.find(r => r.field === 'S闸门')?.value))
+ok('快照记录战略层许可', s1.readings.some(r => r.field === '战略层许可' && r.display === '允许'))
+
+// 同一份数据求差 → 无变化
+ok('相同快照求差结果为空', diffSnapshots(s1, s1).length === 0)
+
+// 份额上升 0.014 → 0.030（委员会关心的 0→1→2→5 爬升）
+const d2 = fakeDash({ date: '2026-08-14' })
+d2.nextLayer[0].nodeShare = 0.03
+d2.nodeStructure.optical[0].levelShare = 0.70
+const s2 = snapshotOf(d2)
+const ch = diffSnapshots(s1, s2)
+ok('检出节点存量份额变化', ch.some(c => c.field === '存量份额' && c.from === '68.7%' && c.to === '70.0%'))
+ok('数值变化附带 delta', ch.find(c => c.field === '存量份额')?.delta !== null)
+ok('小幅份额爬升不被阈值过滤（1.6pct 级别也报出）',
+  ch.some(c => c.field === '节点份额' && c.to === '3.0%'), JSON.stringify(ch.map(c => c.field)))
+
+// 缺失↔有值 的转变须与数值变化区分
+const d3 = fakeDash({ date: '2026-08-15' })
+d3.holdings[0].peUsable = false
+d3.holdings[0].pePercentile = null
+const chMiss = diffSnapshots(s1, snapshotOf(d3))
+ok('由有值变为不可用 → 标记为 DISAPPEARED',
+  chMiss.find(c => c.field === 'PE历史分位')?.kind === 'DISAPPEARED')
+const chBack = diffSnapshots(snapshotOf(d3), s1)
+ok('由不可用变为有值 → 标记为 APPEARED',
+  chBack.find(c => c.field === 'PE历史分位')?.kind === 'APPEARED')
+
+// 状态类变化（非数值）不得伪造 delta
+const d4 = fakeDash({ date: '2026-08-16' })
+d4.mainlines[0].trend = '↑'
+const chState = diffSnapshots(s1, snapshotOf(d4))
+ok('箭头类变化标记为 STATE 且 delta 为 null',
+  chState.find(c => c.field === '趋势')?.kind === 'STATE' &&
+  chState.find(c => c.field === '趋势')?.delta === null)
+
+// 新标的出现 / 消失
+const d5 = fakeDash({ date: '2026-08-17' })
+d5.holdings = []
+const chGone = diffSnapshots(s1, snapshotOf(d5))
+ok('持仓消失被检出', chGone.some(c => c.scope === 'HOLDING' && c.to === '（已消失）'))
+
+// 渲染
+ok('无前一日快照时明说无基准',
+  renderChanges([], null, '2026-08-13').includes('无可比较基准'))
+ok('无变化时明说"不是故障"',
+  renderChanges([], '2026-08-12', '2026-08-13').includes('不是故障'))
+
+// ── 发现台账 ──
+let ledger = updateDiscovery({ updatedAt: '', entries: [] }, fakeDash())
+ok('首次记录写入 firstSeen', ledger.entries[0].firstSeen === '2026-08-13')
+ok('首次记录写入一条历史', ledger.entries[0].history.length === 1)
+
+// 读数未变 → 不重复追加（否则30天后台账里90%是噪声）
+ledger = updateDiscovery(ledger, fakeDash({ date: '2026-08-14' }))
+ok('读数未变时不追加历史', ledger.entries[0].history.length === 1)
+ok('但 lastSeen 前进', ledger.entries[0].lastSeen === '2026-08-14')
+
+// 闸门跃迁 S1 核验完成
+const adv = fakeDash({ date: '2026-08-28' })
+adv.nextLayer[0].gates.s1Industry = true
+adv.nextLayer[0].actionBlockedBy = ['执行债务 7 笔未清偿']
+ledger = updateDiscovery(ledger, adv)
+ok('闸门变化时追加历史', ledger.entries[0].history.length === 2)
+const advances = stageAdvances(ledger)
+ok('检出闸门跃迁（S0→S1）', advances.length === 1 && advances[0].to === 3,
+  JSON.stringify(advances))
+ok('跃迁记录带日期，供30天后回溯', advances[0].date === '2026-08-28')
+ok('台账渲染写出跃迁记录',
+  renderDiscovery(ledger, '2026-08-28').includes('通过闸门 2 → 3'))
+ok('无跃迁时明说"这本身是信息"',
+  renderDiscovery({ updatedAt: '', entries: [{
+    key: 'k', mainlineId: 'optical', node: 'n', firstSeen: 'x', lastSeen: 'x', history: [],
+  }] }, 'x').includes('这本身是信息'))
+
+// 同日重跑覆盖而不重复
+const rerun = updateDiscovery(ledger, adv)
+ok('同日重跑不产生重复历史行', rerun.entries[0].history.length === 2)
+
+// 变化台账不得产生动作，也不得引入阈值
+const src = readFileSync(new URL('./changeLog.ts', import.meta.url), 'utf-8')
+ok('changeLog.ts 不调用 makeAction', !/\bmakeAction\s*\(/.test(src))
+ok('changeLog.ts 不 import 动作类型', !/from '\.\.\/cockpit\/types'/.test(src))
+
+// 规则指纹不因变化台账而改变 —— 审计不是决策规则
+ok('新增变化台账后规则指纹仍为冻结基线值',
+  loadBaseline() === null || fingerprint().hash === loadBaseline()!.hash,
+  `${fingerprint().hash} vs ${loadBaseline()?.hash}`)
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
