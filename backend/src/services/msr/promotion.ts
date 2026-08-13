@@ -89,13 +89,21 @@ export interface PriceWindowResult {
  *   集中度风险由**12%单票上限**这条独立规则承担，与价格无关、与预测无关。
  *   一个风险配一个控制点；用价格窗口再兜一层，是把未经检验的机制伪装成风控。
  */
+/**
+ * 全系统唯一具备决策效力的价格阈值：10日涨幅 > 50% → 硬否决。
+ *
+ * 提取为命名常量的原因：规则指纹（governance/ruleRegistry.ts）须引用真实取值，
+ * 而不是在别处手抄一份。手抄的副本会与本体分叉，而分叉的规则等于没有规则。
+ */
+export const RED_EXTREME_RET10_THRESHOLD = 0.5
+
 export function evaluatePriceWindow(bars: DailyBar[], r: RadarResult): PriceWindowResult {
   const m = r.metrics
   const redFlags: string[] = []
   const greenFlags: string[] = []
 
   // 唯一具备决策效力的判据。阈值与检验结果见函数注释。
-  if (m.ret10 !== null && m.ret10 > 0.5) {
+  if (m.ret10 !== null && m.ret10 > RED_EXTREME_RET10_THRESHOLD) {
     redFlags.push(`10日涨幅 +${(m.ret10 * 100).toFixed(1)}%（>50%，实测此区20日超额 -7.25pct）`)
   }
 

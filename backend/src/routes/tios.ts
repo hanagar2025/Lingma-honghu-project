@@ -112,7 +112,8 @@ router.get('/executions', authenticateToken, asyncHandler(async (req: AuthReques
   const conn = getConnection()
   const [rows] = await conn.execute(
     `SELECT id, DATE_FORMAT(report_date, '%Y-%m-%d') as reportDate, stock_code as stockCode,
-            clause, required_action as requiredAction, executed, note
+            clause, required_action as requiredAction, executed,
+            DATE_FORMAT(executed_at, '%Y-%m-%d %H:%i') as executedAt, note
      FROM trade_executions WHERE user_id = ? ORDER BY report_date DESC, id DESC LIMIT 100`,
     [req.user!.id]
   )
@@ -120,11 +121,20 @@ router.get('/executions', authenticateToken, asyncHandler(async (req: AuthReques
 }))
 
 router.put('/executions/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { executed, note } = req.body ?? {}
+  const { executed, note, executedAt } = req.body ?? {}
   const conn = getConnection()
+  // executedAt 允许显式回填历史执行时间（补记旧账）；未提供则取当前时间。
+  // 取消执行标记时清空时间戳，避免留下"未执行但有执行时间"的矛盾记录。
   const [result] = await conn.execute(
-    'UPDATE trade_executions SET executed = ?, note = ? WHERE id = ? AND user_id = ?',
-    [executed ? 1 : 0, note ?? null, req.params.id, req.user!.id]
+    `UPDATE trade_executions
+     SET executed = ?, note = ?,
+         executed_at = CASE WHEN ? = 1 THEN COALESCE(?, executed_at, CURRENT_TIMESTAMP) ELSE NULL END
+     WHERE id = ? AND user_id = ?`,
+    [
+      executed ? 1 : 0, note ?? null,
+      executed ? 1 : 0, executedAt ?? null,
+      req.params.id, req.user!.id,
+    ]
   )
   if ((result as { affectedRows: number }).affectedRows === 0) throw createError('执行记录不存在', 404)
   res.json({ success: true, message: '执行记录已更新' })

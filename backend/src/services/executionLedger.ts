@@ -46,3 +46,29 @@ export async function listPendingSells(userId: string): Promise<PendingSell[]> {
   )
   return rows as PendingSell[]
 }
+
+/** 全部应执行动作（含已执行），供 KPI E1 执行率与 E4 延迟计算 */
+export async function listAllRequiredActions(userId: string): Promise<RequiredActionRow[]> {
+  const conn = getConnection()
+  const [rows] = await conn.execute(
+    `SELECT id, DATE_FORMAT(report_date, '%Y-%m-%d') AS reportDate,
+            stock_code AS code, clause, required_action AS requiredAction,
+            executed, DATE_FORMAT(executed_at, '%Y-%m-%d') AS executedAt
+     FROM trade_executions
+     WHERE user_id = ?
+     ORDER BY report_date ASC, id ASC`,
+    [userId]
+  )
+  return (rows as (Omit<RequiredActionRow, 'executed'> & { executed: number })[])
+    .map(r => ({ ...r, executed: Number(r.executed) === 1 }))
+}
+
+export interface RequiredActionRow {
+  id: number
+  reportDate: string
+  code: string
+  clause: string
+  requiredAction: string
+  executed: boolean
+  executedAt: string | null
+}

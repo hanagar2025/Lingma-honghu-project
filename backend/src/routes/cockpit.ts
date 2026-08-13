@@ -8,9 +8,13 @@ import { Router } from 'express'
 import { getConnection } from '../config/database'
 import { authenticateToken, type AuthRequest } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
-import { countPendingSells, listPendingSells } from '../services/executionLedger'
+import { countPendingSells, listPendingSells, listAllRequiredActions } from '../services/executionLedger'
 import { fetchDailyBars, getBarsFromDB } from '../services/marketData'
 import { runCockpit } from '../services/cockpit'
+import { buildAudit, computeKpis, renderAuditMarkdown, type CostSnapshot } from '../services/governance/audit'
+import { saveAudit, loadAudits, loadAuditMarkdown } from '../services/governance/auditStore'
+import { fingerprint } from '../services/governance/ruleRegistry'
+import { loadBaseline } from '../services/governance/freeze'
 import { ACTION_TEXT, LEGAL_REASON_TEXT, LIGHT_TEXT, EVIDENCE_TIER_TEXT } from '../services/cockpit/types'
 import { NODE_TAXONOMY } from '../services/cockpit/nodes'
 import { LIMITS } from '../services/cockpit/safety'
@@ -110,11 +114,48 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
     pendingSellCount, valuationByCode, householdAnnualExpense, marketAllows,
   })
 
+  // ── 决策审计：每次运行自动落一条（同日覆盖） ──
+  // 成本快照用总成本而非市值：总成本不随价格波动，其上升唯一对应"发生了买入"，
+  // 是 E3 检出未授权买入的依据。
+  const costSnapshot: CostSnapshot[] = positions.map(p => ({
+    code: p.code, name: p.name, totalCost: p.cost,
+  }))
+  const audit = buildAudit({ report, costSnapshot })
+  const auditMd = renderAuditMarkdown(audit)
+  try {
+    await saveAudit(userId, audit, auditMd)
+  } catch (e) {
+    logger.warn(`决策审计落库失败（不影响当日决策输出）：${e instanceof Error ? e.message : String(e)}`)
+  }
+
+  // ── KPI E1–E4 ──
+  const requiredActions = await listAllRequiredActions(userId)
+  const history = await loadAudits(userId, 60)
+  const kpi = computeKpis({
+    today: date,
+    requiredActions,
+    dataChecks: buildDataChecks(report, snapshot, householdAnnualExpense, valuationByCode),
+    e3: {
+      audits: history.map(h => ({
+        date: h.date,
+        buyFrozen: h.buyFrozen,
+        costSnapshot: h.costSnapshot,
+        // 类型层已保证动作必带法定理由；此处校验的是历史记录是否完整
+        allActionsHadLegalReason: h.why !== undefined,
+        ruleDrifted: h.rules?.drift?.drifted ?? false,
+      })),
+    },
+  })
+
   res.json({
     success: true,
     data: {
       ...report,
       pendingSells,
+      audit,
+      auditMarkdown: auditMd,
+      kpi,
+      freeze: { baseline: loadBaseline(), current: fingerprint() },
       marketStage: stage ?? '未确认（按不允许建仓处理）',
       missing,
       limits: LIMITS,
@@ -125,6 +166,60 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
       valuationUsable: Object.values(valuationByCode).filter(v => v.usable).length,
       valuationLoaded: Object.keys(valuationByCode).length,
     },
+  })
+}))
+
+/**
+ * E2 数据完整度的检查清单。
+ *
+ * 逐项列出"决策需要但可能缺失"的数据。刻意做成显式清单而非"报告里有几条缺口"，
+ * 因为后者会随文案变化而漂移，无法跨月比较。
+ */
+function buildDataChecks(
+  report: { dataGaps: string[] },
+  snapshot: { peakAssets: number },
+  householdAnnualExpense: number | undefined,
+  valuationByCode: Record<string, { usable: boolean }>
+): { name: string; present: boolean }[] {
+  const usable = Object.values(valuationByCode).filter(v => v.usable).length
+  const loaded = Object.keys(valuationByCode).length
+  return [
+    { name: '家庭年度刚性支出', present: householdAnnualExpense !== undefined },
+    { name: '净值峰值', present: snapshot.peakAssets > 0 },
+    { name: 'PE历史分位（≥90%标的可用）', present: loaded > 0 && usable / loaded >= 0.9 },
+    { name: '资金结构数据（北向/融资/龙虎榜/机构持仓）', present: false },
+    { name: '扣非利润与主线收入占比', present: false },
+    { name: '产业链节点全覆盖', present: !report.dataGaps.some(g => g.includes('无覆盖标的')) },
+  ]
+}
+
+/** 历史审计（Markdown），供三个月后回看 */
+router.get('/audit/:date', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const md = await loadAuditMarkdown(req.user!.id, req.params.date)
+  if (md === null) {
+    res.status(404).json({ success: false, error: { message: `${req.params.date} 无审计记录` } })
+    return
+  }
+  res.json({ success: true, data: { date: req.params.date, markdown: md } })
+}))
+
+/** 审计序列，用于观察 30 个交易日的连续性 */
+router.get('/audits', authenticateToken, asyncHandler(async (req: AuthRequest, res) => {
+  const limit = Math.min(Number(req.query.limit ?? 60), 200)
+  const audits = await loadAudits(req.user!.id, limit)
+  res.json({
+    success: true,
+    data: audits.map(a => ({
+      date: a.date,
+      coreDecision: a.coreDecision,
+      buyFrozen: a.buyFrozen,
+      executionDebt: a.actions.executionDebt,
+      newEntries: a.actions.newEntries,
+      legalReduces: a.actions.legalReduces.length,
+      reviewedNoAction: a.actions.reviewedNoAction.length,
+      fingerprint: a.rules.fingerprint.hash,
+      drifted: a.rules.drift?.drifted ?? null,
+    })),
   })
 }))
 

@@ -9,10 +9,12 @@
 // 市值由最新收盘价 × 股数实时算出，portfolio.json 只存股数与成本价 ——
 // 手抄的市值会过期，而过期的市值会让仓位上限判定失真。
 
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchDailyBars } from '../marketData'
+import { buildAudit, renderAuditMarkdown, type CostSnapshot } from '../governance/audit'
+import { loadBaseline } from '../governance/freeze'
 import { loadValuationMap, VALUATION_FILE } from '../msr/valuation'
 import { allBenchmarks, allCodes } from '../msr/universe'
 import type { DailyBar, Position } from '../tios/types'
@@ -158,6 +160,30 @@ async function main(): Promise<void> {
     marketAllows,
   })
   printReport(rep)
+
+  // ── 决策审计归档 ──
+  // 成本快照用总成本而非市值：总成本不随价格波动，其上升唯一对应"发生了买入"。
+  const costSnapshot: CostSnapshot[] = pf.positions.map(p => ({
+    code: p.code, name: p.name, totalCost: p.cost * p.quantity,
+  }))
+  const audit = buildAudit({ report: rep, costSnapshot })
+  const md = renderAuditMarkdown(audit)
+  const dir = join(HERE, 'data', 'audits')
+  mkdirSync(dir, { recursive: true })
+  const auditFile = join(dir, `${audit.date}.md`)
+  writeFileSync(auditFile, `${md}\n`, 'utf-8')
+
+  const base = loadBaseline()
+  process.stdout.write(`\n【决策审计】已归档 ${auditFile}\n`)
+  process.stdout.write(
+    `  规则指纹 ${audit.rules.fingerprint.hash}｜${audit.rules.fingerprint.entryCount} 条决策生效参数｜` +
+    `${Object.entries(audit.rules.fingerprint.tierCounts).map(([t, n]) => `${t}=${n}`).join(' ')}\n`
+  )
+  process.stdout.write(
+    base
+      ? `  ${audit.rules.drift?.drifted ? '⚠ 规则已漂移：' : '✓ '}${audit.rules.drift?.detail ?? ''}\n`
+      : `  ⚠ 未找到冻结基线，无法判定漂移。先跑 npm run freeze:baseline\n`
+  )
 }
 
 main().catch(e => {

@@ -158,9 +158,35 @@ const initTables = async (): Promise<void> => {
         clause VARCHAR(100) NOT NULL,
         required_action VARCHAR(30) NOT NULL,
         executed TINYINT(1) NOT NULL DEFAULT 0,
+        -- executed_at 是 KPI E4（决策到执行的延迟）的唯一数据来源。
+        -- 此前只有 executed 布尔位，"什么时候执行的"无处可查，E4 在结构上无法计算。
+        executed_at TIMESTAMP NULL DEFAULT NULL,
         note VARCHAR(300),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_user_date (user_id, report_date),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `)
+    await connection.execute(`
+      ALTER TABLE trade_executions
+      ADD COLUMN IF NOT EXISTS executed_at TIMESTAMP NULL DEFAULT NULL
+    `).catch(() => { /* MySQL 8.0 以下不支持 IF NOT EXISTS；缺列时 E4 判为无样本 */ })
+
+    // 每日决策审计：记录"当时的信息条件下为什么这样决定"，附规则指纹。
+    // 存 JSON 也存 Markdown —— 三个月后回看时，读者可能没有跑起来的系统。
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS decision_audits (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        audit_date DATE NOT NULL,
+        rules_fingerprint VARCHAR(24) NOT NULL,
+        rules_drifted TINYINT(1) NOT NULL DEFAULT 0,
+        buy_frozen TINYINT(1) NOT NULL DEFAULT 0,
+        core_decision VARCHAR(500) NOT NULL,
+        audit_json JSON NOT NULL,
+        audit_md MEDIUMTEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_user_audit_date (user_id, audit_date),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `)
