@@ -151,12 +151,12 @@ check(`追涨样本资金/趋势确实打高分（资${trapRadar.capital.score} 
 check(`追涨样本（10日+70%）判为 RED_EXTREME（实际 ${trapWindow.color}）`,
   trapWindow.color === 'RED_EXTREME', trapWindow.detail)
 check('深红样本规模系数为 0（唯一硬否决）', trapWindow.sizeMultiplier === 0)
-check('追涨样本红灯项 ≥ 3（涨幅/偏离/爆量/上影多项同时命中）',
-  trapWindow.redFlags.length >= 3, trapWindow.redFlags.join(' | '))
+check('否决项恰为1条（删四留一后，价格窗口只剩10日涨幅>50%一个判据）',
+  trapWindow.redFlags.length === 1, trapWindow.redFlags.join(' | '))
 check(`追涨样本即便产业+盈利+估值全部满分，也停在 S2 不得建仓（实际 ${trapPromo.stage}）`,
   trapPromo.stage === 'STAGE_2_EARNINGS', trapPromo.blockedBy.join(' | '))
 
-/** 普通红灯：10日涨34%（越过30%红线但未入>50%极端区），无长上影、无爆量 */
+/** 已伸展但未达极端区：10日涨34%，无长上影、无爆量 —— 应放行且规模不打折 */
 function moderateRedBars(n = 200): DailyBar[] {
   const out: DailyBar[] = []
   let px = 100
@@ -178,11 +178,35 @@ const modRed = moderateRedBars()
 const modRadar = runRadar(trapMember, modRed, flatBars())
 const modWindow = evaluatePriceWindow(modRed, modRadar)
 const modPromo = evaluatePromotion(trapMember, modRadar, modRed, { marketAllows: true, executionCleared: true })
-check(`普通红灯样本（10日+34%）判为 RED（实际 ${modWindow.color}）`, modWindow.color === 'RED', modWindow.detail)
-check('普通红灯规模系数为 0.5（缩规模而非否决）', modWindow.sizeMultiplier === 0.5)
-check(`普通红灯不再阻断 S3（实际 ${modPromo.stage}）—— 回测证伪后的新语义`,
+check(`已伸展样本（10日+34%）判为 EXTENDED（实际 ${modWindow.color}）`,
+  modWindow.color === 'EXTENDED', modWindow.detail)
+check('已伸展样本规模系数为 1（纯描述，不打折）', modWindow.sizeMultiplier === 1)
+check(`已伸展样本不阻断 S3（实际 ${modPromo.stage}）—— 五个子条件删四留一后的语义`,
   modPromo.stage === 'STAGE_3_PRICE_WINDOW', modPromo.blockedBy.join(' | '))
-check('普通红灯的阻断清单里不含价格窗口理由', !modPromo.blockedBy.some(b => b.includes('价格窗口')))
+check('已伸展样本的阻断清单里不含价格窗口理由', !modPromo.blockedBy.some(b => b.includes('价格窗口')))
+
+// 回归测试：被删除的四个子条件不得以任何形式恢复否决权。
+// 逐条构造只命中该条件的样本，断言全部放行 —— 防止未来"手感不对"时被悄悄加回。
+const deletedFlagCases: Array<[string, () => DailyBar[]]> = [
+  ['长上影（实测反向且显著，绝不可恢复）', () => {
+    const b = strongBars(200, 100)
+    const px = b[b.length - 1].close
+    b.push({ date: '2026-08-20', open: px, high: px * 1.12, low: px * 0.99, close: px * 1.0, volume: 120000 })
+    return b
+  }],
+  ['当日爆量>2.5倍', () => {
+    const b = strongBars(200, 100)
+    const px = b[b.length - 1].close
+    b.push({ date: '2026-08-20', open: px, high: px * 1.01, low: px * 0.99, close: px, volume: 900000 })
+    return b
+  }],
+]
+for (const [label, make] of deletedFlagCases) {
+  const bs = make()
+  const w = evaluatePriceWindow(bs, runRadar(trapMember, bs, flatBars()))
+  check(`已删除子条件不得恢复否决权：${label}（实际 ${w.color}）`,
+    w.color !== 'RED_EXTREME' && w.sizeMultiplier === 1, w.detail)
+}
 
 // 对照：同样全部字段满分，但价格贴近均线 —— 必须能晋级 S3，否则闸门是恒假的死锁
 const healthyEntry = (() => {

@@ -22,24 +22,25 @@ export const STAGE_TEXT: Record<PromotionStage, string> = {
   STAGE_3_PRICE_WINDOW: 'S3价格窗口·可建仓',
 }
 
-export type PriceWindow = 'GREEN' | 'YELLOW' | 'RED' | 'RED_EXTREME'
+/**
+ * 价格窗口。**只有 RED_EXTREME 具有决策效力**，其余两档纯描述、不影响任何输出。
+ * 三档不是"红黄绿灯"式的强弱序列 —— 那个设计已于 2026-08-13 被回测删除，见下方注释。
+ */
+export type PriceWindow = 'CALM' | 'EXTENDED' | 'RED_EXTREME'
 
 export const WINDOW_COLOR_TEXT: Record<PriceWindow, string> = {
-  GREEN: '绿灯·结构平缓',
-  YELLOW: '黄灯·结构一般',
-  RED: '红灯·已偏离（不否决，仅降规模）',
-  RED_EXTREME: '深红·极端急涨（唯一硬否决）',
+  CALM: '结构平缓（描述，无决策效力）',
+  EXTENDED: '已伸展（描述，无决策效力）',
+  RED_EXTREME: '极端急涨·硬否决（10日涨幅>50%）',
 }
 
 export interface PriceWindowResult {
   color: PriceWindow
-  /** 触发红灯的具体项，用于复盘 */
+  /** 触发硬否决的项。仅可能包含"10日涨幅>50%"一项 */
   redFlags: string[]
+  /** 结构描述项，仅用于报告可读性，不参与任何判定 */
   greenFlags: string[]
-  /**
-   * 仓位规模系数。价格窗口自 2026-08-13 回测后**不再具有否决权**（深红除外），
-   * 只影响首次建仓的规模。
-   */
+  /** 建仓规模系数。只有 0（深红否决）与 1（其余）两种取值 */
   sizeMultiplier: number
   detail: string
 }
@@ -47,91 +48,83 @@ export interface PriceWindowResult {
 /**
  * 价格窗口判定。
  *
- * ⚠ 本函数的收益主张已于 2026-08-13 被自有回测**证伪**，且方向相反。必须先读这段再改代码。
+ * ⚠ 改这个函数前必须读完这段。本函数在 2026-08-13 一天内经历了"建立 → 被自有回测证伪 → 删到只剩一条"。
  *
  * 回测设定：27只标的（AI光通信/半导体/算力/电力）、2023-05 ~ 2026-08、13500 个观测，
- * 前瞻超额对创业板指，日期区块自助抽样 3000 次修正重叠窗口。
- * 脚本：scripts/backtest-0813-signals.py、-regime.py、-significance.py
+ * 20日前瞻超额对创业板指，与**同日期基准**配对比较，日期区块自助抽样 3000 次修正重叠窗口。
+ * 脚本：backtest-0813-signals.py / -regime.py / -significance.py / -redflags.py
  *
- *   20日前瞻超额：绿灯 +3.53%（胜率50.7%）  黄灯 +5.07%  红灯 +6.14%（胜率56.6%）
- *   绿灯减红灯 = **-2.61pct**，95%区间 [-5.62, -0.37]，P(绿≥红)=0.012
- *   → 不是"无差异"，是**红灯显著优于绿灯**。等绿灯建仓平均少赚，不是多赚。
+ * ── 第一步：整体证伪 ──
+ *   绿灯 +3.53%（胜率50.7%） 黄灯 +5.07% 红灯 +6.14%（胜率56.6%）
+ *   绿减红 -2.61pct，95%区间 [-5.62, -0.37] —— 不是无差异，是**红灯显著优于绿灯**。
+ *   分期复核未找到辩解：上行期 -1.96pct，下行期 -1.54pct，本轮回撤期 -0.38pct，三者无一支持闸门。
  *
- *   分期复核（想找出"闸门只在转折期有效"的辩解，未找到）：
- *     基准在MA60上方（上行期）：绿减红 -1.96pct
- *     基准在MA60下方（下行期）：绿减红 -1.54pct
- *     2026-06-20 以来本轮回撤期：绿减红 -0.38pct
- *   三个子样本无一支持闸门。原先"急涨段内会回踩绿灯，等待几乎免费"的结论
- *   （基于中际旭创三段共 3 个样本）属于极小样本偶然，已作废。
+ * ── 第二步：逐项归因，找出是谁在拖累 ──
+ *   实盘扫描出现异象：距MA20 仅 -2.1% 的标的也被判红灯。逐项检验五个子条件：
  *
- *   唯一还有方向性支持的是极端尾部：10日涨幅 >50% 时，20日前瞻超额 -2.70%（全样本 +4.56%）。
- *   但 n=138 且高度重叠，有效样本约 7，t=-0.4 —— 统计上什么都没证明。
+ *     子条件                  命中    减同期基准   95%区间          判定
+ *     长上影（收盘低于最高4%）  2516   +1.14pct   [+0.2,+3.2]   ✗反向且显著，留着主动亏钱
+ *     距MA20 > +15%          1668   +2.48pct   [-1.0,+6.2]   ✗无信息（点估计还是正的）
+ *     当日量 > 2.5倍            162   +3.35pct   [-3.0,+7.3]   ✗无信息
+ *     10日涨幅 > +30%          685   +0.27pct   [-3.7,+4.4]   ✗无信息
+ *     10日超额 > +25pct        632   -1.69pct   [-5.1,+2.4]   ✗无信息
+ *     ★10日涨幅 > +50%         138   -7.25pct   [-12.6,-1.4]  ✓唯一有警示力
+ *     ☆10日超额 > +40pct       155   -5.54pct   [-10.9,+0.9]  ✗跨0，不够格
  *
- * 因此本次改造遵循一条原则：**被证伪的部分不许再以收益为理由存在。**
- *   - 除深红（10日>50% 或 10日超额>40%）外，红灯**不再否决建仓**，只压缩规模。
- *   - 深红保留硬否决，理由写明是**集中度与行为风险**，不是超额收益。
- *     本账户的 80万 回撤来自单票 16% 仓位在急涨末端建仓后无法持有，
- *     回测用等权分散度量均值，测不到这种破产风险，故此处保留一条不靠回测支撑的护栏，
- *     并明码标价：代价约 2.6pct/20日 的均值让渡。
- *   - 规模系数本身**未经回测检验**（回测是等权的，没测过仓位调节），属于设计判断，勿宣称有据。
+ *   红灯之所以整体优于绿灯，主因是**长上影**这一项：命中最多（2516次，把几乎所有标的染红），
+ *   而它命中后 20 日表现反而**显著更好**。把噪声当警报，是整套闸门失效的根源。
+ *
+ * ── 第三步：删四留一 ──
+ *   按 CTC 证据标准条款（样本≥300独立观测 + 有可推翻的检验 + 对无条件基准 + 否则不得进代码），
+ *   五个子条件删掉四个，只留 10日涨幅>50%。普通红灯整档删除 —— 它的每个组成部分都不携带信息。
+ *
+ * ── 必须记下的一次自我纠错 ──
+ *   本函数上午的注释曾写"10日涨>50% 有效样本约7、t=-0.4，统计上什么都没证明"。**这个判断是错的**，
+ *   因为它检验的是"均值是否异于0"。急涨日集中在市场火热期，同期基准也高，
+ *   不与**同日期基准**配对就会被共同市场因子淹没。改为配对检验后，该条 95%区间不含 0。
+ *   教训：检验设计错误会把真信号判成噪声，与把噪声判成真信号同样危险。
+ *
+ * ── 关于集中度风险 ──
+ *   上午曾用"防止单票16%仓位在急涨末端建仓"为普通红灯的降规模机制辩护。该辩护已撤回：
+ *   集中度风险由**12%单票上限**这条独立规则承担，与价格无关、与预测无关。
+ *   一个风险配一个控制点；用价格窗口再兜一层，是把未经检验的机制伪装成风控。
  */
 export function evaluatePriceWindow(bars: DailyBar[], r: RadarResult): PriceWindowResult {
   const m = r.metrics
   const redFlags: string[] = []
   const greenFlags: string[] = []
 
-  const last = bars[bars.length - 1]
-  const vol20 = bars.slice(-20).reduce((a, b) => a + b.volume, 0) / 20
-  const volSpike = vol20 > 0 ? last.volume / vol20 : null
-  // 长上影：当日收盘显著低于最高价
-  const upperShadow = last.high > 0 ? last.close / last.high - 1 : 0
+  // 唯一具备决策效力的判据。阈值与检验结果见函数注释。
+  if (m.ret10 !== null && m.ret10 > 0.5) {
+    redFlags.push(`10日涨幅 +${(m.ret10 * 100).toFixed(1)}%（>50%，实测此区20日超额 -7.25pct）`)
+  }
 
-  if (m.distMa20 !== null && m.distMa20 > 0.15) redFlags.push(`距MA20 +${(m.distMa20 * 100).toFixed(1)}%（严重偏离）`)
-  if (m.ret10 !== null && m.ret10 > 0.3) redFlags.push(`10日涨幅 +${(m.ret10 * 100).toFixed(1)}%（极大）`)
-  if (volSpike !== null && volSpike > 2.5) redFlags.push(`当日量为20日均量${volSpike.toFixed(1)}倍（爆量）`)
-  if (upperShadow < -0.04 && last.close > 0) redFlags.push(`长上影 收盘距当日最高${(upperShadow * 100).toFixed(1)}%`)
-  if (m.excess10 !== null && m.excess10 > 0.25) redFlags.push(`10日超额 +${(m.excess10 * 100).toFixed(1)}pct（情绪极热）`)
-
+  // 以下全部为描述项，不参与判定。保留是为了报告可读性与人工复盘。
   if (m.distMa20 !== null && Math.abs(m.distMa20) <= 0.08) greenFlags.push(`贴近MA20（${(m.distMa20 * 100).toFixed(1)}%）`)
   if (m.distMa60 !== null && Math.abs(m.distMa60) <= 0.1) greenFlags.push(`贴近MA60（${(m.distMa60 * 100).toFixed(1)}%）`)
   if (m.upDownVolumeRatio !== null && m.upDownVolumeRatio >= 1) greenFlags.push(`上涨放量（涨跌量比${m.upDownVolumeRatio.toFixed(2)}）`)
-  if (m.excess20 !== null && m.excess20 > 0 && m.excess10 !== null && m.excess10 <= 0.25) {
-    greenFlags.push(`相对强度刚启动（20日超额+${(m.excess20 * 100).toFixed(1)}pct 且10日未过热）`)
-  }
   if (m.pullbackDepths.length >= 2) {
     const [a, b] = m.pullbackDepths.slice(-2)
     if (Math.abs(b) < Math.abs(a)) greenFlags.push('回调递浅')
   }
 
-  // 深红：唯一保留硬否决的极端区。阈值取自回测中唯一出现负超额的尾部。
-  const extremeFlags: string[] = []
-  if (m.ret10 !== null && m.ret10 > 0.5) extremeFlags.push(`10日涨幅 +${(m.ret10 * 100).toFixed(1)}%（>50%极端区）`)
-  if (m.excess10 !== null && m.excess10 > 0.4) extremeFlags.push(`10日超额 +${(m.excess10 * 100).toFixed(1)}pct（>40pct极端区）`)
-
+  const extended = (m.distMa20 !== null && m.distMa20 > 0.15) || (m.ret10 !== null && m.ret10 > 0.3)
   const color: PriceWindow =
-    extremeFlags.length > 0
-      ? 'RED_EXTREME'
-      : redFlags.length > 0
-        ? 'RED'
-        : greenFlags.length >= 3
-          ? 'GREEN'
-          : 'YELLOW'
-
-  const sizeMultiplier = color === 'RED_EXTREME' ? 0 : color === 'RED' ? 0.5 : color === 'YELLOW' ? 0.7 : 1
+    redFlags.length > 0 ? 'RED_EXTREME' : extended ? 'EXTENDED' : 'CALM'
 
   return {
     color,
-    redFlags: color === 'RED_EXTREME' ? [...extremeFlags, ...redFlags] : redFlags,
+    redFlags,
     greenFlags,
-    sizeMultiplier,
+    // 只有否决与不否决两种。差异化规模系数已删除：回测从未检验过仓位调节，
+    // 未经检验的机制不得进代码（CTC 证据标准条款第4项）。
+    sizeMultiplier: color === 'RED_EXTREME' ? 0 : 1,
     detail:
       color === 'RED_EXTREME'
-        ? `深红：${extremeFlags.join('；')} → 禁止建仓（行为护栏，非收益理由；资格保留）`
-        : color === 'RED'
-          ? `红灯：${redFlags.join('；')} → 可建仓但规模减半（回测显示此区收益并不更差，仅控集中度）`
-          : color === 'GREEN'
-            ? `绿灯：${greenFlags.join('；')} → 全额规模（注意：回测中绿灯收益低于红灯 2.6pct/20日）`
-            : `黄灯：绿灯项${greenFlags.length}/3未达标${greenFlags.length > 0 ? `（${greenFlags.join('；')}）` : ''} → 规模七折`,
+        ? `硬否决：${redFlags.join('；')} → 禁止建仓（资格保留，回落后可买）`
+        : color === 'EXTENDED'
+          ? `已伸展（仅描述，不影响放行）${greenFlags.length ? `；${greenFlags.join('；')}` : ''}`
+          : `结构平缓（仅描述，不影响放行）${greenFlags.length ? `：${greenFlags.join('；')}` : ''}`,
   }
 }
 
