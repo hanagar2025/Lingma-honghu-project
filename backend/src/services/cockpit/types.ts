@@ -223,4 +223,12 @@ export interface CockpitReport {
   }
   /** 数据缺口清单 —— 缺什么就明说缺什么，不用默认值糊过去 */
   dataGaps: string[]
+  /**
+   * 中间结果，供五层驾驶舱装配层（dashboard.ts）复用。
+   *
+   * 存在的理由是**防漂移**：驾驶舱四张表与六问必须来自同一次计算。
+   * 若装配层自己再算一遍相对强度或健康度，两处口径迟早不一致，
+   * 而读表的人无法察觉。类型为 unknown 是为避免 types.ts 反向依赖引擎模块。
+   */
+  internals?: { momentumRows: unknown[]; msr: unknown; nodes: unknown[] }
 }

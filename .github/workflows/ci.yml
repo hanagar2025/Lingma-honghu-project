@@ -41,6 +41,10 @@ jobs:
       # 它必须在 CI 里跑 —— 否则该约束只是注释里的一句承诺。
       - name: Cockpit selftest (观察指标不得产生动作)
         run: npm -w backend run cockpit:selftest
+      # 守四条：禁止综合评分；「不可判断」是合法输出；装配层不生产动作；
+      # 全部在册标的被清退的节点不得被输出为"最值得研究"（兆易创新案例）。
+      - name: Dashboard selftest (禁止综合评分 + 不可判断合法)
+        run: npm -w backend run dashboard:selftest
       # 守两条：规则漂移必须能被发现；E3 不得用盈亏评判模型。
       - name: Governance selftest (规则指纹 + E3不用盈亏)
         run: npm -w backend run audit:selftest

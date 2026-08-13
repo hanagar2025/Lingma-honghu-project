@@ -19,6 +19,12 @@ import { loadValuationMap, VALUATION_FILE } from '../msr/valuation'
 import { allBenchmarks, allCodes } from '../msr/universe'
 import type { DailyBar, Position } from '../tios/types'
 import { runCockpit } from './index'
+import { buildDashboard, type SessionKind } from './dashboard'
+import { renderDashboard } from './renderDashboard'
+import { buildProfitMap } from '../research/profitRadar'
+import type { ProfitMap } from '../research/profitRadar'
+import type { MsrReport } from '../msr'
+import type { MomentumRow } from './momentum'
 import { ACTION_TEXT, LEGAL_REASON_TEXT, LIGHT_TEXT, type CockpitReport } from './types'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -159,7 +165,38 @@ async function main(): Promise<void> {
     householdAnnualExpense: pf.householdAnnualExpense ?? undefined,
     marketAllows,
   })
-  printReport(rep)
+
+  // ── 五层驾驶舱 ──
+  // DASHBOARD=0 可退回六问旧版；SESSION=pre 出盘前简报。
+  const session: SessionKind = process.env.SESSION === 'pre' ? 'PRE_OPEN' : 'POST_CLOSE'
+  let profit: ProfitMap | null = null
+  try {
+    profit = buildProfitMap(date)
+  } catch {
+    process.stdout.write('⚠ 利润结构地图不可用（先跑 npm run profit:fetch）→ 主线/产业结构表将显示数据缺失\n')
+  }
+  const internals = rep.internals as
+    | { momentumRows: MomentumRow[]; msr: MsrReport; nodes: unknown[] }
+    | undefined
+
+  if (process.env.DASHBOARD === '0' || !internals) {
+    printReport(rep)
+  } else {
+    const dash = buildDashboard({
+      date, session, positions, totalAssets,
+      barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
+      valuationByCode,
+      momentumRows: internals.momentumRows,
+      msr: internals.msr,
+      profit,
+      actions: rep.actions,
+      pendingSellCount,
+      noNewEntryReasons: rep.noNewEntry.reasons,
+      dataGaps: rep.dataGaps,
+    })
+    process.stdout.write(`${renderDashboard(dash)}\n`)
+    if (session === 'POST_CLOSE' && process.env.SIX === '1') printReport(rep)
+  }
 
   // ── 决策审计归档 ──
   // 成本快照用总成本而非市值：总成本不随价格波动，其上升唯一对应"发生了买入"。

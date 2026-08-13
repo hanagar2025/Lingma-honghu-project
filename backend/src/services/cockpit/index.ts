@@ -475,6 +475,8 @@ export function runCockpit(input: CockpitInput): CockpitReport {
       ],
     },
     dataGaps,
+    // 供五层驾驶舱装配层复用。刻意不重算 —— 两处各算一遍必然漂移。
+    internals: { momentumRows: momentum.rows, msr, nodes: nodes.nodes },
   }
 }
 

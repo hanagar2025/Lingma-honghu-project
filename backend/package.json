@@ -14,6 +14,7 @@
     "msr:valuation": "tsx src/services/msr/valuationFetch.ts",
     "cockpit": "tsx src/services/cockpit/run.ts",
     "cockpit:selftest": "tsx src/services/cockpit/selftest.ts",
+    "dashboard:selftest": "tsx src/services/cockpit/dashboardSelftest.ts",
     "freeze:check": "tsx src/services/governance/freeze.ts check",
     "freeze:baseline": "tsx src/services/governance/freeze.ts baseline",
     "audit:selftest": "tsx src/services/governance/selftest.ts",
