@@ -9,11 +9,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import {
-  Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover,
-  Space, Table, Tag, Typography,
+  Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover, Progress,
+  Space, Statistic, Table, Tag, Typography,
 } from 'antd'
-import { ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons'
-import { cockpitAPI } from '../services/api'
+import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/icons'
+import { cockpitAPI, tiosAPI } from '../services/api'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -91,9 +91,32 @@ const Light: React.FC<{ light: string }> = ({ light }) => {
   return <span title={s.label} style={{ fontSize: 16 }}>{s.dot}</span>
 }
 
+/** KPI 单格。缺样本时显示"—"而非 0 —— 0 会把"没统计过"读成"表现完美" */
+const KpiCell: React.FC<{
+  title: string; rate: number | null; detail: string; goodAbove?: number
+}> = ({ title, rate, detail, goodAbove = 0.9 }) => (
+  <Card size="small" style={{ flex: 1, minWidth: 220 }}>
+    <Statistic
+      title={title}
+      value={rate === null ? '—' : `${(rate * 100).toFixed(1)}%`}
+      valueStyle={{
+        color: rate === null ? '#8e8e93' : rate >= goodAbove ? '#34c759' : rate >= 0.6 ? '#ff9500' : '#ff3b30',
+      }}
+    />
+    {rate !== null && <Progress
+      percent={Math.round(rate * 100)}
+      showInfo={false}
+      strokeColor={rate >= goodAbove ? '#34c759' : rate >= 0.6 ? '#ff9500' : '#ff3b30'}
+      size="small"
+    />}
+    <div style={{ fontSize: 12, color: '#666', marginTop: 4, lineHeight: 1.6 }}>{detail}</div>
+  </Card>
+)
+
 const Cockpit: React.FC = () => {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [marking, setMarking] = useState<number | null>(null)
 
   const load = useCallback(async (live = false) => {
     setLoading(true)
@@ -105,6 +128,21 @@ const Cockpit: React.FC = () => {
       setLoading(false)
     }
   }, [])
+
+  // 标记执行 —— 清偿执行债务是当前第一优先级，因此这个按钮直接放在驾驶舱里，
+  // 不必跳到别的页面。执行时间由后端回填，用于 KPI E4。
+  const markExecuted = useCallback(async (id: number, code: string) => {
+    setMarking(id)
+    try {
+      await tiosAPI.updateExecution(id, { executed: true })
+      message.success(`${code} 已标记执行，执行时间已记入延迟统计`)
+      await load(false)
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message || err.message || '标记失败')
+    } finally {
+      setMarking(null)
+    }
+  }, [load])
 
   useEffect(() => { load(false) }, [load])
 
@@ -318,27 +356,144 @@ const Cockpit: React.FC = () => {
         />
       </Card>
 
-      {/* ── 执行债务 ── */}
+      {/* ── 执行债务：勾选清偿 ── */}
       {(data.pendingSells ?? []).length > 0 && (
-        <Card title={`执行债务：${data.pendingSells.length} 条未执行卖出指令`} style={{ marginBottom: 16 }}>
+        <Card
+          title={`执行债务：${data.pendingSells.length} 条未执行卖出指令`}
+          style={{ marginBottom: 16, borderColor: '#ff3b30' }}
+        >
           <Alert
             type="error"
             showIcon
             style={{ marginBottom: 12 }}
             message="执行债务未清零期间，系统锁死全部新增建仓输出"
-            description="这是硬闸门，不受任何评分或配置影响。清偿顺序优先于一切研究结论。"
+            description={
+              <span>
+                这是硬闸门，不受任何评分或配置影响。清偿顺序优先于一切研究结论。
+                过去最大的问题不是找不到好股票，而是旧仓位没处理完就不断增加新仓位。
+              </span>
+            }
           />
           <Table
             dataSource={data.pendingSells.map((p: any) => ({ ...p, key: p.id }))}
             pagination={false}
             size="small"
             columns={[
-              { title: '指令日期', dataIndex: 'reportDate', width: 120 },
-              { title: '标的', dataIndex: 'code', width: 100 },
+              { title: '指令日期', dataIndex: 'reportDate', width: 110 },
+              { title: '标的', dataIndex: 'code', width: 90 },
               { title: '触发条款', dataIndex: 'clause' },
-              { title: '应执行动作', dataIndex: 'requiredAction', width: 160 },
+              { title: '应执行动作', dataIndex: 'requiredAction', width: 150 },
+              {
+                title: '操作', width: 130,
+                render: (_: any, r: any) => (
+                  <Button
+                    size="small" type="primary" icon={<CheckOutlined />}
+                    loading={marking === r.id}
+                    onClick={() => markExecuted(r.id, r.code)}
+                  >
+                    标记已执行
+                  </Button>
+                ),
+              },
             ]}
           />
+        </Card>
+      )}
+
+      {/* ── KPI E1–E4 ── */}
+      {data.kpi && (
+        <Card title="KPI（30个交易日观察期）" style={{ marginBottom: 16 }}>
+          <Space style={{ width: '100%', flexWrap: 'wrap' }} align="start">
+            <KpiCell title="E1 执行率" rate={data.kpi.e1?.rate ?? null} detail={data.kpi.e1?.detail ?? ''} />
+            <KpiCell title="E2 数据完整度" rate={data.kpi.e2?.rate ?? null} detail={data.kpi.e2?.detail ?? ''} goodAbove={1} />
+            <KpiCell
+              title="E3 规则一致性"
+              rate={data.kpi.e3?.complianceRate ?? null}
+              detail={(data.kpi.e3?.checks ?? []).map((c: any) => `${c.passed ? '✓' : '✗'} ${c.name}`).join('；')}
+              goodAbove={1}
+            />
+            <Card size="small" style={{ flex: 1, minWidth: 220 }}>
+              <Statistic
+                title="E4 决策到执行延迟"
+                value={data.kpi.e4?.medianDays === null || data.kpi.e4?.medianDays === undefined
+                  ? '—' : `${data.kpi.e4.medianDays} 天`}
+                valueStyle={{ color: '#8e8e93' }}
+              />
+              <div style={{ fontSize: 12, color: '#666', marginTop: 4, lineHeight: 1.6 }}>
+                {data.kpi.e4?.detail}
+              </div>
+            </Card>
+          </Space>
+          <Alert
+            type="info"
+            style={{ marginTop: 12 }}
+            message={<Text style={{ fontSize: 13 }}>E3 方法论</Text>}
+            description={<Text type="secondary" style={{ fontSize: 12 }}>{data.kpi.e3?.methodology}</Text>}
+          />
+          {(data.kpi.e3?.unauthorizedBuys ?? []).length > 0 && (
+            <Alert
+              type="error" showIcon style={{ marginTop: 12 }}
+              message="检出未授权买入"
+              description={
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {data.kpi.e3.unauthorizedBuys.map((u: any, i: number) => (
+                    <li key={i}>{u.date} {u.name} 持仓成本 +{(u.costIncrease / 10000).toFixed(1)}万（当日处于禁止建仓状态）</li>
+                  ))}
+                </ul>
+              }
+            />
+          )}
+        </Card>
+      )}
+
+      {/* ── 规则冻结状态 ── */}
+      {data.freeze?.baseline && (
+        <Card title="规则冻结状态" style={{ marginBottom: 16 }}>
+          <Paragraph type="secondary" style={{ fontSize: 13 }}>
+            冻结期内不新增决策规则，只修 Bug、补数据、记录结果。
+            全部决策生效参数取指纹并随每日审计存档 —— 三个月后比对指纹即可回答
+            「当时的规则是不是今天这套」，不需要任何人回忆。
+          </Paragraph>
+          <Descriptions size="small" column={2} bordered>
+            <Descriptions.Item label="冻结起始">{data.freeze.baseline.frozenAt}</Descriptions.Item>
+            <Descriptions.Item label="冻结天数">{data.freeze.baseline.tradingDays} 个交易日</Descriptions.Item>
+            <Descriptions.Item label="基线指纹">
+              <Text code>{data.freeze.baseline.hash}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="当前指纹">
+              <Space>
+                <Text code>{data.freeze.current?.hash}</Text>
+                {data.freeze.current?.hash === data.freeze.baseline.hash
+                  ? <Tag color="green">未漂移</Tag>
+                  : <Tag color="red">已漂移</Tag>}
+              </Space>
+            </Descriptions.Item>
+            <Descriptions.Item label="规则条数" span={2}>
+              {data.freeze.current?.entryCount} 条｜
+              {Object.entries(data.freeze.current?.tierCounts ?? {}).map(([t, n]) => (
+                <Tag key={t} color={TIER_STYLE[t]?.color}>{t}={String(n)}</Tag>
+              ))}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
+
+      {/* ── 今日决策审计 ── */}
+      {data.auditMarkdown && (
+        <Card
+          title="今日决策审计（已归档）"
+          style={{ marginBottom: 16 }}
+          extra={<Text type="secondary" style={{ fontSize: 12 }}>
+            三个月后可回答「当时为什么没买、为什么没卖」，而不是凭记忆重新解释
+          </Text>}
+        >
+          <pre style={{
+            margin: 0, padding: 16, background: '#f2f2f7', borderRadius: 12,
+            fontSize: 12.5, lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          }}>
+            {data.auditMarkdown}
+          </pre>
         </Card>
       )}
 

@@ -127,7 +127,8 @@ export const tiosAPI = {
 
   getExecutions: () => apiClient.get<any[]>('/tios/executions'),
 
-  updateExecution: (id: number, data: { executed: boolean; note?: string }) =>
+  /** executedAt 可回填历史执行时间（补记旧账）；不传则取当前时间 */
+  updateExecution: (id: number, data: { executed: boolean; note?: string; executedAt?: string }) =>
     apiClient.put(`/tios/executions/${id}`, data),
 
   getExecutionStats: () => apiClient.get<any>('/tios/executions/stats'),
@@ -143,6 +144,12 @@ export const cockpitAPI = {
 
   /** 阈值与口径说明，用于核对规则 */
   getSpec: () => apiClient.get<any>('/cockpit/spec'),
+
+  /** 某日决策审计（Markdown），供三个月后回看 */
+  getAudit: (date: string) => apiClient.get<any>(`/cockpit/audit/${date}`),
+
+  /** 审计序列，用于观察 30 个交易日的连续性 */
+  getAudits: (limit = 60) => apiClient.get<any[]>('/cockpit/audits', { limit }),
 }
 
 // MSR 主线内部轮动雷达
