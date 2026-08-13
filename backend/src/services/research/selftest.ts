@@ -218,6 +218,71 @@ const q2 = early?.deltaShareHistory.find(h => h.label === '2026Q2')
 ok('财报季首个披露者不会显示成 100% 份额（披露顺序伪影已屏蔽）',
   q2 === undefined || q2.share === null, `2026Q2 share=${q2?.share}`)
 
+// ── 存量份额与增量份额是两个不同的量，不得互相替代 ──
+const levelFile: ProfitFile = {
+  ...fakeFile,
+  records: [
+    // 大节点：家底厚但本季增量一般
+    { code: '300308', name: '大节点', scope: 'DECISION', periods: [p(2025, 1, 900, 90), p(2026, 1, 1000, 100)] },
+    { code: '300502', name: '中节点', scope: 'DECISION', periods: [p(2025, 1, 100, 10), p(2026, 1, 150, 15)] },
+    // 小节点：家底薄但本季增量占比高
+    { code: '688498', name: '小节点', scope: 'DECISION', periods: [p(2025, 1, 5, 1), p(2026, 1, 50, 30)] },
+  ],
+}
+const lvMap = buildProfitMap('2026-08-13', levelFile)
+const bigNode = lvMap.nodes.find(n => n.members.some(m => m.code === '300308'))
+const smallNode = lvMap.nodes.find(n => n.members.some(m => m.code === '688498'))
+// 300308 与 300502 同属光模块节点：节点规模 = 100 + 15 = 115，主线合计 = 115 + 30 = 145
+ok('存量份额：大节点 115/145 ≈ 79%',
+  Math.abs((bigNode?.levelShare ?? 0) - 115 / 145) < 1e-6, String(bigNode?.levelShare))
+ok('增量份额：小节点 29/(15+29) ≈ 66%，远高于其存量份额 21%',
+  Math.abs((smallNode?.deltaShareOfMainline ?? 0) - 29 / 44) < 1e-6 &&
+  (smallNode?.levelShare ?? 1) < 0.25,
+  `delta=${smallNode?.deltaShareOfMainline} level=${smallNode?.levelShare}`)
+ok('同一节点的存量份额与增量份额可以差距悬殊（故两者必须并列显示）',
+  Math.abs((smallNode?.deltaShareOfMainline ?? 0) - (smallNode?.levelShare ?? 0)) > 0.3)
+ok('A 利润规模按绝对水平记录，不是份额',
+  bigNode?.npLevelSum === 115, String(bigNode?.npLevelSum))
+
+// 公司在节点内的份额
+const twoInNode: ProfitFile = {
+  ...fakeFile,
+  records: [
+    { code: '300308', name: '甲', scope: 'DECISION', periods: [p(2026, 1, 100, 75)] },
+    { code: '300502', name: '乙', scope: 'DECISION', periods: [p(2026, 1, 100, 25)] },
+  ],
+}
+const wnMap = buildProfitMap('2026-08-13', twoInNode)
+const wnNode = wnMap.nodes.find(n => n.members.length === 2)
+ok('公司节点内份额：甲 75%、乙 25%',
+  Math.abs((wnNode?.members.find(m => m.code === '300308')?.shareWithinNode ?? 0) - 0.75) < 1e-9 &&
+  Math.abs((wnNode?.members.find(m => m.code === '300502')?.shareWithinNode ?? 0) - 0.25) < 1e-9)
+
+// 亏损公司不得把同节点其他公司的份额推过 100%
+const withLoss: ProfitFile = {
+  ...fakeFile,
+  records: [
+    { code: '300308', name: '盈利', scope: 'DECISION', periods: [p(2026, 1, 100, 80)] },
+    { code: '300502', name: '亏损', scope: 'DECISION', periods: [p(2026, 1, 100, -30)] },
+  ],
+}
+const lossNode = buildProfitMap('2026-08-13', withLoss).nodes.find(n => n.members.length === 2)
+ok('同节点有亏损公司时，盈利方份额不超过 100%',
+  (lossNode?.members.find(m => m.code === '300308')?.shareWithinNode ?? 0) === 1)
+
+// ── 数据完整度闸门：0/6 必须判为不可用于机会判断 ──
+const q = lvMap.quality
+ok('输出各主线数据完整度', q.length >= 4, String(q.length))
+const power = q.find(x => x.mainlineId === 'power')
+ok('AI电力三项验证均为 0 → 判为不可用于机会判断',
+  power !== undefined && power.usableForOpportunity === false,
+  JSON.stringify(power?.blockers))
+ok('不可用时给出具体原因（不知道本身就是信息）',
+  (power?.blockers.length ?? 0) >= 3, JSON.stringify(power?.blockers))
+const compute = q.find(x => x.mainlineId === 'compute')
+ok('AI算力三项验证 4/6 → 判为可用', compute?.usableForOpportunity === true)
+ok('完整度是比例而非评分', (power?.completeness ?? -1) === 0)
+
 // 真实数据的份额趋势
 try {
   const realMap = buildProfitMap('2026-08-13')
@@ -228,8 +293,12 @@ try {
     String(mod?.deltaShareHistory.filter(h => h.share !== null).length))
   const shares = optical.map(n => n.deltaShareHistory[n.deltaShareHistory.length - 2]?.share ?? 0)
   const total = shares.reduce((a, b) => a + b, 0)
-  ok('同一主线同一季度的份额合计约为 1',
+  ok('同一主线同一季度的增量份额合计约为 1',
     Math.abs(total - 1) < 0.02, String(total))
+  const lvTotal = optical.map(n => n.levelShare ?? 0).reduce((a, b) => a + b, 0)
+  ok('同一主线的存量份额合计约为 1', Math.abs(lvTotal - 1) < 0.02, String(lvTotal))
+  ok('真实数据中 AI电力被判为不可用于机会判断',
+    realMap.quality.find(x => x.mainlineId === 'power')?.usableForOpportunity === false)
 } catch { /* 需先跑 profit:fetch */ }
 ok('地图列出不可得字段', map.unavailableFields.length > 0)
 

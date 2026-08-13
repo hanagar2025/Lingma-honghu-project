@@ -1,6 +1,21 @@
-// Profit Radar —— 利润池迁移地图
+// Profit Radar —— 主线利润结构地图
 //
-// 回答委员会的问题：「哪个节点的利润正在从预期变成兑现？」
+// 委员会 2026-08-13 定名。原名"利润池迁移地图"已废弃：
+//   **"迁移"默认了零和**，而实测显示光通信全链同时扩张（光模块 +100、光芯片 +20、光器件 +10），
+//   这叫"产业扩张 + 边际扩散"，不是"100→80→60，钱跑到另一个节点"。
+//   名字会决定读者怎么解释数字，所以名字必须先改对。
+//
+// 回答的问题：「这条主线的利润，现在集中在哪些节点？各节点占多少？份额在往哪个方向变？」
+//
+// 三个变量必须同时看（委员会第三节）：
+//   A. 利润规模   —— 这个节点到底创造了多少钱（绝对水平）
+//   B. 利润份额   —— 它占整条主线利润的多少（**存量**份额）
+//   C. 份额变化   —— 扩大 / 稳定 / 缩小
+//
+// ⚠ B 与"增量份额"是两个不同的量，且常常给出不同印象：
+//   增量份额回答"这一季新增的钱去了哪里"，存量份额回答"钱现在在哪里"。
+//   一个节点可以增量份额很高（新增的钱多流向它）而存量份额仍很低（家底还小）。
+//   两者都要显示，不得只留其一。
 //
 // 本文件只做两件事：把累计财报还原成单季序列，按节点汇总。**不含任何决策规则。**
 // 全部输出为会计事实（ACCOUNTING）或描述性标签（OBSERVATION），不产生动作、不产生买入候选。
@@ -104,6 +119,15 @@ export interface MemberProfit {
    * 增长率衡量"这家公司变化多大"，增量衡量"利润池的钱去了哪里"。后者才是迁移问题的答案。
    */
   npAbsDelta: number | null
+  /**
+   * 该公司单季净利占**所属节点**利润的份额。
+   *
+   * 委员会给出的新核心定义需要两个条件同时成立：
+   *   ① 所在节点正在获得越来越大的主线利润份额；
+   *   ② **公司自身开始获得节点内越来越高的份额**。
+   * 本字段是第 ② 个条件的度量。单标的节点恒为 1，此时该条件无判别力，须标注。
+   */
+  shareWithinNode: number | null
   /** 累计毛利率及其同比变化（pct点） */
   grossMargin: number | null
   grossMarginYoyPct: number | null
@@ -180,6 +204,7 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
     latestSingle: latestSq, prevSingle: prevSq,
     npYoyAccelPct: accel,
     npAbsDelta,
+    shareWithinNode: null,
     grossMargin: latest?.grossMarginCum ?? null,
     grossMarginYoyPct: gmYoy,
     deductRatio, deductRatioAsOf: deductAsOf,
@@ -208,6 +233,14 @@ export interface NodeProfit {
    * 与增长率中位数常常方向相反，两者必须并列呈现，不得只显示其一。
    */
   npAbsDeltaSum: number | null
+  /** ── A. 利润规模 ── 节点单季净利合计（元），绝对水平 */
+  npLevelSum: number | null
+  /** ── B. 利润份额（存量）── 该节点利润占本主线利润总额的份额 */
+  levelShare: number | null
+  /** ── C. 份额变化 ── 存量份额的历史序列（按季升序） */
+  levelShareHistory: { label: string; share: number | null }[]
+  /** 存量份额相对四季前的变化（pct点）。正=份额扩大 */
+  levelShareDelta4Q: number | null
   /** 该节点增量占本主线全部正增量的份额。负增量节点为 null */
   deltaShareOfMainline: number | null
   /**
@@ -244,9 +277,39 @@ function median(xs: number[]): number | null {
   return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2
 }
 
+/**
+ * 主线级数据完整度。
+ *
+ * 委员会 2026-08-13 第九节：「不知道，本身就是信息。」
+ * AI电力产业验证 0/6、盈利验证 0/6、主线归因 0/6 时，系统必须显示
+ * 「⚠ 当前结论不可用于机会判断」，**而不是给它一个 81 分**。
+ *
+ * `usableForOpportunity` 为 false 时，该主线的一切读数只能用于"这里需要研究"，
+ * 不得用于"这里有机会"。这是一条**抑制**规则 —— 它只减少系统的发言权，不增加，
+ * 因此不属于"新增决策规则"，不改变规则指纹。
+ */
+export interface MainlineDataQuality {
+  mainlineId: string
+  mainlineName: string
+  memberCount: number
+  industryVerified: number
+  earningsVerified: number
+  attributionVerified: number
+  /** 三项验证的整体完整度 */
+  completeness: number
+  /** 报告期中位滞后天数 */
+  medianReportAgeDays: number | null
+  /** 是否可用于机会判断 */
+  usableForOpportunity: boolean
+  /** 不可用的原因。可用时为空 */
+  blockers: string[]
+}
+
 export interface ProfitMap {
   today: string
   generatedAt: string
+  /** 各主线数据完整度。必须显示在每张表最显眼处 */
+  quality: MainlineDataQuality[]
   /** 数据新鲜度声明 —— 必须随地图一起呈现 */
   freshness: {
     withLatestHalfYear: number
@@ -288,10 +351,15 @@ export function buildProfitMap(today: string, file?: ProfitFile): ProfitMap {
       : accelerating === accels.length ? 'ACCELERATING'
       : accelerating === 0 ? 'DECELERATING' : 'MIXED'
     const deltas = ms.map(m => m.npAbsDelta).filter((x): x is number => x != null)
+    const levels = ms.map(m => m.latestSingle?.netProfit).filter((x): x is number => x != null)
     return {
       mainlineId, node, members: ms,
       usable: yoys.length,
       medianNpYoy: median(yoys),
+      npLevelSum: levels.length ? levels.reduce((a, b) => a + b, 0) : null,
+      levelShare: null,
+      levelShareHistory: [],
+      levelShareDelta4Q: null,
       npAbsDeltaSum: deltas.length ? deltas.reduce((a, b) => a + b, 0) : null,
       deltaShareOfMainline: null,
       deltaShareHistory: [],
@@ -310,6 +378,27 @@ export function buildProfitMap(today: string, file?: ProfitFile): ProfitMap {
     if (posTotal <= 0) continue
     for (const n of inMl) {
       if (n.npAbsDeltaSum != null && n.npAbsDeltaSum > 0) n.deltaShareOfMainline = n.npAbsDeltaSum / posTotal
+    }
+  }
+
+  // ── 公司在节点内的利润份额 ──
+  // 分母取节点内**正**利润之和：若某公司亏损，用净额做分母会让其他公司份额超过 100%。
+  for (const n of nodes) {
+    const posTotal = n.members.reduce((s, m) => s + Math.max(0, m.latestSingle?.netProfit ?? 0), 0)
+    if (posTotal <= 0) continue
+    for (const m of n.members) {
+      const v = m.latestSingle?.netProfit
+      if (v != null && v > 0) m.shareWithinNode = v / posTotal
+    }
+  }
+
+  // ── B. 存量份额（当季） ──
+  for (const mlId of new Set(nodes.map(n => n.mainlineId))) {
+    const inMl = nodes.filter(n => n.mainlineId === mlId)
+    const posTotal = inMl.reduce((s, n) => s + Math.max(0, n.npLevelSum ?? 0), 0)
+    if (posTotal <= 0) continue
+    for (const n of inMl) {
+      if (n.npLevelSum != null && n.npLevelSum > 0) n.levelShare = n.npLevelSum / posTotal
     }
   }
 
@@ -355,12 +444,79 @@ export function buildProfitMap(today: string, file?: ProfitFile): ProfitMap {
     }
   }
 
+  // ── C. 存量份额的历史序列 ──
+  // 与增量份额同样受披露顺序影响：财报季只有少数节点出报表时，分母不完整。
+  for (const label of recentLabels) {
+    const [yStr, qStr] = label.split('Q')
+    const year = +yStr
+    const quarter = +qStr
+    const nodeLevel = new Map<string, number>()
+    for (const n of nodes) {
+      let sum: number | null = null
+      for (const m of n.members) {
+        const sq = sqByCode.get(m.code) ?? []
+        const cur = sq.find(x => x.year === year && x.quarter === quarter)
+        if (cur?.netProfit != null) sum = (sum ?? 0) + cur.netProfit
+      }
+      if (sum !== null) nodeLevel.set(`${n.mainlineId}|${n.node}`, sum)
+    }
+    for (const mlId of new Set(nodes.map(n => n.mainlineId))) {
+      const inMl = nodes.filter(n => n.mainlineId === mlId)
+      const reporting = inMl.filter(n => nodeLevel.has(`${n.mainlineId}|${n.node}`)).length
+      const posTotal = inMl.reduce((s, n) => s + Math.max(0, nodeLevel.get(`${n.mainlineId}|${n.node}`) ?? 0), 0)
+      const usableSeason = reporting >= 3
+      for (const n of inMl) {
+        const v = nodeLevel.get(`${n.mainlineId}|${n.node}`)
+        n.levelShareHistory.push({
+          label,
+          share: usableSeason && v != null && posTotal > 0 ? Math.max(0, v) / posTotal : null,
+        })
+      }
+    }
+  }
+
+  // 份额变化：与四季前同比，避开季节性
+  for (const n of nodes) {
+    const h = n.levelShareHistory.filter(x => x.share !== null)
+    if (h.length >= 5) {
+      const last = h[h.length - 1].share!
+      const prior = h[h.length - 5].share!
+      n.levelShareDelta4Q = (last - prior) * 100
+    }
+  }
+
   const ages = members.map(m => m.reportAgeDays).filter((x): x is number => x != null)
   const withH1 = members.filter(m => m.latestReport && m.latestReport >= `${today.slice(0, 4)}-06-30`).length
+
+  // ── 主线数据完整度 ──
+  const quality: MainlineDataQuality[] = MAINLINES.map(ml => {
+    const n = ml.members.length
+    const ind = ml.members.filter(m => m.industryVerified).length
+    const earn = ml.members.filter(m => m.earningsVerified).length
+    const attr = ml.members.filter(m => m.mainlineAttributionVerified === true).length
+    const codes = new Set(ml.members.map(m => m.code))
+    const mlAges = members.filter(m => codes.has(m.code)).map(m => m.reportAgeDays)
+      .filter((x): x is number => x != null)
+    const completeness = n > 0 ? (ind + earn + attr) / (n * 3) : 0
+    const blockers: string[] = []
+    if (ind === 0) blockers.push(`产业验证 0/${n}`)
+    if (earn === 0) blockers.push(`盈利验证 0/${n}`)
+    if (attr === 0) blockers.push(`主线归因 0/${n}`)
+    if (completeness < 0.2) blockers.push(`三项验证完整度仅 ${(completeness * 100).toFixed(0)}%`)
+    return {
+      mainlineId: ml.id, mainlineName: ml.name, memberCount: n,
+      industryVerified: ind, earningsVerified: earn, attributionVerified: attr,
+      completeness,
+      medianReportAgeDays: median(mlAges),
+      usableForOpportunity: blockers.length === 0,
+      blockers,
+    }
+  })
 
   return {
     today,
     generatedAt: f.generatedAt,
+    quality,
     freshness: {
       withLatestHalfYear: withH1,
       total: members.length,

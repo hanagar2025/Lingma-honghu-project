@@ -35,26 +35,48 @@ function main(): void {
   const W = 118
 
   out.write(`\n${'═'.repeat(W)}\n`)
-  out.write(`  主线利润池迁移地图  ${today}\n`)
+  out.write(`  主线利润结构地图  ${today}\n`)
   out.write(`${'═'.repeat(W)}\n\n`)
 
   out.write(`⚠ 数据新鲜度：${map.freshness.warning}\n\n`)
 
+  // ── 数据完整度置顶 ──「不知道，本身就是信息」 ──
+  out.write(`${'─'.repeat(W)}\n数据完整度（三项验证：产业 / 盈利 / 主线归因）\n${'─'.repeat(W)}\n`)
+  out.write(`  ${'主线'.padEnd(20)}${'产业'.padEnd(8)}${'盈利'.padEnd(8)}${'归因'.padEnd(8)}${'完整度'.padEnd(9)}${'滞后'.padEnd(8)}可用于机会判断\n`)
+  for (const q of map.quality) {
+    out.write(
+      `  ${q.mainlineName.padEnd(20)}${`${q.industryVerified}/${q.memberCount}`.padEnd(8)}` +
+      `${`${q.earningsVerified}/${q.memberCount}`.padEnd(8)}${`${q.attributionVerified}/${q.memberCount}`.padEnd(8)}` +
+      `${`${(q.completeness * 100).toFixed(0)}%`.padEnd(9)}` +
+      `${(q.medianReportAgeDays === null ? '—' : `${q.medianReportAgeDays}天`).padEnd(8)}` +
+      `${q.usableForOpportunity ? '可用' : `⚠ 不可用（${q.blockers.join('、')}）`}\n`
+    )
+  }
+  out.write('\n')
+
   for (const mlId of ['optical', 'semi', 'compute', 'power', '未归属']) {
     const nodes = map.nodes.filter(n => n.mainlineId === mlId)
     if (!nodes.length) continue
-    out.write(`${'─'.repeat(W)}\n【${MAINLINE_NAME[mlId] ?? mlId}】\n${'─'.repeat(W)}\n`)
+    const q = map.quality.find(x => x.mainlineId === mlId)
+    out.write(`${'─'.repeat(W)}\n【${MAINLINE_NAME[mlId] ?? mlId}】`)
+    if (q && !q.usableForOpportunity) {
+      out.write(`  ⚠ 当前结论不可用于机会判断（${q.blockers.join('、')}）`)
+    }
+    out.write(`\n${'─'.repeat(W)}\n`)
+    // A 利润规模 / B 利润份额（存量）/ C 份额变化 —— 三个变量必须同时看
     out.write(
-      `  ${'节点'.padEnd(12)}${'状态'.padEnd(14)}${'同比中位'.padEnd(11)}` +
-      `${'净利增量'.padEnd(10)}${'增量份额'.padEnd(9)}${'滞后'.padEnd(7)}覆盖\n`
+      `  ${'节点'.padEnd(12)}${'A利润规模'.padEnd(11)}${'B存量份额'.padEnd(11)}${'C份额变化'.padEnd(11)}` +
+      `${'同比中位'.padEnd(11)}${'净利增量'.padEnd(10)}${'增量份额'.padEnd(9)}${'滞后'.padEnd(7)}覆盖\n`
     )
-    // 按**绝对增量**降序 —— 这才是"利润池的钱去了哪里"。
-    // 早前按同比增长率排序会把小基数标的顶到最前，与迁移问题的答案相反。
-    const sorted = [...nodes].sort((a, b) => (b.npAbsDeltaSum ?? -Infinity) - (a.npAbsDeltaSum ?? -Infinity))
+    // 按**存量利润规模**降序 —— 回答"钱现在在哪里"。
+    // 不按增长率排：那会把小基数标的顶到最前，与结构问题的答案相反。
+    const sorted = [...nodes].sort((a, b) => (b.npLevelSum ?? -Infinity) - (a.npLevelSum ?? -Infinity))
     for (const n of sorted) {
       const cov = n.researchOnly ? '仅研究域' : `${n.members.filter(m => m.scope === 'DECISION').length}只决策域`
       out.write(
-        `  ${n.node.padEnd(12)}${STATUS_TEXT[n.status].padEnd(14)}` +
+        `  ${n.node.padEnd(12)}${yi(n.npLevelSum).padEnd(11)}` +
+        `${(n.levelShare === null ? '—' : `${(n.levelShare * 100).toFixed(1)}%`).padEnd(11)}` +
+        `${pp(n.levelShareDelta4Q).padEnd(11)}` +
         `${pct(n.medianNpYoy).padEnd(11)}${yi(n.npAbsDeltaSum).padEnd(10)}` +
         `${(n.deltaShareOfMainline === null ? '—' : `${(n.deltaShareOfMainline * 100).toFixed(1)}%`).padEnd(9)}` +
         `${(n.maxReportAgeDays === null ? '—' : `${n.maxReportAgeDays}天`).padEnd(7)}${cov}\n`
@@ -64,10 +86,19 @@ function main(): void {
 
     // ── 增量份额趋势 ──
     // 迁移的直接证据是份额的变化方向，不是单季快照。份额上升=这一块蛋糕分得更多。
-    const withHist = sorted.filter(n => n.deltaShareHistory.some(h => h.share !== null))
+    const withHist = sorted.filter(n => n.levelShareHistory.some(h => h.share !== null))
     if (withHist.length) {
-      const labels = withHist[0].deltaShareHistory.map(h => h.label)
-      out.write(`  利润增量份额趋势（%）—— 迁移的直接证据是份额方向，不是单季快照\n`)
+      const labels = withHist[0].levelShareHistory.map(h => h.label)
+      out.write(`  B 存量份额趋势（%）—— 钱现在在哪里，以及这个分配比例在怎么变\n`)
+      out.write(`  ${'节点'.padEnd(14)}${labels.map(l => l.padStart(8)).join('')}\n`)
+      for (const n of withHist) {
+        const cells = n.levelShareHistory
+          .map(h => (h.share === null ? '—' : (h.share * 100).toFixed(0)).padStart(8))
+          .join('')
+        out.write(`  ${n.node.padEnd(14)}${cells}\n`)
+      }
+      out.write('\n')
+      out.write(`  增量份额趋势（%）—— 这一季新增的钱去了哪里（与存量份额是两个不同的量）\n`)
       out.write(`  ${'节点'.padEnd(14)}${labels.map(l => l.padStart(8)).join('')}\n`)
       for (const n of withHist) {
         const cells = n.deltaShareHistory
@@ -83,9 +114,14 @@ function main(): void {
       if (!n.members.length) continue
       out.write(`  ▸ ${n.node}\n`)
       for (const m of n.members) {
+        const within = m.shareWithinNode === null
+          ? '—'
+          : n.members.length === 1
+            ? '100%（单标的节点，本项无判别力）'
+            : `${(m.shareWithinNode * 100).toFixed(1)}%`
         out.write(
           `      ${m.name.padEnd(7)}${m.code}  ${m.scope === 'RESEARCH' ? '[研究]' : '[决策]'}  ` +
-          `${m.latestReport ?? '无数据'}\n`
+          `${m.latestReport ?? '无数据'}  节点内份额 ${within}\n`
         )
         out.write(
           `        单季收入 ${yi(m.latestSingle?.revenue ?? null)}（同比 ${pct(m.latestSingle?.revenueYoy ?? null)}）` +
