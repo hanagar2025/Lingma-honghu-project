@@ -78,8 +78,12 @@ echo "   已备份到 \$BACKUP（\$(sudo du -h "\$BACKUP" | cut -f1)）"
 echo "── 2/6 探测现有证书路径 ──"
 # **探测而不是假设**：证书路径写错会让 HTTPS 直接起不来，
 # 而 HTTPS 是解锁功能的硬依赖。宁可失败退出，也不猜一个路径。
-ALL_CERT=\$(sudo grep -rhoP '(?<=ssl_certificate\s)\S+(?=;)' /etc/nginx/ 2>/dev/null | sort -u || true)
-ALL_KEY=\$(sudo grep -rhoP '(?<=ssl_certificate_key\s)\S+(?=;)' /etc/nginx/ 2>/dev/null | sort -u || true)
+# 同样用 \K：后向断言是固定长度的，只能吃一个空格，
+# 而对齐排版的配置（含本脚本自己生成的那份）用的是多个空格 ——
+# 那会让重跑时读不到自己写的配置，且失败方式是"静默匹配不到"。
+# \K 之后要求 \s+，因此不会误吃 ssl_certificate_key 那一行。
+ALL_CERT=\$(sudo grep -rhoP '^\s*ssl_certificate\s+\K\S+(?=;)' /etc/nginx/ 2>/dev/null | sort -u || true)
+ALL_KEY=\$(sudo grep -rhoP '^\s*ssl_certificate_key\s+\K\S+(?=;)' /etc/nginx/ 2>/dev/null | sort -u || true)
 # 机器上可能配着多个域名的证书。优先取路径里含本域名的那张 ——
 # 挑错证书的后果是 HTTPS 报名称不匹配，而浏览器一报错就不给 WebCrypto，解锁直接失效。
 CERT=\$(echo "\$ALL_CERT" | grep -F "\$DOMAIN" | head -1 || true)
@@ -166,6 +170,15 @@ NGINXCONF
 sudo sed -i "s|__DOMAIN__|\$DOMAIN|g; s|__CERT__|\$CERT|g; s|__KEY__|\$KEY|g; s|__WEBROOT__|\$WEBROOT|g" "\$NGINX_SITE"
 
 echo "── 5/6 下线旧站点并校验配置 ──"
+# 先记下旧站点的 root 目录再解除启用。
+# **本脚本不删旧应用的文件**，只让 nginx 不再服务它 ——
+# 删除必须发生在新站点验证通过之后，否则一旦新站点有问题就没有回退余地。
+# 把路径打印出来，等验证通过再由人决定删不删。
+# 用 \K 而不是后向断言：PCRE 的 (?<=...) 不支持可变长度，
+# 而 root 前面的缩进长度不定，写成后向断言会静默匹配不到任何东西。
+OLD_ROOTS=\$(sudo grep -rhoP '^\s*root\s+\K\S+(?=;)' /etc/nginx/sites-enabled/ 2>/dev/null \\
+  | sort -u | grep -v "^\$WEBROOT\$" || true)
+
 # 移除全部旧的启用软链（原配置已在第 1 步备份），只启用我们这一个
 sudo rm -f /etc/nginx/sites-enabled/*
 sudo ln -sf "\$NGINX_SITE" /etc/nginx/sites-enabled/
@@ -183,8 +196,17 @@ sudo systemctl reload nginx
 echo "   nginx 已重载"
 
 echo
-echo "完成。旧应用已下线，其文件与配置保留在 \$BACKUP。"
-echo "证书与 certbot 续期未做任何改动。"
+echo "完成。证书与 certbot 续期未做任何改动。"
+echo "旧 nginx 配置已备份在 \$BACKUP。"
+if [[ -n "\$OLD_ROOTS" ]]; then
+  echo
+  echo "旧应用的文件**仍在磁盘上**，只是 nginx 不再服务它们："
+  echo "\$OLD_ROOTS" | sed 's/^/    /'
+  echo
+  echo "先在手机和电脑上确认新站点能正常解锁并看到数据，确认无误后再删："
+  echo "\$OLD_ROOTS" | sed 's|^|    sudo rm -rf |'
+  echo "  —— 删除前不必着急，它们不占带宽也不被访问。"
+fi
 REMOTE
 
 step "二、将在服务器上执行的脚本"
