@@ -6,6 +6,8 @@
   "peakAssets": 4300000,
   "householdAnnualExpense": null,
   "householdAnnualExpenseNote": "委员会尚未提供家庭年度刚性支出。保持 null → 安全垫判为数据缺失，不得用 0 代替。",
+  "externalCash": 2000000,
+  "externalCashNote": "委员会 2026-08-14 报出的券商账户外现金储备。口径待战略层裁定：并入仓位上限分母会让现有超限持仓一次记账即自动合规，故未裁定期间不计入，仅在报告中并列显示两种口径的百分比。",
   "positions": [
     { "code": "300308", "name": "中际旭创", "quantity": 400, "cost": 967.50, "sector": "通信", "theme": "AI" },
     { "code": "300502", "name": "新易盛", "quantity": 1260, "cost": 470.63, "sector": "通信", "theme": "AI" },
