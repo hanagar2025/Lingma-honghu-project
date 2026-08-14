@@ -9,8 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "dev:offline": "VITE_OFFLINE=1 vite",
+    "dev:lan": "VITE_OFFLINE=1 vite --host",
     "build:offline": "VITE_OFFLINE=1 vite build",
     "serve:offline": "VITE_OFFLINE=1 vite preview --port 4173",
+    "serve:lan": "VITE_OFFLINE=1 vite preview --port 4173 --host",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {

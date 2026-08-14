@@ -73,6 +73,50 @@ npm run web:build  # 产出 frontend/dist，含快照
 npm run web:serve
 ```
 
+## 手机上看
+
+两条路，都不需要把数据放到公网。
+
+```bash
+npm run web:lan    # 起服务并打印手机可访问的局域网地址
+```
+
+手机与电脑连**同一个 WiFi**，在手机浏览器打开打印出来的 `http://192.168.x.x:5173`。
+离开这个 WiFi 就打不开，外网访问不到 —— 对一个显示全部持仓与总资产的页面来说，
+这个限制是特性而不是缺陷。
+
+不想开电脑服务时，走单文件路线：`npm run daily` 生成的
+`backend/src/services/cockpit/data/reports/YYYY-MM-DD.html` 隔空投送到手机，
+用 Safari 打开即可。窄屏已单独适配（表格横滑，不隐藏任何一列 ——
+手机上看不到的那列，正好可能是法定减仓理由）。完全离线，可长期存档翻看。
+
+> ### ⚠ 不要把这个页面放到公开的静态托管上
+>
+> 页面包含全部持仓、股数、成本、现金与总资产。GitHub Pages 在免费与 Pro 计划下
+> **即使仓库是私有的，发布出去的站点也是公开的**。
+> 若确实需要一个随处可访问的链接，必须选带访问控制的方案
+> （例如 Cloudflare Access、Netlify 密码保护、Tailscale 私有网络），
+> 不能只依赖"URL 没人知道"。
+
+## 持仓数据的存放位置（关系到隐私）
+
+`backend/src/services/cockpit/data/portfolio.json` 记录现金、峰值净值、每只标的的股数与成本。
+它默认**在版本库里**，因此仓库若是公开的，这些数字就是公开的。审计档
+（`data/audits/*.md`）与变化台账（`governance/data/changelog/*.json`）同样含仓位百分比与减仓金额。
+
+两种处理方式，按需要选一种：
+
+1. **把仓库设为 Private**（推荐）—— 保留跨机器同步，一处设置即可。
+   注意历史提交不会自动消失，改为私有只能止住继续暴露。
+2. **把持仓文件放到版本库之外** —— 所有命令都支持 `PORTFOLIO=` 指定路径：
+
+   ```bash
+   PORTFOLIO=~/.tios/portfolio.json npm run web:snapshot
+   ```
+
+   此时可以 `git rm --cached backend/src/services/cockpit/data/portfolio.json` 并加入 `.gitignore`。
+   代价是持仓不再随仓库同步。
+
 ## 完整模式（需要数据库，可写入执行记录）
 
 ```bash

@@ -13,7 +13,8 @@
     "web": "npm run web:snapshot && npm run dev:offline --workspace frontend",
     "web:snapshot": "cd backend && WEB=1 HTML=1 npx tsx src/services/cockpit/run.ts",
     "web:build": "npm run web:snapshot && npm run build:offline --workspace frontend",
-    "web:serve": "npm run serve:offline --workspace frontend"
+    "web:serve": "npm run serve:offline --workspace frontend",
+    "web:lan": "npm run web:snapshot && node scripts/lan-url.mjs && npm run dev:lan --workspace frontend"
   },
   "workspaces": [
     "backend",
