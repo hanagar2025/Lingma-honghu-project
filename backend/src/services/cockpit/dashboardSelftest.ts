@@ -18,7 +18,9 @@ import {
   type Dashboard, type DashboardInput, type NodeStructureRow,
 } from './dashboard'
 import { renderDashboard } from './renderDashboard'
-import { FORBIDDEN_REASON_PHRASES } from './types'
+import { buildVerdict } from './verdict'
+import { renderVerdict } from './renderVerdict'
+import { ACTION_TEXT, FORBIDDEN_REASON_PHRASES } from './types'
 
 let failed = 0
 let passed = 0
@@ -387,6 +389,87 @@ ok('前端在离线模式隐藏需要后端的复跑按钮',
   /!offline\.on\s*&&/.test(cockpitPageSrc))
 ok('前端显示外围现金口径待裁定',
   /externalCash/.test(cockpitPageSrc) && /未计入仓位上限分母/.test(cockpitPageSrc))
+
+// ───────────────────────────────────────────────────────────────
+// 今日结论层
+//
+// 这一层最危险：它是唯一"给结论"的地方，所以最容易在此把观察指标偷偷升级成动作，
+// 或者为了让页面好看而给出一个"看起来像答案"的择时判断。逐条钉住。
+console.log('\n【今日结论层】')
+
+const verdict = buildVerdict({
+  dashboard: dash,
+  actions: [],
+  actionText: ACTION_TEXT,
+  drift: [],
+  driftSnapshotCount: 1,
+})
+
+ok('结论层不含综合评分字段',
+  !/"(score|总分|rating|星级|grade|rank|weight)"/i.test(JSON.stringify(verdict)))
+
+// 焦点必须能收敛。二十行的"焦点"等于没有焦点。
+ok('焦点名单不超过 8 条', verdict.focus.length <= 8, String(verdict.focus.length))
+ok('焦点条目不重复同一标的',
+  new Set(verdict.focus.filter(f => f.code).map(f => f.code)).size
+    === verdict.focus.filter(f => f.code).length)
+ok('每条焦点都写明凭哪条规则入列', verdict.focus.every(f => f.because.length > 0))
+ok('每条焦点都给出可执行的今日动作', verdict.focus.every(f => f.todo.length > 0))
+
+// 法定理由与复核项在措辞上不可互换
+const mustText = JSON.stringify(verdict.mustDo)
+ok('必须执行档的理由不含预测性措辞',
+  !FORBIDDEN_REASON_PHRASES.some(p => mustText.includes(p)),
+  FORBIDDEN_REASON_PHRASES.filter(p => mustText.includes(p)).join('、'))
+ok('必须执行档每条都有法定理由', verdict.mustDo.every(h => !!h.legalReason))
+ok('复核档每条都明确无法定理由', verdict.reviewNoAction.every(h => h.legalReason === null))
+ok('复核档在渲染文本里明写"法定减仓理由：无"',
+  !verdict.reviewNoAction.length || renderVerdict(verdict).includes('法定减仓理由：无'))
+
+// 答不了的问题必须存在且带实测依据 —— 空着等于默认"没说不能就是能"
+ok('列出系统答不了的问题', verdict.cannotAnswer.length >= 4)
+ok('包含"是不是阶段性顶底"这一条',
+  verdict.cannotAnswer.some(c => c.question.includes('阶段性')))
+ok('包含"现在能不能建仓"这一条',
+  verdict.cannotAnswer.some(c => c.question.includes('能不能建仓')))
+ok('每条都给出为什么答不了，且引用实测而非仅表态',
+  verdict.cannotAnswer.every(c => c.why.length > 30))
+ok('明说减仓不是因为要跌',
+  verdict.cannotAnswer.some(c => c.question.includes('要跌') && c.why.startsWith('不是')))
+
+// 样本不足必须显式告知，不能拿 1 天的档冒充趋势
+ok('归档不足时明说无法计算累计趋势',
+  verdict.driftNote.includes('无法计算') || verdict.driftNote.includes('样本太短'),
+  verdict.driftNote)
+
+// 一堆待核验节点不等于一堆机会 —— 这是最容易读反的地方
+ok('研究覆盖判断把"待核验"说成覆盖不足而非机会',
+  verdict.coverageVerdict.includes('不是') || verdict.coverageVerdict.includes('均已补齐'),
+  verdict.coverageVerdict)
+
+const verdictSrc = readFileSync(new URL('./verdict.ts', import.meta.url), 'utf-8')
+ok('结论层不调用 makeAction（不生产动作）', !/\bmakeAction\s*\(/.test(verdictSrc))
+
+/**
+ * 剥掉注释与字符串字面量再查逻辑。
+ *
+ * 必须这么做的原因很具体：`cannotAnswer` 里要写清"10 日涨幅 >50% 这条护栏"
+ * 才能让人知道为什么系统答不了顶底，而那段解释性文案会被"含价格阈值"的正则命中。
+ * 若不区分代码与文案，就会逼着人删掉解释来讨好自检 —— 本末倒置。
+ */
+function codeOnly(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/`(?:[^`\\]|\\.)*`/g, '``')
+}
+
+ok('结论层不含价格阈值比较（不做择时）',
+  !/(ret10|涨幅|drawdown|pePercentile)\s*[<>]/.test(codeOnly(verdictSrc)))
+ok('结论层不引入新的数值阈值常量',
+  !/[<>]=?\s*0\.\d/.test(codeOnly(verdictSrc)))
 
 // ───────────────────────────────────────────────────────────────
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
