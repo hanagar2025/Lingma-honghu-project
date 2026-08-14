@@ -229,9 +229,40 @@ echo "── 5/6 下线旧站点并校验配置 ──"
 OLD_ROOTS=\$(sudo grep -rhoP '^\s*root\s+\K\S+(?=;)' /etc/nginx/sites-enabled/ 2>/dev/null \\
   | sort -u | grep -v "^\$WEBROOT\$" || true)
 
-# 移除全部旧的启用软链（原配置已在第 1 步备份），只启用我们这一个
+# 移除全部旧的启用软链（原配置已在第 1 步备份）
 sudo rm -f /etc/nginx/sites-enabled/*
+
+# **仅清 sites-enabled 是不够的。** 实测踩过：旧配置放在 conf.d/ 里，
+# 而 Ubuntu 的 nginx.conf 先 include conf.d/ 再 include sites-enabled/，
+# 先到的 server 块赢，我们的配置被判为 "conflicting server name ... ignored"。
+# 症状极具欺骗性：nginx -t 只报 warn 不报错、reload 成功、页面返回 200，
+# 一切看着都对，但服务的还是旧应用。
+# 所以要扫遍整个 /etc/nginx，把所有声明了本域名的其他配置一并停用。
+echo "   扫描其他位置的同域名配置……"
+OTHERS=\$(sudo grep -rl "server_name.*\$DOMAIN" /etc/nginx/ 2>/dev/null \\
+  | grep -v "^\$NGINX_SITE\$" | grep -v '/sites-enabled/' | sort -u || true)
+if [[ -n "\$OTHERS" ]]; then
+  while IFS= read -r f; do
+    [[ -z "\$f" ]] && continue
+    sudo mv "\$f" "\$f.disabled-\$STAMP"
+    echo "     已停用 \$f → \$(basename "\$f").disabled-\$STAMP"
+  done <<< "\$OTHERS"
+else
+  echo "     没有其他位置声明本域名"
+fi
+
 sudo ln -sf "\$NGINX_SITE" /etc/nginx/sites-enabled/
+
+# 冲突必须当失败处理。nginx 把它当 warn，而 warn 不会让 nginx -t 返回非零 ——
+# 于是"配置被忽略"这件事会静默通过，正是上一次部署失败的原因。
+if sudo nginx -t 2>&1 | grep -q 'conflicting server name'; then
+  echo "   ✗ 仍有同域名的 server 块在竞争，我们的配置会被忽略"
+  sudo nginx -t 2>&1 | grep 'conflicting server name' | sed 's/^/     /'
+  echo "   请检查：sudo nginx -T | grep -n 'server_name.*\$DOMAIN'"
+  echo "   已中止。备份在 \$BACKUP"
+  exit 1
+fi
+
 if ! sudo nginx -t; then
   echo "   ✗ nginx 配置校验失败，正在回滚站点启用状态"
   sudo rm -f /etc/nginx/sites-enabled/*
@@ -298,15 +329,45 @@ ssh "${SSH_OPTS[@]}" "$USER_@$HOST" "chmod +x /tmp/tios-deploy.sh && /tmp/tios-d
 rm -f "$REMOTE_SH" "$(dirname "$REMOTE_SH")/tios-deploy.sh"
 
 step "四、验证"
+# **只看状态码会给出假绿。** 上一次部署就是这么骗过去的：旧应用同样返回 200，
+# 而它也是个 SPA，任何不存在的路径都被回退成 index.html（仍是 200）——
+# 于是"首页 200、快照 200、明文不可访问"三项全绿，服务的却还是旧程序。
+# 所以必须验内容：认我们自己页面里的标识串。
 sleep 2
-CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://$DOMAIN/" || echo "000")
-printf '  https://%s/ → HTTP %s\n' "$DOMAIN" "$CODE"
-SNAP=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://$DOMAIN/data/today.enc.json" || echo "000")
-printf '  加密快照 → HTTP %s\n' "$SNAP"
-PLAIN=$(curl -s --max-time 20 "https://$DOMAIN/data/today.json" 2>/dev/null | head -c 20 || true)
-if [[ "$PLAIN" == *'"date"'* ]]; then
-  printf '\n  \033[31m✗ 明文快照可公开下载，请立即处理\033[0m\n'
+FAILED=0
+BODY=$(curl -s --max-time 20 "https://$DOMAIN/" || true)
+
+if [[ "$BODY" == *'TIOS'* ]]; then
+  printf '  ✓ 首页是本项目（标题含 TIOS）\n'
 else
-  printf '  明文快照 → 不可访问（正确）\n'
+  FAILED=1
+  printf '  \033[31m✗ 首页不是本项目\033[0m\n'
+  TITLE=$(printf '%s' "$BODY" | grep -oP '(?<=<title>).*?(?=</title>)' | head -1 || true)
+  printf '     实际标题：%s\n' "${TITLE:-（取不到）}"
+  printf '     多半是仍有同域名的 server 块在竞争，或浏览器/CDN 缓存。\n'
+  printf '     查：sudo nginx -T | grep -n "server_name.*%s"\n' "$DOMAIN"
 fi
-printf '\n  手机打开 https://%s/ ，应先出现口令解锁页。\n\n' "$DOMAIN"
+
+# 密文必须是真的密文，不能是被 SPA 回退接走的 index.html
+ENC=$(curl -s --max-time 20 "https://$DOMAIN/data/today.enc.json" || true)
+if [[ "$ENC" == *'"encrypted"'* && "$ENC" == *'"dataB64"'* ]]; then
+  printf '  ✓ 加密快照可取且确为密文\n'
+else
+  FAILED=1
+  printf '  \033[31m✗ 加密快照不可用\033[0m（取到的前 60 字节：%s）\n' "$(printf '%s' "$ENC" | head -c 60)"
+fi
+
+PLAIN=$(curl -s --max-time 20 "https://$DOMAIN/data/today.json" 2>/dev/null || true)
+if [[ "$PLAIN" == *'"date"'* && "$PLAIN" == *'"holdings"'* ]]; then
+  FAILED=1
+  printf '  \033[31m✗ 明文快照可公开下载，请立即处理\033[0m\n'
+else
+  printf '  ✓ 明文快照不可访问\n'
+fi
+
+if (( FAILED )); then
+  printf '\n  \033[31m部署未生效。旧配置与文件都还在，备份也在服务器 /root/ 下。\033[0m\n\n'
+  exit 1
+fi
+printf '\n  手机打开 https://%s/ ，应先出现口令解锁页。\n' "$DOMAIN"
+printf '  若仍看到旧页面，先强制刷新（iOS Safari：长按刷新按钮）。\n\n'
