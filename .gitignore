@@ -23,3 +23,6 @@ node_modules
 
 # 盘中临时审计档（收盘后重跑会生成正式档 YYYY-MM-DD.md）
 /backend/src/services/cockpit/data/audits/*-盘中.md
+
+# 待上传的发布包。内含当日密文快照，且完全可由代码重现，无需入库。
+/frontend/release

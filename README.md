@@ -147,7 +147,32 @@ TIOS_PASSPHRASE='你的长口令' npm run web:deploy
 因此 `npm run web:lan` 那条局域网路径**不能用加密快照**（局域网是 http），
 局域网就用明文快照，公网才用密文。
 
-### 具体到 hhwealth.cc（阿里云注册）
+### 具体到 hhwealth.cc
+
+现状（2026-08-14 实测）：域名解析到阿里云 ECS `39.104.86.200`，
+nginx/1.18.0 (Ubuntu)，**HTTPS 已配好**，根目录跑着 2026-02 部署的老版鸿鹄理财。
+
+HTTPS 现成是关键 —— 加密解锁必须在安全上下文里才能工作。
+所以不需要换托管，只要把我们的产物挂到一个**子路径**，不动根目录那个应用：
+
+```bash
+TIOS_PASSPHRASE='你的长口令' BASE_PATH=/tios/ npm run web:deploy
+BASE_PATH=/tios/ npm run web:package
+```
+
+`web:package` 会打好 tar.gz，并打印照抄即可的 scp、解包与 nginx 配置。
+之后手机打开 `https://hhwealth.cc/tios/`，先出现口令解锁页。
+
+每个交易日更新数据只需重传 `data/today.enc.json` 这一个文件（约 280KB），
+nginx 无需重载。
+
+> **子路径部署必须带 `BASE_PATH`。** 不带的话产物会引用 `/assets/...`，
+> 浏览器去站点根目录找资源 —— 那里是另一个应用。症状是**白屏，但所有请求都是 200**
+> （被 SPA 回退接走），从现象上完全看不出原因。
+> `BASE_PATH` 同时驱动 Vite 的 `base` 与 React Router 的 `basename`，两者不会不同步；
+> `web:package` 还会再校验一遍产物里的实际路径，不一致就拒绝打包。
+
+### 换成独立托管（可选）
 
 两条路，差别主要在备案：
 
