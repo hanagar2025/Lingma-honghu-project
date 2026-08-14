@@ -78,7 +78,7 @@ fi
 LOWER="$(printf '%s' "$TIOS_PASSPHRASE" | tr '[:upper:]' '[:lower:]')"
 for w in hhwealth honghu wealth hongkong tios 鸿鹄 理财; do
   if [[ "$LOWER" == *"$w"* ]]; then
-    die "口令里含「$w」—— 域名与品牌名是攻击者字典里的第一批词。请换一个无关的口令。"
+    die "口令里含「${w}」—— 域名与品牌名是攻击者字典里的第一批词。请换一个无关的口令。"
   fi
 done
 unset LOWER
@@ -117,7 +117,7 @@ sudo tar -czf "\$BACKUP" \\
   --ignore-failed-read \\
   /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d \\
   /var/www 2>/dev/null || true
-echo "   已备份到 \$BACKUP（\$(sudo du -h "\$BACKUP" | cut -f1)）"
+echo "   已备份到 \${BACKUP}（\$(sudo du -h "\$BACKUP" | cut -f1)）"
 
 echo "── 2/6 探测现有证书路径 ──"
 # **探测而不是假设**：证书路径写错会让 HTTPS 直接起不来，
@@ -241,7 +241,7 @@ echo "   nginx 已重载"
 
 echo
 echo "完成。证书与 certbot 续期未做任何改动。"
-echo "旧 nginx 配置已备份在 \$BACKUP。"
+echo "旧 nginx 配置已备份在 \${BACKUP}。"
 if [[ -n "\$OLD_ROOTS" ]]; then
   echo
   echo "旧应用的文件**仍在磁盘上**，只是 nginx 不再服务它们："
