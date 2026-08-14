@@ -60,8 +60,54 @@ for (const f of files) {
   }
 }
 
+// ── 三、界面文案里的 Markdown 星号 ──
+//
+// 写 `**重点**` 是写文档的肌肉记忆，但 HTML 与 React 不渲染它 ——
+// 页面上会老老实实显示两个星号。这个错误犯过两次（HTML 报告一次、解锁页一次），
+// 且只有截图才看得出来，代码评审时完全不显眼，故做成机械检查。
+// 要强调就用「」。
+const UI_DIRS = [
+  join(HERE, '..', 'frontend', 'src'),
+  join(HERE, '..', 'backend', 'src', 'services', 'cockpit'),
+]
+
+function walk(dir, out = []) {
+  let entries
+  try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return out }
+  for (const e of entries) {
+    const p = join(dir, e.name)
+    if (e.isDirectory()) walk(p, out)
+    else if (/\.(ts|tsx)$/.test(e.name)) out.push(p)
+  }
+  return out
+}
+
+/** 去掉注释：JSDoc 里的 `**` 是合法的块注释语法，不是界面文案 */
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+}
+
+let uiFiles = 0
+for (const dir of UI_DIRS) {
+  for (const f of walk(dir)) {
+    uiFiles++
+    const code = stripComments(readFileSync(f, 'utf-8'))
+    code.split('\n').forEach((line, i) => {
+      if (!/\*\*/.test(line)) return
+      problems++
+      console.error(
+        `${f.replace(join(HERE, '..'), '.')}:${i + 1}  界面文案里有 Markdown 星号\n`
+        + `    ${line.trim().slice(0, 110)}\n`
+        + `    HTML 与 React 不渲染 ** —— 页面上会显示成两个星号。要强调请用「」。\n`
+      )
+    })
+  }
+}
+
 if (problems > 0) {
   console.error(`\n✗ ${problems} 处问题\n`)
   process.exit(1)
 }
-console.log(`✓ ${files.length} 个 shell 脚本检查通过`)
+console.log(`✓ ${files.length} 个 shell 脚本 + ${uiFiles} 个源文件检查通过`)

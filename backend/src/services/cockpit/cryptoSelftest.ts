@@ -174,8 +174,20 @@ const gateSrc = readFileSync(
 )
 const gateCode = stripComments(gateSrc)
 ok('解锁界面代码不触碰浏览器存储', !/localStorage|sessionStorage/.test(gateCode))
-ok('解锁界面明说每次刷新需重输，不提供记住选项',
-  /每次刷新都需重新输入/.test(gateSrc) && !/记住口令/.test(gateCode))
+ok('解锁界面明说本页不保存口令', /本页不保存口令/.test(gateSrc))
+
+// 钥匙串支持是必需的，不是可选项：
+// 好记与高熵互斥，任何背得下来的口令熵都有限。出路是用真随机口令并交给
+// 系统钥匙串（Face ID 保护），而 Safari 只在规范表单上提示保存 ——
+// 少了 form 或 autoComplete，提示不出现，人就只能退回去背一个弱口令。
+ok('解锁表单是规范 form（Safari 才会提示存入钥匙串）',
+  /<form[\s\S]*onSubmit/.test(gateCode))
+ok('口令输入标注 autoComplete="current-password"',
+  /autoComplete="current-password"/.test(gateCode))
+ok('提交按钮为 htmlType="submit"（回车与钥匙串填充后可直接提交）',
+  /htmlType="submit"/.test(gateCode))
+ok('区分"本页不存"与"系统钥匙串可存"，不把后者也一并禁掉',
+  /钥匙串/.test(gateSrc))
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

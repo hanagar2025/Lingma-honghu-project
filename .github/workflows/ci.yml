@@ -63,8 +63,8 @@ jobs:
       # 部署脚本里中文很多，裸 $VAR 紧邻全角字符会让某些 bash 把后续字节
       # 并入变量名，在 set -u 下报 "w?: unbound variable" —— 报错指不到真正原因。
       # 这个 bug 真的把一次部署卡住过，故做成机械检查。
-      - name: Shell lint (变量花括号 + 严格模式)
-        run: node scripts/lint-shell.mjs
+      - name: Source lint (变量花括号 + 严格模式 + 界面文案无 Markdown 星号)
+        run: node scripts/lint-source.mjs
       - name: Shell syntax
         run: for f in scripts/*.sh; do bash -n "$f"; done
       - name: Run backend tests

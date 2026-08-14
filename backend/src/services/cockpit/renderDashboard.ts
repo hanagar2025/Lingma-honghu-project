@@ -138,7 +138,7 @@ export function renderDashboard(d: Dashboard): string {
     )
   }
   w()
-  w('  「成交/资金代理」是成交额比值，**不是真实资金流**（北向/融资/龙虎榜/机构持仓免费源不可得）。')
+  w('  「成交/资金代理」是成交额比值，不是真实资金流（北向/融资/龙虎榜/机构持仓免费源不可得）。')
   w('  「不可判断」是合法输出：数据完整度不足的主线，即使价格在涨也不得输出主线强弱结论。')
 
   // ══ 市场结构 ══
@@ -151,7 +151,7 @@ export function renderDashboard(d: Dashboard): string {
   for (const e of d.marketStructure.evidence) w(`    · ${e}`)
   w()
   w(`  主线切换：${d.marketStructure.switchEvidence}`)
-  w(`  ⚠ 本判断描述的是**已披露的历史利润分配**，不预测价格，且不得产生任何动作。`)
+  w(`  ⚠ 本判断描述的是「已披露的历史利润分配」，不预测价格，且不得产生任何动作。`)
 
   // ══ ③ 产业结构表 ══
   w()

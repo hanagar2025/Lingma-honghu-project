@@ -291,7 +291,7 @@ async function main(): Promise<void> {
       if (intraday) {
         process.stdout.write(`\n${'═'.repeat(122)}\n`)
         process.stdout.write(
-          `⚠ 盘中运行（北京时间 15:00 前，最新K线 ${date} 尚未定价）→ 本次读数为临时值，**不写入30天档案**。\n` +
+          `⚠ 盘中运行（北京时间 15:00 前，最新K线 ${date} 尚未定价）→ 本次读数为临时值，不写入30天档案。\n` +
           `  下面的变化仅供现在看；盘后 15:10 之后重跑一次才会归档。\n`
         )
         process.stdout.write(`${renderChanges(changesForHtml, prevDateForHtml, date)}\n`)
@@ -345,7 +345,7 @@ async function main(): Promise<void> {
       `${biggest.name} ${(biggest.marketValue / wouldBe * 100).toFixed(1)}%\n`
     )
     process.stdout.write(
-      `  ⚠ 两个口径会得出不同的超限结论。这是**战略层裁定事项**，不是代码默认值：\n` +
+      `  ⚠ 两个口径会得出不同的超限结论。这是「战略层裁定事项」，不是代码默认值：\n` +
       `     并入分母等于用一个记账动作消掉真实集中度风险，故未裁定期间一律按从严口径。\n`
     )
   }

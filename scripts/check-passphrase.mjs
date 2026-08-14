@@ -19,6 +19,7 @@
 // 用法：printf '%s' "$PASS" | node scripts/check-passphrase.mjs [--allow-weak]
 
 import { readFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 
 const ALLOW_WEAK = process.argv.includes('--allow-weak')
 
@@ -96,6 +97,56 @@ function crackTime(bits) {
   if (sec < 3.15e7) return `${(sec / 86400).toFixed(0)} 天`
   const years = sec / 3.15e7
   return years < 1e4 ? `${years.toFixed(0)} 年` : `${years.toExponential(1)} 年`
+}
+
+/**
+ * 生成真随机口令。
+ *
+ * **不做"好记又够强"的承诺，因为那是做不到的。** 好记与高熵是互斥的：
+ * 任何能背下来的东西，其生成规则一旦公开（本脚本就在仓库里），
+ * 真实搜索空间就是那个规则的组合数，而不是按字符类别估出来的比特数。
+ *
+ * 这里踩过一次坑：先前的版本从一个 24 词的表里挑词拼装，
+ * 估算器给出 53 比特，而真实组合数只有约 5 万种（约 16 比特，一秒即破）——
+ * 词表就在这个文件里，攻击者照着跑一遍即可。差了三十多个数量级。
+ *
+ * 所以改成：**真随机，熵可计算，不假装好记。**
+ * 记不住是对的 —— 存进 iPhone / Mac 钥匙串，用 Face ID 调出来，
+ * 另在纸上抄一份放家里。要记的东西是解锁手机，不是这串字符。
+ */
+const POOL = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'  // 去掉 l1O0 等易混字符
+
+function randomPass(chars = 14) {
+  const out = []
+  // 拒绝采样避免取模偏置：256 不是 POOL 长度的整数倍，
+  // 直接取模会让前几个字符出现得更频繁，实际熵低于标称值。
+  const limit = Math.floor(256 / POOL.length) * POOL.length
+  while (out.length < chars) {
+    for (const b of randomBytes(chars * 2)) {
+      if (b >= limit) continue
+      out.push(POOL[b % POOL.length])
+      if (out.length === chars) break
+    }
+  }
+  return out.join('')
+}
+
+if (process.argv.includes('--suggest')) {
+  const chars = 14
+  const bits = chars * Math.log2(POOL.length)
+  process.stdout.write(
+    `\n  真随机口令（每个 ${chars} 位，字符集 ${POOL.length}，真实熵 ${bits.toFixed(0)} 比特）：\n\n`
+  )
+  for (let i = 0; i < 5; i++) process.stdout.write(`    ${randomPass(chars)}\n`)
+  process.stdout.write(
+    `\n  离线爆破约需 ${crackTime(bits)}。\n\n`
+    + `  **不要试图背下来。** 挑一个，存进 iPhone / Mac 钥匙串（Safari 会问是否保存），\n`
+    + `  以后用 Face ID 自动填入；另在纸上抄一份放家里作为备份。\n`
+    + `  要记的东西是解锁手机，不是这串字符。\n\n`
+    + `  想用能背的口令，见 README「让好记的口令也安全」—— \n`
+    + `  把页面放在猜不到的路径下，攻击者拿不到密文，离线爆破就无从开始。\n\n`
+  )
+  process.exit(0)
 }
 
 const pass = readFileSync(0, 'utf-8').replace(/\n$/, '')

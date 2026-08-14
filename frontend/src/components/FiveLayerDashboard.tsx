@@ -440,7 +440,7 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
             { title: '趋势', dataIndex: 'trend', width: 70, render: (v: string) => <Arrow v={v} /> },
             { title: '相对强度', dataIndex: 'relStrength', width: 90, render: (v: string) => <Arrow v={v} /> },
             {
-              title: <Tooltip title="成交额20/60比值。**代理变量，不是真实资金流** —— 北向/融资/龙虎榜/机构持仓免费源不可得">成交/资金代理</Tooltip>,
+              title: <Tooltip title="成交额20/60比值。「代理变量，不是真实资金流」—— 北向/融资/龙虎榜/机构持仓免费源不可得">成交/资金代理</Tooltip>,
               dataIndex: 'volumeProxy', width: 118, render: (v: string) => <Arrow v={v} />,
             },
             {

@@ -454,7 +454,7 @@ export function buildDashboard(input: DashboardInput): Dashboard {
           `${ml.benchmark} vs 创业板指`, '基准20日涨幅 − 大盘20日涨幅', date,
           relV === null ? '基准或大盘K线不足' : undefined),
         obs('成交额20/60比（资金代理）', volV, volV === null ? '缺失' : `${(volV * 100).toFixed(1)}%`,
-          `${ml.benchmark} 成交额`, '近20日均额 ÷ 近60日均额 − 1。**代理变量，非真实资金流**', date,
+          `${ml.benchmark} 成交额`, '近20日均额 ÷ 近60日均额 − 1。「代理变量，非真实资金流」', date,
           volV === null ? '基准K线不足60根' : undefined),
         acct('三项验证完整度', q?.completeness ?? null,
           q ? `${(q.completeness * 100).toFixed(0)}%` : '缺失',
