@@ -119,11 +119,14 @@ const Cockpit: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [marking, setMarking] = useState<number | null>(null)
   const [session, setSession] = useState<'pre' | 'post'>('post')
+  const [offline, setOffline] = useState<{ on: boolean; reason: string }>({ on: false, reason: '' })
 
   const load = useCallback(async (live = false, s: 'pre' | 'post' = session) => {
     setLoading(true)
     try {
-      setData(await cockpitAPI.getToday(live, s))
+      const r = await cockpitAPI.getTodayOrOffline(live, s)
+      setData(r.data)
+      setOffline({ on: r.offline, reason: r.reason })
       setSession(s)
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || err.message || '驾驶舱加载失败')
@@ -164,6 +167,59 @@ const Cockpit: React.FC = () => {
 
   return (
     <div>
+      {/* ── 离线快照模式：必须明说，否则会被当成实时接口数据 ── */}
+      {offline.on && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={<Text strong>离线快照模式（无数据库、无登录）</Text>}
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              <div>{offline.reason}</div>
+              <div style={{ marginTop: 4 }}>
+                快照生成于 {data.offline?.generatedAt ?? '未知时间'}，数据源：{data.offline?.source ?? '未知'}。
+                与命令行版、HTML 报告读的是同一份数据，结论不会互相矛盾。
+              </div>
+              {(data.offline?.unavailable ?? []).length > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  本模式下拿不到（宁可显式缺失，不伪造）：
+                  <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+                    {data.offline.unavailable.map((u: string, i: number) => <li key={i}>{u}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          }
+        />
+      )}
+
+      {/* ── 外围现金口径：需要战略层裁定，放在最上面 ── */}
+      {data.externalCash && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={
+            <Text strong>
+              外围现金 {(data.externalCash.amount / 10000).toFixed(0)} 万 —— 口径待战略层裁定，未计入仓位上限分母
+            </Text>
+          }
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              <div>{data.externalCash.note}</div>
+              <div style={{ marginTop: 4 }}>
+                本页所有仓位百分比的分母是证券账户总资产
+                {' '}{(data.externalCash.denominatorNow / 10000).toFixed(1)} 万；
+                若并入这 {(data.externalCash.amount / 10000).toFixed(0)} 万，分母变为
+                {' '}{((data.externalCash.denominatorNow + data.externalCash.amount) / 10000).toFixed(1)} 万，
+                超限结论会随之改变。并入分母等于用一个记账动作消掉真实集中度风险，故未裁定期间按从严口径。
+              </div>
+            </div>
+          }
+        />
+      )}
+
       {/* ── 能力披露：置顶且不可关闭 ── */}
       <Alert
         type="warning"
@@ -198,7 +254,14 @@ const Cockpit: React.FC = () => {
             ]}
           />
           <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
-          <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>
+          {/* 直连行情复跑要走后端。离线模式下给一个点了没反应的按钮，比不给更糟 */}
+          {!offline.on && <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>}
+          {offline.on && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              离线模式下切换盘前/盘后与复跑均需后端；要更新快照请在 backend 目录重跑
+              {' '}<Text code>WEB=1 npm run cockpit</Text>
+            </Text>
+          )}
         </Space>
       </Card>
 
@@ -376,6 +439,28 @@ const Cockpit: React.FC = () => {
           }))}
         />
       </Card>
+
+      {/* ── 执行债务：离线拿不到明细，但条数不能不说 ── */}
+      {/* null = 拿不到明细（离线），[] = 确实已清零。两者必须区分：
+          把"不知道"显示成"已清零"，正好抹掉当前第一优先级的那件事。 */}
+      {data.pendingSells === null && (data.pendingSellCount ?? 0) > 0 && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={<Text strong style={{ fontSize: 16 }}>
+            执行债务：{data.pendingSellCount} 条未执行卖出指令（离线模式无明细）
+          </Text>}
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              这是硬闸门，未清零期间系统锁死全部新增建仓输出，不受任何评分或配置影响。
+              <div style={{ marginTop: 4 }}>
+                指令明细与"标记已执行"存在数据库里，需启动后端才能勾选清偿。
+              </div>
+            </div>
+          }
+        />
+      )}
 
       {/* ── 执行债务：勾选清偿 ── */}
       {(data.pendingSells ?? []).length > 0 && (

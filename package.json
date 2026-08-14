@@ -9,7 +9,11 @@
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
     "start": "npm run start --workspace backend",
     "test": "npm run test --workspace backend",
-    "tios:selftest": "npm run tios:selftest --workspace backend"
+    "tios:selftest": "npm run tios:selftest --workspace backend",
+    "web": "npm run web:snapshot && npm run dev:offline --workspace frontend",
+    "web:snapshot": "cd backend && WEB=1 HTML=1 npx tsx src/services/cockpit/run.ts",
+    "web:build": "npm run web:snapshot && npm run build:offline --workspace frontend",
+    "web:serve": "npm run serve:offline --workspace frontend"
   },
   "workspaces": [
     "backend",
