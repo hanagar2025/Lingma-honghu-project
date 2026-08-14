@@ -52,12 +52,25 @@ frontend/src/
 ```bash
 git clone -b cursor/decision-audit-c819 https://github.com/hanagar2025/Lingma-honghu-project.git ~/tios
 cd ~/tios
-npm install
+npm ci
 npm run web
 ```
 
 `npm run web` 会自己打开浏览器；没打开就手动开 `http://localhost:5173`。
 之后每天只要两步：`cd ~/tios` 然后 `npm run web`。
+
+**装依赖用 `npm ci`，不要用 `npm install`。**
+`npm install` 会重写 `package-lock.json`（不同机器、不同 npm 版本的写法有差异），
+于是下次 `git pull` 就会报「您对下列文件的本地修改将被合并操作覆盖」并中止 ——
+而那条报错完全指不到"是 npm install 改的"这个原因。
+`npm ci` 严格按 lock 安装且**从不写它**，不会造成这种冲突。
+
+已经撞上了就丢掉本地那份（它是自动生成的，丢了没有任何损失）：
+
+```bash
+git checkout -- package-lock.json
+git pull
+```
 
 `npm run web` 做两件事：先用命令行引擎直连行情算出当日快照
 （落到 `frontend/public/data/today.json`），再以离线模式启动前端读它。
@@ -272,6 +285,20 @@ zsh 交互式 shell **默认不把 `#` 当注释**（`interactive_comments` 未�
 其次是 macOS 防火墙与路由器 AP 隔离。三条都排除不掉就走 `npm run report`
 隔空投送 HTML —— 那条路不经过网络，没有中间环节可失败。
 
+**五、`git pull` 报「您对下列文件的本地修改将被合并操作覆盖：package-lock.json」**
+
+是之前用 `npm install` 装依赖造成的：它会重写 lock 文件。
+丢掉本地那份即可（自动生成的，丢了没有损失），以后改用 `npm ci`：
+
+```bash
+git checkout -- package-lock.json
+git pull
+```
+
+注意这个报错的连带后果：**pull 已经中止，所以新文件根本没下来**。
+紧接着跑新脚本会看到 `no such file or directory` ——
+那不是第二个问题，是同一个问题的下游表现。
+
 ## 持仓数据的存放位置（关系到隐私）
 
 `backend/src/services/cockpit/data/portfolio.json` 记录现金、峰值净值、每只标的的股数与成本。
@@ -301,7 +328,7 @@ mysql -e "CREATE DATABASE stock_decision CHARACTER SET utf8mb4"
 cp backend/env.example backend/.env   # 填入数据库密码
 
 # 3. 安装依赖并启动（前端 5173 / 后端 5000）
-npm install
+npm ci
 npm run dev
 ```
 
