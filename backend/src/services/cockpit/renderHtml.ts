@@ -49,6 +49,10 @@ const CSS = `
 *{box-sizing:border-box}
 body{margin:0;padding:24px;font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--fg);background:#f2f2f7}
 .wrap{max-width:1280px;margin:0 auto}
+/* 表格横向滚动容器。手机上宁可让人横滑，也不压缩列或换行 ——
+   持仓表的每一列都是判断依据，挤成两行会读错行。 */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tw table{min-width:760px}
 h1{font-size:20px;margin:0 0 4px}
 h2{font-size:16px;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
 .card{background:var(--bg);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -77,6 +81,24 @@ ul{margin:4px 0;padding-left:20px}
 .chg .who{min-width:230px;color:var(--sec)}
 .foot{font-size:12px;color:var(--sec);margin-top:8px}
 .note{font-size:12px;color:var(--sec);margin-top:10px}
+
+/* 手机：这份报告的主要用途之一是隔夜在手机上翻，所以窄屏必须能读。
+   只调间距与字号，不隐藏任何一列 —— 手机上看不到的那列，正好可能是法定减仓理由。 */
+@media (max-width:820px){
+  body{padding:10px;font-size:15px}
+  .card{padding:14px;border-radius:12px}
+  h1{font-size:18px}
+  h2{font-size:15px}
+  .kv{flex-direction:column;gap:0;margin-bottom:8px}
+  .kv .k{min-width:0;font-size:12px}
+  /* 变化行：标签独占一行，但 旧值→新值（增量）必须留在同一行。
+     若整行纵向堆叠，"12.1% / → / 9.0% / (-3.1pct)" 会变成四行，读的人得自己拼回去。 */
+  .chg{margin-bottom:10px}
+  .chg .who{min-width:0;flex:0 0 100%;font-size:12px}
+  .tw table{min-width:700px;font-size:12.5px}
+  th,td{padding:6px 7px}
+  .banner{padding:10px 12px}
+}
 `
 
 export interface HtmlInput {
@@ -190,7 +212,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(`<div><b>今日新增建仓：${az.newEntryCount}</b></div></div>`)
 
   // ── ① 持仓表 ──
-  w(`<div class=card><h2>① 持仓表 —— 我手里的东西发生了什么？</h2><table>`)
+  w(`<div class=card><h2>① 持仓表 —— 我手里的东西发生了什么？</h2><div class=tw><table>`)
   w(`<tr><th>持仓</th><th>仓位</th><th>今日</th><th>5日</th><th>20日</th><th>相对主线</th>`)
   w(`<th>MA20/60</th><th>PE分位</th><th>节点利润份额</th><th>节点内份额</th><th>产业位置</th><th>状态</th><th>法定减仓理由</th></tr>`)
   for (const r of d.holdings) {
@@ -205,7 +227,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
     w(`<td><span class="tag ${st}">${esc(r.status)}</span></td>`)
     w(`<td>${r.legalReason ? `<span class=up>${esc(r.legalReason)}</span>` : '<span class=sec>无</span>'}</td></tr>`)
   }
-  w(`</table>`)
+  w(`</table></div>`)
   w(`<div class=note>触发复核项（观察指标，<b>不构成减仓理由</b>）：</div><ul>`)
   for (const r of d.holdings.filter(x => x.reviewTriggers.length)) {
     w(`<li><b>${esc(r.name)}</b>（${r.reviewTriggers.length}项）：${esc(r.reviewTriggers.join('；'))}`)
@@ -214,7 +236,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(`</ul></div>`)
 
   // ── ② 主线表 ──
-  w(`<div class=card><h2>② 主线表 —— 市场现在在哪？有没有切换？</h2><table>`)
+  w(`<div class=card><h2>② 主线表 —— 市场现在在哪？有没有切换？</h2><div class=tw><table>`)
   w(`<tr><th>主线</th><th>趋势</th><th>相对强度</th><th>成交/资金代理</th><th>利润结构</th>`)
   w(`<th>龙头状态</th><th>数据完整度</th><th>当前判断</th></tr>`)
   for (const m of d.mainlines) {
@@ -227,7 +249,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
     w(`<td>${arrow(m.volumeProxy)}</td><td>${arrow(m.profitStructure)}</td><td>${esc(m.leaderStatus)}</td>`)
     w(`<td>${tag}</td><td class="${m.judgable ? '' : 'up'}" style="white-space:normal">${m.judgable ? '' : '⚠ '}${esc(m.verdict)}</td></tr>`)
   }
-  w(`</table>`)
+  w(`</table></div>`)
   w(`<div class=note>「成交/资金代理」是成交额比值，<b>不是真实资金流</b>。「不可判断」是合法输出：数据完整度不足的主线，即使价格在涨也不得输出主线强弱结论。本表不输出主线综合评分。</div></div>`)
 
   // ── ③ 产业结构表 ──
@@ -238,7 +260,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
     w(ml?.completeness == null ? ' <span class="tag grey">完整度缺失</span>'
       : ml.judgable ? ` <span class="tag green">完整度 ${(ml.completeness * 100).toFixed(0)}%</span>`
         : ` <span class="tag red">完整度 ${(ml.completeness * 100).toFixed(0)}% · 不可用于机会判断</span>`)
-    w(`<table style="margin-top:6px"><tr><th>节点</th><th>A 利润规模</th><th>B 存量份额</th><th>C 四季变化</th>`)
+    w(`<div class=tw><table style="margin-top:6px"><tr><th>节点</th><th>A 利润规模</th><th>B 存量份额</th><th>C 四季变化</th>`)
     w(`<th>节点内领先公司</th><th>方向</th><th>数据滞后</th><th>覆盖</th></tr>`)
     for (const r of rows) {
       const leaders = r.leaders.length
@@ -250,12 +272,12 @@ export function renderDashboardHtml(input: HtmlInput): string {
         : `<span class="${r.maxReportAgeDays > 120 ? 'down' : ''}">${r.maxReportAgeDays}天</span>`}</td>`)
       w(`<td><span class="tag ${r.researchOnly ? 'grey' : ''}">${r.researchOnly ? '仅研究域' : '决策域'}</span></td></tr>`)
     }
-    w(`</table></div>`)
+    w(`</table></div></div>`)
   }
   w(`<div class=note>三个变量必须同时看：A 规模答"创造了多少钱"，B 份额答"钱现在在哪里"，C 变化答"份额往哪走"。单看任何一个都会误导 —— 同比 +1153% 的节点，份额可能只有 1.4%。</div></div>`)
 
   // ── ④ 下一观察层 ──
-  w(`<div class=card><h2>④ 下一观察层 —— 接下来应该盯谁？<span class="tag orange">发现 ≠ 候选 ≠ 买入</span></h2><table>`)
+  w(`<div class=card><h2>④ 下一观察层 —— 接下来应该盯谁？<span class="tag orange">发现 ≠ 候选 ≠ 买入</span></h2><div class=tw><table>`)
   w(`<tr><th>节点</th><th>产业</th><th>利润</th><th>节点份额</th><th>资金</th><th>相对强度</th>`)
   w(`<th>估值</th><th>证据</th><th>S0/S1/S2/S3/资金</th><th>阶段</th><th>动作</th></tr>`)
   for (const r of d.nextLayer) {
@@ -269,7 +291,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
       : r.strategyAllows ? '' : ' <span class="tag red">战略层不允许</span>')
     w(`</td><td class=up>❌</td></tr>`)
   }
-  w(`</table><div class=note>阶段词只有「观察」「研究」两级 —— 「候选」以上须 S0–S3 全通过，当前无一满足。「资金」列恒为 ? （真实资金流免费源不可得，不用价格代理冒充资金验证）。</div>`)
+  w(`</table></div><div class=note>阶段词只有「观察」「研究」两级 —— 「候选」以上须 S0–S3 全通过，当前无一满足。「资金」列恒为 ? （真实资金流免费源不可得，不用价格代理冒充资金验证）。</div>`)
   w(`<div class=note>逐节点阻断项：</div><ul>`)
   for (const r of d.nextLayer.filter(x => x.stage === '观察')) {
     w(`<li><b>${esc(r.node)}</b>${r.members.length ? `（${esc(r.members.map(m => m.name).join('、'))}）` : ''}：${esc(r.actionBlockedBy.join('；'))}</li>`)
