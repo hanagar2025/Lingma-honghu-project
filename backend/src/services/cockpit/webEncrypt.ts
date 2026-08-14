@@ -66,8 +66,34 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
   )
 }
 
-/** 口令下限。低于此长度直接拒绝，不是警告 */
-export const MIN_PASSPHRASE = 8
+/**
+ * 每类字符的信息量（比特）。
+ *
+ * 必须按类别区分，不能按字符个数计数：
+ * 一个常用汉字的选择空间约三千字（≈11.5 比特），一个小写字母只有 4.7。
+ * 按个数算会把「青瓦灯塔鸿鹄远」（7 字，约 80 比特）判得比 8 个字母（38 比特）还弱，
+ * 正好惩罚了对中文用户最好记的那种口令 —— 这个偏差实测拦下过一个完全够强的口令。
+ *
+ * 与 scripts/check-passphrase.mjs 的取值必须一致，由 cryptoSelftest 断言。
+ */
+export function bitsOfChar(ch: string): number {
+  if (/[\u4e00-\u9fa5]/.test(ch)) return 11.5
+  if (/[a-zA-Z]/.test(ch)) return 4.7
+  if (/[0-9]/.test(ch)) return 3.3
+  return 4.9
+}
+
+/** 口令熵估算（比特） */
+export function passphraseBits(passphrase: string): number {
+  return [...passphrase].reduce((sum, ch) => sum + bitsOfChar(ch), 0)
+}
+
+/**
+ * 库层下限（比特）。30 比特很宽松 —— 本机与局域网用这个强度够了，
+ * 公网部署另有更严的判据（scripts/check-passphrase.mjs，按剩余熵 36 比特）。
+ * 这里只拦"形同虚设"的那一档：abc、12345678 之类。
+ */
+export const MIN_PASSPHRASE_BITS = 30
 
 /**
  * 口令校验。**必须在流程最前面调用。**
@@ -79,8 +105,11 @@ export const MIN_PASSPHRASE = 8
  */
 export function checkPassphrase(passphrase: string | undefined): string | null {
   if (!passphrase) return '未提供口令'
-  if (passphrase.length < MIN_PASSPHRASE) {
-    return `口令至少 ${MIN_PASSPHRASE} 个字符，当前 ${passphrase.length} 个。太短的口令使加密形同虚设。`
+  const bits = passphraseBits(passphrase)
+  if (bits < MIN_PASSPHRASE_BITS) {
+    return `口令强度约 ${bits.toFixed(0)} 比特，低于下限 ${MIN_PASSPHRASE_BITS} 比特`
+      + `（当前 ${[...passphrase].length} 个字符）。太弱的口令使加密形同虚设。`
+      + `　提示：汉字每字约 11.5 比特，三个汉字即可达标。`
   }
   return null
 }

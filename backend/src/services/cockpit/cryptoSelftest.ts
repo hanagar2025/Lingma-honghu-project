@@ -12,7 +12,7 @@
 // 运行：npx tsx backend/src/services/cockpit/cryptoSelftest.ts
 
 import { readFileSync } from 'node:fs'
-import { CRYPTO_SPEC, encryptSnapshot, decryptSnapshot } from './webEncrypt'
+import { CRYPTO_SPEC, encryptSnapshot, decryptSnapshot, bitsOfChar, passphraseBits } from './webEncrypt'
 
 // 用运行时动态导入而不是静态 import：前端源码不在 backend 的 rootDir 下，
 // 静态引用会让 tsc 报 TS6059。specifier 写成变量，tsc 就不做静态解析，
@@ -111,10 +111,40 @@ const enc2 = await encryptSnapshot(PAYLOAD, PASS)
 ok('相同内容两次加密得到不同密文（盐与 IV 随机）',
   enc2.dataB64 !== enc.dataB64 && enc2.saltB64 !== enc.saltB64)
 
-console.log('\n【拒绝弱口令】')
+console.log('\n【口令强度：按比特而非字符个数】')
 let shortRejected = false
 try { await encryptSnapshot(PAYLOAD, 'abc') } catch { shortRejected = true }
-ok('过短口令被拒绝而非仅告警', shortRejected)
+ok('过弱口令被拒绝而非仅告警', shortRejected)
+
+let digitsRejected = false
+try { await encryptSnapshot(PAYLOAD, '12345678') } catch { digitsRejected = true }
+ok('八位纯数字被拒（26 比特，按字符数会误判为达标）', digitsRejected)
+
+// 七个汉字约 81 比特，远强于八个字母的 38 比特。
+// 按字符个数计数会把它判为"不足 8 位"而拒绝 —— 这个偏差实测拦下过一个够强的口令。
+ok('中文口令按比特计：七个汉字约 81 比特',
+  Math.abs(passphraseBits('青瓦灯塔鸿鹄远') - 80.5) < 0.1,
+  String(passphraseBits('青瓦灯塔鸿鹄远')))
+const zhEnc = await encryptSnapshot(PAYLOAD, '青瓦灯塔鸿鹄远')
+ok('七个汉字的口令可用（不因"少于8个字符"被拒）', zhEnc.encrypted === true)
+ok('中文口令的密文可被前端解开',
+  await feDecrypt(zhEnc, '青瓦灯塔鸿鹄远') !== null)
+ok('汉字每字权重高于字母', bitsOfChar('青') > bitsOfChar('a'))
+
+// 两处比特表必须一致：一处在库里（TS），一处在部署检查器里（mjs）。
+// 不一致会导致"部署脚本放行的口令，加密层却拒绝"这种自相矛盾的失败。
+const mjsSrc = readFileSync(
+  new URL('../../../../scripts/check-passphrase.mjs', import.meta.url), 'utf-8'
+)
+for (const [re, expect, label] of [
+  [/\[\\u4e00-\\u9fa5\]\/\.test\(ch\)\) return ([\d.]+)/, bitsOfChar('青'), '汉字'],
+  [/\[a-z\]\/\.test\(ch\)\) return ([\d.]+)/, bitsOfChar('a'), '小写字母'],
+  [/\[0-9\]\/\.test\(ch\)\) return ([\d.]+)/, bitsOfChar('7'), '数字'],
+] as [RegExp, number, string][]) {
+  const m = re.exec(mjsSrc)
+  ok(`检查器与库对「${label}」的比特取值一致（${expect}）`,
+    !!m && Number(m[1]) === expect, m ? m[1] : '未匹配到')
+}
 
 console.log('\n【明文与密文不得并存】')
 const snapSrc = readFileSync(new URL('./webSnapshot.ts', import.meta.url), 'utf-8')
