@@ -147,27 +147,58 @@ TIOS_PASSPHRASE='你的长口令' npm run web:deploy
 因此 `npm run web:lan` 那条局域网路径**不能用加密快照**（局域网是 http），
 局域网就用明文快照，公网才用密文。
 
-### 具体到 hhwealth.cc
+### 具体到 hhwealth.cc（一条命令部署）
 
-现状（2026-08-14 实测）：域名解析到阿里云 ECS `39.104.86.200`，
-nginx/1.18.0 (Ubuntu)，**HTTPS 已配好**，根目录跑着 2026-02 部署的老版鸿鹄理财。
-
-HTTPS 现成是关键 —— 加密解锁必须在安全上下文里才能工作。
-所以不需要换托管，只要把我们的产物挂到一个**子路径**，不动根目录那个应用：
+现状（2026-08-14 实测）：域名解析到阿里云 ECS `39.104.86.200`，nginx/1.18.0 (Ubuntu)，
+Let's Encrypt 证书（8/11 签发、11/9 到期，certbot 自动续期），**HTTPS 已配好**。
 
 ```bash
-TIOS_PASSPHRASE='你的长口令' BASE_PATH=/tios/ npm run web:deploy
+DEPLOY_HOST=39.104.86.200 TIOS_PASSPHRASE='你的长口令' ./scripts/deploy-ecs.sh
+```
+
+先加 `DRY_RUN=1` 跑一次，它会把**将在服务器上执行的完整脚本打印出来**且不连服务器。
+涉及删文件与改 nginx 配置的操作，应当先看清楚再跑。
+
+脚本做六步：无条件备份现状 → 探测证书路径 → 部署产物 → 写站点配置 →
+校验并下线旧站点 → 重载。`nginx -t` 不通过会自动回滚站点启用状态。
+
+> ### ⚠ 不要把服务器"删干净重装"
+>
+> 那台机器上的 Let's Encrypt 证书与 certbot 续期配置是**本项目的硬依赖** ——
+> 加密快照的解锁用 WebCrypto，而浏览器只在 HTTPS 下提供它。
+> 重装会把证书、续期配置与 ACME 账户一起清掉，然后要重新申请重新配，
+> 而这跟"下线旧应用"是两件毫不相干的事。
+>
+> 部署脚本因此只做三件事：备份、换文件、换站点配置。系统、nginx、证书一概不动。
+> 旧应用的文件与 nginx 配置会打包留在服务器 `/root/hhwealth-backup-*.tar.gz`。
+
+脚本里两个刻意的选择：
+
+- **探测证书路径而不是假设。** 路径写错会让 HTTPS 直接起不来，
+  而那会连带让解锁失效。读不出路径就中止退出，不猜。
+  机器上有多张证书时按域名匹配 —— 挑错证书会报名称不匹配，
+  浏览器一报错就不给 WebCrypto。
+- **`data/*.json` 强制 `no-store`。** 快照每个交易日都换，
+  缓存住会让人看着昨天的数据做今天的决定 —— 这种错误没有任何提示，页面看起来完全正常。
+
+每个交易日更新数据只需重传一个文件（约 280KB），nginx 无需重载：
+
+```bash
+TIOS_PASSPHRASE='你的长口令' npm run web:deploy
+scp frontend/dist/data/today.enc.json root@39.104.86.200:/var/www/tios/data/
+```
+
+### 挂在子路径（保留根目录现有应用时）
+
+若根目录还要跑别的东西，我们可以只占一个子路径：
+
+```bash
+TIOS_PASSPHRASE='口令' BASE_PATH=/tios/ npm run web:deploy
 BASE_PATH=/tios/ npm run web:package
 ```
 
-`web:package` 会打好 tar.gz，并打印照抄即可的 scp、解包与 nginx 配置。
-之后手机打开 `https://hhwealth.cc/tios/`，先出现口令解锁页。
-
-每个交易日更新数据只需重传 `data/today.enc.json` 这一个文件（约 280KB），
-nginx 无需重载。
-
 > **子路径部署必须带 `BASE_PATH`。** 不带的话产物会引用 `/assets/...`，
-> 浏览器去站点根目录找资源 —— 那里是另一个应用。症状是**白屏，但所有请求都是 200**
+> 浏览器去站点根目录找资源。症状是**白屏，但所有请求都是 200**
 > （被 SPA 回退接走），从现象上完全看不出原因。
 > `BASE_PATH` 同时驱动 Vite 的 `base` 与 React Router 的 `basename`，两者不会不同步；
 > `web:package` 还会再校验一遍产物里的实际路径，不一致就拒绝打包。
