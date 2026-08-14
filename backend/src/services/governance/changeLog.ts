@@ -361,6 +361,101 @@ export function saveDiscovery(ledger: DiscoveryLedger, file = DISCOVERY_FILE): v
   writeFileSync(file, compactArray('entries', ledger.entries, { updatedAt: ledger.updatedAt }), 'utf-8')
 }
 
+/**
+ * 读取全部归档快照，按日期升序。
+ *
+ * 存在理由是委员会 2026-08-14 的观察：
+ *   「好多数据不一定是今天看明天看，它的数据变化可能很小，
+ *     但在一段时间长度当中，你就能看出来。」
+ * 单日求差会把持续爬升淹没在噪声里 —— 份额 +0.3pct 单看毫无意义，
+ * 连续二十天各 +0.3pct 就是 +6pct。要看出后者，必须跨多日累计。
+ */
+export function loadAllSnapshots(dir = CHANGELOG_DIR): DailySnapshot[] {
+  if (!existsSync(dir)) return []
+  return readdirSync(dir)
+    .filter(f => f.endsWith('.json'))
+    .sort()
+    .map(f => {
+      try {
+        return JSON.parse(readFileSync(join(dir, f), 'utf-8')) as DailySnapshot
+      } catch {
+        return null
+      }
+    })
+    .filter((s): s is DailySnapshot => !!s && Array.isArray(s.readings))
+}
+
+/** 一项读数在一段区间上的累计变化 */
+export interface Drift {
+  scope: Reading['scope']
+  key: string
+  field: string
+  fromDate: string
+  toDate: string
+  /** 区间内出现过的天数。少于全区间说明中途缺档，须显式告知而非静默平滑 */
+  days: number
+  from: string
+  to: string
+  delta: number | null
+  /** 单调性：区间内每一步同向为 true。持续爬升与来回震荡是两件事 */
+  monotonic: boolean
+}
+
+/**
+ * 跨区间累计变化。
+ *
+ * 刻意不做的三件事：
+ *   ① 不插值补缺档 —— 缺的那天就是没数据，补出来的点会被当成观察到的事实；
+ *   ② 不设显著性阈值 —— 阈值会滤掉 0→1→2→5 的小幅持续爬升，那正是要找的；
+ *   ③ 不跨字段排序 —— 把「份额 +2pct」和「相对强度 ↑」放在一起排需要重要性
+ *      评分，而综合评分已被写死禁止。调用方按字段分组自行呈现。
+ */
+export function driftOver(snaps: DailySnapshot[], lastNDays?: number): Drift[] {
+  const use = lastNDays && lastNDays > 0 ? snaps.slice(-lastNDays) : snaps
+  if (use.length < 2) return []
+
+  // key -> 按时间排列的观测点。只收该读数真实出现过的日子
+  const series = new Map<string, { date: string; r: Reading }[]>()
+  for (const s of use) {
+    for (const r of s.readings) {
+      const k = `${r.scope}|${r.key}|${r.field}`
+      const arr = series.get(k) ?? []
+      arr.push({ date: s.date, r })
+      series.set(k, arr)
+    }
+  }
+
+  const out: Drift[] = []
+  for (const [, pts] of series) {
+    if (pts.length < 2) continue
+    const a = pts[0]
+    const b = pts[pts.length - 1]
+    if (a.r.display === b.r.display) continue
+
+    const numeric = typeof a.r.value === 'number' && typeof b.r.value === 'number'
+    const delta = numeric ? b.r.value! - a.r.value! : null
+
+    let monotonic = false
+    if (numeric) {
+      const dir = Math.sign(delta ?? 0)
+      monotonic = dir !== 0 && pts.every((p, i) => {
+        if (i === 0) return true
+        const prev = pts[i - 1].r.value
+        if (typeof prev !== 'number' || typeof p.r.value !== 'number') return false
+        const step = Math.sign(p.r.value - prev)
+        return step === dir || step === 0
+      })
+    }
+
+    out.push({
+      scope: a.r.scope, key: a.r.key, field: a.r.field,
+      fromDate: a.date, toDate: b.date, days: pts.length,
+      from: a.r.display, to: b.r.display, delta, monotonic,
+    })
+  }
+  return out
+}
+
 /** 读取指定日期之前最近的一份快照，用于求差 */
 export function loadPrevSnapshot(date: string, dir = CHANGELOG_DIR): DailySnapshot | null {
   if (!existsSync(dir)) return null
