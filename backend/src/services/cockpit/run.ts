@@ -10,7 +10,7 @@
 // 市值由最新收盘价 × 股数实时算出，portfolio.json 只存股数与成本价 ——
 // 手抄的市值会过期，而过期的市值会让仓位上限判定失真。
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchDailyBars } from '../marketData'
@@ -23,7 +23,10 @@ import { runCockpit } from './index'
 import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
 import { renderDashboardHtml } from './renderHtml'
-import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
+import {
+  buildWebSnapshot, saveWebSnapshot, saveEncryptedWebSnapshot,
+  encryptedSnapshotPath, webSnapshotFile,
+} from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
@@ -374,11 +377,33 @@ async function main(): Promise<void> {
         }
         : null,
     })
-    const webFile = saveWebSnapshot(payload, webSnapshotFile(repoRoot))
-    process.stdout.write(
-      `\n【网页快照】${webFile}\n` +
-      `  浏览器版驾驶舱可离线读取它：npm run web —— 不需要 MySQL，也不需要登录。\n`
-    )
+    // 设了 TIOS_PASSPHRASE 就只落密文，且删掉同目录的明文 ——
+    // 要上公网的快照，绝不能给"明文恰好还留在旁边"留任何机会。
+    const plainPath = webSnapshotFile(repoRoot)
+    const pass = process.env.TIOS_PASSPHRASE
+    if (pass) {
+      const { file, removedPlain } = await saveEncryptedWebSnapshot(payload, plainPath, pass)
+      process.stdout.write(
+        `\n【网页快照·已加密】${file}\n` +
+        `  AES-GCM + PBKDF2(60万次)。密文已当场解密回验，内容与原文一致。\n` +
+        `  口令不在文件里、不在服务端，只在你脑子里；打开页面时手动输入一次。\n` +
+        (removedPlain ? `  已删除同目录的明文快照（否则构建会把明文一起发上去）。\n` : '')
+      )
+    } else {
+      const webFile = saveWebSnapshot(payload, plainPath)
+      // 明文与密文并存会让构建把两份都拷进 dist/，密文旁边躺着明文等于没加密
+      const stale = encryptedSnapshotPath(plainPath)
+      if (existsSync(stale)) {
+        rmSync(stale)
+        process.stdout.write(`\n  已删除旧的加密快照（本次生成的是明文，两者不可并存）。\n`)
+      }
+      process.stdout.write(
+        `\n【网页快照·明文】${webFile}\n` +
+        `  浏览器版驾驶舱可离线读取它：npm run web —— 不需要 MySQL，也不需要登录。\n` +
+        `  ⚠ 明文快照含全部持仓与总资产，仅限本机与局域网使用。\n` +
+        `    要发到公网域名，改用 TIOS_PASSPHRASE=你的口令 npm run web:build\n`
+      )
+    }
   }
 }
 

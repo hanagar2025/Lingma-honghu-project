@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
+import { isEncryptedSnapshot, type EncryptedSnapshot } from './decrypt'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
@@ -148,16 +149,54 @@ export const tiosAPI = {
  * 自动降级是必要的：让人在后端挂掉时还能看到当天数据，比弹一个报错更有用。
  */
 export const OFFLINE_FORCED = import.meta.env.VITE_OFFLINE === '1'
-export const OFFLINE_SNAPSHOT_URL = `${import.meta.env.BASE_URL ?? '/'}data/today.json`.replace(/\/{2,}/g, '/')
+const base = (import.meta.env.BASE_URL ?? '/')
+export const OFFLINE_SNAPSHOT_URL = `${base}data/today.json`.replace(/([^:])\/{2,}/g, '$1/')
+export const OFFLINE_ENC_URL = `${base}data/today.enc.json`.replace(/([^:])\/{2,}/g, '$1/')
 
-export async function loadOfflineSnapshot(): Promise<any> {
-  const res = await fetch(OFFLINE_SNAPSHOT_URL, { cache: 'no-store' })
-  if (!res.ok) {
-    throw new Error(
-      `离线快照不存在（${OFFLINE_SNAPSHOT_URL}）。先在 backend 目录跑一次 WEB=1 npm run cockpit 生成它。`
-    )
+/** 密文快照。需要口令才能解开，故与明文分开表达，不能混成一个"加载失败" */
+export interface LockedSnapshot {
+  locked: true
+  enc: EncryptedSnapshot
+}
+
+export function isLocked(x: unknown): x is LockedSnapshot {
+  return !!x && typeof x === 'object' && (x as { locked?: unknown }).locked === true
+}
+
+/**
+ * 取离线快照。**先试密文再试明文。**
+ *
+ * 顺序是刻意的：部署到公网时目录里只应有密文，但本机开发时可能两者都在。
+ * 若先试明文，本机就会静默走明文分支 —— 于是"上线后解密流程有问题"这件事
+ * 要等到真的上线才暴露。宁可让本机也走一遍密文路径。
+ */
+export async function loadOfflineSnapshot(): Promise<any | LockedSnapshot> {
+  const enc = await fetchJson(OFFLINE_ENC_URL)
+  if (isEncryptedSnapshot(enc)) return { locked: true, enc }
+  const plain = await fetchJson(OFFLINE_SNAPSHOT_URL)
+  if (plain) return plain
+  throw new Error(
+    `未找到离线快照（${OFFLINE_ENC_URL} 与 ${OFFLINE_SNAPSHOT_URL} 均不可用）。`
+    + ` 先在项目根目录跑一次 npm run web:snapshot 生成它。`
+  )
+}
+
+/**
+ * 取 JSON，取不到就返回 null 而不抛。
+ *
+ * 必须判 content-type：静态托管的 SPA 回退会把**不存在的文件**当成路由，
+ * 返回 200 + index.html。直接 res.json() 得到的是 "Unexpected token <"，
+ * 而真正的问题是"文件没生成"或"部署时漏传了" —— 错误信息指向完全错误的方向。
+ */
+async function fetchJson(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return null
+    if (!(res.headers.get('content-type') ?? '').includes('json')) return null
+    return await res.json()
+  } catch {
+    return null
   }
-  return res.json()
 }
 
 // 每日驾驶舱（六问）

@@ -14,7 +14,7 @@
 //     前端据此隐藏"标记已执行"按钮，而不是给一个点了没反应的按钮。
 //   - 本文件只做搬运与序列化，不含任何判据、阈值、评分，不影响规则指纹。
 
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { Dashboard } from './dashboard'
 import type { CockpitReport } from './types'
@@ -115,7 +115,42 @@ export function saveWebSnapshot(
   return file
 }
 
+/**
+ * 加密落盘。
+ *
+ * 关键在于**同时删掉明文**：加密快照与明文快照并存于同一个 public/ 目录时，
+ * 构建会把两份都拷进 dist/，于是密文旁边就躺着一份明文 —— 加密等于没做。
+ * 这类失误不会有任何报错，所以必须在写入时就消除可能性。
+ */
+export async function saveEncryptedWebSnapshot(
+  payload: Record<string, unknown>, plainFile: string, passphrase: string
+): Promise<{ file: string; removedPlain: boolean }> {
+  const { encryptSnapshot, decryptSnapshot } = await import('./webEncrypt')
+  const json = JSON.stringify(payload)
+  const enc = await encryptSnapshot(json, passphrase)
+
+  // 写盘前先解一次。生成了解不开的密文而当时没发现，等于当天的分析直接丢失，
+  // 而这种问题往往要到第二天想看昨天数据时才暴露。
+  const back = await decryptSnapshot(enc, passphrase)
+  if (back !== json) throw new Error('加密自检失败：密文解出的内容与原文不一致，已中止写盘。')
+
+  const encFile = encryptedSnapshotPath(plainFile)
+  mkdirSync(dirname(encFile), { recursive: true })
+  writeFileSync(encFile, `${JSON.stringify(enc, null, 2)}\n`, 'utf-8')
+
+  let removedPlain = false
+  if (existsSync(plainFile)) {
+    rmSync(plainFile)
+    removedPlain = true
+  }
+  return { file: encFile, removedPlain }
+}
+
 /** 前端静态资源目录。Vite 会把 public/ 原样拷进 dist/ */
 export function webSnapshotFile(repoRoot: string): string {
   return join(repoRoot, 'frontend', 'public', 'data', 'today.json')
+}
+
+export function encryptedSnapshotPath(plainFile: string): string {
+  return plainFile.replace(/\.json$/, '.enc.json')
 }
