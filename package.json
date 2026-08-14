@@ -15,7 +15,9 @@
     "web:build": "npm run web:snapshot && npm run build:offline --workspace frontend",
     "web:serve": "npm run serve:offline --workspace frontend",
     "web:lan": "npm run web:snapshot && node scripts/lan-url.mjs && npm run dev:lan --workspace frontend",
-    "report": "npm run web:snapshot && node scripts/open-report.mjs"
+    "report": "npm run web:snapshot && node scripts/open-report.mjs",
+    "web:preflight": "node scripts/preflight-deploy.mjs",
+    "web:deploy": "npm run web:build && npm run web:preflight"
   },
   "workspaces": [
     "backend",
