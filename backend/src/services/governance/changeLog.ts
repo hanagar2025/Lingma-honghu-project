@@ -229,6 +229,30 @@ export interface DiscoveryLedger {
   entries: DiscoveryEntry[]
 }
 
+/**
+ * 判断"最新一根K线"是否其实是**盘中未定价**。
+ *
+ * 为什么必须有这个闸门：行情源在盘中会给出当日一根"进行中"的K线，
+ * 日期就是今天。系统据此算出的仓位、相对强度、成交比值全都是临时值，
+ * 但归档逻辑只看日期 —— 于是 11:16 跑一次，盘中读数就被写成"8月14日收盘"，
+ * 而这份档案要连续读 30 个交易日。序列里混进盘中值，
+ * 30 天后回看"哪一天变了"时得到的答案是错的，且**无法事后分辨**。
+ *
+ * 判据只用交易日历里最硬的一条事实：A股 15:00 收盘。
+ * 不做任何预测，也不引入可调阈值，故不构成新增决策规则。
+ *
+ * @param barDate 最新一根K线的日期（YYYY-MM-DD）
+ * @param now 用于测试注入
+ */
+export function isIntraday(barDate: string, now = new Date()): boolean {
+  // 北京时间 = UTC+8，直接用偏移算，避免依赖运行机器的时区设置
+  const bj = new Date(now.getTime() + 8 * 3600 * 1000)
+  const today = bj.toISOString().slice(0, 10)
+  if (barDate !== today) return false
+  const hhmm = bj.getUTCHours() * 60 + bj.getUTCMinutes()
+  return hhmm < 15 * 60
+}
+
 export function loadDiscovery(file = DISCOVERY_FILE): DiscoveryLedger {
   if (!existsSync(file)) return { updatedAt: '', entries: [] }
   try {
@@ -362,6 +386,9 @@ export function loadPrevSnapshot(date: string, dir = CHANGELOG_DIR): DailySnapsh
  */
 function deltaText(c: Change): string {
   if (c.delta === null) return ''
+  // 增量为 0 却仍被记为变化 → 说明变的是文案而非数值（例："超出2.4pct"→"超出2.8pct"，
+  // 两条都以 Reading.value=0 落档）。此时印一个"（0.000）"只会让人以为数值没动。
+  if (c.delta === 0) return ''
   const isPct = c.from.endsWith('%') && c.to.endsWith('%')
   if (isPct) return `（${c.delta > 0 ? '+' : ''}${(c.delta * 100).toFixed(1)}pct）`
   const abs = Math.abs(c.delta)
