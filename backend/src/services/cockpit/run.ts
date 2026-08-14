@@ -22,6 +22,8 @@ import type { DailyBar, Position } from '../tios/types'
 import { runCockpit } from './index'
 import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
+import { buildVerdict, type Verdict } from './verdict'
+import { renderVerdict } from './renderVerdict'
 import { renderDashboardHtml } from './renderHtml'
 import {
   buildWebSnapshot, saveWebSnapshot, saveEncryptedWebSnapshot,
@@ -30,7 +32,8 @@ import {
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
-  stageAdvances, isIntraday, type Change, type DiscoveryLedger,
+  stageAdvances, isIntraday, loadAllSnapshots, driftOver,
+  type Change, type DiscoveryLedger,
 } from '../governance/changeLog'
 import { buildProfitMap } from '../research/profitRadar'
 import type { ProfitMap } from '../research/profitRadar'
@@ -204,6 +207,7 @@ async function main(): Promise<void> {
     | undefined
 
   let dashForHtml: Dashboard | null = null
+  let verdictForHtml: Verdict | null = null
   let changesForHtml: Change[] = []
   let prevDateForHtml: string | null = null
   let ledgerForHtml: DiscoveryLedger | null = null
@@ -223,6 +227,21 @@ async function main(): Promise<void> {
       noNewEntryReasons: rep.noNewEntry.reasons,
       dataGaps: rep.dataGaps,
     })
+    // 结论先于依据：委员会明确不想再从四张表里自己提炼。
+    // 这一层不产生新判断，只按规则类别筛选归类，并把答不了的问题一并列出。
+    const snaps = loadAllSnapshots()
+    const verdict = buildVerdict({
+      dashboard: dash,
+      actions: rep.actions,
+      actionText: ACTION_TEXT,
+      drift: driftOver(snaps),
+      driftSnapshotCount: snaps.length,
+      driftFrom: snaps[0]?.date,
+      driftTo: snaps[snaps.length - 1]?.date,
+    })
+    process.stdout.write(`\n${renderVerdict(verdict)}\n`)
+    verdictForHtml = verdict
+
     process.stdout.write(`${renderDashboard(dash)}\n`)
     dashForHtml = dash
 
@@ -333,6 +352,7 @@ async function main(): Promise<void> {
         detail: audit.rules.drift?.detail ?? '未找到冻结基线，无法判定漂移。先跑 npm run freeze:baseline',
       },
       intraday: isIntraday(dashForHtml.date),
+      verdict: verdictForHtml,
       externalCash: extCash !== null && extCash > 0
         ? {
           amount: extCash,
@@ -356,6 +376,7 @@ async function main(): Promise<void> {
     const payload = buildWebSnapshot({
       report: rep,
       dashboard: dashForHtml,
+      verdict: verdictForHtml,
       changes: changesForHtml,
       prevDate: prevDateForHtml,
       discovery: ledgerForHtml,

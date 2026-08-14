@@ -13,10 +13,12 @@ import { fetchDailyBars, getBarsFromDB } from '../services/marketData'
 import { runCockpit } from '../services/cockpit'
 import { buildDashboard, type SessionKind } from '../services/cockpit/dashboard'
 import { renderDashboard } from '../services/cockpit/renderDashboard'
+import { buildVerdict } from '../services/cockpit/verdict'
 import type { MomentumRow } from '../services/cockpit/momentum'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, stageAdvances, isIntraday,
+  loadAllSnapshots, driftOver,
   type Change, type DiscoveryLedger,
 } from '../services/governance/changeLog'
 import { buildProfitMap, type ProfitMap } from '../services/research/profitRadar'
@@ -212,11 +214,27 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
     }
   }
 
+  // 今日结论。三个出口（网页/HTML/命令行）必须给出同一份结论，
+  // 否则会各说一套，而"到底听哪个"这种问题一旦出现，纪律就没了。
+  const allSnaps = loadAllSnapshots()
+  const verdict = dashboard
+    ? buildVerdict({
+      dashboard,
+      actions: report.actions,
+      actionText: ACTION_TEXT,
+      drift: driftOver(allSnaps),
+      driftSnapshotCount: allSnaps.length,
+      driftFrom: allSnaps[0]?.date,
+      driftTo: allSnaps[allSnaps.length - 1]?.date,
+    })
+    : null
+
   res.json({
     success: true,
     data: {
       ...report,
       dashboard,
+      verdict,
       dashboardText: dashboard ? renderDashboard(dashboard) : null,
       changes: { prevDate, items: changes },
       // 盘中标记必须随数据一起下发：前端若只看到数字，会把未定价读数当收盘读数用

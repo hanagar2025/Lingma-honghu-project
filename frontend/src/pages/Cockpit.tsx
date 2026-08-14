@@ -16,6 +16,7 @@ import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/i
 import { cockpitAPI, isLocked, tiosAPI } from '../services/api'
 import { decryptSnapshot, type EncryptedSnapshot } from '../services/decrypt'
 import FiveLayerDashboard from '../components/FiveLayerDashboard'
+import TodayVerdict from '../components/TodayVerdict'
 import UnlockGate from '../components/UnlockGate'
 
 const { Title, Text, Paragraph } = Typography
@@ -287,6 +288,9 @@ const Cockpit: React.FC = () => {
           )}
         </Space>
       </Card>
+
+      {/* ── 今日结论：结论先于依据，放在四张表之前 ── */}
+      <TodayVerdict verdict={data.verdict} />
 
       {/* ── 五层驾驶舱：四张研究表 + 隔离的动作区 ── */}
       <FiveLayerDashboard

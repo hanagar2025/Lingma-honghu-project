@@ -9,6 +9,7 @@
 // 渲染纪律与前端一致：缺失显示"缺失"、不显示综合评分、数据完整度放表头。
 
 import type { Dashboard } from './dashboard'
+import type { Verdict } from './verdict'
 import type { Change } from '../governance/changeLog'
 
 function esc(s: unknown): string {
@@ -111,10 +112,14 @@ export interface HtmlInput {
   externalCash?: { amount: number; note: string } | null
   /** 最新K线尚未定价（盘中运行）。为真时全表读数为临时值且未归档 */
   intraday?: boolean
+  /** 今日结论。放在四张表之前 —— 结论先于依据 */
+  verdict?: Verdict | null
 }
 
 export function renderDashboardHtml(input: HtmlInput): string {
-  const { dashboard: d, changes, prevDate, discovery, freeze, externalCash, intraday } = input
+  const {
+    dashboard: d, changes, prevDate, discovery, freeze, externalCash, intraday, verdict,
+  } = input
   const h = d.headline
   const ms = d.marketStructure
   const az = d.actionZone
@@ -138,8 +143,97 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(freeze.baselineHash ? `　基线 ${esc(freeze.baselineHash)}　${freeze.drifted ? '⚠ 已漂移' : '✓ 未漂移'}` : '　⚠ 无冻结基线')
   w(`<div class=foot>${esc(freeze.detail)}</div></div>`)
 
+  // ── 今日结论 ──
+  // 放在最前：委员会明确不想再从四张表里自己提炼结论。
+  if (verdict) {
+    w(`</div><div class="card act"><h2>今日结论</h2>`)
+    w(`<div class="banner info"><b>${esc(verdict.oneLine)}</b></div>`)
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">焦点：今天真正需要你看的就这 ${verdict.focus.length} 个</h3>`)
+    if (!verdict.focus.length) w(`<div class=sec>无。今天没有任何标的触发规则。</div>`)
+    verdict.focus.forEach((f, i) => {
+      w(`<div style="margin-bottom:10px"><b>${i + 1}. ${esc(f.name)}</b>`)
+      w(`<span class="tag ${f.held ? 'green' : 'grey'}">${f.held ? '持仓' : '未持仓'}</span>`)
+      w(`<div class=foot style="padding-left:14px">为什么在这里：${esc(f.because)}</div>`)
+      w(`<div class=foot style="padding-left:14px">今天做什么：${esc(f.todo)}</div></div>`)
+    })
+    w(`<div class="banner warn"><b>研究覆盖</b>　${esc(verdict.coverageVerdict)}</div>`)
+
+    const tier = (title: string, note: string, rows: typeof verdict.mustDo, strong: boolean) => {
+      w(`<h3 style="font-size:15px;margin:14px 0 6px" class="${strong ? 'up' : ''}">${esc(title)}</h3>`)
+      if (note) w(`<div class=foot>${esc(note)}</div>`)
+      if (!rows.length) { w(`<div class=sec>无</div>`); return }
+      for (const h of rows) {
+        w(`<div style="margin:8px 0"><b>${esc(h.name)}</b>（${esc(h.code)}）`)
+        w(`　仓位 ${h.posPct === null ? '<span class=miss>缺失</span>' : `${(h.posPct * 100).toFixed(1)}%`}`)
+        w(`　→ <b>${esc(h.action)}</b>`)
+        w(`<div class=foot style="padding-left:14px">法定减仓理由：`)
+        w(h.legalReason ? `<span class=up>${esc(h.legalReason)}</span>` : '<span class=sec>无</span>')
+        w(`</div><div class=foot style="padding-left:14px">${esc(h.saysWhat.join('；'))}</div>`)
+        if (h.notReason.length) {
+          w(`<div class=foot style="padding-left:14px">明确不是理由：${esc(h.notReason.join('；'))}</div>`)
+        }
+        w(`</div>`)
+      }
+    }
+    tier(`一、必须执行（有法定理由）—— ${verdict.mustDo.length} 项`, '', verdict.mustDo, true)
+    tier(
+      `二、触发复核但无法定理由 —— ${verdict.reviewNoAction.length} 项（系统不动作）`,
+      '这一档最容易被自己推翻：读到"多项恶化"很容易顺手卖出，但技术指标只被允许触发复核。',
+      verdict.reviewNoAction, false
+    )
+    if (verdict.quiet.length) {
+      w(`<h3 style="font-size:15px;margin:14px 0 6px">三、无复核项也无法定理由 —— ${verdict.quiet.length} 项</h3>`)
+      w(`<div class=sec>${verdict.quiet.map(q =>
+        `${esc(q.name)} ${q.posPct === null ? '缺失' : `${(q.posPct * 100).toFixed(1)}%`}`).join('　')}</div>`)
+    }
+
+    w(`<h3 style="font-size:15px;margin:14px 0 6px">四、允许研究（不是允许买入）—— ${verdict.research.length} 个节点</h3>`)
+    w(`<div class=foot>「允许研究」不等于「再等等」：下面每条缺口都是一件今天可以开始做的核验任务。</div>`)
+    w(`<div class=tw><table><tr><th>节点</th><th>标的</th><th>数据在说什么</th><th>缺口</th></tr>`)
+    for (const r of verdict.research) {
+      w(`<tr><td>${esc(r.node)}${r.blockedByStrategy ? ' <span class="tag red">战略层不允许</span>' : ''}</td>`)
+      w(`<td>${esc(r.members.join('、')) || '<span class=miss>无</span>'}</td>`)
+      w(`<td style="white-space:normal">${esc(r.saysWhat.join('；'))}</td>`)
+      w(`<td style="white-space:normal">${r.missingGates.map(g => esc(g)).join('<br>')}</td></tr>`)
+    }
+    w(`</table></div>`)
+
+    w(`<h3 style="font-size:15px;margin:14px 0 6px">五、今日不许新增建仓的逐条原因</h3><ul>`)
+    for (const r of verdict.noEntryReasons) w(`<li>${esc(r)}</li>`)
+    if (!verdict.noEntryReasons.length) w(`<li>无禁止项</li>`)
+    w(`</ul>`)
+
+    w(`<h3 style="font-size:15px;margin:14px 0 6px">六、跨多日累计变化 —— 单日看不出的东西</h3>`)
+    w(`<div class="banner ${verdict.drift.length ? 'info' : 'warn'}">${esc(verdict.driftNote)}`)
+    if (verdict.driftWindow) {
+      w(`<div class=foot>区间 ${esc(verdict.driftWindow.from)} → ${esc(verdict.driftWindow.to)}（${verdict.driftWindow.days} 个交易日）</div>`)
+    }
+    w(`</div>`)
+    for (const g of verdict.drift) {
+      w(`<div style="margin-bottom:10px"><b>${esc(g.label)}</b>`)
+      for (const it of g.items) {
+        const dt = it.delta === null || it.delta === 0 ? ''
+          : `<span class="${it.delta > 0 ? 'up' : 'down'}">（${it.delta > 0 ? '+' : ''}${
+            it.from.endsWith('%') ? `${(it.delta * 100).toFixed(1)}pct` : it.delta.toFixed(2)
+          }）</span>`
+        w(`<div class=chg><span class=who>${esc(it.key)} · ${esc(it.field)}</span>`)
+        w(`<span class=miss>${esc(it.from)}</span><span>→</span><b>${esc(it.to)}</b>${dt}`)
+        w(`${it.monotonic ? '<span class="tag green">单向</span>' : ''}<span class=foot>${it.days}天</span></div>`)
+      }
+      w(`</div>`)
+    }
+
+    w(`<h3 style="font-size:15px;margin:14px 0 6px">七、这套系统答不了的问题（附实测依据）</h3>`)
+    w(`<div class=foot>把答不了的问题明确列出来，本身是结论的一部分 —— 否则读者会默认"没说不能，就是能"。</div>`)
+    for (const c of verdict.cannotAnswer) {
+      w(`<div style="margin:8px 0"><b>问：${esc(c.question)}</b>`)
+      w(`<div class=foot style="padding-left:14px">答：${esc(c.why)}</div></div>`)
+    }
+  }
+
   // ── 今日市场状态 ──
-  w(`<h2 style="margin-top:16px">今日市场状态</h2>`)
+  w(`</div><div class=card><h2>今日市场状态</h2>`)
   for (const [k, v] of [
     ['主线', h.mainline], ['结构', h.structure], ['核心', h.core], ['深化', h.deepening],
     ['切换', h.switching], ['行动', h.action], ['数据完整度', h.dataCompleteness],

@@ -29,6 +29,8 @@ import { fingerprint } from '../governance/ruleRegistry'
 export interface WebSnapshotInput {
   report: CockpitReport
   dashboard: Dashboard | null
+  /** 今日结论。网页端与 CLI/HTML 必须给出同一份结论，否则三个出口会各说一套 */
+  verdict?: unknown
   changes: Change[]
   prevDate: string | null
   discovery: DiscoveryLedger | null
@@ -58,6 +60,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
   return {
     ...report,
     dashboard,
+    verdict: input.verdict ?? null,
     dashboardText: null,
     changes: { prevDate, items: changes },
     discovery: {
