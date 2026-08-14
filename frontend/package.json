@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "dev:offline": "VITE_OFFLINE=1 vite",
+    "dev:open": "VITE_OFFLINE=1 vite --open",
     "dev:lan": "VITE_OFFLINE=1 vite --host",
     "build:offline": "VITE_OFFLINE=1 vite build",
     "serve:offline": "VITE_OFFLINE=1 vite preview --port 4173",

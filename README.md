@@ -45,12 +45,19 @@ frontend/src/
 
 ## 在浏览器里看今天的分析（推荐，不需要数据库和登录）
 
-驾驶舱有三个出口，读的是**同一份数据**，因此不可能给出互相矛盾的结论。
+驾驶舱有四个出口，读的是**同一份数据**，因此不可能给出互相矛盾的结论。
+
+首次在一台新机器上（把 `~/tios` 换成你想放的目录）：
 
 ```bash
+git clone -b cursor/decision-audit-c819 https://github.com/hanagar2025/Lingma-honghu-project.git ~/tios
+cd ~/tios
 npm install
-npm run web        # 生成快照 → 起前端 → 打开 http://localhost:5173
+npm run web
 ```
+
+`npm run web` 会自己打开浏览器；没打开就手动开 `http://localhost:5173`。
+之后每天只要两步：`cd ~/tios` 然后 `npm run web`。
 
 `npm run web` 做两件事：先用命令行引擎直连行情算出当日快照
 （落到 `frontend/public/data/today.json`），再以离线模式启动前端读它。
@@ -97,6 +104,25 @@ npm run web:lan    # 起服务并打印手机可访问的局域网地址
 > 若确实需要一个随处可访问的链接，必须选带访问控制的方案
 > （例如 Cloudflare Access、Netlify 密码保护、Tailscale 私有网络），
 > 不能只依赖"URL 没人知道"。
+
+## 三个真踩过的坑
+
+**一、`致命错误：不是 Git 仓库` / `Could not read package.json`**
+
+命令是在家目录（`~`）下跑的，那里既没有 `.git` 也没有 `package.json`。
+先 `cd` 到项目目录。确认当前位置：`pwd`；确认是不是项目根：`ls package.json`。
+
+**二、`cd: too many arguments`**
+
+zsh 交互式 shell **默认不把 `#` 当注释**（`interactive_comments` 未开启），
+所以 `cd /some/path   # 说明文字` 里的说明文字会被当成 `cd` 的额外参数。
+粘贴命令时不要带行尾注释；本 README 的命令块都不含注释。
+
+**三、手机打不开 `192.168.1.x`**
+
+`192.168.1.x` 是**占位写法，不是可用地址**。真实地址要看 `npm run web:lan`
+打印出来的那一行，形如 `http://192.168.1.23:5173` —— 最后那段是具体数字。
+手机还必须与电脑连同一个 WiFi。
 
 ## 持仓数据的存放位置（关系到隐私）
 
