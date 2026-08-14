@@ -14,7 +14,8 @@
     "web:snapshot": "cd backend && WEB=1 HTML=1 npx tsx src/services/cockpit/run.ts",
     "web:build": "npm run web:snapshot && npm run build:offline --workspace frontend",
     "web:serve": "npm run serve:offline --workspace frontend",
-    "web:lan": "npm run web:snapshot && node scripts/lan-url.mjs && npm run dev:lan --workspace frontend"
+    "web:lan": "npm run web:snapshot && node scripts/lan-url.mjs && npm run dev:lan --workspace frontend",
+    "report": "npm run web:snapshot && node scripts/open-report.mjs"
   },
   "workspaces": [
     "backend",
@@ -28,6 +29,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "qrcode": "^1.5.4"
   }
 }
