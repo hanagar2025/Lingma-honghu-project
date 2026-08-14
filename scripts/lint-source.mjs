@@ -90,20 +90,26 @@ function stripComments(src) {
 }
 
 let uiFiles = 0
-for (const dir of UI_DIRS) {
-  for (const f of walk(dir)) {
-    uiFiles++
-    const code = stripComments(readFileSync(f, 'utf-8'))
-    code.split('\n').forEach((line, i) => {
-      if (!/\*\*/.test(line)) return
-      problems++
-      console.error(
-        `${f.replace(join(HERE, '..'), '.')}:${i + 1}  界面文案里有 Markdown 星号\n`
-        + `    ${line.trim().slice(0, 110)}\n`
-        + `    HTML 与 React 不渲染 ** —— 页面上会显示成两个星号。要强调请用「」。\n`
-      )
-    })
-  }
+// shell 脚本也算界面：终端同样不渲染 Markdown。
+// 漏掉它们的后果实测过一次 —— 部署脚本的干跑输出里赫然印着两个星号。
+const uiTargets = [...UI_DIRS.flatMap(d => walk(d)), ...files]
+for (const f of uiTargets) {
+  uiFiles++
+  const isShell = f.endsWith('.sh')
+  const code = isShell
+    // shell 只有 # 注释；不能套用 // 与 /* */ 的剥离规则，
+    // 否则 URL 里的 // 会把整行后半截当成注释吃掉。
+    ? readFileSync(f, 'utf-8').split('\n').map(l => (/^\s*#/.test(l) ? '' : l)).join('\n')
+    : stripComments(readFileSync(f, 'utf-8'))
+  code.split('\n').forEach((line, i) => {
+    if (!/\*\*/.test(line)) return
+    problems++
+    console.error(
+      `${f.replace(join(HERE, '..'), '.')}:${i + 1}  界面文案里有 Markdown 星号\n`
+      + `    ${line.trim().slice(0, 110)}\n`
+      + `    HTML、React 与终端都不渲染 ** —— 会原样显示成两个星号。要强调请用「」。\n`
+    )
+  })
 }
 
 if (problems > 0) {

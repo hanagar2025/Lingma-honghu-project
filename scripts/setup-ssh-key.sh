@@ -63,7 +63,7 @@ EOF
 step "如果想让 Cursor 里的 Agent 替你部署"
 cat <<EOF
   把私钥内容加到 Cursor 后台：Cloud Agents → Secrets，
-  变量名 ECS_SSH_KEY，值是下面这个文件的**全部内容**：
+  变量名 ECS_SSH_KEY，值是下面这个文件的「全部内容」：
 
     $KEY
 
