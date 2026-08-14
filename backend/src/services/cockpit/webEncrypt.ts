@@ -66,13 +66,32 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
   )
 }
 
+/** 口令下限。低于此长度直接拒绝，不是警告 */
+export const MIN_PASSPHRASE = 8
+
+/**
+ * 口令校验。**必须在流程最前面调用。**
+ *
+ * 存在理由是一次真实的浪费：校验原本只发生在加密那一步，也就是整个流程的最后。
+ * 于是口令写短了会先拉完 60 只标的的行情、算完全部读数、写完 HTML 报告，
+ * 9 秒之后才告诉你"口令太短" —— 而这 9 秒的工作全部作废。
+ * 参数错误应当在花费任何代价之前就报出来。
+ */
+export function checkPassphrase(passphrase: string | undefined): string | null {
+  if (!passphrase) return '未提供口令'
+  if (passphrase.length < MIN_PASSPHRASE) {
+    return `口令至少 ${MIN_PASSPHRASE} 个字符，当前 ${passphrase.length} 个。太短的口令使加密形同虚设。`
+  }
+  return null
+}
+
 export async function encryptSnapshot(
   plaintext: string, passphrase: string
 ): Promise<EncryptedSnapshot> {
-  if (passphrase.length < 8) {
-    // 短口令让整套加密失去意义。这里直接拒绝而不是警告：
-    // 一个"看起来加密了"的公网页面比一个明知未加密的页面更危险。
-    throw new Error('口令至少 8 个字符。太短的口令使加密形同虚设。')
+  const bad = checkPassphrase(passphrase)
+  if (bad) {
+    // 一个"看起来加密了"的公网页面比一个明知未加密的页面更危险，所以拒绝而不是警告。
+    throw new Error(bad)
   }
   const salt = crypto.getRandomValues(new Uint8Array(CRYPTO_SPEC.saltBytes))
   const iv = crypto.getRandomValues(new Uint8Array(CRYPTO_SPEC.ivBytes))

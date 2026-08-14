@@ -35,9 +35,53 @@ die() { printf '\n\033[31m✗ %s\033[0m\n\n' "$1" >&2; exit 1; }
 step() { printf '\n%s\n%s\n%s\n' "$LINE" "$1" "$LINE"; }
 
 [[ -n "$HOST" ]] || die "未设置 DEPLOY_HOST。例：DEPLOY_HOST=39.104.86.200"
-[[ -n "${TIOS_PASSPHRASE:-}" ]] || die \
-  "未设置 TIOS_PASSPHRASE。公网部署必须加密 —— 页面含全部持仓与总资产，
-   不加密等于把它公开发布。口令至少 8 位。"
+
+# ── 口令：优先交互式输入 ──
+# 写在命令行里的口令会**原文进入 ~/.zsh_history**，而这个口令是公网页面的唯一保护。
+# 所以默认改为读取输入且不回显：不进历史、不进进程列表（ps 能看到命令行参数）。
+# 已经用环境变量传进来的仍然接受 —— 自动化场景需要它，但会提示历史泄漏。
+if [[ -n "${TIOS_PASSPHRASE:-}" ]]; then
+  printf '\n  \033[33m注意：口令通过环境变量传入，会留在 shell 历史里。\033[0m\n'
+  printf '  清理：history -d 对应行号，或直接删掉 ~/.zsh_history 里那一行。\n'
+else
+  step "设置解锁口令"
+  cat <<'TIP'
+  这是以后每次打开页面要输的口令。它是公网页面的唯一保护，因为：
+    · 数据以密文静态托管，服务器自己也解不开；
+    · 任何人都能下载那个密文文件，然后**离线**慢慢试口令。
+
+  所以口令必须经得起离线爆破：
+    · 至少 12 位；
+    · 不要用域名、品牌名、"honghu"、"wealth"、"hhwealth" 这类能猜到的词 ——
+      攻击者的第一批字典就是这些；
+    · 不要与其他账号复用。
+
+  输入时不回显，也不会进入 shell 历史。
+TIP
+  printf '\n  口令：'
+  read -rs TIOS_PASSPHRASE
+  printf '\n  再输一次：'
+  read -rs PASS2
+  printf '\n'
+  [[ "$TIOS_PASSPHRASE" == "$PASS2" ]] || die "两次输入不一致"
+  unset PASS2
+  export TIOS_PASSPHRASE
+fi
+
+# ── 口令强度：面向公网，比库里的 8 位下限更严 ──
+# 库的下限是 8（本机/局域网也够用），但这份产物要挂公网、可被离线爆破，
+# 故此处单独收紧。宁可在这里被拦一次，也不要挂一个能被字典跑出来的口令。
+(( ${#TIOS_PASSPHRASE} >= 12 )) || die \
+  "口令只有 ${#TIOS_PASSPHRASE} 位。公网部署要求至少 12 位 ——
+   密文可被下载后离线爆破，短口令挡不住字典。"
+
+LOWER="$(printf '%s' "$TIOS_PASSPHRASE" | tr '[:upper:]' '[:lower:]')"
+for w in hhwealth honghu wealth hongkong tios 鸿鹄 理财; do
+  if [[ "$LOWER" == *"$w"* ]]; then
+    die "口令里含「$w」—— 域名与品牌名是攻击者字典里的第一批词。请换一个无关的口令。"
+  fi
+done
+unset LOWER
 
 # ── 一、本地构建并体检 ──
 step "一、本地构建加密产物并体检"

@@ -29,6 +29,7 @@ import {
   buildWebSnapshot, saveWebSnapshot, saveEncryptedWebSnapshot,
   encryptedSnapshotPath, webSnapshotFile,
 } from './webSnapshot'
+import { checkPassphrase } from './webEncrypt'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
@@ -133,6 +134,22 @@ function printReport(rep: CockpitReport): void {
 }
 
 async function main(): Promise<void> {
+  // 口令先校验，再干活。写短了不该在拉完 60 只标的的行情、算完全部读数之后
+  // 才被告知 —— 那 9 秒的工作会全部作废，而错误原因跟行情毫无关系。
+  if (process.env.TIOS_PASSPHRASE !== undefined) {
+    const bad = checkPassphrase(process.env.TIOS_PASSPHRASE)
+    if (bad) {
+      process.stderr.write(
+        `\n口令不合格：${bad}\n\n`
+        + `  这个页面要挂在公网上，口令是唯一的保护。请重新指定：\n`
+        + `    TIOS_PASSPHRASE='更长的口令' npm run web:deploy\n\n`
+        + `  注意：写在命令行里的口令会进入 ~/.zsh_history。\n`
+        + `  用 ./scripts/deploy-ecs.sh 会改为交互式输入，不留痕迹。\n\n`
+      )
+      process.exit(1)
+    }
+  }
+
   const file = process.env.PORTFOLIO ?? PORTFOLIO_FILE
   const pf = JSON.parse(readFileSync(file, 'utf-8')) as PortfolioFile
 

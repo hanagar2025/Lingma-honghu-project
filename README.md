@@ -185,8 +185,16 @@ TIOS_PASSPHRASE='你的长口令' npm run web:deploy
 Let's Encrypt 证书（8/11 签发、11/9 到期，certbot 自动续期），**HTTPS 已配好**。
 
 ```bash
-DEPLOY_HOST=39.104.86.200 TIOS_PASSPHRASE='你的长口令' ./scripts/deploy-ecs.sh
+DEPLOY_HOST=39.104.86.200 ./scripts/deploy-ecs.sh
 ```
+
+**不要把口令写在命令行里** —— 它会原文进入 `~/.zsh_history`，
+而这个口令是公网页面的唯一保护。脚本会交互式提问、不回显、要求输两遍。
+
+口令必须经得起**离线**爆破：密文文件谁都能下载，然后在自己机器上慢慢试。
+所以脚本要求至少 12 位（比库里的 8 位下限更严，因为这份产物面向公网），
+并拒绝含域名、品牌名（`hhwealth`、`honghu`、`wealth`、`鸿鹄`、`理财` 等）的口令 ——
+那些是攻击者字典里的第一批词。
 
 先加 `DRY_RUN=1` 跑一次，它会把**将在服务器上执行的完整脚本打印出来**且不连服务器。
 涉及删文件与改 nginx 配置的操作，应当先看清楚再跑。
