@@ -23,6 +23,7 @@ import { runCockpit } from './index'
 import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
 import { renderDashboardHtml } from './renderHtml'
+import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
@@ -342,6 +343,42 @@ async function main(): Promise<void> {
     const htmlFile = join(reportDir, `${dashForHtml.date}${session === 'PRE_OPEN' ? '-盘前' : ''}.html`)
     writeFileSync(htmlFile, html, 'utf-8')
     process.stdout.write(`\n【HTML 报告】${htmlFile}\n  双击即可在浏览器打开，无需数据库、无需登录、无外部请求。\n`)
+  }
+
+  // ── 离线网页快照 ──
+  // 让浏览器里的 React 驾驶舱脱离 MySQL 与登录运行。数据来源与 CLI/HTML 完全一致，
+  // 三个出口因此不可能给出互相矛盾的结论。
+  if (process.env.WEB === '1' && dashForHtml) {
+    const repoRoot = join(HERE, '..', '..', '..', '..')
+    const payload = buildWebSnapshot({
+      report: rep,
+      dashboard: dashForHtml,
+      changes: changesForHtml,
+      prevDate: prevDateForHtml,
+      discovery: ledgerForHtml,
+      audit,
+      auditMarkdown: md,
+      baseline: base,
+      missing: failed,
+      valuationUsable: Object.values(valuationByCode).filter(v => v.usable).length,
+      valuationLoaded: Object.keys(valuationByCode).length,
+      intraday: isIntraday(dashForHtml.date),
+      marketAllows,
+      pendingSellCount,
+      externalCash: extCash !== null && extCash > 0
+        ? {
+          amount: extCash,
+          note: pf.externalCashNote
+            ?? '口径未裁定：并入分母会让现有超限持仓自动合规，故按从严处理，暂不计入。',
+          denominatorNow: totalAssets,
+        }
+        : null,
+    })
+    const webFile = saveWebSnapshot(payload, webSnapshotFile(repoRoot))
+    process.stdout.write(
+      `\n【网页快照】${webFile}\n` +
+      `  浏览器版驾驶舱可离线读取它：npm run web —— 不需要 MySQL，也不需要登录。\n`
+    )
   }
 }
 

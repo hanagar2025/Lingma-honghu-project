@@ -8,6 +8,7 @@
 //
 // 运行：npx tsx backend/src/services/cockpit/dashboardSelftest.ts
 
+import { readFileSync } from 'node:fs'
 import type { DailyBar, Position } from '../tios/types'
 import { runMsr } from '../msr'
 import { MAINLINES } from '../msr/universe'
@@ -343,6 +344,49 @@ if (profit) {
       dash.headline.deepening)
   }
 }
+
+// ───────────────────────────────────────────────────────────────
+// 离线网页快照 —— 字段契约
+//
+// 前端同一个页面会从两个源读数据（接口 / 离线快照）。若两边字段名漂移，
+// 症状是**某些卡片只在某个模式下出现** —— 页面不报错，只是静默少一块，
+// 而少掉的那块很可能正是执行债务或外围现金口径。故用源码级断言把契约钉住。
+console.log('\n【离线网页快照字段契约】')
+
+const webSnapSrc = readFileSync(new URL('./webSnapshot.ts', import.meta.url), 'utf-8')
+const routeSrc = readFileSync(new URL('../../routes/cockpit.ts', import.meta.url), 'utf-8')
+
+// 接口 res.json 的 data 段里出现的顶层字段，快照必须同样给出
+const CONTRACT = [
+  'dashboard', 'changes', 'discovery', 'provisional', 'audit', 'auditMarkdown',
+  'freeze', 'marketStage', 'missing', 'limits', 'lightText', 'actionText',
+  'legalReasonText', 'evidenceTierText', 'valuationUsable', 'valuationLoaded',
+]
+for (const f of CONTRACT) {
+  ok(`快照提供接口同名字段 ${f}`, new RegExp(`\\b${f}\\s*[:,]`).test(webSnapSrc))
+  ok(`接口确实有字段 ${f}（契约两端都在）`, new RegExp(`\\b${f}\\s*[:,]`).test(routeSrc))
+}
+
+ok('快照不产生动作（无 makeAction 调用）', !/\bmakeAction\s*\(/.test(webSnapSrc))
+ok('快照层不含阈值数字字面量比较（只搬运，不判断）',
+  !/[<>]=?\s*0\.\d/.test(webSnapSrc), '出现了阈值比较')
+ok('拿不到的东西显式列为 unavailable，而不是省略',
+  /unavailable:\s*\[/.test(webSnapSrc))
+ok('执行债务明细缺失用 null 表示，与空数组区分',
+  /pendingSells:\s*null/.test(webSnapSrc))
+ok('KPI 在离线模式下为 null，不用 0 冒充',
+  /kpi:\s*null/.test(webSnapSrc))
+
+// 前端必须把 null 与 [] 区别对待，否则"不知道"会被显示成"已清零"
+const cockpitPageSrc = readFileSync(
+  new URL('../../../../frontend/src/pages/Cockpit.tsx', import.meta.url), 'utf-8'
+)
+ok('前端区分"拿不到明细"与"确实已清零"',
+  /pendingSells\s*===\s*null/.test(cockpitPageSrc))
+ok('前端在离线模式隐藏需要后端的复跑按钮',
+  /!offline\.on\s*&&/.test(cockpitPageSrc))
+ok('前端显示外围现金口径待裁定',
+  /externalCash/.test(cockpitPageSrc) && /未计入仓位上限分母/.test(cockpitPageSrc))
 
 // ───────────────────────────────────────────────────────────────
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
