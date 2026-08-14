@@ -68,20 +68,26 @@ TIP
   export TIOS_PASSPHRASE
 fi
 
-# ── 口令强度：面向公网，比库里的 8 位下限更严 ──
-# 库的下限是 8（本机/局域网也够用），但这份产物要挂公网、可被离线爆破，
-# 故此处单独收紧。宁可在这里被拦一次，也不要挂一个能被字典跑出来的口令。
-(( ${#TIOS_PASSPHRASE} >= 12 )) || die \
-  "口令只有 ${#TIOS_PASSPHRASE} 位。公网部署要求至少 12 位 ——
-   密文可被下载后离线爆破，短口令挡不住字典。"
+# ── 口令强度 ──
+# 原来的规则是"含 honghu / wealth 就拒绝"。**那条规则拦错了对象** ——
+# honghu 当记忆锚点没有问题，问题是除它之外什么都没有。
+# 现在改为估算"去掉可猜成分后剩余的熵"，于是 honghu-青瓦-灯塔-47 这种
+# 好记又够强的口令能通过，而 honghu2026 那种一秒即破的仍被拦。
+#
+# 口令走标准输入传给检查器，不走命令行参数 —— argv 会出现在 ps 输出里。
+WEAK_FLAG=""
+[[ "${TIOS_ALLOW_WEAK:-0}" == "1" ]] && WEAK_FLAG="--allow-weak"
+if ! STRENGTH="$(printf '%s' "$TIOS_PASSPHRASE" | node "$ROOT/scripts/check-passphrase.mjs" $WEAK_FLAG)"; then
+  die "口令未通过强度检查，未做任何改动。"
+fi
 
-LOWER="$(printf '%s' "$TIOS_PASSPHRASE" | tr '[:upper:]' '[:lower:]')"
-for w in hhwealth honghu wealth hongkong tios 鸿鹄 理财; do
-  if [[ "$LOWER" == *"$w"* ]]; then
-    die "口令里含「${w}」—— 域名与品牌名是攻击者字典里的第一批词。请换一个无关的口令。"
-  fi
-done
-unset LOWER
+if [[ "$STRENGTH" == WEAK* ]]; then
+  printf '\n  \033[31m确认使用弱口令？\033[0m 这个页面挂在公网，口令是唯一保护。\n'
+  printf '  强度：%s\n' "${STRENGTH#WEAK }"
+  read -r -p '  输入 "我知道风险" 继续：' ack
+  [[ "$ack" == "我知道风险" ]] || die "已取消，未做任何改动"
+fi
+printf '\n  口令强度：%s\n' "${STRENGTH#* }"
 
 # ── 一、本地构建并体检 ──
 step "一、本地构建加密产物并体检"
