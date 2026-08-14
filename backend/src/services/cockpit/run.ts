@@ -5,6 +5,7 @@
 //   PENDING_SELLS=0 npm run cockpit      模拟执行债务清零后的输出
 //   MARKET_ALLOWS=1 npm run cockpit      模拟市场阶段允许建仓
 //   PORTFOLIO=/path/to/x.json npm run cockpit
+//   HTML=1 npm run cockpit               另存自包含 HTML 到 data/reports/（不依赖数据库与登录）
 //
 // 市值由最新收盘价 × 股数实时算出，portfolio.json 只存股数与成本价 ——
 // 手抄的市值会过期，而过期的市值会让仓位上限判定失真。
@@ -19,11 +20,13 @@ import { loadValuationMap, VALUATION_FILE } from '../msr/valuation'
 import { allBenchmarks, allCodes } from '../msr/universe'
 import type { DailyBar, Position } from '../tios/types'
 import { runCockpit } from './index'
-import { buildDashboard, type SessionKind } from './dashboard'
+import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
+import { renderDashboardHtml } from './renderHtml'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
+  stageAdvances, isIntraday, type Change, type DiscoveryLedger,
 } from '../governance/changeLog'
 import { buildProfitMap } from '../research/profitRadar'
 import type { ProfitMap } from '../research/profitRadar'
@@ -40,6 +43,19 @@ interface PortfolioFile {
   householdAnnualExpense: number | null
   positions: { code: string; name: string; quantity: number; cost: number; sector: string; theme: string }[]
   pendingSells: number
+  /**
+   * 券商账户之外的现金储备。
+   *
+   * **刻意不参与任何上限计算。** 12% 单票上限的分母是"组合总资产"，
+   * 而这笔钱算不算"组合"是战略层口径问题，不是代码可以替委员会决定的：
+   *   - 若计入 → 分母变大 → 现有超限持仓可能瞬间"自动合规"，
+   *     等于用一个记账动作消掉了真实的集中度风险；
+   *   - 若不计入 → 分母不变 → 维持从严判定。
+   * 未裁定期间按后者（从严），并在报告里显式标注口径待裁定，
+   * 绝不静默把它并进分母。
+   */
+  externalCash?: number | null
+  externalCashNote?: string
 }
 
 const LIGHT_DOT: Record<string, string> = { GREEN: '🟢', YELLOW: '🟡', RED: '🔴', UNKNOWN: '⚪' }
@@ -183,6 +199,11 @@ async function main(): Promise<void> {
     | { momentumRows: MomentumRow[]; msr: MsrReport; nodes: unknown[] }
     | undefined
 
+  let dashForHtml: Dashboard | null = null
+  let changesForHtml: Change[] = []
+  let prevDateForHtml: string | null = null
+  let ledgerForHtml: DiscoveryLedger | null = null
+
   if (process.env.DASHBOARD === '0' || !internals) {
     printReport(rep)
   } else {
@@ -199,21 +220,42 @@ async function main(): Promise<void> {
       dataGaps: rep.dataGaps,
     })
     process.stdout.write(`${renderDashboard(dash)}\n`)
+    dashForHtml = dash
 
     // ── 变化台账 ──
     // 盘前不落档：盘中读数会污染日间序列，而这份档案要连续读 30 个交易日。
-    if (session === 'POST_CLOSE') {
+    // 同理，盘中（15:00 前）跑出来的"今日收盘"其实是未定价的临时值，同样不得落档。
+    const intraday = isIntraday(date)
+    if (session === 'POST_CLOSE' && !intraday) {
       const snap = snapshotOf(dash)
       const prev = loadPrevSnapshot(snap.date)
       const changes = prev ? diffSnapshots(prev, snap) : []
       const snapFile = saveSnapshot(snap)
       const ledger = updateDiscovery(loadDiscovery(), dash)
       saveDiscovery(ledger)
+      changesForHtml = changes
+      prevDateForHtml = prev?.date ?? null
+      ledgerForHtml = ledger
 
       process.stdout.write(`\n${'═'.repeat(122)}\n`)
       process.stdout.write(`${renderChanges(changes, prev?.date ?? null, snap.date)}\n`)
       process.stdout.write(`\n${renderDiscovery(ledger, snap.date)}\n`)
       process.stdout.write(`\n快照已归档 ${snapFile}（${snap.readings.length} 项读数）\n`)
+    } else {
+      ledgerForHtml = loadDiscovery()
+      // 仍然算出变化给人看 —— 只是不写进档案。看得见，但不污染序列。
+      const snap = snapshotOf(dash)
+      const prev = loadPrevSnapshot(snap.date)
+      changesForHtml = prev ? diffSnapshots(prev, snap) : []
+      prevDateForHtml = prev?.date ?? null
+      if (intraday) {
+        process.stdout.write(`\n${'═'.repeat(122)}\n`)
+        process.stdout.write(
+          `⚠ 盘中运行（北京时间 15:00 前，最新K线 ${date} 尚未定价）→ 本次读数为临时值，**不写入30天档案**。\n` +
+          `  下面的变化仅供现在看；盘后 15:10 之后重跑一次才会归档。\n`
+        )
+        process.stdout.write(`${renderChanges(changesForHtml, prevDateForHtml, date)}\n`)
+      }
     }
 
     if (session === 'POST_CLOSE' && process.env.SIX === '1') printReport(rep)
@@ -228,11 +270,16 @@ async function main(): Promise<void> {
   const md = renderAuditMarkdown(audit)
   const dir = join(HERE, 'data', 'audits')
   mkdirSync(dir, { recursive: true })
-  const auditFile = join(dir, `${audit.date}.md`)
+  // 盘中审计另存文件名：审计里的减仓理由带着仓位百分比（"18.6% > 12%"），
+  // 而盘中的百分比会随收盘变。若覆盖当日正式档，30天后回看会拿盘中值当结论依据。
+  const auditIntraday = isIntraday(audit.date)
+  const auditFile = join(dir, `${audit.date}${auditIntraday ? '-盘中' : ''}.md`)
   writeFileSync(auditFile, `${md}\n`, 'utf-8')
 
   const base = loadBaseline()
-  process.stdout.write(`\n【决策审计】已归档 ${auditFile}\n`)
+  process.stdout.write(
+    `\n【决策审计】已归档 ${auditFile}${auditIntraday ? '（盘中临时档，不覆盖当日正式记录）' : ''}\n`
+  )
   process.stdout.write(
     `  规则指纹 ${audit.rules.fingerprint.hash}｜${audit.rules.fingerprint.entryCount} 条决策生效参数｜` +
     `${Object.entries(audit.rules.fingerprint.tierCounts).map(([t, n]) => `${t}=${n}`).join(' ')}\n`
@@ -242,6 +289,60 @@ async function main(): Promise<void> {
       ? `  ${audit.rules.drift?.drifted ? '⚠ 规则已漂移：' : '✓ '}${audit.rules.drift?.detail ?? ''}\n`
       : `  ⚠ 未找到冻结基线，无法判定漂移。先跑 npm run freeze:baseline\n`
   )
+
+  // ── 外围现金：只播报，不进分母 ──
+  const extCash = pf.externalCash ?? null
+  if (extCash !== null && extCash > 0) {
+    const wouldBe = totalAssets + extCash
+    const biggest = positions.reduce((a, b) => (b.marketValue > a.marketValue ? b : a), positions[0])
+    process.stdout.write(`\n【外围现金】${(extCash / 10000).toFixed(0)} 万 —— 口径待战略层裁定，未计入仓位上限分母\n`)
+    process.stdout.write(
+      `  当前分母（证券账户）${(totalAssets / 10000).toFixed(1)} 万：` +
+      `${biggest.name} ${(biggest.marketValue / totalAssets * 100).toFixed(1)}%\n`
+    )
+    process.stdout.write(
+      `  若计入后分母 ${(wouldBe / 10000).toFixed(1)} 万：` +
+      `${biggest.name} ${(biggest.marketValue / wouldBe * 100).toFixed(1)}%\n`
+    )
+    process.stdout.write(
+      `  ⚠ 两个口径会得出不同的超限结论。这是**战略层裁定事项**，不是代码默认值：\n` +
+      `     并入分母等于用一个记账动作消掉真实集中度风险，故未裁定期间一律按从严口径。\n`
+    )
+  }
+
+  // ── 自包含 HTML 导出 ──
+  // 后端启动依赖 MySQL、前端还要登录；盘后想看一眼分析结果不该卡在这上面。
+  // 同一份数据的另一个渲染器：不新增判据，不影响规则指纹。
+  if (process.env.HTML === '1' && dashForHtml) {
+    const html = renderDashboardHtml({
+      dashboard: dashForHtml,
+      changes: changesForHtml,
+      prevDate: prevDateForHtml,
+      discovery: {
+        nodeCount: ledgerForHtml?.entries.length ?? 0,
+        advances: ledgerForHtml ? stageAdvances(ledgerForHtml) : [],
+      },
+      freeze: {
+        baselineHash: base?.hash ?? null,
+        currentHash: audit.rules.fingerprint.hash,
+        drifted: audit.rules.drift?.drifted ?? false,
+        detail: audit.rules.drift?.detail ?? '未找到冻结基线，无法判定漂移。先跑 npm run freeze:baseline',
+      },
+      intraday: isIntraday(dashForHtml.date),
+      externalCash: extCash !== null && extCash > 0
+        ? {
+          amount: extCash,
+          note: pf.externalCashNote
+            ?? '口径未裁定：并入分母会让现有超限持仓自动合规，故按从严处理，暂不计入。',
+        }
+        : null,
+    })
+    const reportDir = join(HERE, 'data', 'reports')
+    mkdirSync(reportDir, { recursive: true })
+    const htmlFile = join(reportDir, `${dashForHtml.date}${session === 'PRE_OPEN' ? '-盘前' : ''}.html`)
+    writeFileSync(htmlFile, html, 'utf-8')
+    process.stdout.write(`\n【HTML 报告】${htmlFile}\n  双击即可在浏览器打开，无需数据库、无需登录、无外部请求。\n`)
+  }
 }
 
 main().catch(e => {

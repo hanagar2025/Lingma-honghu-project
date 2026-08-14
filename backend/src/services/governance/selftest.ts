@@ -13,7 +13,7 @@ import { loadBaseline } from './freeze'
 import { buildAudit, computeE3, computeKpis, renderAuditMarkdown, type CostSnapshot, type E3Input } from './audit'
 import {
   snapshotOf, diffSnapshots, renderChanges,
-  updateDiscovery, stageAdvances, renderDiscovery,
+  updateDiscovery, stageAdvances, renderDiscovery, isIntraday,
 } from './changeLog'
 import { LEGAL_REASON_TEXT } from '../cockpit/types'
 import type { CockpitReport } from '../cockpit/types'
@@ -377,6 +377,35 @@ ok('无前一日快照时明说无基准',
   renderChanges([], null, '2026-08-13').includes('无可比较基准'))
 ok('无变化时明说"不是故障"',
   renderChanges([], '2026-08-12', '2026-08-13').includes('不是故障'))
+
+// delta 为 0 的"变化"只是文案变了，印出数字会让人误以为数值没动
+ok('增量为0时不印(0.000)',
+  !renderChanges(
+    [{ scope: 'HOLDING', key: '新易盛', field: '法定减仓理由', from: '超出2.4pct', to: '超出2.8pct', delta: 0, kind: 'VALUE' }],
+    '2026-08-13', '2026-08-14'
+  ).includes('0.000'))
+
+// ── 盘中闸门 ──
+// 归档逻辑只看日期，而盘中K线的日期就是今天 → 若不拦，11:16 跑一次就把
+// 未定价读数写成当日收盘，且30天后无法事后分辨。
+const bj = (iso: string) => new Date(new Date(`${iso}Z`).getTime() - 8 * 3600 * 1000)
+ok('同日 11:16（北京）判为盘中',
+  isIntraday('2026-08-14', bj('2026-08-14T11:16:00')))
+ok('同日 09:20（北京）判为盘中',
+  isIntraday('2026-08-14', bj('2026-08-14T09:20:00')))
+ok('同日 15:10（北京）判为已收盘',
+  !isIntraday('2026-08-14', bj('2026-08-14T15:10:00')))
+ok('同日 15:00 整判为已收盘（收盘瞬间不再算盘中）',
+  !isIntraday('2026-08-14', bj('2026-08-14T15:00:00')))
+ok('K线日期早于今日 → 不是盘中（隔日复跑历史数据应可归档）',
+  !isIntraday('2026-08-13', bj('2026-08-14T09:20:00')))
+ok('跨零点仍按北京日历判定',
+  !isIntraday('2026-08-13', bj('2026-08-14T00:30:00')))
+
+const runSrc = readFileSync(new URL('../cockpit/run.ts', import.meta.url), 'utf-8')
+ok('run.ts 归档前检查盘中状态', /isIntraday\(/.test(runSrc))
+ok('run.ts 盘中不落档（saveSnapshot 处于 !intraday 分支内）',
+  /!intraday[\s\S]{0,400}saveSnapshot/.test(runSrc))
 
 // ── 发现台账 ──
 let ledger = updateDiscovery({ updatedAt: '', entries: [] }, fakeDash())

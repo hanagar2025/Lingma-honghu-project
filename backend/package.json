@@ -21,8 +21,8 @@
     "profit:fetch": "tsx src/services/research/profitFetch.ts",
     "profit:map": "tsx src/services/research/profitMapRun.ts",
     "research:selftest": "tsx src/services/research/selftest.ts",
-    "daily": "npm run freeze:check && npm run cockpit && tsx src/services/governance/reviewRun.ts",
-    "daily:pre": "SESSION=pre npm run cockpit",
+    "daily": "npm run freeze:check && HTML=1 npm run cockpit && tsx src/services/governance/reviewRun.ts",
+    "daily:pre": "SESSION=pre HTML=1 npm run cockpit",
     "review": "tsx src/services/governance/reviewRun.ts"
   },
   "dependencies": {
