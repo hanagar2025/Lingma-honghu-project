@@ -16,7 +16,7 @@ import { renderDashboard } from '../services/cockpit/renderDashboard'
 import type { MomentumRow } from '../services/cockpit/momentum'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
-  loadDiscovery, updateDiscovery, saveDiscovery, stageAdvances,
+  loadDiscovery, updateDiscovery, saveDiscovery, stageAdvances, isIntraday,
   type Change, type DiscoveryLedger,
 } from '../services/governance/changeLog'
 import { buildProfitMap, type ProfitMap } from '../services/research/profitRadar'
@@ -188,6 +188,11 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
   // ── 变化台账 ──
   // 只在盘后落档：盘中读数会污染日间序列。接口调用不写盘也不影响决策，
   // 但会让 Discovery KPI 少一天样本，所以失败要记日志而不是静默跳过。
+  //
+  // `session` 只反映前端选了哪个视图，**不代表现在真的收盘了**：
+  // 用户在 11:16 打开页面（默认盘后视图）时，最新K线是当日未定价的那一根。
+  // 若照写，盘中值就成了"当日收盘"，且 30 天后无法事后分辨 —— 故须用时间闸门另判一次。
+  const intraday = isIntraday(date)
   let changes: Change[] = []
   let prevDate: string | null = null
   let discovery: DiscoveryLedger = { updatedAt: '', entries: [] }
@@ -198,7 +203,7 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
       prevDate = prev?.date ?? null
       changes = prev ? diffSnapshots(prev, snap) : []
       discovery = updateDiscovery(loadDiscovery(), dashboard)
-      if (session === 'POST_CLOSE') {
+      if (session === 'POST_CLOSE' && !intraday) {
         saveSnapshot(snap)
         saveDiscovery(discovery)
       }
@@ -214,6 +219,14 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
       dashboard,
       dashboardText: dashboard ? renderDashboard(dashboard) : null,
       changes: { prevDate, items: changes },
+      // 盘中标记必须随数据一起下发：前端若只看到数字，会把未定价读数当收盘读数用
+      provisional: {
+        intraday,
+        archived: session === 'POST_CLOSE' && !intraday,
+        note: intraday
+          ? `最新K线 ${date} 尚未收盘，本页读数为临时值（仓位%、相对强度、成交比值都会随收盘变化），且未写入30天档案。`
+          : '',
+      },
       discovery: {
         nodeCount: discovery.entries.length,
         advances: stageAdvances(discovery),

@@ -197,9 +197,13 @@ export interface FiveLayerDashboardProps {
   dashboard: any
   changes?: any
   discovery?: any
+  /** 后端下发的盘中标记。未定价读数必须显式标注，否则会被当成收盘读数用 */
+  provisional?: any
 }
 
-const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({ dashboard: d, changes, discovery }) => {
+const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
+  dashboard: d, changes, discovery, provisional,
+}) => {
   if (!d) {
     return (
       <Alert
@@ -219,6 +223,24 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({ dashboard: d, c
 
   return (
     <div>
+      {/* 盘中未定价：放在最顶部。这一条不提醒，整页数字都会被误当作收盘值 */}
+      {provisional?.intraday && (
+        <Alert
+          type="warning"
+          showIcon
+          style={SECTION}
+          message="盘中快照（未定价）"
+          description={
+            <div style={{ fontSize: 13 }}>
+              {provisional.note}
+              <div style={{ marginTop: 4 }}>
+                盘后 15:10 之后重新打开本页，才是当日正式读数。
+              </div>
+            </div>
+          }
+        />
+      )}
+
       {/* ══ 首页一句话 ══ */}
       <Card
         style={SECTION}
