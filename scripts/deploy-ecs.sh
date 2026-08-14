@@ -10,9 +10,13 @@
 #
 # 用法：
 #   DEPLOY_HOST=39.104.86.200 TIOS_PASSPHRASE='口令' ./scripts/deploy-ecs.sh
-#   DRY_RUN=1 ...   只打印将在服务器上执行的脚本，不连服务器
+#   DRY_RUN=1 ...          只打印将在服务器上执行的脚本，不连服务器
+#   DEPLOY_KEY=~/.ssh/id   指定私钥；不指定就用默认密钥或密码登录
+#   DEPLOY_PORT=22         非默认端口
 #
-# 需要：本机已能 ssh 到服务器（密钥或密码），远端有 sudo 权限。
+# 需要：本机已能 ssh 到服务器（密钥或密码皆可），远端有 sudo 权限。
+# 阿里云查不到已有私钥 —— 私钥只在创建密钥对时下载那一次。
+# 用密码登录同样可以，本脚本复用一条 SSH 连接，全程只需输一次密码。
 
 set -euo pipefail
 
@@ -200,10 +204,26 @@ printf '  旧应用文件与 nginx 配置会先备份到服务器 /root/ 下，�
 read -r -p "  确认继续？(输入 yes) " ans
 [[ "$ans" == "yes" ]] || die "已取消，未做任何改动"
 
-scp "$TARBALL" "$USER_@$HOST:/tmp/"
-scp "$REMOTE_SH" "$USER_@$HOST:/tmp/tios-deploy.sh"
-ssh "$USER_@$HOST" "chmod +x /tmp/tios-deploy.sh && /tmp/tios-deploy.sh"
-rm -f "$REMOTE_SH"
+# 两个文件一次传完、只连两次：用密码登录时每次连接都要输一遍密码，
+# 三次提示会让人以为卡住了或者输错了。
+# ControlMaster 让 scp 与随后的 ssh 复用同一条连接 → 全程只输一次密码。
+CTL="$(mktemp -u /tmp/tios-ssh-%C)"
+SSH_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$CTL" -o "ControlPersist=120")
+[[ -n "${DEPLOY_KEY:-}" ]] && SSH_OPTS+=(-i "$DEPLOY_KEY")
+[[ -n "${DEPLOY_PORT:-}" ]] && SSH_OPTS+=(-p "$DEPLOY_PORT")
+
+cleanup_ssh() { ssh "${SSH_OPTS[@]}" -O exit "$USER_@$HOST" 2>/dev/null || true; }
+trap cleanup_ssh EXIT
+
+cp "$REMOTE_SH" "$(dirname "$REMOTE_SH")/tios-deploy.sh"
+# scp 的端口参数是 -P 而不是 -p，单独拼一份，否则密码登录时会连不上而看不出原因
+SCP_OPTS=(-o "ControlMaster=auto" -o "ControlPath=$CTL" -o "ControlPersist=120")
+[[ -n "${DEPLOY_KEY:-}" ]] && SCP_OPTS+=(-i "$DEPLOY_KEY")
+[[ -n "${DEPLOY_PORT:-}" ]] && SCP_OPTS+=(-P "$DEPLOY_PORT")
+
+scp "${SCP_OPTS[@]}" "$TARBALL" "$(dirname "$REMOTE_SH")/tios-deploy.sh" "$USER_@$HOST:/tmp/"
+ssh "${SSH_OPTS[@]}" "$USER_@$HOST" "chmod +x /tmp/tios-deploy.sh && /tmp/tios-deploy.sh"
+rm -f "$REMOTE_SH" "$(dirname "$REMOTE_SH")/tios-deploy.sh"
 
 step "四、验证"
 sleep 2
