@@ -348,9 +348,41 @@ function compactArray(key: string, items: unknown[], head: Record<string, unknow
   return `{\n${headText}\n  ${JSON.stringify(key)}: [\n${body}\n  ]\n}\n`
 }
 
-export function saveSnapshot(snap: DailySnapshot, dir = CHANGELOG_DIR): string {
+/**
+ * 归档当日快照。
+ *
+ * **拒绝覆盖过去日期的档案，除非显式声明重述。**
+ *
+ * 这条闸门来自一次真实的静默改历史：8/15 用更正后的数据跑 CLI，而最新K线仍是 8/14，
+ * 于是 8/14 的档案被重写成新口径的数字。档案的用途是回答"那天我们看到了什么"——
+ * 8/14 我们看到的是海光 18.6%（旧口径、旧股数），把它改成 13.1% 之后，
+ * "当时看到的是错的"这个事实就消失了，而那恰恰是 30 天复盘最该保留的东西。
+ *
+ * 覆盖同一天的档案是允许的（当天多次运行、盘后重跑），只有跨日覆盖才拦。
+ * 确实要重述历史时用 RESTATE=1，且会打印出被覆盖的内容摘要 ——
+ * 重述本身不是错误，静默重述才是。
+ */
+export function saveSnapshot(
+  snap: DailySnapshot, dir = CHANGELOG_DIR, todayBeijing?: string
+): string {
   mkdirSync(dir, { recursive: true })
   const f = join(dir, `${snap.date}.json`)
+  const today = todayBeijing
+    ?? new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+
+  if (existsSync(f) && snap.date < today && process.env.RESTATE !== '1') {
+    let oldCount = '未知'
+    try {
+      oldCount = String((JSON.parse(readFileSync(f, 'utf-8')) as DailySnapshot).readings.length)
+    } catch { /* 读不出就不报数量，不影响拦截 */ }
+    throw new Error(
+      `拒绝覆盖 ${snap.date} 的档案（今天是 ${today}）。\n`
+      + `  该档案已有 ${oldCount} 项读数，记录的是"那天我们看到了什么"。\n`
+      + `  用今天更正后的数据改写它，会让"当时看到的是错的"这个事实消失 ——\n`
+      + `  而那恰恰是 30 天复盘最该保留的东西。\n`
+      + `  确实要重述：RESTATE=1 重跑，并在提交信息中写明理由。`
+    )
+  }
   writeFileSync(f, compactArray('readings', snap.readings, { date: snap.date }), 'utf-8')
   return f
 }
@@ -370,10 +402,14 @@ export function saveDiscovery(ledger: DiscoveryLedger, file = DISCOVERY_FILE): v
  * 单日求差会把持续爬升淹没在噪声里 —— 份额 +0.3pct 单看毫无意义，
  * 连续二十天各 +0.3pct 就是 +6pct。要看出后者，必须跨多日累计。
  */
+/** 只认 YYYY-MM-DD.json 为正式档。重述档形如 2026-08-14.restated-2026-08-15.json，
+ *  必须排除 —— 否则同一天会被读成两条，复盘里凭空多出一天的变化。 */
+const DAILY_FILE = /^\d{4}-\d{2}-\d{2}\.json$/
+
 export function loadAllSnapshots(dir = CHANGELOG_DIR): DailySnapshot[] {
   if (!existsSync(dir)) return []
   return readdirSync(dir)
-    .filter(f => f.endsWith('.json'))
+    .filter(f => DAILY_FILE.test(f))
     .sort()
     .map(f => {
       try {

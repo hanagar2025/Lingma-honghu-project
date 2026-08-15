@@ -13,12 +13,14 @@ import { loadBaseline } from './freeze'
 import { buildAudit, computeE3, computeKpis, renderAuditMarkdown, type CostSnapshot, type E3Input } from './audit'
 import {
   snapshotOf, diffSnapshots, renderChanges,
-  updateDiscovery, stageAdvances, renderDiscovery, isIntraday,
+  updateDiscovery, stageAdvances, renderDiscovery, isIntraday, saveSnapshot, loadAllSnapshots,
 } from './changeLog'
 import { LEGAL_REASON_TEXT } from '../cockpit/types'
 import type { CockpitReport } from '../cockpit/types'
 import type { Dashboard } from '../cockpit/dashboard'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 let failed = 0
 let passed = 0
@@ -406,6 +408,63 @@ const runSrc = readFileSync(new URL('../cockpit/run.ts', import.meta.url), 'utf-
 ok('run.ts 归档前检查盘中状态', /isIntraday\(/.test(runSrc))
 ok('run.ts 盘中不落档（saveSnapshot 处于 !intraday 分支内）',
   /!intraday[\s\S]{0,400}saveSnapshot/.test(runSrc))
+
+// ── 拒绝静默改历史 ──
+//
+// 8/15 用更正后的数据跑 CLI 时，最新K线仍是 8/14，于是 8/14 的档案被重写成新口径的
+// 数字。档案的用途是回答"那天我们看到了什么"—— 8/14 看到的是海光 18.6%（旧口径），
+// 改成 13.1% 之后，"当时看到的是错的"这个事实就消失了，
+// 而那恰恰是 30 天复盘最该保留的东西。
+{
+  const tmp = mkdtempSync(join(tmpdir(), 'tios-archive-'))
+  const past = { date: '2026-08-14', readings: s1.readings }
+
+  // 首次写入过去日期是允许的（补档）
+  saveSnapshot(past, tmp, '2026-08-15')
+  ok('首次写入过去日期的档案允许（补档场景）',
+    existsSync(join(tmp, '2026-08-14.json')))
+
+  // 再次覆盖必须被拦
+  let blocked = false
+  let msg = ''
+  try { saveSnapshot(past, tmp, '2026-08-15') } catch (e) {
+    blocked = true
+    msg = e instanceof Error ? e.message : String(e)
+  }
+  ok('跨日覆盖已有档案被拒绝', blocked)
+  ok('拒绝理由说明"那天我们看到了什么"，而不只是"文件已存在"',
+    msg.includes('那天我们看到了什么'), msg.slice(0, 60))
+  ok('拒绝理由给出重述出路（RESTATE=1）', msg.includes('RESTATE=1'))
+
+  // 同一天多次运行必须允许（盘后重跑）
+  const todaySnap = { date: '2026-08-15', readings: s1.readings }
+  saveSnapshot(todaySnap, tmp, '2026-08-15')
+  let sameDayOk = true
+  try { saveSnapshot(todaySnap, tmp, '2026-08-15') } catch { sameDayOk = false }
+  ok('同一天重复归档允许（盘后重跑不该被拦）', sameDayOk)
+
+  // 显式重述允许，但不是默认
+  process.env.RESTATE = '1'
+  let restateOk = true
+  try { saveSnapshot(past, tmp, '2026-08-15') } catch { restateOk = false }
+  delete process.env.RESTATE
+  ok('RESTATE=1 时允许重述历史（重述不是错误，静默重述才是）', restateOk)
+
+  // 重述档不得被当成正式档读入 —— 否则同一天读成两条，复盘里凭空多出一天的变化
+  const tmp2 = mkdtempSync(join(tmpdir(), 'tios-restate-'))
+  saveSnapshot({ date: '2026-08-14', readings: s1.readings }, tmp2, '2026-08-14')
+  writeFileSync(
+    join(tmp2, '2026-08-14.restated-2026-08-15.json'),
+    JSON.stringify({ date: '2026-08-14', readings: s2.readings }),
+    'utf-8'
+  )
+  const loaded = loadAllSnapshots(tmp2)
+  ok('重述档被排除，同一天只读入一条正式档', loaded.length === 1,
+    `读入 ${loaded.length} 条：${loaded.map(x => x.date).join(', ')}`)
+
+  rmSync(tmp, { recursive: true, force: true })
+  rmSync(tmp2, { recursive: true, force: true })
+}
 
 // ── 发现台账 ──
 let ledger = updateDiscovery({ updatedAt: '', entries: [] }, fakeDash())
