@@ -54,10 +54,10 @@ EOF
 
 step "四、部署"
 cat <<EOF
-  DEPLOY_HOST=$HOST DEPLOY_KEY=$KEY TIOS_PASSPHRASE='你的长口令' \\
-    ./scripts/deploy-ecs.sh
+  DEPLOY_HOST=${HOST} DEPLOY_KEY=${KEY} npm run ship
 
-  先加 DRY_RUN=1 跑一次看清楚再执行。
+  ship 按顺序做完五步（部署前端 → 校验线上 → 更新服务器脚本 → 跑一次 → 再校验），
+  任一步失败立刻停。先加 DRY_RUN=1 看清楚再执行。
 EOF
 
 step "如果想让 Cursor 里的 Agent 替你部署"

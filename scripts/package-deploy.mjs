@@ -26,7 +26,7 @@ console.log(`\n${line}\n打包待上传产物\n${line}\n`)
 
 if (!existsSync(DIST)) {
   console.error(`  ✗ 没有构建产物。先跑：\n`
-    + `    TIOS_PASSPHRASE='你的口令' BASE_PATH=${base} npm run web:deploy\n`)
+    + `    BASE_PATH=${base} npm run web:deploy\n`)
   process.exit(1)
 }
 
@@ -44,24 +44,32 @@ if (bad.length) {
     + `    BASE_PATH=${base}，但 index.html 引用的是：\n`
     + bad.map(b => `      ${b}`).join('\n')
     + `\n\n    上传后会白屏，且资源请求全是 200（被 SPA 回退接走），从现象上看不出原因。\n`
-    + `    重新构建：TIOS_PASSPHRASE='你的口令' BASE_PATH=${base} npm run web:deploy\n`
+    + `    重新构建：BASE_PATH=${base} npm run web:deploy\n`
   )
   process.exit(1)
 }
 console.log(`  ✓ 资源路径与 BASE_PATH=${base} 一致（${assetRefs.length} 项）`)
 
-const enc = join(DIST, 'data', 'today.enc.json')
+// 快照检查。
+//
+// 这里曾经写着"产物里有明文快照就报错"——那是口令时代的判据，
+// 而 2026-08-15 决议去掉口令后明文才是**预期**产物。
+// 漏改的原因很具体：同一条检查在 preflight-deploy.mjs 里也有一份，
+// 我只改了那一份。**重复的判据必然会漏改其中一份**，
+// 所以这里只保留本脚本独有的 base 路径校验，快照内容交给 preflight 统一负责
+// （ship.sh 与 web:deploy 都会先跑 preflight）。
 const plain = join(DIST, 'data', 'today.json')
-if (existsSync(plain)) {
+const enc = join(DIST, 'data', 'today.enc.json')
+if (existsSync(enc)) {
   console.error(
-    `  ✗ 产物里有明文快照 data/today.json —— 含全部持仓与总资产，公网可直接下载。\n`
-    + `    重新用 TIOS_PASSPHRASE=... 构建。\n`
+    `  ✗ 产物里还有旧的加密快照 data/today.enc.json —— 口令模式已废弃。\n`
+    + `    删掉它再重新构建。\n`
   )
   process.exit(1)
 }
-console.log(existsSync(enc)
-  ? `  ✓ 快照为密文（data/today.enc.json）`
-  : `  ⚠ 没有快照文件。页面能打开但没有数据`)
+console.log(existsSync(plain)
+  ? `  ✓ 快照存在（data/today.json）`
+  : `  ⚠ 没有快照文件。页面能打开但所有列都显示"缺失"`)
 
 // ── 打包 ──
 mkdirSync(OUT_DIR, { recursive: true })
@@ -96,5 +104,5 @@ console.log(`  sudo nginx -t && sudo systemctl reload nginx\n`)
 console.log(`然后手机打开 https://hhwealth.cc${base} —— 会先出现口令解锁页。\n`)
 console.log(`${line}`)
 console.log(`每个交易日更新数据只需重复一次这四步中的一、二 ——`)
-console.log(`或者只传 data/today.enc.json 这一个文件（约 280KB），nginx 无需重载。`)
+console.log(`或者只传 data/today.json 这一个文件（约 380KB），nginx 无需重载。`)
 console.log(`${line}\n`)

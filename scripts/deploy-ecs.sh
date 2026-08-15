@@ -3,7 +3,7 @@
 #
 # 为什么不是"把服务器删干净重装"：
 #   那台机器上的 Let's Encrypt 证书（certbot 自动续期）是本项目的**硬依赖** ——
-#   加密快照的解锁用 WebCrypto，浏览器只在 HTTPS 下提供它。
+#   站点已在 HTTPS 上运行，降级会让浏览器报警并中断已有的 certbot 续期。
 #   重装系统会把证书、certbot 续期配置和 ACME 账户一起清掉，
 #   然后要重新申请、重新配 —— 而这跟"下线旧应用"是两件毫不相干的事。
 #   所以本脚本只做三件事：备份、换文件、换站点配置。系统、nginx、证书一概不动。
@@ -86,7 +86,7 @@ echo "   已备份到 \${BACKUP}（\$(sudo du -h "\$BACKUP" | cut -f1)）"
 
 echo "── 2/6 探测现有证书路径 ──"
 # **探测而不是假设**：证书路径写错会让 HTTPS 直接起不来，
-# 而 HTTPS 是解锁功能的硬依赖。宁可失败退出，也不猜一个路径。
+# 而站点现在就跑在 HTTPS 上。宁可失败退出，也不猜一个路径。
 # 同样用 \K：后向断言是固定长度的，只能吃一个空格，
 # 而对齐排版的配置（含本脚本自己生成的那份）用的是多个空格 ——
 # 那会让重跑时读不到自己写的配置，且失败方式是"静默匹配不到"。
@@ -94,7 +94,7 @@ echo "── 2/6 探测现有证书路径 ──"
 ALL_CERT=\$(sudo grep -rhoP '^\s*ssl_certificate\s+\K\S+(?=;)' /etc/nginx/ 2>/dev/null | sort -u || true)
 ALL_KEY=\$(sudo grep -rhoP '^\s*ssl_certificate_key\s+\K\S+(?=;)' /etc/nginx/ 2>/dev/null | sort -u || true)
 # 机器上可能配着多个域名的证书。优先取路径里含本域名的那张 ——
-# 挑错证书的后果是 HTTPS 报名称不匹配，而浏览器一报错就不给 WebCrypto，解锁直接失效。
+# 挑错证书的后果是 HTTPS 报名称不匹配，浏览器会拦下整个页面。
 CERT=\$(echo "\$ALL_CERT" | grep -F "\$DOMAIN" | head -1 || true)
 KEY=\$(echo "\$ALL_KEY" | grep -F "\$DOMAIN" | head -1 || true)
 [[ -n "\$CERT" ]] || CERT=\$(echo "\$ALL_CERT" | head -1)
@@ -130,7 +130,7 @@ server {
     listen 80;
     listen [::]:80;
     server_name __DOMAIN__ www.__DOMAIN__;
-    # 解锁用 WebCrypto，浏览器只在安全上下文提供它 → 必须强制 HTTPS
+    # 站点已有证书，统一强制 HTTPS，避免同一页面存在两个可访问入口
     return 301 https://__DOMAIN__\$request_uri;
 }
 
@@ -243,7 +243,7 @@ if [[ -n "\$OLD_ROOTS" ]]; then
   echo "旧应用的文件「仍在磁盘上」，只是 nginx 不再服务它们："
   echo "\$OLD_ROOTS" | sed 's/^/    /'
   echo
-  echo "先在手机和电脑上确认新站点能正常解锁并看到数据，确认无误后再删："
+  echo "先在手机和电脑上确认新站点能打开并看到数据，确认无误后再删："
   echo "\$OLD_ROOTS" | sed 's|^|    sudo rm -rf |'
   echo "  —— 删除前不必着急，它们不占带宽也不被访问。"
 fi

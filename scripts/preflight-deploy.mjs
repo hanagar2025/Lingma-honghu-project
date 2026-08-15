@@ -43,7 +43,7 @@ console.log(`\n${line}\n发布前体检：这份产物能不能放到公网域�
 if (!existsSync(DIST)) {
   console.error(
     `  ✗ 没有构建产物（${DIST}）\n\n` +
-    `  先跑：TIOS_PASSPHRASE='你的口令' npm run web:build\n`
+    `  先跑：npm run web:build\n`
   )
   process.exit(1)
 }
