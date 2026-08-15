@@ -131,7 +131,7 @@ export async function buildSnapshot(userId: string, date: string, positions: Pos
     await conn.execute('UPDATE account_state SET peak_assets = ? WHERE user_id = ?', [peak, userId])
   }
   return {
-    date, totalAssets: brokerTotal, cash, positionsValue,
+    date, brokerTotal: brokerTotal, cash, positionsValue,
     externalCash, portfolioTotal, peakAssets: peak, peakBasis,
   }
 }

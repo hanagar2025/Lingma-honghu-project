@@ -39,8 +39,17 @@ export interface Position {
  */
 export interface AccountSnapshot {
   date: string
-  /** 券商账户内合计 = cash + positionsValue。仅用于账户内操作口径 */
-  totalAssets: number
+  /**
+   * 券商账户内合计 = cash + positionsValue。**仅用于账户内操作口径。**
+   *
+   * 原名 totalAssets，2026-08-15 改名。改名不是整理代码 ——
+   * 旧名字不说明它是哪个分母，于是被当成"总资产"用在了熔断上：
+   * 显示层已迁到组合口径（回撤 15.2%、上限 50%），
+   * 而动作层仍用 totalAssets 算出回撤 46.9%、上限 30%、需减 175.7 万。
+   * 两层各说各话且互不报错。叫 brokerTotal 之后，
+   * 任何把它当上限分母的写法在阅读时就是显式错误。
+   */
+  brokerTotal: number
   /** 券商账户内现金 */
   cash: number
   positionsValue: number
@@ -125,9 +134,10 @@ export interface BuyGateResult {
 }
 
 export interface PortfolioCircuitResult {
-  drawdownPct: number
-  /** 触发的仓位上限（1 表示无约束） */
-  positionCap: number
+  /** null = 峰值与当前值不同口径，回撤不可计算。**不得当成 0 处理。** */
+  drawdownPct: number | null
+  /** 触发的仓位上限（1 表示无约束；null = 回撤不可计算，故上限待定） */
+  positionCap: number | null
   sellOnly: boolean
   detail: string
 }

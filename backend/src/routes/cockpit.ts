@@ -177,13 +177,14 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
     ? buildDashboard({
       // 上限分母改用组合口径（8/15 裁定）。数据库尚无 external_cash 列，
       // 故 portfolioTotal 目前退化为账户口径 —— 由 tiosService 显式标注。
-      date, session, positions, totalAssets: snapshot.portfolioTotal,
+      date, session, positions, portfolioTotal: snapshot.portfolioTotal,
       assetBreakdown: {
         positionsValue: snapshot.positionsValue,
         brokerCash: snapshot.cash,
         externalCash: snapshot.externalCash,
-        brokerTotal: snapshot.totalAssets,
+        brokerTotal: snapshot.brokerTotal,
         peakBasis: snapshot.peakBasis,
+        peak: snapshot.peakAssets,
       },
       barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
       valuationByCode,

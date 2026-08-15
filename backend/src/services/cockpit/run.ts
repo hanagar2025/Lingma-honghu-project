@@ -176,7 +176,7 @@ async function main(): Promise<void> {
   const peakBasis = pf.peakBasis ?? 'BROKER'
   const snapshot = {
     date,
-    totalAssets: brokerTotal,
+    brokerTotal: brokerTotal,
     cash: pf.cash,
     positionsValue,
     externalCash,
@@ -229,10 +229,10 @@ async function main(): Promise<void> {
     printReport(rep)
   } else {
     const dash = buildDashboard({
-      date, session, positions, totalAssets: portfolioTotal,
+      date, session, positions, portfolioTotal,
       assetBreakdown: {
         positionsValue, brokerCash: pf.cash, externalCash,
-        brokerTotal, peakBasis,
+        brokerTotal, peakBasis, peak: pf.peakAssets,
       },
       barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
       valuationByCode,

@@ -1,3 +1,4 @@
+import { LIMITS, SAFETY_NET_POLICY } from './safety'
 // 五层驾驶舱 —— 组合 × 主线 × 产业链 × 新势能 × 执行
 //
 // 委员会 2026-08-13 定稿原话：
@@ -250,6 +251,33 @@ export interface AssetLayer {
   /** 熔断状态。口径不可比时为 INCOMPARABLE，不得显示为"正常" */
   circuitState: 'NORMAL' | 'LEVEL1' | 'LEVEL2' | 'INCOMPARABLE'
   circuitReason: string
+  /** 历史峰值（组合口径）。null = 尚未按组合口径认定 */
+  peak: number | null
+  peakBasis: 'BROKER' | 'PORTFOLIO'
+  /** 自峰值回撤。null = 峰值与当前值不同口径，不可比 —— 不得当成 0 */
+  drawdown: number | null
+  /** 熔断触发的股票占比上限。null = 未触发或不可判定 */
+  equityCap: number | null
+  /** 组合层须降低的股票敞口。null = 无需降仓 */
+  circuitExcess: number | null
+}
+
+/**
+ * 风控四层优先级（委员会 2026-08-15 指定）。
+ *
+ * 每天先看这个，而不是先看股票涨跌。**顺序本身是规则**：
+ * L1/L2 产生动作，L3 已被裁定排除，L4 永远只是复核信息。
+ * 把 L4 排在最后不是排版偏好 —— 技术/产业/估值越权生成减仓动作，
+ * 正是"研究替代执行"的入口。
+ */
+export interface RiskLayer {
+  id: 'L1' | 'L2' | 'L3' | 'L4'
+  name: string
+  state: string
+  light: Light
+  /** 该层是否有权产生减仓动作 */
+  canGenerateActions: boolean
+  note: string
 }
 
 export interface Dashboard {
@@ -258,6 +286,8 @@ export interface Dashboard {
   sessionNote: string
   /** 第一层：资产。委员会 2026-08-15 指定放在最前 */
   assets: AssetLayer
+  /** 风控四层优先级。每天先看这个，而不是先看股票涨跌 */
+  riskLayers: RiskLayer[]
   headline: Headline
   marketStructure: MarketStructure
   holdings: HoldingRow[]
@@ -335,11 +365,13 @@ export interface DashboardInput {
   session: SessionKind
   positions: Position[]
   /**
-   * 上限判定的分母 = 组合总资产。
-   * 名字保留 totalAssets 以免波及全部调用点，但语义已由 8/15 裁定改为组合口径 ——
-   * 调用方必须传 snapshot.portfolioTotal，不是 snapshot.totalAssets。
+   * **组合总资产**，一切上限的分母。
+   *
+   * 曾一度叫 portfolioTotal 并靠注释提醒"请传 portfolioTotal"——
+   * 靠注释约束分母是无效的：注释拦不住把券商口径传进来，
+   * 而一旦传错，显示层与动作层会各算一套且互不报错。现在名字本身就是约束。
    */
-  totalAssets: number
+  portfolioTotal: number
   /** 资产层所需的分项。缺失时资产层显示"数据缺失"而非猜一个 */
   assetBreakdown?: {
     positionsValue: number
@@ -347,6 +379,8 @@ export interface DashboardInput {
     externalCash: number
     brokerTotal: number
     peakBasis: 'BROKER' | 'PORTFOLIO'
+    /** 组合口径峰值。peakBasis 非 PORTFOLIO 时忽略 */
+    peak?: number
   }
   barsByCode: Record<string, DailyBar[]>
   indexBarsByCode: Record<string, DailyBar[]>
@@ -365,7 +399,7 @@ export interface DashboardInput {
 
 export function buildDashboard(input: DashboardInput): Dashboard {
   const {
-    date, session, positions, totalAssets, barsByCode, indexBarsByCode, marketBars,
+    date, session, positions, portfolioTotal, barsByCode, indexBarsByCode, marketBars,
     valuationByCode, momentumRows, msr, profit, actions, pendingSellCount,
     noNewEntryReasons, dataGaps,
   } = input
@@ -393,12 +427,12 @@ export function buildDashboard(input: DashboardInput): Dashboard {
     const r20 = ret(bars, 20)
     const b20 = ret(sectorIdx, 20)
     const v = valuationByCode?.[p.code]
-    const posPct = totalAssets > 0 ? p.marketValue / totalAssets : null
+    const posPct = portfolioTotal > 0 ? p.marketValue / portfolioTotal : null
 
     const metrics: Metric[] = [
       acct('仓位占比', posPct, posPct === null ? '缺失' : `${(posPct * 100).toFixed(1)}%`,
         'positions.market_value ÷ 总资产',
-        `${p.marketValue.toFixed(0)} ÷ ${totalAssets.toFixed(0)}`,
+        `${p.marketValue.toFixed(0)} ÷ ${portfolioTotal.toFixed(0)}`,
         date, posPct === null ? '总资产为0' : undefined),
       obs('20日相对主线超额', r20 === null || b20 === null ? null : r20 - b20,
         r20 === null || b20 === null ? '缺失' : `${((r20 - b20) * 100).toFixed(1)}%`,
@@ -697,28 +731,101 @@ export function buildDashboard(input: DashboardInput): Dashboard {
   // 等于在风控开关坏掉时亮一盏绿灯。
   const bd = input.assetBreakdown
   const circuit = bd?.peakBasis === 'PORTFOLIO'
-    ? judgeCircuit(totalAssets)
+    ? judgeCircuit(portfolioTotal)
     : {
       state: 'INCOMPARABLE' as const,
       reason: '净值峰值仍记于券商账户口径，与组合口径不可比 →'
         + ' 回撤无法计算。不得显示为"正常"或"回撤 0%"。',
     }
+  // 峰值/回撤/上限/超额：全部只在同口径时计算，否则一律 null。
+  // null 与 0 在这里必须分开 —— 0% 回撤读作"没跌过"，null 读作"算不出"。
+  const peakForDisplay = bd?.peakBasis === 'PORTFOLIO' ? (bd.peak ?? null) : null
+  const ddForDisplay = peakForDisplay !== null && peakForDisplay > 0
+    ? 1 - portfolioTotal / peakForDisplay : null
+  const equityCap = ddForDisplay === null ? null
+    : ddForDisplay >= LIMITS.circuitLevel2 ? 0.30
+      : ddForDisplay >= LIMITS.circuitLevel1 ? 0.50 : null
+  const equityNow = bd && portfolioTotal > 0 ? bd.positionsValue / portfolioTotal : null
+  const circuitExcess = equityCap !== null && equityNow !== null && equityNow > equityCap
+    ? (equityNow - equityCap) * portfolioTotal : null
+
   const assets: AssetLayer = {
-    portfolioTotal: totalAssets,
+    portfolioTotal: portfolioTotal,
     positionsValue: bd?.positionsValue ?? 0,
     brokerCash: bd?.brokerCash ?? 0,
     externalCash: bd?.externalCash ?? 0,
-    equityPct: bd && totalAssets > 0 ? bd.positionsValue / totalAssets : null,
-    cashPct: bd && totalAssets > 0 ? (bd.brokerCash + bd.externalCash) / totalAssets : null,
+    equityPct: bd && portfolioTotal > 0 ? bd.positionsValue / portfolioTotal : null,
+    cashPct: bd && portfolioTotal > 0 ? (bd.brokerCash + bd.externalCash) / portfolioTotal : null,
     brokerTotal: bd?.brokerTotal ?? 0,
     brokerPositionPct: bd && bd.brokerTotal > 0 ? bd.positionsValue / bd.brokerTotal : null,
     tradableCash: bd?.brokerCash ?? 0,
     circuitState: circuit.state,
     circuitReason: circuit.reason,
+    peak: peakForDisplay,
+    peakBasis: bd?.peakBasis ?? 'BROKER',
+    drawdown: ddForDisplay,
+    equityCap,
+    circuitExcess,
   }
 
+  // ── 风控四层 ──
+  // 单票超限直接复用动作区里 POSITION_LIMIT 的那批 —— 不在这里重算一遍阈值。
+  // 重算的后果是：改上限时只改一处，L2 显示"无超限"而动作区仍吐减仓指令。
+  const singleBreaches = actions.filter(a => a.reason === 'POSITION_LIMIT')
+  const riskLayers: RiskLayer[] = [
+    {
+      id: 'L1', name: '组合熔断',
+      state: assets.circuitState === 'INCOMPARABLE'
+        ? '不可判定（峰值口径不可比）'
+        : assets.circuitState === 'NORMAL'
+          ? `未触发（回撤 ${assets.drawdown === null ? '?' : (assets.drawdown * 100).toFixed(1)}%）`
+          : `${assets.circuitState === 'LEVEL1' ? '一级' : '二级'}成立`
+            + `　回撤 ${assets.drawdown === null ? '?' : (assets.drawdown * 100).toFixed(1)}%`
+            + `　股票占比须 ≤ ${equityCap === null ? '?' : (equityCap * 100).toFixed(0)}%`
+            + (circuitExcess ? `　须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万` : ''),
+      light: assets.circuitState === 'INCOMPARABLE' ? 'UNKNOWN'
+        : assets.circuitState === 'NORMAL' ? 'GREEN' : 'RED',
+      canGenerateActions: true,
+      note: '组合层降仓不指定卖哪一只 —— 由委员会指派承担持仓',
+    },
+    {
+      id: 'L2', name: '单票集中度',
+      state: singleBreaches.length === 0
+        ? '无超限'
+        : singleBreaches
+          .map(a => {
+            const pct = holdings.find(h => h.code === a.code)?.posPct
+            return `${a.name} ${pct === null || pct === undefined ? '?' : (pct * 100).toFixed(2) + '%'}`
+              + ` > ${(LIMITS.singleStock * 100).toFixed(0)}%`
+          })
+          .join('、'),
+      light: singleBreaches.length === 0 ? 'GREEN' : 'RED',
+      canGenerateActions: true,
+      note: '与 L1 是两套独立的法定理由，不得合并计算',
+    },
+    {
+      id: 'L3', name: '家庭安全垫',
+      state: SAFETY_NET_POLICY.mode === 'EXCLUDED_BY_STRATEGY'
+        ? '不纳入 TIOS 风控模型（战略层裁定）'
+        : '按 2 年刚性支出判定',
+      light: SAFETY_NET_POLICY.mode === 'EXCLUDED_BY_STRATEGY' ? 'EXCLUDED' : 'GREEN',
+      canGenerateActions: false,
+      note: SAFETY_NET_POLICY.mode === 'EXCLUDED_BY_STRATEGY'
+        ? '裁定排除 ≠ 数据缺失。前者系统完整，后者系统不完整'
+        : '',
+    },
+    {
+      id: 'L4', name: '技术/产业/估值',
+      state: '复核信息',
+      light: 'GREEN',
+      canGenerateActions: false,
+      note: '不能越权生成减仓动作。放在最后不是排版偏好 ——'
+        + '技术判据越权正是"研究替代执行"的入口',
+    },
+  ]
+
   return {
-    date, session, sessionNote: SESSION_TEXT[session],
+    date, session, riskLayers, sessionNote: SESSION_TEXT[session],
     assets,
     headline, marketStructure,
     holdings, mainlines, nodeStructure, nextLayer, actionZone,

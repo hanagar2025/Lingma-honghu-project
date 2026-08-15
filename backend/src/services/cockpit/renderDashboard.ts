@@ -66,14 +66,39 @@ export function renderDashboard(d: Dashboard): string {
     L.push('═'.repeat(W))
     L.push('资产层')
     L.push('═'.repeat(W))
-    L.push(`  组合总资产（一切上限的分母）${w(a.portfolioTotal)}`)
-    L.push(`    股票 ${w(a.positionsValue)}（${p(a.equityPct)}）　`
-      + `现金 ${w(a.brokerCash + a.externalCash)}（${p(a.cashPct)}）`
-      + `　＝ 账内 ${w(a.brokerCash)} + 账户外 ${w(a.externalCash)}`)
+    // ── 仪表盘：委员会指定永久置顶的六个数字 ──
+    // 只有这六个才是仪表盘。其余（海光、中际、主线、利润池、观察层）都在它下面。
+    const CIRCUIT_TEXT: Record<string, string> = {
+      NORMAL: '未触发', LEVEL1: '🔴 一级成立', LEVEL2: '🔴 二级成立',
+      INCOMPARABLE: '⚠ 不可判定（峰值口径不可比）',
+    }
+    L.push(`  组合总资产 ${w(a.portfolioTotal)}　│　股票市值 ${w(a.positionsValue)}`
+      + `　│　投资现金 ${w(a.brokerCash + a.externalCash)}　│　股票仓位 ${p(a.equityPct)}`)
+    L.push(`  历史峰值 ${a.peak === null ? '未按组合口径认定' : w(a.peak)}`
+      + `　│　当前回撤 ${a.drawdown === null ? '不可比' : p(a.drawdown)}`
+      + `　│　熔断 ${CIRCUIT_TEXT[a.circuitState] ?? a.circuitState}`)
+    L.push('  ' + '─'.repeat(W - 2))
+    L.push(`  分项：账内现金 ${w(a.brokerCash)} + 账户外 ${w(a.externalCash)}`)
     L.push(`  券商账户合计 ${w(a.brokerTotal)}　账户内仓位 ${p(a.brokerPositionPct)}`)
     L.push(`    —— 只回答"还有多少钱可直接下单"（可交易现金 ${w(a.tradableCash)}），不参与上限判定`)
-    L.push(`  熔断状态 ${a.circuitState}`)
     if (a.circuitState === 'INCOMPARABLE') L.push(`    ⚠ ${a.circuitReason}`)
+  }
+
+  // ── 风控四层：每天先看这个，而不是先看股票涨跌 ──
+  {
+    const LIGHT: Record<string, string> = {
+      GREEN: '🟢', YELLOW: '🟡', RED: '🔴', UNKNOWN: '⚠', EXCLUDED: '—',
+    }
+    L.push('')
+    L.push('═'.repeat(W))
+    L.push('风控优先级（先看这个，再看涨跌）')
+    L.push('═'.repeat(W))
+    for (const r of d.riskLayers) {
+      L.push(`  ${r.id}｜${r.name}　${LIGHT[r.light] ?? ''} ${r.state}`)
+      if (r.note) {
+        L.push(`      ${r.canGenerateActions ? '可产生动作' : '不可产生动作'}　${r.note}`)
+      }
+    }
   }
 
   // ── 首页一句话 ──

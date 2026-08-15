@@ -64,7 +64,7 @@ const positions: Position[] = [
   { code: '688041', name: '海光信息', sector: '半导体', theme: 'AI', cost: 500000, marketValue: 900000 },
   { code: '603986', name: '兆易创新', sector: '半导体', theme: 'AI', cost: 100000, marketValue: 90000 },
 ]
-const totalAssets = 3_000_000
+const portfolioTotal = 3_000_000
 
 const msr = runMsr({
   date: '2026-08-13', barsByCode, indexBarsByCode, pendingSellCount: 7, marketAllows: false,
@@ -74,7 +74,7 @@ let profit: ProfitMap | null = null
 try { profit = buildProfitMap('2026-08-13') } catch { /* 需先跑 profit:fetch */ }
 
 const baseInput: DashboardInput = {
-  date: '2026-08-13', session: 'POST_CLOSE', positions, totalAssets,
+  date: '2026-08-13', session: 'POST_CLOSE', positions, portfolioTotal,
   barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
   momentumRows: [
     {
@@ -93,7 +93,9 @@ const baseInput: DashboardInput = {
   ],
   msr, profit, actions: [], pendingSellCount: 7,
   noNewEntryReasons: ['执行债务未清：7条卖出指令未执行'],
-  dataGaps: ['家庭年度刚性支出未提供'],
+  // 家庭刚性支出已于 2026-08-15 裁定排除，不再是数据缺口。
+  // 换成一个真实仍缺的项，以确保"缺口机制本身"仍被测到。
+  dataGaps: ['3只标的PE分位不可用（TTM亏损或PE极端）'],
 }
 
 const dash = buildDashboard(baseInput)
@@ -549,5 +551,119 @@ console.log('\n【外发摘要脱敏】')
 }
 
 // ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// 8/15 两项裁定：峰值采用情形 B、安全垫裁定排除
+// ══════════════════════════════════════════════════════════════
+{
+  const { SAFETY_NET_POLICY, worstLight, LIMITS } = await import('./safety')
+  const { PEAK_HISTORY } = await import('../governance/peakBasis')
+  const { LEGAL_REASON_TEXT, makeAction } = await import('./types')
+
+  // ── 裁定排除 ≠ 数据缺失 ──
+  ok('安全垫已裁定排除', SAFETY_NET_POLICY.mode === 'EXCLUDED_BY_STRATEGY')
+  ok('EXCLUDED 不参与三色灯取严（否则"不纳入模型"退化成永久亮灯的待办）',
+    worstLight(['EXCLUDED', 'GREEN']) === 'GREEN'
+    && worstLight(['EXCLUDED']) === 'GREEN')
+  ok('EXCLUDED 不被当成 UNKNOWN（前者系统完整，后者系统不完整）',
+    worstLight(['EXCLUDED', 'GREEN']) !== 'UNKNOWN')
+  ok('UNKNOWN 仍按必须处理对待 —— 排除的是安全垫这一维，不是"缺数据可以不管"',
+    worstLight(['UNKNOWN', 'GREEN']) === 'UNKNOWN')
+
+  // 直接推论：不纳入模型的维度不能再产生减仓的法定理由
+  let safetyNetRejected = false
+  try {
+    makeAction({
+      code: '688041', name: '海光信息', kind: 'REDUCE', reason: 'FAMILY_SAFETY_NET',
+      reasonDetail: '安全垫不足', notReason: [], reviewTriggers: [], metrics: [],
+      size: { display: '1万', value: 10_000, note: '测试用' },
+    })
+  } catch { safetyNetRejected = true }
+  ok('FAMILY_SAFETY_NET 已退出减仓白名单（不纳入模型的维度不能产生法定理由）',
+    safetyNetRejected)
+  ok('枚举值本身保留 —— 8/15 前的审计档引用过它，删枚举会让历史档无法解析',
+    typeof LEGAL_REASON_TEXT.FAMILY_SAFETY_NET === 'string')
+
+  // ── 峰值情形 B ──
+  const pv1 = PEAK_HISTORY.find(r => r.basis === 'portfolio_basis_v1')
+  ok('组合口径峰值已认定为 630 万（情形 B）', pv1?.peak === 6_300_000)
+  const legacy = PEAK_HISTORY.find(r => r.basis === 'legacy_account_basis')
+  ok('券商口径 430 万仍保留 —— 它是 7/17–8/14 全部判定的依据', legacy?.peak === 4_300_000)
+
+  // ── 熔断：一级成立，且降仓额与显示层同源 ──
+  const dashB = buildDashboard({
+    ...baseInput,
+    portfolioTotal: 5_342_513,
+    assetBreakdown: {
+      positionsValue: 2_759_613, brokerCash: 582_900, externalCash: 2_000_000,
+      brokerTotal: 3_342_513, peakBasis: 'PORTFOLIO', peak: 6_300_000,
+    },
+  })
+  ok('一级熔断成立', dashB.assets.circuitState === 'LEVEL1')
+  ok('回撤约 15.2%',
+    dashB.assets.drawdown !== null && Math.abs(dashB.assets.drawdown - 0.152) < 0.002,
+    `实为 ${dashB.assets.drawdown}`)
+  ok('股票上限 50%', dashB.assets.equityCap === 0.50)
+  ok('降仓额约 8.84 万（用同一套精确数：275.96 − 534.25×50%）',
+    dashB.assets.circuitExcess !== null
+    && Math.abs(dashB.assets.circuitExcess - 88_357) < 2_000,
+    `实为 ${dashB.assets.circuitExcess}`)
+
+  // 恒等式：组合总资产 − 账内现金 − 账户外现金 = 股票市值。
+  // 8.1 万那个数就是违反这条恒等式的产物 —— 用了 275.2 万配 534.25 万。
+  const a = dashB.assets
+  ok('三个分项与组合总资产自洽（恒等式成立，故降仓额唯一）',
+    Math.abs(a.portfolioTotal - a.positionsValue - a.brokerCash - a.externalCash) < 1,
+    `差 ${a.portfolioTotal - a.positionsValue - a.brokerCash - a.externalCash}`)
+
+  // ── 峰值口径不可比时，绝不能显示为正常/0% ──
+  const dashMismatch = buildDashboard({
+    ...baseInput,
+    portfolioTotal: 5_342_513,
+    assetBreakdown: {
+      positionsValue: 2_759_613, brokerCash: 582_900, externalCash: 2_000_000,
+      brokerTotal: 3_342_513, peakBasis: 'BROKER', peak: 4_300_000,
+    },
+  })
+  ok('峰值口径不可比 → INCOMPARABLE', dashMismatch.assets.circuitState === 'INCOMPARABLE')
+  ok('不可比时回撤为 null，不是 0（0% 读作"没跌过"，null 读作"算不出"）',
+    dashMismatch.assets.drawdown === null)
+  ok('不可比时上限为 null，不是无约束', dashMismatch.assets.equityCap === null)
+
+  // ── 风控四层 ──
+  const ids = dashB.riskLayers.map(r => r.id)
+  ok('风控四层顺序为 L1→L4', ids.join(',') === 'L1,L2,L3,L4')
+  const l4 = dashB.riskLayers.find(r => r.id === 'L4')!
+  ok('L4 技术/产业/估值不可产生动作（越权正是"研究替代执行"的入口）',
+    l4.canGenerateActions === false)
+  const l3 = dashB.riskLayers.find(r => r.id === 'L3')!
+  ok('L3 安全垫标为 EXCLUDED 且不可产生动作',
+    l3.light === 'EXCLUDED' && l3.canGenerateActions === false)
+  ok('L3 文案为"不纳入 TIOS 风控模型"，不得出现"数据缺失"',
+    l3.state.includes('不纳入') && !l3.state.includes('缺失'), l3.state)
+  const l1 = dashB.riskLayers.find(r => r.id === 'L1')!
+  ok('L1 明确降仓不指定卖哪一只', l1.note.includes('不指定卖哪一只'))
+  const l2 = dashB.riskLayers.find(r => r.id === 'L2')!
+  ok('L2 明确与 L1 是两套独立理由，不得合并计算',
+    l2.note.includes('独立') && l2.note.includes('不得合并'))
+
+  // ── 组合层降仓不得落到个股头上 ──
+  // 熔断类必办项的标签必须是"组合整体"，不能是某只股票的名字。
+  // 若哪天变成"海光信息：熔断降仓 8.8万"，就是把组合层义务落到了个股头上，
+  // 而承担持仓本应由委员会指派。
+  const circuitItems = dashB.actionZone.mustExecute.filter(x => x.detail.includes('熔断')
+    || x.detail.includes('自峰值回撤'))
+  ok('熔断类必办项指向组合整体，不指向某只股票',
+    circuitItems.every(x => x.label.includes('组合')),
+    circuitItems.map(x => x.label).join(',') || '（本 fixture 未触发熔断动作，由 cockpit selftest 覆盖）')
+
+  // ── 家庭支出不得再出现在数据缺口里 ──
+  ok('数据缺口不再包含家庭刚性支出（裁定排除不是待办）',
+    !dashB.dataGaps.some(g => g.includes('家庭')),
+    dashB.dataGaps.filter(g => g.includes('家庭')).join(';'))
+  ok('JSON 全文不出现"安全垫：数据缺失"这类表述',
+    !JSON.stringify(dashB).includes('安全垫无法判定'))
+  void LIMITS
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

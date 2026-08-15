@@ -47,13 +47,37 @@ function wanStr(v: number | null): string {
   return v === null ? '缺失' : `${(v / 10000).toFixed(1)}万`
 }
 
-/** 三色灯取最严：任一项 RED 则整体 RED；UNKNOWN 等同 RED 对待但单独标注 */
+/**
+ * 三色灯取最严：任一项 RED 则整体 RED；UNKNOWN 等同 RED 对待但单独标注。
+ *
+ * `EXCLUDED` 被直接跳过,不参与取严 —— 被战略层裁定不使用的维度既不应变红,
+ * 也不应像 UNKNOWN 那样持续提示补数据。若它参与取严,
+ * 「不纳入模型」就会退化成「永久亮灯的待办」。
+ */
 export function worstLight(lights: Light[]): Light {
-  if (lights.includes('RED')) return 'RED'
-  if (lights.includes('UNKNOWN')) return 'UNKNOWN'
-  if (lights.includes('YELLOW')) return 'YELLOW'
+  const active = lights.filter(l => l !== 'EXCLUDED')
+  if (active.length === 0) return 'GREEN'
+  if (active.includes('RED')) return 'RED'
+  if (active.includes('UNKNOWN')) return 'UNKNOWN'
+  if (active.includes('YELLOW')) return 'YELLOW'
   return 'GREEN'
 }
+
+/**
+ * 家庭刚性支出的处置方式。**属于决策生效参数,已纳入规则指纹。**
+ *
+ * 委员会 2026-08-15 裁定不纳入 TIOS 风控模型。这不是「暂缺数据」——
+ * 两者在系统里的表现必须不同:缺数据要持续提示补,裁定排除则不再出现在待办里。
+ * 直接推论:FAMILY_SAFETY_NET 同时退出减仓法定理由白名单。
+ */
+export const SAFETY_NET_POLICY = {
+  mode: 'EXCLUDED_BY_STRATEGY' as 'REQUIRED' | 'EXCLUDED_BY_STRATEGY',
+  ruledOn: '2026-08-15',
+  statement: '家庭刚性支出约束：不纳入 TIOS 风控模型（战略层裁定）',
+  rationale:
+    '家庭年度刚性支出由家庭财务层管理,不作为本投资系统的风控输入。'
+    + '裁定排除 ≠ 数据缺失 —— 前者系统完整,后者系统不完整。',
+} as const
 
 export function evaluateSafety(input: SafetyInput): Answer {
   const { snapshot, positions, householdAnnualExpense, asOf } = input
@@ -64,7 +88,7 @@ export function evaluateSafety(input: SafetyInput): Answer {
   // 不该改变股票风险的度量。故仓位上限一律用组合口径。
   // 变量名不再用 total —— 之前就是因为只有一个 total，
   // 才会把账户口径的百分比拿去和 12% 的组合上限比较。
-  const brokerTotal = snapshot.totalAssets
+  const brokerTotal = snapshot.brokerTotal
   const portfolioTotal = snapshot.portfolioTotal
   const totalCash = snapshot.cash + snapshot.externalCash
   const rows: AnswerRow[] = []
@@ -107,7 +131,22 @@ export function evaluateSafety(input: SafetyInput): Answer {
     metrics: [mCash],
   })
 
-  // ── 家庭安全垫 ──
+  // ── 家庭安全垫：2026-08-15 起由战略层裁定排除 ──
+  if (SAFETY_NET_POLICY.mode === 'EXCLUDED_BY_STRATEGY') {
+    const mEx = m('家庭刚性支出', null, '不纳入模型',
+      `战略层裁定（${SAFETY_NET_POLICY.ruledOn}）`,
+      SAFETY_NET_POLICY.rationale, asOf)
+    // 刻意不写 missingReason —— 那个字段的语义是「该补而未补」,
+    // 用在这里会让裁定排除重新变成一条待办。
+    metrics.push(mEx)
+    rows.push({
+      label: '家庭刚性支出约束', status: '不纳入 TIOS 风控模型（战略层裁定）',
+      light: 'EXCLUDED',
+      decision: `不参与风控判定。${SAFETY_NET_POLICY.ruledOn} 裁定,`
+        + 'FAMILY_SAFETY_NET 同时退出减仓法定理由白名单',
+      metrics: [mEx],
+    })
+  } else {
   const needed = householdAnnualExpense === undefined ? null : householdAnnualExpense * LIMITS.safetyNetYears
   const netYears = householdAnnualExpense === undefined || householdAnnualExpense <= 0
     ? null : snapshot.cash / householdAnnualExpense
@@ -132,6 +171,7 @@ export function evaluateSafety(input: SafetyInput): Answer {
       : netLight === 'GREEN' ? '正常' : '优先补足现金',
     metrics: [mNet],
   })
+  }
 
   // ── 单股仓位 ──
   // 单票上限的分母是**组合总资产**，不是券商账户合计。
@@ -275,7 +315,7 @@ export interface LimitBreach {
 /**
  * 超限清单 —— **这里是真正生成减仓动作的地方。**
  *
- * 分母必须是组合口径。这个函数曾经用 `snapshot.totalAssets`（券商账户口径），
+ * 分母必须是组合口径。这个函数曾经用 `snapshot.brokerTotal`（券商账户口径），
  * 而 evaluateSafety 里还有一份同样的 12% 判据 —— 同一条规则两份实现，
  * 改分母时若只改一处，页面显示"未超限"而动作区仍然吐出减仓指令，
  * 两边互相矛盾且没有任何报错。

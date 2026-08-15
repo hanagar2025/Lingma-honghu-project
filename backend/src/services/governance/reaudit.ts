@@ -105,7 +105,7 @@ export function reauditDebts(
         countsTowardE1: true,
       }
     }
-    const oldPct = snapshot.totalAssets > 0 ? mv / snapshot.totalAssets : 0
+    const oldPct = snapshot.brokerTotal > 0 ? mv / snapshot.brokerTotal : 0
     const newPct = singleNameWeight(mv, snapshot.portfolioTotal)
     const oldOver = oldPct > LIMITS.singleStock
     const newOver = newPct > LIMITS.singleStock
@@ -158,7 +158,7 @@ export function renderReaudit(rows: DebtReaudit[], snapshot: AccountSnapshot): s
   w('执行债务重审 —— 按 2026-08-15 组合口径逐条分类')
   w('═'.repeat(96))
   w()
-  w(`  旧分母（券商账户合计）${wan(snapshot.totalAssets)}`)
+  w(`  旧分母（券商账户合计）${wan(snapshot.brokerTotal)}`)
   w(`  新分母（组合总资产）  ${wan(snapshot.portfolioTotal)}`)
   w(`  峰值口径 ${snapshot.peakBasis}${snapshot.peakBasis === 'PORTFOLIO' ? '' : ' → 回撤不可比，熔断类无法重算'}`)
   w()

@@ -12,7 +12,8 @@
 
 import { createHash } from 'node:crypto'
 import { LEGAL_REASON_TEXT, FORBIDDEN_REASON_PHRASES } from '../cockpit/types'
-import { LIMITS } from '../cockpit/safety'
+import { LIMITS, SAFETY_NET_POLICY } from '../cockpit/safety'
+import { PEAK_HISTORY } from './peakBasis'
 import { NODE_TAXONOMY } from '../cockpit/nodes'
 import { RED_EXTREME_RET10_THRESHOLD } from '../msr/promotion'
 import { PE_SANITY_CEILING } from '../msr/valuation'
@@ -74,10 +75,32 @@ export function buildRuleRegistry(): RuleEntry[] {
     tier: 'ACCOUNTING',
     definedIn: 'cockpit/safety.ts:findLimitBreaches（= 持仓 + 账内现金 + 账户外股票现金）',
   })
+  // 安全垫由"用哪个基数"变成"是否纳入模型"。
+  // 这不是同一个参数换值 —— 它退掉了一条减仓法定理由，属于能翻转动作结论的改动，
+  // 故必须对指纹可见。若哪天有人把 mode 改回 REQUIRED，指纹会变。
   out.push({
-    domain: 'POSITION_LIMIT', key: 'safetyNetBase', value: 'brokerCashOnly',
+    domain: 'POSITION_LIMIT', key: 'safetyNetMode', value: SAFETY_NET_POLICY.mode,
     tier: 'ACCOUNTING',
-    definedIn: 'cockpit/safety.ts:evaluateSafety（账户外那笔按委员会定义排除）',
+    definedIn: 'cockpit/safety.ts:SAFETY_NET_POLICY'
+      + `（${SAFETY_NET_POLICY.ruledOn} 战略层裁定不纳入 TIOS 风控模型）`,
+  })
+  out.push({
+    domain: 'LEGAL_REASON', key: 'reduceReasonsRetired', value: 'FAMILY_SAFETY_NET',
+    tier: 'ACCOUNTING',
+    definedIn: 'cockpit/types.ts:makeAction（安全垫不纳入模型的直接推论：退出减仓白名单）',
+  })
+  // 峰值口径与取值：情形 B 的裁定直接决定熔断是否成立，
+  // 故峰值本身也是决策生效参数，而不只是一个数据点。
+  out.push({
+    domain: 'GUARD', key: 'portfolioPeakBasis', value: 'portfolio_basis_v1',
+    tier: 'ACCOUNTING',
+    definedIn: 'governance/peakBasis.ts（2026-08-15 裁定采用情形 B：430万 + 200万 = 630万）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'portfolioPeakValue',
+    value: PEAK_HISTORY.find(r => r.basis === 'portfolio_basis_v1')?.peak ?? null,
+    tier: 'ACCOUNTING',
+    definedIn: 'governance/peakBasis.ts:PEAK_HISTORY',
   })
   out.push({
     domain: 'GUARD', key: 'drawdownRequiresSamePeakBasis', value: true,
