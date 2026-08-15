@@ -46,6 +46,13 @@ BASE_PATH="$BASE" npm run web:build
 npm run web:preflight
 BASE_PATH="$BASE" npm run web:package
 
+# 取刚打好的那个包。这一行原本夹在交易日闸门那段里，
+# 上一轮整段删除时被一起带走，于是后面 scp 处报 TARBALL: unbound variable ——
+# 删整段代码前必须确认段内没有后面还要用的赋值。
+TARBALL="$(ls -t "$ROOT"/frontend/release/*.tar.gz 2>/dev/null | head -1)"
+[[ -f "$TARBALL" ]] || die "找不到打包产物（$ROOT/frontend/release/*.tar.gz）"
+printf '\n  产物：%s\n' "$TARBALL"
+
 # ── 这里刻意没有交易日闸门 ──
 #
 # 曾经有过：NONINTERACTIVE=1 时若最新K线不是今天就跳过发布。

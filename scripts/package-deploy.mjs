@@ -80,7 +80,11 @@ const size = (statSync(tar).size / 1024 / 1024).toFixed(2)
 console.log(`  ✓ 已打包 ${tar}（${size} MB）`)
 
 // ── 上传与配置 ──
-const remoteDir = `/var/www/${sub || 'html'}`
+// 与 deploy-ecs.sh 的 DEPLOY_PATH 默认值保持一致。
+// 原来根路径部署时算成 /var/www/html，而自动部署走的是 /var/www/tios ——
+// 两份指引指向不同目录，照着手动做会把文件放错地方，
+// 而 nginx 仍从旧目录读，现象是"传上去了但页面没变"。
+const remoteDir = process.env.DEPLOY_PATH ?? '/var/www/tios'
 console.log(`\n${line}\n接下来在你的机器上执行（服务器 39.104.86.200）\n${line}\n`)
 console.log(`一、上传（把 root 换成你的 ECS 登录用户）\n`)
 console.log(`  scp ${tar} root@39.104.86.200:/tmp/\n`)
@@ -101,7 +105,7 @@ console.log(`      }`)
 console.log(`  }\n`)
 console.log(`四、检查语法并生效\n`)
 console.log(`  sudo nginx -t && sudo systemctl reload nginx\n`)
-console.log(`然后手机打开 https://hhwealth.cc${base} —— 会先出现口令解锁页。\n`)
+console.log(`然后手机打开 https://hhwealth.cc${base} —— 直接就是驾驶舱（无解锁页）。\n`)
 console.log(`${line}`)
 console.log(`每个交易日更新数据只需重复一次这四步中的一、二 ——`)
 console.log(`或者只传 data/today.json 这一个文件（约 380KB），nginx 无需重载。`)

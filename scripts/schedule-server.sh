@@ -24,6 +24,9 @@
 
 set -euo pipefail
 
+# 仓库根目录。pull-archive 要把服务器上的档案写回本地，需要它 ——
+# 之前漏了这行，pull-archive 一跑就会报 ROOT: unbound variable。
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST="${DEPLOY_HOST:-39.104.86.200}"
 USER_="${DEPLOY_USER:-root}"
 KEY="${DEPLOY_KEY:-$HOME/.ssh/tios_ecs}"

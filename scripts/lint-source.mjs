@@ -124,7 +124,90 @@ for (const f of uiTargets) {
   })
 }
 
-// ── 四、被引用的 npm 脚本必须真的存在 ──
+// ── 四、shell 里不得使用从未赋值的变量 ──
+//
+// 这条来自连续三次事故：`w?: unbound variable`、`KEY?`、以及删整段代码时
+// 把 `TARBALL=` 的赋值一起带走，于是后面 scp 处报 `TARBALL: unbound variable`。
+//
+// 三次都只在委员会执行时才暴露，因为 `bash -n` 只查语法 ——
+// 未定义变量在 `set -u` 下是**运行时**错误。而这类错误可以静态查出来：
+// 凡 $VAR 形式的使用，VAR 必须在同文件里被赋值过，或属于环境/特殊变量。
+//
+// 刻意跳过带引号的 heredoc（<<'X'）：那里的变量在远端展开，本地无从判断。
+// 这也是本项目里最常见的写法，若不跳过会得到满屏假报。
+const SHELL_ALLOW = new Set([
+  'HOME', 'USER', 'PATH', 'SHELL', 'PWD', 'OLDPWD', 'IFS', 'TZ', 'LANG', 'TERM',
+  'BASH_SOURCE', 'BASH_VERSION', 'LINENO', 'RANDOM', 'SECONDS', 'PPID', 'UID',
+  'FUNCNAME', 'REPLY', 'EDITOR', 'TMPDIR', 'LOGNAME', 'HOSTNAME',
+])
+
+/** 去掉带引号的 heredoc 体：其中的变量由远端展开 */
+function stripQuotedHeredocs(src) {
+  const lines = src.split('\n')
+  const out = []
+  let end = null
+  for (const l of lines) {
+    if (end !== null) {
+      if (l.trim() === end) { end = null; out.push('') }
+      else out.push('')
+      continue
+    }
+    const m = /<<[-]?\s*'([A-Za-z_][A-Za-z0-9_]*)'/.exec(l)
+    if (m) { end = m[1]; out.push(l.replace(/<<[-]?\s*'[^']*'/, '')); continue }
+    out.push(l)
+  }
+  return out.join('\n')
+}
+
+for (const f of files) {
+  const src = stripQuotedHeredocs(
+    readFileSync(f, 'utf-8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').map(l => (/^\s*#/.test(l) ? '' : l)).join('\n')
+  )
+
+  const assigned = new Set(SHELL_ALLOW)
+  for (const re of [
+    /^\s*(?:export\s+|local\s+|declare\s+(?:-\w+\s+)?|readonly\s+)?([A-Za-z_][A-Za-z0-9_]*)\+?=/gm,
+    /^\s*for\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\b/gm,
+    // read 后面可以跟多个变量名（read -r code name qty ...），必须全部收下。
+    // 只捕获第一个会把后面那些误判成未赋值 —— seed 脚本上就这么误报了 7 次。
+    /\bread\s+((?:-\w+\s+)*(?:-p\s+"[^"]*"\s+)?[A-Za-z_][A-Za-z0-9_ ]*)/g,
+  ]) {
+    for (const m of src.matchAll(re)) {
+      // 一次匹配可能含多个变量名（read 的情形），逐个拆开
+      for (const name of m[1].split(/\s+/)) {
+        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) assigned.add(name)
+      }
+    }
+  }
+
+  // 使用：$VAR 与 ${VAR}。带默认值/替换的形式（${VAR:-x} 等）在 set -u 下安全，故排除。
+  const used = new Map()
+  for (const m of src.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g)) {
+    const name = m[1] ?? m[2]
+    // ${VAR:-...} / ${VAR:?...} / ${VAR#...} 之类：前面已被 ${VAR} 分支排除，
+    // 这里再挡一次带修饰符的情况
+    const after = src.slice(m.index + m[0].length - 1, m.index + m[0].length + 1)
+    if (m[1] && /^[:\-+?#%\/^,]/.test(after)) continue
+    if (!assigned.has(name) && !used.has(name)) {
+      const lineNo = src.slice(0, m.index).split('\n').length
+      used.set(name, lineNo)
+    }
+  }
+  // 带修饰符的形式在正则里不会匹配到 ${VAR}，需单独确认没有误报
+  for (const [name, lineNo] of used) {
+    if (new RegExp(`\\$\\{${name}[:\\-+?#%/^,]`).test(src)) continue
+    problems++
+    console.error(
+      `${f.replace(join(HERE, '..'), '.')}:${lineNo}  使用了从未赋值的变量 $${name}\n`
+      + `    set -u 下这是运行时错误（bash -n 查不出来），只会在别人执行时暴露。\n`
+      + `    要么补上赋值，要么写成 \${${name}:-默认值}。\n`
+    )
+  }
+}
+
+// ── 五、被引用的 npm 脚本必须真的存在 ──
 //
 // 这条检查来自一次真实事故：README 与对话里都写了 `npm run ship`，
 // 而添加它的那步命令因为 && 链在前一步失败时中断，从未执行。
