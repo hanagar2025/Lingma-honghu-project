@@ -136,7 +136,9 @@ export async function saveEncryptedWebSnapshot(
 ): Promise<{ file: string; removedPlain: boolean }> {
   const { encryptSnapshot, decryptSnapshot } = await import('./webEncrypt')
   const json = JSON.stringify(payload)
-  const enc = await encryptSnapshot(json, passphrase)
+  // 交易日期留在明文里，供定时任务判断"今天是否已发过最新的一份"
+  const snapshotDate = typeof payload.date === 'string' ? payload.date : null
+  const enc = await encryptSnapshot(json, passphrase, snapshotDate)
 
   // 写盘前先解一次。生成了解不开的密文而当时没发现，等于当天的分析直接丢失，
   // 而这种问题往往要到第二天想看昨天数据时才暴露。

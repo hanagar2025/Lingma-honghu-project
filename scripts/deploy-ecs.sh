@@ -40,9 +40,23 @@ step() { printf '\n%s\n%s\n%s\n' "$LINE" "$1" "$LINE"; }
 # 写在命令行里的口令会**原文进入 ~/.zsh_history**，而这个口令是公网页面的唯一保护。
 # 所以默认改为读取输入且不回显：不进历史、不进进程列表（ps 能看到命令行参数）。
 # 已经用环境变量传进来的仍然接受 —— 自动化场景需要它，但会提示历史泄漏。
+KEYCHAIN_ITEM="${TIOS_KEYCHAIN_ITEM:-tios-deploy-passphrase}"
+
 if [[ -n "${TIOS_PASSPHRASE:-}" ]]; then
   printf '\n  \033[33m注意：口令通过环境变量传入，会留在 shell 历史里。\033[0m\n'
   printf '  清理：history -d 对应行号，或直接删掉 ~/.zsh_history 里那一行。\n'
+elif [[ "${NONINTERACTIVE:-0}" == "1" ]]; then
+  # 定时任务没有终端可以交互。从 macOS 钥匙串取口令：
+  # 磁盘上没有明文、shell 历史里没有痕迹、ps 也看不到 ——
+  # 把口令写进 plist 或环境变量文件是这一步最容易犯的错，那等于明文落盘。
+  command -v security >/dev/null 2>&1 || die "NONINTERACTIVE 模式目前只支持 macOS 钥匙串（security 命令不可用）"
+  TIOS_PASSPHRASE="$(security find-generic-password -a "$USER" -s "$KEYCHAIN_ITEM" -w 2>/dev/null || true)"
+  [[ -n "$TIOS_PASSPHRASE" ]] || die \
+    "钥匙串里没有条目「${KEYCHAIN_ITEM}」。先存一次（只需一次，不会留在 shell 历史）：
+       security add-generic-password -a \"\$USER\" -s $KEYCHAIN_ITEM -w
+     回车后它会提示你输入口令，输入时不回显。"
+  export TIOS_PASSPHRASE
+  printf '\n  口令来自 macOS 钥匙串条目「%s」\n' "$KEYCHAIN_ITEM"
 else
   step "设置解锁口令"
   cat <<'TIP'
@@ -95,6 +109,41 @@ cd "$ROOT"
 BASE_PATH="$BASE" npm run web:build
 npm run web:preflight
 BASE_PATH="$BASE" npm run web:package
+
+# ── 交易日闸门（仅定时任务模式）──
+# 不需要节假日日历：**看行情源给出的最新K线日期就够了。**
+# 休市日最新K线仍是上一个交易日的，与线上那份相同 —— 此时发布只是白发一次，
+# 还会把"快照生成时间"刷成今天，让人误以为看的是今天的数据。
+# 日历会过期（调休、临时休市），而"最新K线是哪天"永远是当下的事实。
+if [[ "${NONINTERACTIVE:-0}" == "1" ]]; then
+  NEW_DATE=$(python3 -c "
+import json,sys
+try:
+    d=json.load(open('$ROOT/frontend/dist/data/today.enc.json'))
+    print(d.get('snapshotDate') or '')
+except Exception:
+    print('')
+" 2>/dev/null || true)
+  TODAY_BJ=$(TZ=Asia/Shanghai date +%F)
+  LIVE_DATE=$(curl -s --max-time 20 "https://$DOMAIN/data/today.enc.json" 2>/dev/null \
+    | python3 -c "
+import json,sys
+try: print(json.load(sys.stdin).get('snapshotDate') or '')
+except Exception: print('')
+" 2>/dev/null || true)
+
+  printf '\n  最新K线日期 %s，北京日期 %s，线上已发布 %s\n' \
+    "${NEW_DATE:-未知}" "$TODAY_BJ" "${LIVE_DATE:-未知}"
+
+  if [[ -n "$NEW_DATE" && "$NEW_DATE" != "$TODAY_BJ" ]]; then
+    printf '  今日无新K线（休市或数据未更新），跳过发布。线上保持 %s 那份。\n\n' "${LIVE_DATE:-原样}"
+    exit 0
+  fi
+  if [[ -n "$NEW_DATE" && "$NEW_DATE" == "$LIVE_DATE" && "${FORCE:-0}" != "1" ]]; then
+    printf '  线上已是 %s 的数据，跳过发布（要强制覆盖加 FORCE=1）。\n\n' "$NEW_DATE"
+    exit 0
+  fi
+fi
 
 TARBALL="$(ls -t "$ROOT"/frontend/release/*.tar.gz | head -1)"
 [[ -f "$TARBALL" ]] || die "找不到打包产物"
@@ -304,8 +353,12 @@ fi
 step "三、上传并执行"
 printf '  目标 %s@%s，站点目录 %s\n' "$USER_" "$HOST" "$WEBROOT"
 printf '  旧应用文件与 nginx 配置会先备份到服务器 /root/ 下，不会直接删除。\n\n'
-read -r -p "  确认继续？(输入 yes) " ans
-[[ "$ans" == "yes" ]] || die "已取消，未做任何改动"
+if [[ "${NONINTERACTIVE:-0}" == "1" ]]; then
+  printf '  NONINTERACTIVE=1：跳过确认（定时任务模式）\n'
+else
+  read -r -p "  确认继续？(输入 yes) " ans
+  [[ "$ans" == "yes" ]] || die "已取消，未做任何改动"
+fi
 
 # 两个文件一次传完、只连两次：用密码登录时每次连接都要输一遍密码，
 # 三次提示会让人以为卡住了或者输错了。

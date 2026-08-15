@@ -41,6 +41,14 @@ export interface EncryptedSnapshot {
   dataB64: string
   /** 生成时间。刻意放在明文里 —— 需要判断"这份快照是哪天的"而不必先解密 */
   generatedAt: string
+  /**
+   * 快照对应的交易日。同样刻意留在明文里。
+   *
+   * 用处很具体：定时任务要判断"今天是否已经发过一份最新的"，
+   * 若这个字段藏在密文里，判断就必须先解密 —— 而定时任务不该持有口令的使用权限
+   * 之外还去解密数据。交易日期本身不是敏感信息（交易日历是公开的）。
+   */
+  snapshotDate: string | null
   hint: string
 }
 
@@ -115,7 +123,7 @@ export function checkPassphrase(passphrase: string | undefined): string | null {
 }
 
 export async function encryptSnapshot(
-  plaintext: string, passphrase: string
+  plaintext: string, passphrase: string, snapshotDate: string | null = null
 ): Promise<EncryptedSnapshot> {
   const bad = checkPassphrase(passphrase)
   if (bad) {
@@ -141,6 +149,7 @@ export async function encryptSnapshot(
     ivB64: b64(iv),
     dataB64: b64(data),
     generatedAt: new Date().toISOString(),
+    snapshotDate,
     hint: '本文件为 AES-GCM 密文。口令不在文件内，也不在服务端，只在你脑子里。',
   }
 }
