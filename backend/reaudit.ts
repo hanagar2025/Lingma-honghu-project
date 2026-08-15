@@ -35,7 +35,7 @@ async function main() {
   const externalCash = pf.externalCash ?? 0
   const snapshot: AccountSnapshot = {
     date: new Date().toISOString().slice(0, 10),
-    totalAssets: brokerTotal,
+    brokerTotal,
     cash: pf.cash,
     positionsValue,
     externalCash,
@@ -51,8 +51,12 @@ async function main() {
   const { peakScenarios, renderPeakScenarios, renderPeakHistory } =
     await import('./src/services/governance/peakBasis')
   process.stdout.write(`${renderPeakHistory()}\n`)
+  // legacy 峰值必须取自 PEAK_HISTORY，不能用 pf.peakAssets ——
+  // 后者在 8/15 裁定后已经是组合口径的 630 万，再加 200 万会得出 830 万。
+  const { PEAK_HISTORY: PH } = await import('./src/services/governance/peakBasis')
+  const legacyPeak = PH.find(r => r.basis === 'legacy_account_basis')?.peak ?? 0
   process.stdout.write(renderPeakScenarios(peakScenarios(
-    snapshot.portfolioTotal, snapshot.positionsValue, pf.peakAssets, externalCash
+    snapshot.portfolioTotal, snapshot.positionsValue, legacyPeak, externalCash
   )))
 }
 main()

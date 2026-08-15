@@ -73,14 +73,45 @@ export function reauditDebts(
     // ── 与分母无关的债务：分母变了不影响它，但也不因此自动作废 ──
     if (!d.dependsOnPositionDenominator) {
       if (d.dependsOnPeakBasis) {
+        // 峰值已按组合口径认定后，熔断缺口就不该再停在"需重算"——
+        // 停在那里等于把一个能算的数留成待办，而待办不会自己变成执行。
+        if (peakComparable && snapshot.peakAssets > 0) {
+          const dd = 1 - snapshot.portfolioTotal / snapshot.peakAssets
+          const cap = dd >= 0.25 ? 0.30 : dd >= 0.15 ? 0.50 : null
+          const eqPct = snapshot.portfolioTotal > 0
+            ? snapshot.positionsValue / snapshot.portfolioTotal : 0
+          if (cap === null) {
+            return {
+              debt: d, verdict: 'INVALIDATED_BY_BASIS_CHANGE' as DebtVerdict,
+              oldPct: null, newPct: eqPct, oldOver: true, newOver: false,
+              reasoning: `按组合口径峰值 ${(snapshot.peakAssets / 10000).toFixed(1)}万 重算：`
+                + `回撤 ${(dd * 100).toFixed(2)}% 未达 15% → 熔断未成立，本条法定理由消失。`
+                + '注意：这是重算后的结论，不是"看着没超"就消掉。',
+              countsTowardE1: false,
+            }
+          }
+          const need = Math.max(0, (eqPct - cap) * snapshot.portfolioTotal)
+          const wan = (v: number) => `${(v / 10000).toFixed(2)}万`
+          return {
+            debt: d, verdict: 'RECALC_REQUIRED' as DebtVerdict,
+            oldPct: null, newPct: eqPct, oldOver: true, newOver: eqPct > cap,
+            reasoning: `已按组合口径重算：峰值 ${wan(snapshot.peakAssets)}，`
+              + `当前 ${wan(snapshot.portfolioTotal)} → 回撤 ${(dd * 100).toFixed(2)}%，`
+              + `${dd >= 0.25 ? '二级' : '一级'}熔断成立，股票上限 ${(cap * 100).toFixed(0)}%`
+              + `（= ${wan(snapshot.portfolioTotal * cap)}）。`
+              + `当前股票 ${wan(snapshot.positionsValue)}（${(eqPct * 100).toFixed(2)}%）`
+              + ` → ${need > 0 ? `**须降低组合股票敞口 ${wan(need)}**` : '已符合上限'}。`
+              + '原指令记录的"持仓 ≤132 万"是券商口径下的目标，已作废。'
+              + '具体由哪一持仓承担，不由技术指标决定 —— 须委员会指派。',
+            countsTowardE1: true,
+          }
+        }
         return {
           debt: d, verdict: 'RECALC_REQUIRED' as DebtVerdict,
           oldPct: null, newPct: null, oldOver: null, newOver: null,
-          reasoning: peakComparable
-            ? '熔断类：峰值已按组合口径认定，可重算强制降仓缺口'
-            : '熔断类：净值峰值仍记于券商账户口径，与组合口径不可比 → 回撤无法计算，'
-              + '强制降仓缺口无法重算。**不得因"现在看着没超"而消掉** —— '
-              + '那是把"不知道"当成"没问题"。须先完成峰值口径迁移。',
+          reasoning: '熔断类：净值峰值仍记于券商账户口径，与组合口径不可比 → 回撤无法计算，'
+            + '强制降仓缺口无法重算。「不得因"现在看着没超"而消掉」 —— '
+            + '那是把"不知道"当成"没问题"。须先完成峰值口径迁移。',
           countsTowardE1: true,
         }
       }

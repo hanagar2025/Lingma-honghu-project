@@ -123,6 +123,15 @@ export interface PeakScenario {
   note: string
 }
 
+/**
+ * 已被采纳的情形。委员会 2026-08-15 裁定采用 B。
+ *
+ * 裁定之后仍保留这张对照表，是为了让"当时面对的是什么选择"可复核 ——
+ * 只记录结果的话，将来没人能判断这个峰值是算出来的还是随手填的。
+ * 但必须标出哪一个被采纳，否则读者会以为问题还开着。
+ */
+export const ADOPTED_SCENARIO: PeakScenario['id'] = 'B_INCLUDED_AT_PEAK'
+
 export function peakScenarios(
   portfolioTotal: number,
   positionsValue: number,
@@ -166,10 +175,12 @@ export function peakScenarios(
 
 export function renderPeakScenarios(rows: PeakScenario[]): string {
   const w = (v: number) => `${(v / 10000).toFixed(2)}万`
-  const L: string[] = ['', '组合口径峰值：两种候选情形', '─'.repeat(78)]
+  const L: string[] = [
+    '', '组合口径峰值：两种候选情形（委员会 2026-08-15 已裁定采用 B）', '─'.repeat(78),
+  ]
   for (const r of rows) {
     L.push('')
-    L.push(`  ${r.id}`)
+    L.push(`  ${r.id}${r.id === ADOPTED_SCENARIO ? '　★ 已采纳' : '　（未采纳）'}`)
     L.push(`    前提问题：${r.question}`)
     L.push(`    峰值 ${w(r.peak)}　回撤 ${(r.drawdown * 100).toFixed(2)}%　熔断 ${r.circuit}`)
     if (r.equityCapPct !== null) {
@@ -179,8 +190,9 @@ export function renderPeakScenarios(rows: PeakScenario[]): string {
     L.push(`    说明：${r.note}`)
   }
   L.push('')
-  L.push('  两者相差一次强制降仓，故不由代码挑默认值 ——')
+  L.push('  两者相差一次强制降仓，故当初不由代码挑默认值 ——')
   L.push('  而且默认值天然会偏向"不触发"，因为那是什么都不用做的那个。')
+  L.push(`  委员会 2026-08-15 裁定：${ADOPTED_SCENARIO}（430 万峰值发生时那 200 万已属股票投资资金）。`)
   L.push('')
   return L.join('\n')
 }

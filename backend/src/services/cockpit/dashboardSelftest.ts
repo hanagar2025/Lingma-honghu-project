@@ -665,5 +665,24 @@ console.log('\n【外发摘要脱敏】')
   void LIMITS
 }
 
+// 峰值对照表：裁定后必须标出采纳项，且不得把已裁定的峰值再叠加一次
+{
+  const { peakScenarios, renderPeakScenarios, ADOPTED_SCENARIO, PEAK_HISTORY } =
+    await import('../governance/peakBasis')
+  const legacy = PEAK_HISTORY.find(r => r.basis === 'legacy_account_basis')?.peak ?? 0
+  const rows = peakScenarios(5_342_513, 2_759_613, legacy, 2_000_000)
+  const b = rows.find(r => r.id === 'B_INCLUDED_AT_PEAK')!
+  ok('对照表已采纳 B', ADOPTED_SCENARIO === 'B_INCLUDED_AT_PEAK')
+  ok('情形 B 峰值为 630 万，而非 830 万（不得把已裁定的组合峰值再加一次外部现金）',
+    b.peak === 6_300_000, String(b.peak))
+  ok('情形 B 触发一级熔断、须减约 8.84 万',
+    b.circuit === 'LEVEL1' && b.requiredReduction !== null
+    && Math.abs(b.requiredReduction - 88_357) < 2_000,
+    `${b.circuit} / ${b.requiredReduction}`)
+  const txt = renderPeakScenarios(rows)
+  ok('渲染标出"已采纳"，否则读者会以为问题还开着', txt.includes('★ 已采纳'))
+  ok('未采纳项显式标注', txt.includes('（未采纳）'))
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
