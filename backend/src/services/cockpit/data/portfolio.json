@@ -1,22 +1,27 @@
 {
   "note": "账户快照。市值由 CLI 用最新收盘价 × 股数实时计算，此处只记录股数与成本价，避免市值成为一个会过期的手抄数字。",
-  "asOf": "2026-07-17",
-  "source": "券商App截图人工录入（委员会 2026-07-17 15:30 快照）",
-  "cash": 1407000,
+  "asOf": "2026-08-14",
+  "source": "券商App截图（委员会 2026-08-14 盘后）+ 2026-08-15 口径裁定",
+  "cash": 582900,
+  "cashNote": "账内可用现金 58.29 万，取自 8/14 截图。此前记录的 140.70 万是 7/17 的值，中间发生过买入与家庭提取但未记账，导致账户总资产被高估 46 万。",
+  "externalCash": 2000000,
+  "externalCashNote": "专用于股票投资的账户外现金储备。委员会 2026-08-15 裁定：计入组合分母（单票/板块/主题上限），但不计入家庭安全垫 —— 委员会明确它不是家庭日常生活资产。",
   "peakAssets": 4300000,
+  "peakBasis": "BROKER",
+  "peakNote": "430 万记录于券商账户口径。组合口径当前 531 万已大于它，直接相减会得出负回撤、使熔断静默失效。故标记为 BROKER，回撤输出「不可比」而非 0，待委员会按组合口径重新认定峰值。",
   "householdAnnualExpense": null,
   "householdAnnualExpenseNote": "委员会尚未提供家庭年度刚性支出。保持 null → 安全垫判为数据缺失，不得用 0 代替。",
-  "externalCash": 2000000,
-  "externalCashNote": "委员会 2026-08-14 报出的券商账户外现金储备。口径待战略层裁定：并入仓位上限分母会让现有超限持仓一次记账即自动合规，故未裁定期间不计入，仅在报告中并列显示两种口径的百分比。",
   "positions": [
-    { "code": "300308", "name": "中际旭创", "quantity": 400, "cost": 967.50, "sector": "通信", "theme": "AI" },
-    { "code": "300502", "name": "新易盛", "quantity": 1260, "cost": 470.63, "sector": "通信", "theme": "AI" },
-    { "code": "688041", "name": "海光信息", "quantity": 2500, "cost": 310.00, "sector": "电子", "theme": "AI" },
-    { "code": "603986", "name": "兆易创新", "quantity": 200, "cost": 580.00, "sector": "电子", "theme": "半导体" },
-    { "code": "688008", "name": "澜起科技", "quantity": 1300, "cost": 260.77, "sector": "电子", "theme": "半导体" },
-    { "code": "688012", "name": "中微公司", "quantity": 400, "cost": 382.50, "sector": "电子", "theme": "半导体" },
-    { "code": "002371", "name": "北方华创", "quantity": 300, "cost": 806.67, "sector": "电子", "theme": "半导体" }
+    { "code": "688041", "name": "海光信息", "quantity": 2500, "cost": 310.00, "sector": "电子", "theme": "AI", "qtySource": "OBSERVED" },
+    { "code": "300308", "name": "中际旭创", "quantity": 594, "cost": 967.50, "sector": "通信", "theme": "AI", "qtySource": "DERIVED" },
+    { "code": "300502", "name": "新易盛", "quantity": 1260, "cost": 470.63, "sector": "通信", "theme": "AI", "qtySource": "OBSERVED" },
+    { "code": "688008", "name": "澜起科技", "quantity": 1300, "cost": 260.77, "sector": "电子", "theme": "半导体", "qtySource": "OBSERVED" },
+    { "code": "688012", "name": "中微公司", "quantity": 594, "cost": 382.50, "sector": "电子", "theme": "半导体", "qtySource": "DERIVED" },
+    { "code": "002371", "name": "北方华创", "quantity": 300, "cost": 806.67, "sector": "电子", "theme": "半导体", "qtySource": "OBSERVED" },
+    { "code": "002463", "name": "沪电股份", "quantity": 1000, "cost": 121.27, "sector": "电子", "theme": "AI", "qtySource": "DERIVED" },
+    { "code": "603986", "name": "兆易创新", "quantity": 200, "cost": 580.00, "sector": "电子", "theme": "半导体", "qtySource": "OBSERVED" }
   ],
+  "qtySourceNote": "OBSERVED = 与 8/14 截图市值对得上，股数沿用原记录。DERIVED = 由截图市值 ÷ 收盘价反推，须委员会用券商App核对确切股数。中际旭创与中微公司属创业板/科创板，允许任意股数，无法用整手规则校验；沪电股份属主板，反推得 992.8 股 → 1000 股（整百手），置信较高。",
   "pendingSells": 7,
-  "pendingSellsNote": "自 7/17 起累计的未执行卖出指令条数。清零后改为 0 以观察闸门解锁后的输出。"
+  "pendingSellsNote": "自 7/17 起累计的未执行卖出指令条数。**须按 8/15 新口径逐笔重新审计** —— 其中基于券商账户口径（旧分母）产生的超限指令，其法定理由可能已不成立。"
 }
