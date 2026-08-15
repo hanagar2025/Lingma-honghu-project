@@ -13,11 +13,9 @@ import {
   Segmented, Space, Statistic, Table, Tag, Typography,
 } from 'antd'
 import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/icons'
-import { cockpitAPI, isLocked, tiosAPI } from '../services/api'
-import { decryptSnapshot, type EncryptedSnapshot } from '../services/decrypt'
+import { cockpitAPI, tiosAPI } from '../services/api'
 import FiveLayerDashboard from '../components/FiveLayerDashboard'
 import TodayVerdict from '../components/TodayVerdict'
-import UnlockGate from '../components/UnlockGate'
 import ShareButton, { ShareHint } from '../components/ShareButton'
 
 const { Title, Text, Paragraph } = Typography
@@ -124,19 +122,13 @@ const Cockpit: React.FC = () => {
   const [marking, setMarking] = useState<number | null>(null)
   const [session, setSession] = useState<'pre' | 'post'>('post')
   const [offline, setOffline] = useState<{ on: boolean; reason: string }>({ on: false, reason: '' })
-  const [locked, setLocked] = useState<EncryptedSnapshot | null>(null)
 
   const load = useCallback(async (live = false, s: 'pre' | 'post' = session) => {
     setLoading(true)
     try {
       const r = await cockpitAPI.getTodayOrOffline(live, s)
-      if (isLocked(r.data)) {
-        setLocked(r.data.enc)
-        setOffline({ on: true, reason: r.reason || '已加密的静态快照' })
-      } else {
-        setData(r.data)
-        setOffline({ on: r.offline, reason: r.reason })
-      }
+      setData(r.data)
+      setOffline({ on: r.offline, reason: r.reason })
       setSession(s)
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || err.message || '驾驶舱加载失败')
@@ -144,17 +136,6 @@ const Cockpit: React.FC = () => {
       setLoading(false)
     }
   }, [session])
-
-  const unlock = useCallback(async (passphrase: string): Promise<string | null> => {
-    if (!locked) return '没有待解密的快照'
-    try {
-      setData(await decryptSnapshot(locked, passphrase))
-      setLocked(null)
-      return null
-    } catch (e: any) {
-      return e?.message ?? '解密失败'
-    }
-  }, [locked])
 
   // 标记执行 —— 清偿执行债务是当前第一优先级，因此这个按钮直接放在驾驶舱里，
   // 不必跳到别的页面。执行时间由后端回填，用于 KPI E4。
@@ -172,10 +153,6 @@ const Cockpit: React.FC = () => {
   }, [load])
 
   useEffect(() => { load(false) }, [load])
-
-  // 解锁界面必须在一切之前返回：不能先渲染半个驾驶舱再叠一个弹窗，
-  // 那样密文之外的框架信息（会话、按钮、菜单）会先露出来，容易被误读成"已经进去了"。
-  if (locked) return <UnlockGate generatedAt={locked.generatedAt} onUnlock={unlock} />
 
   if (!data) {
     return (

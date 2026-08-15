@@ -48,11 +48,6 @@ jobs:
       # 守两条：规则漂移必须能被发现；E3 不得用盈亏评判模型。
       - name: Governance selftest (规则指纹 + E3不用盈亏)
         run: npm -w backend run audit:selftest
-      # 守：后端加的密文，前端那段代码必须真能解开。两端是两份独立参数表，
-      # 一处改了另一处没跟上，密文就永久打不开且**不会报错** ——
-      # 要等到某天想看昨天数据时才发现，那时密文已积累一个月。
-      - name: Crypto selftest (加密快照真实往返 + 明文密文不并存)
-        run: npm -w backend run crypto:selftest
       # 守：研究域与决策域永不相交；加研究标的不得改变规则指纹；利润数据不得插值。
       - name: Research selftest (研究域不得进入决策域)
         run: npm -w backend run research:selftest

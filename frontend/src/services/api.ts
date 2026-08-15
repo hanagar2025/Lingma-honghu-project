@@ -1,6 +1,5 @@
 /// <reference types="vite/client" />
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
-import { isEncryptedSnapshot, type EncryptedSnapshot } from './decrypt'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
@@ -151,32 +150,13 @@ export const tiosAPI = {
 export const OFFLINE_FORCED = import.meta.env.VITE_OFFLINE === '1'
 const base = (import.meta.env.BASE_URL ?? '/')
 export const OFFLINE_SNAPSHOT_URL = `${base}data/today.json`.replace(/([^:])\/{2,}/g, '$1/')
-export const OFFLINE_ENC_URL = `${base}data/today.enc.json`.replace(/([^:])\/{2,}/g, '$1/')
 
-/** 密文快照。需要口令才能解开，故与明文分开表达，不能混成一个"加载失败" */
-export interface LockedSnapshot {
-  locked: true
-  enc: EncryptedSnapshot
-}
-
-export function isLocked(x: unknown): x is LockedSnapshot {
-  return !!x && typeof x === 'object' && (x as { locked?: unknown }).locked === true
-}
-
-/**
- * 取离线快照。**先试密文再试明文。**
- *
- * 顺序是刻意的：部署到公网时目录里只应有密文，但本机开发时可能两者都在。
- * 若先试明文，本机就会静默走明文分支 —— 于是"上线后解密流程有问题"这件事
- * 要等到真的上线才暴露。宁可让本机也走一遍密文路径。
- */
-export async function loadOfflineSnapshot(): Promise<any | LockedSnapshot> {
-  const enc = await fetchJson(OFFLINE_ENC_URL)
-  if (isEncryptedSnapshot(enc)) return { locked: true, enc }
+/** 取离线快照。委员会 2026-08-15 决议去掉口令解锁，故只有明文一条路径 */
+export async function loadOfflineSnapshot(): Promise<any> {
   const plain = await fetchJson(OFFLINE_SNAPSHOT_URL)
   if (plain) return plain
   throw new Error(
-    `未找到离线快照（${OFFLINE_ENC_URL} 与 ${OFFLINE_SNAPSHOT_URL} 均不可用）。`
+    `未找到离线快照（${OFFLINE_SNAPSHOT_URL}）。`
     + ` 先在项目根目录跑一次 npm run web:snapshot 生成它。`
   )
 }

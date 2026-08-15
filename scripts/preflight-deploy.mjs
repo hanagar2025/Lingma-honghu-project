@@ -50,31 +50,29 @@ if (!existsSync(DIST)) {
 
 const files = walk(DIST)
 
-// ── 一、明文快照绝不能出现在产物里 ──
-const plain = join(DIST, 'data', 'today.json')
-check(
-  '产物中不存在明文快照 data/today.json',
-  !existsSync(plain),
-  existsSync(plain) ? '这个文件含全部持仓与总资产，公网可直接下载。重新用 TIOS_PASSPHRASE=... 构建' : ''
-)
+// ── 一、快照必须存在且是合法 JSON ──
+// 委员会 2026-08-15 决议去掉口令解锁，故明文快照是**正常且预期**的产物。
+// 这一节因此从"禁止明文"改为"确认快照可用" —— 页面能打开但没数据，
+// 比页面打不开更难排查：它看起来完全正常，只是所有列都显示"缺失"。
+const snap = join(DIST, 'data', 'today.json')
+let snapshot = null
+if (existsSync(snap)) {
+  try { snapshot = JSON.parse(readFileSync(snap, 'utf-8')) } catch { snapshot = null }
+}
+check('存在快照 data/today.json', !!snapshot,
+  existsSync(snap) ? '文件存在但不是合法 JSON' : '文件缺失，先跑 npm run web:snapshot')
+if (snapshot) {
+  check('快照含交易日期', typeof snapshot.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(snapshot.date),
+    String(snapshot.date))
+  check('快照含五层驾驶舱数据', !!snapshot.dashboard?.holdings?.length)
+  check('快照含今日结论', !!snapshot.verdict?.focus)
+  check('快照含外发摘要', typeof snapshot.brief === 'string' && snapshot.brief.length > 1000)
+}
 
-// ── 二、密文快照必须存在且真的是密文 ──
-const encPath = join(DIST, 'data', 'today.enc.json')
-let enc = null
-if (existsSync(encPath)) {
-  try { enc = JSON.parse(readFileSync(encPath, 'utf-8')) } catch { enc = null }
-}
-check('存在密文快照 data/today.enc.json', !!enc, existsSync(encPath) ? '文件存在但不是合法 JSON' : '文件缺失')
-if (enc) {
-  check('密文标记为 encrypted:true', enc.encrypted === true)
-  check('密文含盐、IV 与密文体', !!enc.saltB64 && !!enc.ivB64 && !!enc.dataB64)
-  check(
-    'PBKDF2 迭代次数不低于 20 万',
-    Number(enc.iterations) >= 200_000,
-    `当前 ${enc.iterations}`
-  )
-  check('密文文件里不含口令字段', !('passphrase' in enc) && !('pass' in enc))
-}
+// 密文残留会让页面走到已删除的解密路径
+const staleEnc = join(DIST, 'data', 'today.enc.json')
+check('产物中没有旧的加密快照残留', !existsSync(staleEnc),
+  existsSync(staleEnc) ? '口令模式已废弃，请删除该文件后重新构建' : '')
 
 // ── 三、全量扫描 ──
 // 只查密文快照是不够的：构建可能把数据内联进 JS bundle，
@@ -106,16 +104,16 @@ for (const f of files) {
     }
   }
 }
+// 委员会已决议数据公开无妨，故持仓名出现在 data/ 里是预期的。
+// 但出现在 JS 产物里仍属异常 —— 那说明数据被内联进了代码，
+// 会导致"改数据必须重新构建"，是个会静默积累的错误。
+const inCode = leaks.filter(l => !l.startsWith('data/'))
 check(
-  '产物中任何文件都不含持仓名（含表单占位示例）',
-  leaks.length === 0,
-  leaks.slice(0, 5).join('；')
+  '持仓名只出现在 data/ 快照里，未被内联进 JS 产物',
+  inCode.length === 0,
+  inCode.slice(0, 5).join('；')
 )
-check(
-  'data/ 目录内不含明文账户字段',
-  dataLeaks.length === 0,
-  dataLeaks.slice(0, 5).join('；')
-)
+void dataLeaks  // 账户字段现在允许出现在 data/ 内
 
 // ── 四、审计档与台账不得被打包 ──
 const strays = files.filter(f => /audits|changelog|discovery|freeze-baseline|\.md$/i.test(f))
@@ -141,8 +139,8 @@ if (failed > 0) {
 }
 console.log(
   `体检通过。可以发布 frontend/dist。\n\n` +
-  `  仍需人工确认两件事（脚本查不到）：\n` +
-  `    1. 托管必须启用 HTTPS。浏览器只在安全上下文提供 WebCrypto，\n` +
-  `       http:// 下解密按钮会直接报错 —— 这是硬性技术要求，不只是习惯。\n` +
-  `    2. 口令不要与其他账号复用，也不要写进任何提交或聊天记录。\n${line}\n`
+  `  \x1b[33m本站无口令保护\x1b[0m：持仓、仓位与总资产对任何访问者可见。\n` +
+  `  这是 2026-08-15 的明确决议，不是配置遗漏。\n` +
+  `  若哪天改变主意，最省事的补救是把站点挪到猜不到的路径下：\n` +
+  `    BASE_PATH=/随机串/ ./scripts/deploy-ecs.sh\n${line}\n`
 )

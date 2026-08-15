@@ -26,11 +26,7 @@ import { buildVerdict, type Verdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
 import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import { renderDashboardHtml } from './renderHtml'
-import {
-  buildWebSnapshot, saveWebSnapshot, saveEncryptedWebSnapshot,
-  encryptedSnapshotPath, webSnapshotFile,
-} from './webSnapshot'
-import { checkPassphrase } from './webEncrypt'
+import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
@@ -135,22 +131,6 @@ function printReport(rep: CockpitReport): void {
 }
 
 async function main(): Promise<void> {
-  // 口令先校验，再干活。写短了不该在拉完 60 只标的的行情、算完全部读数之后
-  // 才被告知 —— 那 9 秒的工作会全部作废，而错误原因跟行情毫无关系。
-  if (process.env.TIOS_PASSPHRASE !== undefined) {
-    const bad = checkPassphrase(process.env.TIOS_PASSPHRASE)
-    if (bad) {
-      process.stderr.write(
-        `\n口令不合格：${bad}\n\n`
-        + `  这个页面要挂在公网上，口令是唯一的保护。请重新指定：\n`
-        + `    TIOS_PASSPHRASE='更长的口令' npm run web:deploy\n\n`
-        + `  注意：写在命令行里的口令会进入 ~/.zsh_history。\n`
-        + `  用 ./scripts/deploy-ecs.sh 会改为交互式输入，不留痕迹。\n\n`
-      )
-      process.exit(1)
-    }
-  }
-
   const file = process.env.PORTFOLIO ?? PORTFOLIO_FILE
   const pf = JSON.parse(readFileSync(file, 'utf-8')) as PortfolioFile
 
@@ -460,33 +440,23 @@ async function main(): Promise<void> {
         }
         : null,
     })
-    // 设了 TIOS_PASSPHRASE 就只落密文，且删掉同目录的明文 ——
-    // 要上公网的快照，绝不能给"明文恰好还留在旁边"留任何机会。
+    // 快照以明文托管。委员会 2026-08-15 决议：这些数据公开无妨，故去掉口令解锁。
+    //
+    // 这个决定顺带解决了另一件事：服务器生成快照不再需要任何秘密，
+    // 于是"Mac 关机也能更新"从"要么把口令交给公网服务器、要么上非对称加密"
+    // 变成一件平凡的事。为此前写的那套 RSA 混合加密已随之删除 ——
+    // 约束消失后留着它，只是给系统多添一处无人验证的复杂度。
     const plainPath = webSnapshotFile(repoRoot)
-    const pass = process.env.TIOS_PASSPHRASE
-    if (pass) {
-      const { file, removedPlain } = await saveEncryptedWebSnapshot(payload, plainPath, pass)
-      process.stdout.write(
-        `\n【网页快照·已加密】${file}\n` +
-        `  AES-GCM + PBKDF2(60万次)。密文已当场解密回验，内容与原文一致。\n` +
-        `  口令不在文件里、不在服务端，只在你脑子里；打开页面时手动输入一次。\n` +
-        (removedPlain ? `  已删除同目录的明文快照（否则构建会把明文一起发上去）。\n` : '')
-      )
-    } else {
-      const webFile = saveWebSnapshot(payload, plainPath)
-      // 明文与密文并存会让构建把两份都拷进 dist/，密文旁边躺着明文等于没加密
-      const stale = encryptedSnapshotPath(plainPath)
-      if (existsSync(stale)) {
-        rmSync(stale)
-        process.stdout.write(`\n  已删除旧的加密快照（本次生成的是明文，两者不可并存）。\n`)
-      }
-      process.stdout.write(
-        `\n【网页快照·明文】${webFile}\n` +
-        `  浏览器版驾驶舱可离线读取它：npm run web —— 不需要 MySQL，也不需要登录。\n` +
-        `  ⚠ 明文快照含全部持仓与总资产，仅限本机与局域网使用。\n` +
-        `    要发到公网域名，改用 TIOS_PASSPHRASE=你的口令 npm run web:build\n`
-      )
+    const stale = plainPath.replace(/\.json$/, '.enc.json')
+    if (existsSync(stale)) {
+      rmSync(stale)
+      process.stdout.write(`\n  已删除旧的加密快照（口令模式已废弃）。\n`)
     }
+    const webFile = saveWebSnapshot(payload, plainPath)
+    process.stdout.write(
+      `\n【网页快照】${webFile}\n`
+      + `  浏览器直接读取，无需数据库、无需登录、无需口令。\n`
+    )
   }
 }
 

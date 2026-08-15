@@ -8,10 +8,8 @@ node_modules
 # 归档凭据是 changelog/*.json 与 audits/*.md，HTML 只是给人看的渲染结果。
 /backend/src/services/cockpit/data/reports
 
-# 离线网页快照：每份约 330KB，每个交易日重新生成，由 npm run web 自动产出。
-# 密文同样不入库 —— 它是派生产物，且入库会让"哪天用的哪个口令"变成历史包袱。
+# 离线网页快照：每个交易日重新生成，由 npm run web 自动产出，不入库。
 /frontend/public/data/today.json
-/frontend/public/data/today.enc.json
 
 # 环境变量与日志
 .env

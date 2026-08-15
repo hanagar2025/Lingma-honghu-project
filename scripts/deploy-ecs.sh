@@ -9,7 +9,7 @@
 #   所以本脚本只做三件事：备份、换文件、换站点配置。系统、nginx、证书一概不动。
 #
 # 用法：
-#   DEPLOY_HOST=39.104.86.200 TIOS_PASSPHRASE='口令' ./scripts/deploy-ecs.sh
+#   DEPLOY_HOST=39.104.86.200 ./scripts/deploy-ecs.sh
 #   DRY_RUN=1 ...          只打印将在服务器上执行的脚本，不连服务器
 #   DEPLOY_KEY=~/.ssh/id   指定私钥；不指定就用默认密钥或密码登录
 #   DEPLOY_PORT=22         非默认端口
@@ -36,72 +36,8 @@ step() { printf '\n%s\n%s\n%s\n' "$LINE" "$1" "$LINE"; }
 
 [[ -n "$HOST" ]] || die "未设置 DEPLOY_HOST。例：DEPLOY_HOST=39.104.86.200"
 
-# ── 口令：优先交互式输入 ──
-# 写在命令行里的口令会**原文进入 ~/.zsh_history**，而这个口令是公网页面的唯一保护。
-# 所以默认改为读取输入且不回显：不进历史、不进进程列表（ps 能看到命令行参数）。
-# 已经用环境变量传进来的仍然接受 —— 自动化场景需要它，但会提示历史泄漏。
-KEYCHAIN_ITEM="${TIOS_KEYCHAIN_ITEM:-tios-deploy-passphrase}"
-
-if [[ -n "${TIOS_PASSPHRASE:-}" ]]; then
-  printf '\n  \033[33m注意：口令通过环境变量传入，会留在 shell 历史里。\033[0m\n'
-  printf '  清理：history -d 对应行号，或直接删掉 ~/.zsh_history 里那一行。\n'
-elif [[ "${NONINTERACTIVE:-0}" == "1" ]]; then
-  # 定时任务没有终端可以交互。从 macOS 钥匙串取口令：
-  # 磁盘上没有明文、shell 历史里没有痕迹、ps 也看不到 ——
-  # 把口令写进 plist 或环境变量文件是这一步最容易犯的错，那等于明文落盘。
-  command -v security >/dev/null 2>&1 || die "NONINTERACTIVE 模式目前只支持 macOS 钥匙串（security 命令不可用）"
-  TIOS_PASSPHRASE="$(security find-generic-password -a "$USER" -s "$KEYCHAIN_ITEM" -w 2>/dev/null || true)"
-  [[ -n "$TIOS_PASSPHRASE" ]] || die \
-    "钥匙串里没有条目「${KEYCHAIN_ITEM}」。先存一次（只需一次，不会留在 shell 历史）：
-       security add-generic-password -a \"\$USER\" -s $KEYCHAIN_ITEM -w
-     回车后它会提示你输入口令，输入时不回显。"
-  export TIOS_PASSPHRASE
-  printf '\n  口令来自 macOS 钥匙串条目「%s」\n' "$KEYCHAIN_ITEM"
-else
-  step "设置解锁口令"
-  cat <<'TIP'
-  这是以后每次打开页面要输的口令。它是公网页面的唯一保护，因为：
-    · 数据以密文静态托管，服务器自己也解不开；
-    · 任何人都能下载那个密文文件，然后在自己机器上离线慢慢试口令。
-
-  所以口令必须经得起离线爆破：
-    · 至少 12 位；
-    · 不要用域名、品牌名、"honghu"、"wealth"、"hhwealth" 这类能猜到的词 ——
-      攻击者的第一批字典就是这些；
-    · 不要与其他账号复用。
-
-  输入时不回显，也不会进入 shell 历史。
-TIP
-  printf '\n  口令：'
-  read -rs TIOS_PASSPHRASE
-  printf '\n  再输一次：'
-  read -rs PASS2
-  printf '\n'
-  [[ "$TIOS_PASSPHRASE" == "$PASS2" ]] || die "两次输入不一致"
-  unset PASS2
-  export TIOS_PASSPHRASE
-fi
-
-# ── 口令强度 ──
-# 原来的规则是"含 honghu / wealth 就拒绝"。**那条规则拦错了对象** ——
-# honghu 当记忆锚点没有问题，问题是除它之外什么都没有。
-# 现在改为估算"去掉可猜成分后剩余的熵"，于是 honghu-青瓦-灯塔-47 这种
-# 好记又够强的口令能通过，而 honghu2026 那种一秒即破的仍被拦。
-#
-# 口令走标准输入传给检查器，不走命令行参数 —— argv 会出现在 ps 输出里。
-WEAK_FLAG=""
-[[ "${TIOS_ALLOW_WEAK:-0}" == "1" ]] && WEAK_FLAG="--allow-weak"
-if ! STRENGTH="$(printf '%s' "$TIOS_PASSPHRASE" | node "$ROOT/scripts/check-passphrase.mjs" $WEAK_FLAG)"; then
-  die "口令未通过强度检查，未做任何改动。"
-fi
-
-if [[ "$STRENGTH" == WEAK* ]]; then
-  printf '\n  \033[31m确认使用弱口令？\033[0m 这个页面挂在公网，口令是唯一保护。\n'
-  printf '  强度：%s\n' "${STRENGTH#WEAK }"
-  read -r -p '  输入 "我知道风险" 继续：' ack
-  [[ "$ack" == "我知道风险" ]] || die "已取消，未做任何改动"
-fi
-printf '\n  口令强度：%s\n' "${STRENGTH#* }"
+# 无口令：委员会 2026-08-15 决议数据公开无妨，去掉解锁页。
+# 这也让服务器自动更新不再需要任何秘密（见 scripts/schedule-server.sh）。
 
 # ── 一、本地构建并体检 ──
 step "一、本地构建加密产物并体检"
@@ -119,16 +55,16 @@ if [[ "${NONINTERACTIVE:-0}" == "1" ]]; then
   NEW_DATE=$(python3 -c "
 import json,sys
 try:
-    d=json.load(open('$ROOT/frontend/dist/data/today.enc.json'))
-    print(d.get('snapshotDate') or '')
+    d=json.load(open('$ROOT/frontend/dist/data/today.json'))
+    print(d.get('date') or '')
 except Exception:
     print('')
 " 2>/dev/null || true)
   TODAY_BJ=$(TZ=Asia/Shanghai date +%F)
-  LIVE_DATE=$(curl -s --max-time 20 "https://$DOMAIN/data/today.enc.json" 2>/dev/null \
+  LIVE_DATE=$(curl -s --max-time 20 "https://$DOMAIN/data/today.json" 2>/dev/null \
     | python3 -c "
 import json,sys
-try: print(json.load(sys.stdin).get('snapshotDate') or '')
+try: print(json.load(sys.stdin).get('date') or '')
 except Exception: print('')
 " 2>/dev/null || true)
 
@@ -401,26 +337,24 @@ else
   printf '     查：sudo nginx -T | grep -n "server_name.*%s"\n' "$DOMAIN"
 fi
 
-# 密文必须是真的密文，不能是被 SPA 回退接走的 index.html
-ENC=$(curl -s --max-time 20 "https://$DOMAIN/data/today.enc.json" || true)
-if [[ "$ENC" == *'"encrypted"'* && "$ENC" == *'"dataB64"'* ]]; then
-  printf '  ✓ 加密快照可取且确为密文\n'
+# 快照必须是真的 JSON，不能是被 SPA 回退接走的 index.html ——
+# 后者也返回 200，是上一次误判部署成功的原因
+SNAP=$(curl -s --max-time 20 "https://$DOMAIN/data/today.json" || true)
+if [[ "$SNAP" == *'"date"'* && "$SNAP" == *'"dashboard"'* ]]; then
+  SDATE=$(printf '%s' "$SNAP" | python3 -c "
+import json,sys
+try: print(json.load(sys.stdin).get('date') or '未知')
+except Exception: print('解析失败')
+" 2>/dev/null || echo '未知')
+  printf '  ✓ 快照可取，交易日 %s\n' "$SDATE"
 else
   FAILED=1
-  printf '  \033[31m✗ 加密快照不可用\033[0m（取到的前 60 字节：%s）\n' "$(printf '%s' "$ENC" | head -c 60)"
-fi
-
-PLAIN=$(curl -s --max-time 20 "https://$DOMAIN/data/today.json" 2>/dev/null || true)
-if [[ "$PLAIN" == *'"date"'* && "$PLAIN" == *'"holdings"'* ]]; then
-  FAILED=1
-  printf '  \033[31m✗ 明文快照可公开下载，请立即处理\033[0m\n'
-else
-  printf '  ✓ 明文快照不可访问\n'
+  printf '  \033[31m✗ 快照不可用\033[0m（取到的前 60 字节：%s）\n' "$(printf '%s' "$SNAP" | head -c 60)"
 fi
 
 if (( FAILED )); then
   printf '\n  \033[31m部署未生效。旧配置与文件都还在，备份也在服务器 /root/ 下。\033[0m\n\n'
   exit 1
 fi
-printf '\n  手机打开 https://%s/ ，应先出现口令解锁页。\n' "$DOMAIN"
+printf '\n  手机打开 https://%s/ ，直接就是驾驶舱（无解锁页）。\n' "$DOMAIN"
 printf '  若仍看到旧页面，先强制刷新（iOS Safari：长按刷新按钮）。\n\n'
