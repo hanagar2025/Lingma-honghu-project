@@ -60,6 +60,31 @@ export function buildRuleRegistry(): RuleEntry[] {
     })
   }
 
+  // ── 分母口径也必须进指纹 ──
+  //
+  // 这一条是补上的漏洞。2026-08-15 的口径裁定把单票上限的分母从"券商账户合计"
+  // 换成"组合总资产"，直接把新易盛从"必须减仓 2.9pct"翻转成"不超限"，
+  // 把海光从"超 6.6pct"改成"超 1.1pct" —— 而**指纹一个字都没变**，
+  // 因为它只覆盖 12% 这个数值，不覆盖 12% 作用在什么之上。
+  //
+  // 指纹的用途正是"判定是否属于新增规则的机械标准"。一个能翻转动作结论的改动
+  // 若对它不可见，这个机制就是有洞的。故把口径与安全垫基数一并纳入。
+  out.push({
+    domain: 'POSITION_LIMIT', key: 'limitDenominator', value: 'portfolioTotal',
+    tier: 'ACCOUNTING',
+    definedIn: 'cockpit/safety.ts:findLimitBreaches（= 持仓 + 账内现金 + 账户外股票现金）',
+  })
+  out.push({
+    domain: 'POSITION_LIMIT', key: 'safetyNetBase', value: 'brokerCashOnly',
+    tier: 'ACCOUNTING',
+    definedIn: 'cockpit/safety.ts:evaluateSafety（账户外那笔按委员会定义排除）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'drawdownRequiresSamePeakBasis', value: true,
+    tier: 'ACCOUNTING',
+    definedIn: 'cockpit/safety.ts:peakComparable（口径不可比时回撤为 null，不得当作 0）',
+  })
+
   // ── 价格窗口（唯一具备决策效力的价格阈值） ──
   out.push({
     domain: 'PRICE_WINDOW', key: 'redExtremeRet10', value: RED_EXTREME_RET10_THRESHOLD,
