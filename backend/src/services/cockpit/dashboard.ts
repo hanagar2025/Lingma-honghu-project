@@ -28,6 +28,7 @@ import type { MainlineHealth } from '../msr/health'
 import type { ValuationInjection } from '../msr/valuation'
 import type { ProfitMap, NodeProfit } from '../research/profitRadar'
 import { nodeOf } from './nodes'
+import { judgeCircuit } from '../governance/peakBasis'
 import type { MomentumRow } from './momentum'
 import type { Action, EvidenceTier, Light, Metric } from './types'
 
@@ -219,10 +220,44 @@ export interface Headline {
   mostWorthResearching: string
 }
 
+/**
+ * 资产层 —— 委员会 2026-08-15 指定的第一层。
+ *
+ * 放在最前面是因为：以前第一眼看到的是券商 App 的 82.5%，
+ * 而它不是资产配置指标。一个数字放错位置，就能让人得出"仓位太重要减仓"的结论，
+ * 而真实的组合是股票 51.6% / 现金 48.4%。
+ *
+ * 三个分母同屏并列，且各自标注用途 —— 不允许只印一个。
+ */
+export interface AssetLayer {
+  /** 正式股票投资组合总资产（一切上限的分母） */
+  portfolioTotal: number
+  positionsValue: number
+  /** 券商账户内现金 */
+  brokerCash: number
+  /** 专用于股票投资的账户外现金储备 */
+  externalCash: number
+  /** 股票占组合 */
+  equityPct: number | null
+  /** 现金占组合（含账户外） */
+  cashPct: number | null
+  /** 券商账户合计 —— 只回答"还有多少钱可直接下单" */
+  brokerTotal: number
+  /** 券商账户内仓位 —— 不参与任何上限判定 */
+  brokerPositionPct: number | null
+  /** 可直接交易的现金 = 账内现金 */
+  tradableCash: number
+  /** 熔断状态。口径不可比时为 INCOMPARABLE，不得显示为"正常" */
+  circuitState: 'NORMAL' | 'LEVEL1' | 'LEVEL2' | 'INCOMPARABLE'
+  circuitReason: string
+}
+
 export interface Dashboard {
   date: string
   session: SessionKind
   sessionNote: string
+  /** 第一层：资产。委员会 2026-08-15 指定放在最前 */
+  assets: AssetLayer
   headline: Headline
   marketStructure: MarketStructure
   holdings: HoldingRow[]
@@ -299,7 +334,20 @@ export interface DashboardInput {
   date: string
   session: SessionKind
   positions: Position[]
+  /**
+   * 上限判定的分母 = 组合总资产。
+   * 名字保留 totalAssets 以免波及全部调用点，但语义已由 8/15 裁定改为组合口径 ——
+   * 调用方必须传 snapshot.portfolioTotal，不是 snapshot.totalAssets。
+   */
   totalAssets: number
+  /** 资产层所需的分项。缺失时资产层显示"数据缺失"而非猜一个 */
+  assetBreakdown?: {
+    positionsValue: number
+    brokerCash: number
+    externalCash: number
+    brokerTotal: number
+    peakBasis: 'BROKER' | 'PORTFOLIO'
+  }
   barsByCode: Record<string, DailyBar[]>
   indexBarsByCode: Record<string, DailyBar[]>
   marketBars?: DailyBar[]
@@ -643,8 +691,35 @@ export function buildDashboard(input: DashboardInput): Dashboard {
       : '无',
   }
 
+  // ── 资产层 ──
+  // 熔断状态走 judgeCircuit：口径不可比时必须是 INCOMPARABLE 而不是 NORMAL。
+  // 后者意味着"已检查，没问题"，前者意味着"无法检查" —— 混淆两者
+  // 等于在风控开关坏掉时亮一盏绿灯。
+  const bd = input.assetBreakdown
+  const circuit = bd?.peakBasis === 'PORTFOLIO'
+    ? judgeCircuit(totalAssets)
+    : {
+      state: 'INCOMPARABLE' as const,
+      reason: '净值峰值仍记于券商账户口径，与组合口径不可比 →'
+        + ' 回撤无法计算。不得显示为"正常"或"回撤 0%"。',
+    }
+  const assets: AssetLayer = {
+    portfolioTotal: totalAssets,
+    positionsValue: bd?.positionsValue ?? 0,
+    brokerCash: bd?.brokerCash ?? 0,
+    externalCash: bd?.externalCash ?? 0,
+    equityPct: bd && totalAssets > 0 ? bd.positionsValue / totalAssets : null,
+    cashPct: bd && totalAssets > 0 ? (bd.brokerCash + bd.externalCash) / totalAssets : null,
+    brokerTotal: bd?.brokerTotal ?? 0,
+    brokerPositionPct: bd && bd.brokerTotal > 0 ? bd.positionsValue / bd.brokerTotal : null,
+    tradableCash: bd?.brokerCash ?? 0,
+    circuitState: circuit.state,
+    circuitReason: circuit.reason,
+  }
+
   return {
     date, session, sessionNote: SESSION_TEXT[session],
+    assets,
     headline, marketStructure,
     holdings, mainlines, nodeStructure, nextLayer, actionZone,
     dataGaps,

@@ -175,7 +175,16 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
   const session: SessionKind = req.query.session === 'pre' ? 'PRE_OPEN' : 'POST_CLOSE'
   const dashboard = internals
     ? buildDashboard({
-      date, session, positions, totalAssets: snapshot.totalAssets,
+      // 上限分母改用组合口径（8/15 裁定）。数据库尚无 external_cash 列，
+      // 故 portfolioTotal 目前退化为账户口径 —— 由 tiosService 显式标注。
+      date, session, positions, totalAssets: snapshot.portfolioTotal,
+      assetBreakdown: {
+        positionsValue: snapshot.positionsValue,
+        brokerCash: snapshot.cash,
+        externalCash: snapshot.externalCash,
+        brokerTotal: snapshot.totalAssets,
+        peakBasis: snapshot.peakBasis,
+      },
       barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
       valuationByCode,
       momentumRows: internals.momentumRows,

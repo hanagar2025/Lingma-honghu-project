@@ -391,6 +391,40 @@ ok('前端显示外围现金口径待裁定',
   /externalCash/.test(cockpitPageSrc) && /未计入仓位上限分母/.test(cockpitPageSrc))
 
 // ───────────────────────────────────────────────────────────────
+// 资产层（委员会 2026-08-15 指定为第一层）
+//
+// 它必须存在且三个分母同屏。以前第一眼看到的是券商 App 的 82.5%，
+// 而那不是资产配置指标 —— 一个数字放错位置，就能让人得出
+// "仓位太重要减仓"的结论，而真实组合是股票 51.6% / 现金 48.4%。
+console.log('\n【资产层】')
+
+ok('驾驶舱含资产层', !!dash.assets)
+ok('资产层同时给出组合口径与账户口径（不允许只印一个）',
+  dash.assets.portfolioTotal >= 0 && dash.assets.brokerTotal >= 0
+  && 'brokerPositionPct' in dash.assets && 'equityPct' in dash.assets)
+ok('资产层区分"可直接下单现金"与"组合现金"',
+  'tradableCash' in dash.assets && 'externalCash' in dash.assets)
+
+// 熔断口径不可比时必须是 INCOMPARABLE，不是 NORMAL ——
+// 后者意味着"已检查没问题"，前者意味着"无法检查"。
+const noBreakdown = buildDashboard({ ...baseInput, assetBreakdown: undefined })
+ok('缺少资产分项时熔断判为 INCOMPARABLE，而非 NORMAL',
+  noBreakdown.assets.circuitState === 'INCOMPARABLE',
+  noBreakdown.assets.circuitState)
+ok('INCOMPARABLE 时给出理由且明写不得显示为正常',
+  noBreakdown.assets.circuitReason.includes('不可比')
+  && noBreakdown.assets.circuitReason.includes('不得'))
+ok('缺少分项时百分比为 null，不用 0 冒充',
+  noBreakdown.assets.equityPct === null && noBreakdown.assets.cashPct === null)
+
+const renderedAssets = renderDashboard(dash)
+ok('CLI 渲染把资产层印在四张表之前',
+  renderedAssets.indexOf('资产层') < renderedAssets.indexOf('① 持仓表'),
+  `资产层@${renderedAssets.indexOf('资产层')} 持仓表@${renderedAssets.indexOf('① 持仓表')}`)
+ok('CLI 渲染明写账户口径不参与上限判定',
+  renderedAssets.includes('不参与上限判定'))
+
+// ───────────────────────────────────────────────────────────────
 // 今日结论层
 //
 // 这一层最危险：它是唯一"给结论"的地方，所以最容易在此把观察指标偷偷升级成动作，

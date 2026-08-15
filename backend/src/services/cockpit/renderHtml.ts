@@ -143,6 +143,25 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(freeze.baselineHash ? `　基线 ${esc(freeze.baselineHash)}　${freeze.drifted ? '⚠ 已漂移' : '✓ 未漂移'}` : '　⚠ 无冻结基线')
   w(`<div class=foot>${esc(freeze.detail)}</div></div>`)
 
+  // ── 资产层（第一层）──
+  {
+    const a = d.assets
+    const wan = (v: number) => `${(v / 10000).toFixed(1)}万`
+    const pp = (v: number | null) => (v === null ? '<span class=miss>缺失</span>' : `${(v * 100).toFixed(1)}%`)
+    w(`</div><div class=card><h2>资产层</h2>`)
+    w(`<div class="banner info"><b>组合总资产 ${wan(a.portfolioTotal)}</b>　—— 一切上限的分母`)
+    w(`<div class=foot>股票 ${wan(a.positionsValue)}（${pp(a.equityPct)}）　`)
+    w(`现金 ${wan(a.brokerCash + a.externalCash)}（${pp(a.cashPct)}）`)
+    w(`＝ 账内 ${wan(a.brokerCash)} + 账户外 ${wan(a.externalCash)}</div></div>`)
+    w(`<div class=kv><span class=k>券商账户合计</span><span>${wan(a.brokerTotal)}`)
+    w(`　账户内仓位 ${pp(a.brokerPositionPct)}　可直接下单 ${wan(a.tradableCash)}`)
+    w(`<div class=foot>只回答"还有多少钱可直接下单"，不参与任何上限判定</div></span></div>`)
+    w(`<div class="banner ${a.circuitState === 'INCOMPARABLE' ? 'warn' : a.circuitState === 'NORMAL' ? 'ok' : 'warn'}">`)
+    w(`熔断状态 <b>${esc(a.circuitState)}</b>`)
+    if (a.circuitState === 'INCOMPARABLE') w(`<div class=foot>${esc(a.circuitReason)}</div>`)
+    w(`</div>`)
+  }
+
   // ── 今日结论 ──
   // 放在最前：委员会明确不想再从四张表里自己提炼结论。
   if (verdict) {

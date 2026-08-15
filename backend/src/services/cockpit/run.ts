@@ -230,6 +230,10 @@ async function main(): Promise<void> {
   } else {
     const dash = buildDashboard({
       date, session, positions, totalAssets: portfolioTotal,
+      assetBreakdown: {
+        positionsValue, brokerCash: pf.cash, externalCash,
+        brokerTotal, peakBasis,
+      },
       barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
       valuationByCode,
       momentumRows: internals.momentumRows,

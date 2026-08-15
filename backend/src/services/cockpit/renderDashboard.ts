@@ -55,6 +55,27 @@ export function renderDashboard(d: Dashboard): string {
   w(`  ${d.sessionNote}`)
   w('═'.repeat(W))
 
+  // ── 资产层（委员会 2026-08-15 指定为第一层）──
+  // 三个分母同屏并列。以前第一眼看到的是券商 82.5%，而它不是资产配置指标 ——
+  // 一个数字放错位置就能让人得出"仓位太重要减仓"的结论。
+  {
+    const a = d.assets
+    const w = (v: number) => `${(v / 10000).toFixed(1)}万`
+    const p = (v: number | null) => (v === null ? '缺失' : `${(v * 100).toFixed(1)}%`)
+    L.push('')
+    L.push('═'.repeat(W))
+    L.push('资产层')
+    L.push('═'.repeat(W))
+    L.push(`  组合总资产（一切上限的分母）${w(a.portfolioTotal)}`)
+    L.push(`    股票 ${w(a.positionsValue)}（${p(a.equityPct)}）　`
+      + `现金 ${w(a.brokerCash + a.externalCash)}（${p(a.cashPct)}）`
+      + `　＝ 账内 ${w(a.brokerCash)} + 账户外 ${w(a.externalCash)}`)
+    L.push(`  券商账户合计 ${w(a.brokerTotal)}　账户内仓位 ${p(a.brokerPositionPct)}`)
+    L.push(`    —— 只回答"还有多少钱可直接下单"（可交易现金 ${w(a.tradableCash)}），不参与上限判定`)
+    L.push(`  熔断状态 ${a.circuitState}`)
+    if (a.circuitState === 'INCOMPARABLE') L.push(`    ⚠ ${a.circuitReason}`)
+  }
+
   // ── 首页一句话 ──
   w()
   w('【今日市场状态】')

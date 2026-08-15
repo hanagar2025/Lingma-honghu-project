@@ -241,6 +241,59 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         />
       )}
 
+      {/* ══ 资产层：委员会 2026-08-15 指定为第一层 ══ */}
+      {d.assets && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>资产层</Title>}
+        >
+          <Alert
+            type="info"
+            showIcon
+            message={
+              <Text strong style={{ fontSize: 15 }}>
+                组合总资产 {(d.assets.portfolioTotal / 10000).toFixed(1)} 万　
+                <Text type="secondary" style={{ fontSize: 13 }}>—— 一切上限的分母</Text>
+              </Text>
+            }
+            description={
+              <div style={{ fontSize: 13, lineHeight: 1.9 }}>
+                股票 {(d.assets.positionsValue / 10000).toFixed(1)} 万
+                （{d.assets.equityPct === null ? '缺失' : `${(d.assets.equityPct * 100).toFixed(1)}%`}）　
+                现金 {((d.assets.brokerCash + d.assets.externalCash) / 10000).toFixed(1)} 万
+                （{d.assets.cashPct === null ? '缺失' : `${(d.assets.cashPct * 100).toFixed(1)}%`}）
+                <div style={{ marginTop: 2, color: '#666' }}>
+                  ＝ 账内 {(d.assets.brokerCash / 10000).toFixed(1)} 万
+                  ＋ 账户外股票现金 {(d.assets.externalCash / 10000).toFixed(1)} 万
+                </div>
+              </div>
+            }
+          />
+          <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.9 }}>
+            <Text type="secondary">券商账户合计 </Text>
+            {(d.assets.brokerTotal / 10000).toFixed(1)} 万　
+            <Text type="secondary">账户内仓位 </Text>
+            {d.assets.brokerPositionPct === null ? '缺失' : `${(d.assets.brokerPositionPct * 100).toFixed(1)}%`}　
+            <Text type="secondary">可直接下单 </Text>
+            {(d.assets.tradableCash / 10000).toFixed(1)} 万
+            <div style={{ fontSize: 12, color: '#8e8e93' }}>
+              只回答「还有多少钱可直接下单」，<Text strong>不参与任何上限判定</Text>
+            </div>
+          </div>
+          <Alert
+            type={d.assets.circuitState === 'NORMAL' ? 'success' : 'warning'}
+            showIcon
+            style={{ marginTop: 12 }}
+            message={<span style={{ fontSize: 13 }}>熔断状态 {d.assets.circuitState}</span>}
+            description={
+              d.assets.circuitState === 'INCOMPARABLE'
+                ? <span style={{ fontSize: 12 }}>{d.assets.circuitReason}</span>
+                : undefined
+            }
+          />
+        </Card>
+      )}
+
       {/* ══ 首页一句话 ══ */}
       <Card
         style={SECTION}
