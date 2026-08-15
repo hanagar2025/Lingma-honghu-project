@@ -77,6 +77,14 @@ tr:hover td{background:#fafafd}
 .banner.ok{background:#eaf9ee;border-left:4px solid #34c759}
 .banner.warn{background:#fff4e5;border-left:4px solid var(--warn)}
 .banner.info{background:#eef4ff;border-left:4px solid var(--down)}
+.banner.bad{background:#ffeef0;border-left:4px solid var(--up)}
+/* EXCLUDED 用灰色而非黄色：裁定排除不是待办，不该在视觉上要求处理 */
+.banner.grey{background:#f7f7fa;border-left:4px solid #c7c7cc;color:var(--sec)}
+/* 仪表盘：六个数字并排，窄屏自动折行。这是唯一置顶的区块 */
+.dash{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.dashcell{flex:1 1 120px;background:#f7f7fa;border-radius:10px;padding:10px 12px}
+.dashk{font-size:11px;color:var(--sec);margin-bottom:4px}
+.dashv{font-size:17px;font-weight:600}
 ul{margin:4px 0;padding-left:20px}
 .chg{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
 .chg .who{min-width:230px;color:var(--sec)}
@@ -108,8 +116,6 @@ export interface HtmlInput {
   prevDate: string | null
   discovery: { nodeCount: number; advances: { key: string; date: string; from: number; to: number; gates: string }[] }
   freeze: { baselineHash: string | null; currentHash: string; drifted: boolean; detail: string }
-  /** 口径待裁定的外围现金。仅展示，不参与任何上限计算 */
-  externalCash?: { amount: number; note: string } | null
   /** 最新K线尚未定价（盘中运行）。为真时全表读数为临时值且未归档 */
   intraday?: boolean
   /** 今日结论。放在四张表之前 —— 结论先于依据 */
@@ -118,7 +124,7 @@ export interface HtmlInput {
 
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
-    dashboard: d, changes, prevDate, discovery, freeze, externalCash, intraday, verdict,
+    dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -148,18 +154,48 @@ export function renderDashboardHtml(input: HtmlInput): string {
     const a = d.assets
     const wan = (v: number) => `${(v / 10000).toFixed(1)}万`
     const pp = (v: number | null) => (v === null ? '<span class=miss>缺失</span>' : `${(v * 100).toFixed(1)}%`)
-    w(`</div><div class=card><h2>资产层</h2>`)
-    w(`<div class="banner info"><b>组合总资产 ${wan(a.portfolioTotal)}</b>　—— 一切上限的分母`)
-    w(`<div class=foot>股票 ${wan(a.positionsValue)}（${pp(a.equityPct)}）　`)
-    w(`现金 ${wan(a.brokerCash + a.externalCash)}（${pp(a.cashPct)}）`)
-    w(`＝ 账内 ${wan(a.brokerCash)} + 账户外 ${wan(a.externalCash)}</div></div>`)
-    w(`<div class=kv><span class=k>券商账户合计</span><span>${wan(a.brokerTotal)}`)
-    w(`　账户内仓位 ${pp(a.brokerPositionPct)}　可直接下单 ${wan(a.tradableCash)}`)
-    w(`<div class=foot>只回答"还有多少钱可直接下单"，不参与任何上限判定</div></span></div>`)
-    w(`<div class="banner ${a.circuitState === 'INCOMPARABLE' ? 'warn' : a.circuitState === 'NORMAL' ? 'ok' : 'warn'}">`)
-    w(`熔断状态 <b>${esc(a.circuitState)}</b>`)
-    if (a.circuitState === 'INCOMPARABLE') w(`<div class=foot>${esc(a.circuitReason)}</div>`)
+    const CIRCUIT_TEXT: Record<string, string> = {
+      NORMAL: '未触发', LEVEL1: '一级成立', LEVEL2: '二级成立',
+      INCOMPARABLE: '不可判定（峰值口径不可比）',
+    }
+    w(`</div><div class=card><h2>仪表盘</h2>`)
+    // 委员会指定永久置顶的六个数字。其余全部在它下面。
+    w(`<div class=dash>`)
+    for (const [k, v] of [
+      ['组合总资产', wan(a.portfolioTotal)],
+      ['股票市值', wan(a.positionsValue)],
+      ['投资现金', wan(a.brokerCash + a.externalCash)],
+      ['股票仓位', pp(a.equityPct)],
+      ['历史峰值', a.peak === null ? '<span class=miss>未按组合口径认定</span>' : wan(a.peak)],
+      ['当前回撤', a.drawdown === null ? '<span class=miss>不可比</span>' : pp(a.drawdown)],
+      ['熔断等级', CIRCUIT_TEXT[a.circuitState] ?? a.circuitState],
+    ] as [string, string][]) {
+      w(`<div class=dashcell><div class=dashk>${k}</div><div class=dashv>${v}</div></div>`)
+    }
     w(`</div>`)
+    w(`<div class=foot>分项：账内现金 ${wan(a.brokerCash)} + 账户外 ${wan(a.externalCash)}`)
+    w(`　│　券商账户合计 ${wan(a.brokerTotal)}（账户内仓位 ${pp(a.brokerPositionPct)}，`)
+    w(`可直接下单 ${wan(a.tradableCash)}）—— 只回答"还有多少钱能下单"，不参与上限判定</div>`)
+    if (a.circuitState === 'INCOMPARABLE') {
+      w(`<div class="banner warn">${esc(a.circuitReason)}</div>`)
+    }
+  }
+
+  // ── 风控四层：先看这个，再看涨跌 ──
+  {
+    const LIGHT_CLASS: Record<string, string> = {
+      GREEN: 'ok', YELLOW: 'warn', RED: 'bad', UNKNOWN: 'warn', EXCLUDED: 'grey',
+    }
+    w(`</div><div class=card><h2>风控优先级</h2>`)
+    w(`<div class=foot style="margin-bottom:10px">每天先看这一层，再看涨跌。`)
+    w(`顺序本身是规则：L1/L2 产生动作，L3 已裁定排除，L4 永远只是复核信息。</div>`)
+    for (const r of d.riskLayers) {
+      w(`<div class="banner ${LIGHT_CLASS[r.light] ?? 'info'}">`)
+      w(`<b>${esc(r.id)}｜${esc(r.name)}</b>　${esc(r.state)}`)
+      w(`<div class=foot>${r.canGenerateActions ? '可产生动作' : '不可产生动作'}`)
+      if (r.note) w(`　${esc(r.note)}`)
+      w(`</div></div>`)
+    }
   }
 
   // ── 今日结论 ──
@@ -262,13 +298,10 @@ export function renderDashboardHtml(input: HtmlInput): string {
   }
   w(`</div>`)
 
-  // ── 外围现金：口径待裁定 ──
-  if (externalCash) {
-    w(`<div class=card><h2>外围现金 —— 口径待战略层裁定</h2>`)
-    w(`<div class="banner warn"><b>${(externalCash.amount / 10000).toFixed(0)} 万</b>　`)
-    w(`<b>当前未纳入仓位上限的分母</b>，故本报告所有仓位百分比仍以证券账户总资产为基数。`)
-    w(`<div class=foot>${esc(externalCash.note)}</div></div></div>`)
-  }
+  // 「外围现金 —— 口径待战略层裁定」区块已于 2026-08-15 删除。
+  // 那 200 万现在是组合总资产的组成部分、也是一切上限的分母，
+  // 已显示在置顶仪表盘里。留着一个说"当前未纳入分母"的区块，
+  // 会与仪表盘直接矛盾 —— 而两个互相矛盾的说法同屏，比只有错的那个更糟。
 
   // ── 今日变化 ──
   w(`<div class=card><h2>今日变化 —— 谁正在发生变化？</h2>`)

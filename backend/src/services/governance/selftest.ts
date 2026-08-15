@@ -406,8 +406,23 @@ ok('跨零点仍按北京日历判定',
 
 const runSrc = readFileSync(new URL('../cockpit/run.ts', import.meta.url), 'utf-8')
 ok('run.ts 归档前检查盘中状态', /isIntraday\(/.test(runSrc))
-ok('run.ts 盘中不落档（saveSnapshot 处于 !intraday 分支内）',
-  /!intraday[\s\S]{0,400}saveSnapshot/.test(runSrc))
+// 这条断言原本用 /!intraday[\s\S]{0,400}saveSnapshot/ —— 靠源码字符距离判断。
+// 它在一次正常改动（归档外面加 try/catch 与注释）后就误报了：
+// 结构没变，只是两处之间多了几行字。改成结构判断：
+// 取 `!intraday && archiveAllowed` 到该分支 `} else {` 之间的正文，
+// 要求 saveSnapshot 落在其中。
+{
+  const guard = '!intraday && archiveAllowed'
+  const at = runSrc.indexOf(guard)
+  const branch = at < 0 ? '' : runSrc.slice(at, runSrc.indexOf('\n    } else {', at))
+  ok('run.ts 盘中不落档（saveSnapshot 位于 !intraday && archiveAllowed 分支内）',
+    at >= 0 && branch.includes('saveSnapshot('),
+    at < 0 ? '未找到闸门条件' : `分支长度 ${branch.length}`)
+  // 归档失败不得中断流水线：非交易日重跑时跨日覆盖闸门会触发，
+  // 那时应跳过归档、继续出报告，而不是让报告与HTML全部产不出来。
+  ok('归档被 try/catch 包裹（闸门触发时流水线继续）',
+    branch.includes('try {') && branch.includes('catch'))
+}
 
 // ── 拒绝静默改历史 ──
 //

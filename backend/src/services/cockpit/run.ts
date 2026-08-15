@@ -288,17 +288,32 @@ async function main(): Promise<void> {
       const snap = snapshotOf(dash)
       const prev = loadPrevSnapshot(snap.date)
       const changes = prev ? diffSnapshots(prev, snap) : []
-      const snapFile = saveSnapshot(snap)
-      const ledger = updateDiscovery(loadDiscovery(), dash)
-      saveDiscovery(ledger)
       changesForHtml = changes
       prevDateForHtml = prev?.date ?? null
-      ledgerForHtml = ledger
 
-      process.stdout.write(`\n${'═'.repeat(122)}\n`)
-      process.stdout.write(`${renderChanges(changes, prev?.date ?? null, snap.date)}\n`)
-      process.stdout.write(`\n${renderDiscovery(ledger, snap.date)}\n`)
-      process.stdout.write(`\n快照已归档 ${snapFile}（${snap.readings.length} 项读数）\n`)
+      // 归档失败不得中断整条流水线。
+      //
+      // 真实场景：非交易日（或K线未更新）重跑时，最新K线仍是上一交易日，
+      // 而那一天的档案已经存在 → 跨日覆盖闸门触发。这时正确的行为是
+      // **跳过归档、继续出报告**，而不是让报告、HTML、快照全部产不出来。
+      // 闸门要防的是静默改历史，不是让人没法看今天的报告。
+      try {
+        const snapFile = saveSnapshot(snap)
+        const ledger = updateDiscovery(loadDiscovery(), dash)
+        saveDiscovery(ledger)
+        ledgerForHtml = ledger
+        process.stdout.write(`\n${'═'.repeat(122)}\n`)
+        process.stdout.write(`${renderChanges(changes, prev?.date ?? null, snap.date)}\n`)
+        process.stdout.write(`\n${renderDiscovery(ledger, snap.date)}\n`)
+        process.stdout.write(`\n快照已归档 ${snapFile}（${snap.readings.length} 项读数）\n`)
+      } catch (e) {
+        ledgerForHtml = loadDiscovery()
+        process.stdout.write(
+          `\n【未归档】${e instanceof Error ? e.message : String(e)}\n`
+          + `  报告、HTML 与快照仍照常产出 —— 闸门要防的是静默改历史，\n`
+          + `  不是让人没法看今天的报告。\n`
+        )
+      }
     } else {
       ledgerForHtml = loadDiscovery()
       // 仍然算出变化给人看 —— 只是不写进档案。看得见，但不污染序列。
@@ -402,13 +417,6 @@ async function main(): Promise<void> {
       },
       intraday: isIntraday(dashForHtml.date),
       verdict: verdictForHtml,
-      externalCash: externalCash > 0
-        ? {
-          amount: externalCash,
-          note: pf.externalCashNote
-            ?? '口径未裁定：并入分母会让现有超限持仓自动合规，故按从严处理，暂不计入。',
-        }
-        : null,
     })
     const reportDir = join(HERE, 'data', 'reports')
     mkdirSync(reportDir, { recursive: true })

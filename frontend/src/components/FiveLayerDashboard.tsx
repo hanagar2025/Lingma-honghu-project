@@ -80,6 +80,22 @@ const Completeness: React.FC<{ v: number | null | undefined; judgable?: boolean;
 
 const SECTION: React.CSSProperties = { marginBottom: 16 }
 
+const wan = (v: number) => `${(v / 10000).toFixed(1)}万`
+const pct = (v: number | null) => (v === null ? '缺失' : `${(v * 100).toFixed(1)}%`)
+
+const CIRCUIT_TEXT: Record<string, string> = {
+  NORMAL: '未触发',
+  LEVEL1: '一级成立',
+  LEVEL2: '二级成立',
+  INCOMPARABLE: '不可判定',
+}
+
+// EXCLUDED 走 info（灰调）而非 warning：裁定排除不是待办，
+// 让它在视觉上要求处理，等于把「不纳入模型」变成一条永久提醒。
+const RISK_ALERT: Record<string, 'success' | 'warning' | 'error' | 'info'> = {
+  GREEN: 'success', YELLOW: 'warning', RED: 'error', UNKNOWN: 'warning', EXCLUDED: 'info',
+}
+
 const SCOPE_TEXT: Record<string, string> = {
   STRUCTURE: '市场结构', HOLDING: '持仓', MAINLINE: '主线',
   NODE: '产业节点', NEXT_LAYER: '下一观察层',
@@ -193,6 +209,16 @@ const TodayChanges: React.FC<{ changes: any; discovery: any }> = ({ changes, dis
   )
 }
 
+/** 风控四层。后端 dashboard.ts 的 RiskLayer，此处只声明渲染用到的字段 */
+interface RiskLayerView {
+  id: string
+  name: string
+  state: string
+  light: string
+  canGenerateActions: boolean
+  note: string
+}
+
 export interface FiveLayerDashboardProps {
   dashboard: any
   changes?: any
@@ -241,56 +267,83 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         />
       )}
 
-      {/* ══ 资产层：委员会 2026-08-15 指定为第一层 ══ */}
+      {/* ══ 仪表盘：委员会 2026-08-15 指定永久置顶的六个数字 ══ */}
+      {/* 只有这六个是仪表盘。海光、中际、主线、利润池、观察层全部在它下面。 */}
       {d.assets && (
         <Card
           style={SECTION}
-          title={<Title level={5} style={{ margin: 0 }}>资产层</Title>}
+          title={<Title level={5} style={{ margin: 0 }}>仪表盘</Title>}
         >
-          <Alert
-            type="info"
-            showIcon
-            message={
-              <Text strong style={{ fontSize: 15 }}>
-                组合总资产 {(d.assets.portfolioTotal / 10000).toFixed(1)} 万　
-                <Text type="secondary" style={{ fontSize: 13 }}>—— 一切上限的分母</Text>
-              </Text>
-            }
-            description={
-              <div style={{ fontSize: 13, lineHeight: 1.9 }}>
-                股票 {(d.assets.positionsValue / 10000).toFixed(1)} 万
-                （{d.assets.equityPct === null ? '缺失' : `${(d.assets.equityPct * 100).toFixed(1)}%`}）　
-                现金 {((d.assets.brokerCash + d.assets.externalCash) / 10000).toFixed(1)} 万
-                （{d.assets.cashPct === null ? '缺失' : `${(d.assets.cashPct * 100).toFixed(1)}%`}）
-                <div style={{ marginTop: 2, color: '#666' }}>
-                  ＝ 账内 {(d.assets.brokerCash / 10000).toFixed(1)} 万
-                  ＋ 账户外股票现金 {(d.assets.externalCash / 10000).toFixed(1)} 万
-                </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {([
+              ['组合总资产', wan(d.assets.portfolioTotal)],
+              ['股票市值', wan(d.assets.positionsValue)],
+              ['投资现金', wan(d.assets.brokerCash + d.assets.externalCash)],
+              ['股票仓位', pct(d.assets.equityPct)],
+              ['历史峰值', d.assets.peak === null ? '未按组合口径认定' : wan(d.assets.peak)],
+              ['当前回撤', d.assets.drawdown === null ? '不可比' : pct(d.assets.drawdown)],
+              ['熔断等级', CIRCUIT_TEXT[d.assets.circuitState] ?? d.assets.circuitState],
+            ] as [string, string][]).map(([k, v]) => (
+              <div
+                key={k}
+                style={{
+                  flex: '1 1 120px', background: '#f7f7fa',
+                  borderRadius: 10, padding: '10px 12px',
+                }}
+              >
+                <div style={{ fontSize: 11, color: '#8e8e93', marginBottom: 4 }}>{k}</div>
+                <div style={{ fontSize: 17, fontWeight: 600 }}>{v}</div>
               </div>
-            }
-          />
-          <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.9 }}>
-            <Text type="secondary">券商账户合计 </Text>
-            {(d.assets.brokerTotal / 10000).toFixed(1)} 万　
-            <Text type="secondary">账户内仓位 </Text>
-            {d.assets.brokerPositionPct === null ? '缺失' : `${(d.assets.brokerPositionPct * 100).toFixed(1)}%`}　
-            <Text type="secondary">可直接下单 </Text>
-            {(d.assets.tradableCash / 10000).toFixed(1)} 万
-            <div style={{ fontSize: 12, color: '#8e8e93' }}>
-              只回答「还有多少钱可直接下单」，<Text strong>不参与任何上限判定</Text>
+            ))}
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: '#8e8e93', lineHeight: 1.9 }}>
+            分项：账内现金 {wan(d.assets.brokerCash)} ＋ 账户外 {wan(d.assets.externalCash)}
+            　│　券商账户合计 {wan(d.assets.brokerTotal)}
+            （账户内仓位 {pct(d.assets.brokerPositionPct)}，可直接下单 {wan(d.assets.tradableCash)}）
+            <div>
+              券商口径只回答「还有多少钱能下单」，<Text strong>不参与任何上限判定</Text>
             </div>
           </div>
-          <Alert
-            type={d.assets.circuitState === 'NORMAL' ? 'success' : 'warning'}
-            showIcon
-            style={{ marginTop: 12 }}
-            message={<span style={{ fontSize: 13 }}>熔断状态 {d.assets.circuitState}</span>}
-            description={
-              d.assets.circuitState === 'INCOMPARABLE'
-                ? <span style={{ fontSize: 12 }}>{d.assets.circuitReason}</span>
-                : undefined
-            }
-          />
+          {d.assets.circuitState === 'INCOMPARABLE' && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginTop: 12 }}
+              message={<span style={{ fontSize: 12 }}>{d.assets.circuitReason}</span>}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* ══ 风控四层：先看这个，再看涨跌 ══ */}
+      {d.riskLayers && d.riskLayers.length > 0 && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>风控优先级</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 10, lineHeight: 1.8 }}>
+            每天先看这一层，再看涨跌。顺序本身是规则：
+            L1／L2 产生动作，L3 已裁定排除，L4 永远只是复核信息。
+          </div>
+          {(d.riskLayers as RiskLayerView[]).map(r => (
+            <Alert
+              key={r.id}
+              type={RISK_ALERT[r.light] ?? 'info'}
+              showIcon={r.light !== 'EXCLUDED'}
+              style={{ marginBottom: 8 }}
+              message={
+                <span style={{ fontSize: 13 }}>
+                  <Text strong>{r.id}｜{r.name}</Text>　{r.state}
+                </span>
+              }
+              description={
+                <span style={{ fontSize: 12 }}>
+                  {r.canGenerateActions ? '可产生动作' : '不可产生动作'}
+                  {r.note ? `　${r.note}` : ''}
+                </span>
+              }
+            />
+          ))}
         </Card>
       )}
 
