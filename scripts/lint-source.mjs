@@ -13,7 +13,7 @@
 //
 // 运行：node scripts/lint-shell.mjs
 
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -122,6 +122,47 @@ for (const f of uiTargets) {
       + `    HTML、React 与终端都不渲染 ** —— 会原样显示成两个星号。要强调请用「」。\n`
     )
   })
+}
+
+// ── 四、被引用的 npm 脚本必须真的存在 ──
+//
+// 这条检查来自一次真实事故：README 与对话里都写了 `npm run ship`，
+// 而添加它的那步命令因为 && 链在前一步失败时中断，从未执行。
+// 之后我只验证了 `./scripts/ship.sh` 能跑，没验证 `npm run ship` ——
+// 于是给出去的命令直接报 Missing script。
+//
+// 教训是"验证等价命令不算验证"，而这件事可以机械化：
+// 凡文档与脚本里出现的 npm run X，X 必须在某个 package.json 的 scripts 里。
+const PKGS = ['package.json', 'backend/package.json', 'frontend/package.json']
+const known = new Set()
+for (const rel of PKGS) {
+  const p = join(HERE, '..', rel)
+  if (!existsSync(p)) continue
+  for (const k of Object.keys(JSON.parse(readFileSync(p, 'utf-8')).scripts ?? {})) known.add(k)
+}
+
+const REF_FILES = [join(HERE, '..', 'README.md'), ...files, ...UI_DIRS.flatMap(d => walk(d))]
+const missing = new Map()
+for (const f of REF_FILES) {
+  if (!existsSync(f)) continue
+  const txt = readFileSync(f, 'utf-8')
+  for (const m of txt.matchAll(/npm run (?:--silent )?(?:-s )?([a-z][a-z0-9:_-]*)/g)) {
+    const name = m[1]
+    // -w <workspace> 形式与占位示例不查
+    if (name === 'dev' && /npm run dev --workspace/.test(txt)) continue
+    if (!known.has(name)) {
+      if (!missing.has(name)) missing.set(name, [])
+      missing.get(name).push(f.replace(join(HERE, '..'), '.'))
+    }
+  }
+}
+for (const [name, where] of missing) {
+  problems++
+  console.error(
+    `引用了不存在的 npm 脚本「${name}」\n`
+    + `    出现在：${[...new Set(where)].slice(0, 4).join('、')}\n`
+    + `    package.json 里没有它 —— 照文档执行会直接报 Missing script。\n`
+  )
 }
 
 if (problems > 0) {
