@@ -14,6 +14,7 @@ import { runCockpit } from '../services/cockpit'
 import { buildDashboard, type SessionKind } from '../services/cockpit/dashboard'
 import { renderDashboard } from '../services/cockpit/renderDashboard'
 import { buildVerdict } from '../services/cockpit/verdict'
+import { buildBrief } from '../services/cockpit/share'
 import type { MomentumRow } from '../services/cockpit/momentum'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
@@ -235,6 +236,11 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
       ...report,
       dashboard,
       verdict,
+      // 外发摘要由后端统一生成：前端若自己拼，同一份数据会有两套措辞，
+      // 而其中一套迟早会漏掉那段约束前言。默认脱敏，不含金额与总资产。
+      brief: dashboard
+        ? buildBrief({ dashboard, verdict, includeAmounts: false })
+        : null,
       dashboardText: dashboard ? renderDashboard(dashboard) : null,
       changes: { prevDate, items: changes },
       // 盘中标记必须随数据一起下发：前端若只看到数字，会把未定价读数当收盘读数用

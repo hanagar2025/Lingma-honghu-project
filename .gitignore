@@ -26,3 +26,7 @@ node_modules
 
 # 待上传的发布包。内含当日密文快照，且完全可由代码重现，无需入库。
 /frontend/release
+
+# 外发摘要与 CSV：每个交易日重新生成，且可由代码完整重现。
+# 含金额版本更不该入库。
+/backend/src/services/cockpit/data/share

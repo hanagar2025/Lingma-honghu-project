@@ -18,6 +18,7 @@ import { decryptSnapshot, type EncryptedSnapshot } from '../services/decrypt'
 import FiveLayerDashboard from '../components/FiveLayerDashboard'
 import TodayVerdict from '../components/TodayVerdict'
 import UnlockGate from '../components/UnlockGate'
+import ShareButton, { ShareHint } from '../components/ShareButton'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -288,6 +289,16 @@ const Cockpit: React.FC = () => {
           )}
         </Space>
       </Card>
+
+      {/* ── 一键外发：把数据交给别的软件再分析一遍 ── */}
+      {data.brief && (
+        <>
+          <ShareHint />
+          <Card size="small" style={{ marginBottom: 16 }}>
+            <ShareButton brief={data.brief} date={data.date} />
+          </Card>
+        </>
+      )}
 
       {/* ── 今日结论：结论先于依据，放在四张表之前 ── */}
       <TodayVerdict verdict={data.verdict} />

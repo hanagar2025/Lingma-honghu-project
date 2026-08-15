@@ -92,9 +92,21 @@ function stripComments(src) {
 let uiFiles = 0
 // shell 脚本也算界面：终端同样不渲染 Markdown。
 // 漏掉它们的后果实测过一次 —— 部署脚本的干跑输出里赫然印着两个星号。
+/**
+ * 显式豁免标记。
+ *
+ * 有的文件**就是要**生成 Markdown（share.ts 导出给大模型与 Markdown 阅读器读的摘要），
+ * 那里的 `**` 会被正确渲染，不是 bug。
+ * 做成文件顶部的显式声明而不是放宽规则：可以随时 grep 出谁声明了豁免，
+ * 而放宽规则会让真正的错误重新溜回来。
+ */
+const EXEMPT = '// lint-source: emits-markdown'
+
 const uiTargets = [...UI_DIRS.flatMap(d => walk(d)), ...files]
 for (const f of uiTargets) {
   uiFiles++
+  const raw = readFileSync(f, 'utf-8')
+  if (raw.includes(EXEMPT)) continue
   const isShell = f.endsWith('.sh')
   const code = isShell
     // shell 只有 # 注释；不能套用 // 与 /* */ 的剥离规则，

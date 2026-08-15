@@ -471,6 +471,49 @@ ok('结论层不含价格阈值比较（不做择时）',
 ok('结论层不引入新的数值阈值常量',
   !/[<>]=?\s*0\.\d/.test(codeOnly(verdictSrc)))
 
+console.log('\n【外发摘要脱敏】')
+//
+// 实测踩过：摘要开头声称"不含股数"，而焦点区照抄了动作原文「减仓 约800股」。
+// 800 股 × 280.62 元 = 22.4 万，正是超限的 6.6pct，反推总资产 ≈ 340 万，
+// 与真实 377 万只差 10%。**声称脱敏却泄漏，比不声称脱敏更糟** —— 它给了虚假保证。
+// 故把"声称与内容一致"钉成不变量。
+{
+  const { buildBrief } = await import('./share')
+  const fakeDash = {
+    ...dash,
+    holdings: dash.holdings.map(h => ({
+      ...h, systemAction: '减仓 约800股（约22.4万）', reviewTriggers: ['跌破MA20', '需卖出 1200 股'],
+    })),
+  }
+  const fakeVerdict = {
+    ...buildVerdict({ dashboard: fakeDash, actions: [], actionText: ACTION_TEXT, drift: [], driftSnapshotCount: 1 }),
+    focus: [{ name: '海光信息', code: '688041', held: true, because: '超出6.6pct', todo: '执行 减仓 约800股，约 22.4万' }],
+  }
+
+  const redacted = buildBrief({ dashboard: fakeDash, verdict: fakeVerdict, includeAmounts: false })
+  ok('脱敏摘要不含任何"数字+股"', !/\d[\d,]*\s*股(?!数)/.test(redacted),
+    (/\d[\d,]*\s*股(?!数)/.exec(redacted) ?? [''])[0])
+  ok('脱敏摘要不含"数字+万"', !/\d[\d,]*(\.\d+)?\s*万/.test(redacted),
+    (/\d[\d,]*(\.\d+)?\s*万/.exec(redacted) ?? [''])[0])
+  ok('脱敏摘要仍保留仓位百分比（脱敏不等于把信息删空）', /仓位/.test(redacted) && /%/.test(redacted))
+  ok('脱敏摘要明示已脱敏', /本摘要已脱敏/.test(redacted))
+
+  const full = buildBrief({ dashboard: fakeDash, verdict: fakeVerdict, includeAmounts: true })
+  ok('含金额版本不声称已脱敏（避免自相矛盾）', !/本摘要已脱敏/.test(full))
+
+  // 约束前言是这份摘要能否安全外发的前提：没有它，外部模型读完就会给择时建议
+  for (const [must, label] of [
+    ['不要给出买卖时点建议', '禁止择时建议'],
+    ['技术指标只能触发复核', '观察指标不得产生动作'],
+    ['不要输出综合评分', '禁止综合评分'],
+    ['「不可判断」是合法', '不可判断是合法结论'],
+  ] as [string, string][]) {
+    ok(`摘要前言包含约束：${label}`, redacted.includes(must))
+  }
+  ok('摘要体积可控（1.5 万字符以内，能进任何模型上下文）',
+    [...redacted].length < 15000, String([...redacted].length))
+}
+
 // ───────────────────────────────────────────────────────────────
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

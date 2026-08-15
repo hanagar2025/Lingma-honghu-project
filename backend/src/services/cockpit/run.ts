@@ -24,6 +24,7 @@ import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
 import { buildVerdict, type Verdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
+import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import { renderDashboardHtml } from './renderHtml'
 import {
   buildWebSnapshot, saveWebSnapshot, saveEncryptedWebSnapshot,
@@ -385,6 +386,49 @@ async function main(): Promise<void> {
     process.stdout.write(`\n【HTML 报告】${htmlFile}\n  双击即可在浏览器打开，无需数据库、无需登录、无外部请求。\n`)
   }
 
+  // ── 外发摘要 ──
+  // 给别的软件（尤其大模型）读的。完整快照 5 万字符以上，
+  // 其中大半是每个指标的 source/formula —— 对人有用，对模型是噪声。
+  // 故另出一份约 1 万字符的 Markdown，外加两个 CSV 供 Excel/pandas。
+  //
+  // 无条件生成（纯本地计算、不联网、毫秒级），因为网页端的"一键分享"要用它。
+  // 只在 SHARE=1 时才额外落盘成文件。
+  const withAmounts = process.env.SHARE_AMOUNTS === '1'
+  let briefForWeb: string | null = null
+  if (dashForHtml) {
+    briefForWeb = buildBrief({
+      dashboard: dashForHtml,
+      verdict: verdictForHtml,
+      externalCash: extCash !== null && extCash > 0
+        ? { amount: extCash, denominatorNow: totalAssets }
+        : null,
+      includeAmounts: withAmounts,
+    })
+  }
+
+  if (process.env.SHARE === '1' && dashForHtml && briefForWeb) {
+    const brief = briefForWeb
+    const shareDir = join(HERE, 'data', 'share')
+    mkdirSync(shareDir, { recursive: true })
+    const suffix = withAmounts ? '-含金额' : ''
+    const mdFile = join(shareDir, `${dashForHtml.date}-摘要${suffix}.md`)
+    const hCsv = join(shareDir, `${dashForHtml.date}-持仓.csv`)
+    const nCsv = join(shareDir, `${dashForHtml.date}-产业节点.csv`)
+    writeFileSync(mdFile, `${brief}\n`, 'utf-8')
+    writeFileSync(hCsv, buildHoldingsCsv(dashForHtml, withAmounts), 'utf-8')
+    writeFileSync(nCsv, buildNodesCsv(dashForHtml), 'utf-8')
+    // token 估算按**字符数**而非字节数：中文一字占 3 字节但约等于 1 token，
+    // 按字节除以 3.5 会把中文文本的 token 数低估到三分之一。
+    const chars = [...brief].length
+    process.stdout.write(
+      `\n【外发摘要】${mdFile}\n`
+      + `  ${chars.toLocaleString()} 字符，约 ${Math.round(chars / 1000)}k tokens`
+      + `（中文约一字一 token）。完整快照 5 万字符以上，故不直接外发\n`
+      + `  ${withAmounts ? '⚠ 含绝对金额与总资产，仅供自己留档' : '已脱敏：无金额、无股数、无总资产'}\n`
+      + `  CSV（供 Excel/pandas）：${hCsv}\n                    ${nCsv}\n`
+    )
+  }
+
   // ── 离线网页快照 ──
   // 让浏览器里的 React 驾驶舱脱离 MySQL 与登录运行。数据来源与 CLI/HTML 完全一致，
   // 三个出口因此不可能给出互相矛盾的结论。
@@ -394,6 +438,7 @@ async function main(): Promise<void> {
       report: rep,
       dashboard: dashForHtml,
       verdict: verdictForHtml,
+      brief: briefForWeb,
       changes: changesForHtml,
       prevDate: prevDateForHtml,
       discovery: ledgerForHtml,

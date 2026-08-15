@@ -18,7 +18,9 @@
     "report": "npm run web:snapshot && node scripts/open-report.mjs",
     "web:preflight": "node scripts/preflight-deploy.mjs",
     "web:deploy": "npm run web:build && npm run web:preflight",
-    "web:package": "node scripts/package-deploy.mjs"
+    "web:package": "node scripts/package-deploy.mjs",
+    "share": "cd backend && SHARE=1 WEB=1 npx tsx src/services/cockpit/run.ts",
+    "share:amounts": "cd backend && SHARE=1 SHARE_AMOUNTS=1 npx tsx src/services/cockpit/run.ts"
   },
   "workspaces": [
     "backend",

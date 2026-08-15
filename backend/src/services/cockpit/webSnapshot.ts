@@ -31,6 +31,11 @@ export interface WebSnapshotInput {
   dashboard: Dashboard | null
   /** 今日结论。网页端与 CLI/HTML 必须给出同一份结论，否则三个出口会各说一套 */
   verdict?: unknown
+  /**
+   * 外发摘要（Markdown）。由后端生成后随快照下发，前端不自己拼 ——
+   * 否则同一份数据会有两套措辞，而其中一套迟早会漏掉那段约束前言。
+   */
+  brief?: string | null
   changes: Change[]
   prevDate: string | null
   discovery: DiscoveryLedger | null
@@ -61,6 +66,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     ...report,
     dashboard,
     verdict: input.verdict ?? null,
+    brief: input.brief ?? null,
     dashboardText: null,
     changes: { prevDate, items: changes },
     discovery: {
