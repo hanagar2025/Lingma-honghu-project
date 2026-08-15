@@ -99,6 +99,88 @@ export function judgeCircuit(
   }
 }
 
+/**
+ * 组合口径峰值的两种候选情形。
+ *
+ * 取哪一种，取决于一个只有委员会知道的事实：
+ * **账户峰值 430 万出现时，那 200 万是否已经存在且已划为股票投资用途。**
+ *
+ * 两种结论相差一次强制降仓，所以不能由代码挑一个默认值 ——
+ * 而且默认值天然会偏向"不触发"，因为那是什么都不用做的那个。
+ */
+export interface PeakScenario {
+  id: 'A_NEW_SERIES' | 'B_INCLUDED_AT_PEAK'
+  question: string
+  peak: number
+  drawdown: number
+  circuit: CircuitState
+  equityCapPct: number | null
+  requiredReduction: number | null
+  note: string
+}
+
+export function peakScenarios(
+  portfolioTotal: number,
+  positionsValue: number,
+  legacyAccountPeak: number,
+  externalCash: number,
+  levels: { level1: number; level2: number } = { level1: 0.15, level2: 0.25 }
+): PeakScenario[] {
+  const build = (
+    id: PeakScenario['id'], question: string, peak: number, note: string
+  ): PeakScenario => {
+    const dd = 1 - portfolioTotal / peak
+    const circuit: CircuitState = dd >= levels.level2 ? 'LEVEL2'
+      : dd >= levels.level1 ? 'LEVEL1' : 'NORMAL'
+    const cap = circuit === 'LEVEL2' ? 0.30 : circuit === 'LEVEL1' ? 0.50 : null
+    const target = cap === null ? null : portfolioTotal * cap
+    return {
+      id, question, peak, drawdown: dd, circuit,
+      equityCapPct: cap,
+      requiredReduction: target === null ? null : Math.max(0, positionsValue - target),
+      note,
+    }
+  }
+  return [
+    build(
+      'A_NEW_SERIES',
+      '这 200 万是最近才划为股票投资用途的？',
+      portfolioTotal,
+      '组合口径序列自今日起建立，今日值即当前峰值 → 回撤 0%。'
+      + '**注意这等于把回撤时钟归零**：账户口径下已发生的回撤不再触发熔断。'
+      + 'legacy_account_basis 仍保留 430 万，那段历史可复核，但不再产生约束。'
+    ),
+    build(
+      'B_INCLUDED_AT_PEAK',
+      '账户峰值 430 万出现时，这 200 万已经存在且已划为股票投资用途？',
+      legacyAccountPeak + externalCash,
+      '组合峰值 = 账户峰值 + 账户外现金。这是把旧峰值平移到新口径，'
+      + '前提是那笔钱当时确实已在"股票投资资产"之内。'
+    ),
+  ]
+}
+
+export function renderPeakScenarios(rows: PeakScenario[]): string {
+  const w = (v: number) => `${(v / 10000).toFixed(2)}万`
+  const L: string[] = ['', '组合口径峰值：两种候选情形', '─'.repeat(78)]
+  for (const r of rows) {
+    L.push('')
+    L.push(`  ${r.id}`)
+    L.push(`    前提问题：${r.question}`)
+    L.push(`    峰值 ${w(r.peak)}　回撤 ${(r.drawdown * 100).toFixed(2)}%　熔断 ${r.circuit}`)
+    if (r.equityCapPct !== null) {
+      L.push(`    股票上限 ${(r.equityCapPct * 100).toFixed(0)}%`
+        + `　须减约 ${w(r.requiredReduction ?? 0)}`)
+    }
+    L.push(`    说明：${r.note}`)
+  }
+  L.push('')
+  L.push('  两者相差一次强制降仓，故不由代码挑默认值 ——')
+  L.push('  而且默认值天然会偏向"不触发"，因为那是什么都不用做的那个。')
+  L.push('')
+  return L.join('\n')
+}
+
 export function renderPeakHistory(history: PeakRecord[] = PEAK_HISTORY): string {
   const L: string[] = ['净值峰值双口径历史', '─'.repeat(78)]
   for (const h of history) {

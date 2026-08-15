@@ -46,5 +46,13 @@ async function main() {
 
   const rows = reauditDebts(loadDebts(), snapshot, positions)
   process.stdout.write(renderReaudit(rows, snapshot))
+
+  // 峰值口径是 D4（熔断类）能否重算的前提，故与重审同屏输出
+  const { peakScenarios, renderPeakScenarios, renderPeakHistory } =
+    await import('./src/services/governance/peakBasis')
+  process.stdout.write(`${renderPeakHistory()}\n`)
+  process.stdout.write(renderPeakScenarios(peakScenarios(
+    snapshot.portfolioTotal, snapshot.positionsValue, pf.peakAssets, externalCash
+  )))
 }
 main()
