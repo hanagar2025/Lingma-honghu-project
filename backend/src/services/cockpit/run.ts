@@ -49,18 +49,19 @@ interface PortfolioFile {
   positions: { code: string; name: string; quantity: number; cost: number; sector: string; theme: string }[]
   pendingSells: number
   /**
-   * 券商账户之外的现金储备。
+   * 专用于股票投资的账户外现金储备。
    *
-   * **刻意不参与任何上限计算。** 12% 单票上限的分母是"组合总资产"，
-   * 而这笔钱算不算"组合"是战略层口径问题，不是代码可以替委员会决定的：
-   *   - 若计入 → 分母变大 → 现有超限持仓可能瞬间"自动合规"，
-   *     等于用一个记账动作消掉了真实的集中度风险；
-   *   - 若不计入 → 分母不变 → 维持从严判定。
-   * 未裁定期间按后者（从严），并在报告里显式标注口径待裁定，
-   * 绝不静默把它并进分母。
+   * 委员会 2026-08-15 已裁定：**计入组合分母**（单票/板块/主题上限），
+   * 但不计入家庭安全垫 —— 委员会明确它不是家庭日常生活资产。
+   *
+   * 裁定理由（记录在此以免被后来者当成随意放宽）：同一笔钱放在券商账户外
+   * 还是账户内，不改变股票风险的经济实质；用账户口径做分母，等于
+   * "把钱转进账户就认为风险变小"，这不是风控而是记账幻觉。
    */
   externalCash?: number | null
   externalCashNote?: string
+  /** 峰值所属口径。BROKER 表示尚未按组合口径重新认定，回撤将输出"不可比" */
+  peakBasis?: 'BROKER' | 'PORTFOLIO'
 }
 
 const LIGHT_DOT: Record<string, string> = { GREEN: '🟢', YELLOW: '🟡', RED: '🔴', UNKNOWN: '⚪' }
@@ -169,10 +170,24 @@ async function main(): Promise<void> {
   }
 
   const positionsValue = positions.reduce((s, p) => s + p.marketValue, 0)
-  const totalAssets = pf.cash + positionsValue
+  const brokerTotal = pf.cash + positionsValue
+  const externalCash = pf.externalCash ?? 0
+  const portfolioTotal = brokerTotal + externalCash
+  const peakBasis = pf.peakBasis ?? 'BROKER'
   const snapshot = {
-    date, totalAssets, cash: pf.cash, positionsValue,
-    peakAssets: Math.max(pf.peakAssets, totalAssets),
+    date,
+    totalAssets: brokerTotal,
+    cash: pf.cash,
+    positionsValue,
+    externalCash,
+    portfolioTotal,
+    // 峰值只在同口径下才允许被"当前值刷新"。口径不可比时保持原值不动，
+    // 否则一次运行就会把 430 万（账户口径）悄悄抬到 531 万（组合口径），
+    // 而那等于把历史回撤记录抹掉。
+    peakAssets: peakBasis === 'PORTFOLIO'
+      ? Math.max(pf.peakAssets, portfolioTotal)
+      : pf.peakAssets,
+    peakBasis,
   }
 
   const pendingSellCount = Number(process.env.PENDING_SELLS ?? pf.pendingSells)
@@ -214,7 +229,7 @@ async function main(): Promise<void> {
     printReport(rep)
   } else {
     const dash = buildDashboard({
-      date, session, positions, totalAssets,
+      date, session, positions, totalAssets: portfolioTotal,
       barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
       valuationByCode,
       momentumRows: internals.momentumRows,
@@ -333,24 +348,34 @@ async function main(): Promise<void> {
       : `  ⚠ 未找到冻结基线，无法判定漂移。先跑 npm run freeze:baseline\n`
   )
 
-  // ── 外围现金：只播报，不进分母 ──
-  const extCash = pf.externalCash ?? null
-  if (extCash !== null && extCash > 0) {
-    const wouldBe = totalAssets + extCash
-    const biggest = positions.reduce((a, b) => (b.marketValue > a.marketValue ? b : a), positions[0])
-    process.stdout.write(`\n【外围现金】${(extCash / 10000).toFixed(0)} 万 —— 口径待战略层裁定，未计入仓位上限分母\n`)
+  // ── 三个仓位口径并列播报 ──
+  // 委员会 2026-08-15 裁定后，账户口径与组合口径必须同时可见：
+  // 前者回答"还能下多少单"，后者回答"风险有多集中"。
+  // 只印一个的后果实测过 —— 券商App显示 21% 被当成超过 12% 上限。
+  {
+    const biggest = positions.reduce(
+      (a, b) => (b.marketValue > a.marketValue ? b : a), positions[0]
+    )
+    const w = (v: number) => `${(v / 10000).toFixed(1)}万`
+    process.stdout.write(`\n【仓位口径】委员会 2026-08-15 裁定：上限一律用组合口径\n`)
     process.stdout.write(
-      `  当前分母（证券账户）${(totalAssets / 10000).toFixed(1)} 万：` +
-      `${biggest.name} ${(biggest.marketValue / totalAssets * 100).toFixed(1)}%\n`
+      `  券商账户合计 ${w(brokerTotal)}（持仓 ${w(positionsValue)} + 账内现金 ${w(pf.cash)}）\n`
+      + `    账户内仓位 ${(positionsValue / brokerTotal * 100).toFixed(1)}%`
+      + ` —— 只回答"还有多少现金可直接下单"，不用于任何上限判定\n`
     )
     process.stdout.write(
-      `  若计入后分母 ${(wouldBe / 10000).toFixed(1)} 万：` +
-      `${biggest.name} ${(biggest.marketValue / wouldBe * 100).toFixed(1)}%\n`
+      `  组合总资产 ${w(portfolioTotal)}（+ 账户外股票现金 ${w(externalCash)}）\n`
+      + `    股票占比 ${(positionsValue / portfolioTotal * 100).toFixed(1)}%`
+      + `　现金占比 ${((pf.cash + externalCash) / portfolioTotal * 100).toFixed(1)}%\n`
+      + `    最大单票 ${biggest.name} ${(biggest.marketValue / portfolioTotal * 100).toFixed(2)}%`
+      + `（上限 12%）\n`
     )
-    process.stdout.write(
-      `  ⚠ 两个口径会得出不同的超限结论。这是「战略层裁定事项」，不是代码默认值：\n` +
-      `     并入分母等于用一个记账动作消掉真实集中度风险，故未裁定期间一律按从严口径。\n`
-    )
+    if (peakBasis !== 'PORTFOLIO') {
+      process.stdout.write(
+        `  ⚠ 净值峰值 ${w(pf.peakAssets)} 记于券商账户口径，与组合口径不可比 →\n`
+        + `    回撤与熔断判定输出"不可比"而非 0。须由委员会按组合口径重新认定峰值。\n`
+      )
+    }
   }
 
   // ── 自包含 HTML 导出 ──
@@ -373,9 +398,9 @@ async function main(): Promise<void> {
       },
       intraday: isIntraday(dashForHtml.date),
       verdict: verdictForHtml,
-      externalCash: extCash !== null && extCash > 0
+      externalCash: externalCash > 0
         ? {
-          amount: extCash,
+          amount: externalCash,
           note: pf.externalCashNote
             ?? '口径未裁定：并入分母会让现有超限持仓自动合规，故按从严处理，暂不计入。',
         }
@@ -401,8 +426,8 @@ async function main(): Promise<void> {
     briefForWeb = buildBrief({
       dashboard: dashForHtml,
       verdict: verdictForHtml,
-      externalCash: extCash !== null && extCash > 0
-        ? { amount: extCash, denominatorNow: totalAssets }
+      externalCash: externalCash > 0
+        ? { amount: externalCash, denominatorNow: portfolioTotal }
         : null,
       includeAmounts: withAmounts,
     })
@@ -453,12 +478,12 @@ async function main(): Promise<void> {
       intraday: isIntraday(dashForHtml.date),
       marketAllows,
       pendingSellCount,
-      externalCash: extCash !== null && extCash > 0
+      externalCash: externalCash > 0
         ? {
-          amount: extCash,
+          amount: externalCash,
           note: pf.externalCashNote
             ?? '口径未裁定：并入分母会让现有超限持仓自动合规，故按从严处理，暂不计入。',
-          denominatorNow: totalAssets,
+          denominatorNow: portfolioTotal,
         }
         : null,
     })

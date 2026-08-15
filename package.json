@@ -22,7 +22,8 @@
     "share:amounts": "cd backend && ARCHIVE=0 SHARE=1 SHARE_AMOUNTS=1 npx tsx src/services/cockpit/run.ts",
     "web:deploy": "npm run web:build && npm run web:preflight",
     "web:status": "node scripts/check-live.mjs",
-    "ship": "./scripts/ship.sh"
+    "ship": "./scripts/ship.sh",
+    "reaudit": "cd backend && npx tsx reaudit.ts"
   },
   "workspaces": [
     "backend",
