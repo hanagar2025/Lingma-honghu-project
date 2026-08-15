@@ -246,8 +246,26 @@ async function main(): Promise<void> {
     // ── 变化台账 ──
     // 盘前不落档：盘中读数会污染日间序列，而这份档案要连续读 30 个交易日。
     // 同理，盘中（15:00 前）跑出来的"今日收盘"其实是未定价的临时值，同样不得落档。
+    // ARCHIVE=0 时只生成、不归档。
+    //
+    // 存在理由是一个真实的分叉：服务器装上定时任务后，它每天也会写 changelog 与
+    // 审计档；而 Mac 为了部署前端也会跑一次生成。于是同一个交易日在两台机器上
+    // 各有一份档案，两边都不完整 —— 而 30 天观察期的全部价值就建立在
+    // **一条连续的档案**上。两份各缺几天的序列，比一份都没有更糟：
+    // 它看起来是完整的。
+    //
+    // 因此档案必须有唯一归属方。委员会要求 Mac 可关机，那么归属方只能是服务器
+    // （它不睡）。Mac 侧的生成一律带 ARCHIVE=0，只产出用于部署的快照。
+    const archiveAllowed = process.env.ARCHIVE !== '0'
     const intraday = isIntraday(date)
-    if (session === 'POST_CLOSE' && !intraday) {
+    if (session === 'POST_CLOSE' && !intraday && !archiveAllowed) {
+      process.stdout.write(
+        `\n【不归档】ARCHIVE=0 —— 本次只生成快照。\n`
+        + `  档案的唯一归属方是服务器（它不睡）。两台机器各写一份会得到两条\n`
+        + `  各不完整的序列，而那比没有档案更糟：它看起来是完整的。\n`
+      )
+    }
+    if (session === 'POST_CLOSE' && !intraday && archiveAllowed) {
       const snap = snapshotOf(dash)
       const prev = loadPrevSnapshot(snap.date)
       const changes = prev ? diffSnapshots(prev, snap) : []
@@ -294,12 +312,16 @@ async function main(): Promise<void> {
   // 盘中审计另存文件名：审计里的减仓理由带着仓位百分比（"18.6% > 12%"），
   // 而盘中的百分比会随收盘变。若覆盖当日正式档，30天后回看会拿盘中值当结论依据。
   const auditIntraday = isIntraday(audit.date)
+  // 审计档与变化台账同属"档案"，归属方必须一致 ——
+  // 否则会出现"台账在服务器、审计在 Mac"这种更难对齐的分裂。
   const auditFile = join(dir, `${audit.date}${auditIntraday ? '-盘中' : ''}.md`)
-  writeFileSync(auditFile, `${md}\n`, 'utf-8')
+  if (process.env.ARCHIVE !== '0') writeFileSync(auditFile, `${md}\n`, 'utf-8')
 
   const base = loadBaseline()
   process.stdout.write(
-    `\n【决策审计】已归档 ${auditFile}${auditIntraday ? '（盘中临时档，不覆盖当日正式记录）' : ''}\n`
+    process.env.ARCHIVE === '0'
+      ? `\n【决策审计】未归档（ARCHIVE=0）\n`
+      : `\n【决策审计】已归档 ${auditFile}${auditIntraday ? '（盘中临时档，不覆盖当日正式记录）' : ''}\n`
   )
   process.stdout.write(
     `  规则指纹 ${audit.rules.fingerprint.hash}｜${audit.rules.fingerprint.entryCount} 条决策生效参数｜` +

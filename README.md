@@ -220,7 +220,29 @@ DEPLOY_HOST=39.104.86.200 DEPLOY_KEY=~/.ssh/tios_ecs ./scripts/schedule-server.s
 这两个时点之外**不会有任何更新**，包括盘中。这是刻意的：盘中读数是未定价的临时值，
 把它当收盘值写进 30 天档案会污染整条序列，而观察期的全部价值就建立在那条序列上。
 
-其他命令：`status` 看 cron 配置与最近日志、`run-now` 立即跑一次、`uninstall` 只删 cron。
+| 命令 | 用途 |
+|---|---|
+| `status` | 看 cron 配置、数据文件时间、最近日志 |
+| `run-now` | 立即跑一次并**强制发布**（休市日也能验证管线） |
+| `update` | 更新服务器上的仓库与更新脚本（不重装 Node） |
+| `pull-archive` | 把服务器上的档案取回本地，供提交进 git |
+| `uninstall` | 只删 cron，不动仓库与站点文件 |
+
+### 档案只能有一个归属方，那就是服务器
+
+30 天观察期的全部价值建立在**一条连续的档案**上。服务器装上定时任务后它每天都写
+`changelog` 与审计档；而 Mac 为了部署前端也会跑一次生成 ——
+于是同一个交易日在两台机器上各有一份，两边都不完整。
+**两份各缺几天的序列比一份都没有更糟：它看起来是完整的。**
+
+因为委员会要求 Mac 可关机，归属方只能是服务器（它不睡）。
+故 Mac 侧的 `web:snapshot` / `share` 一律带 `ARCHIVE=0`，只产出用于部署的快照。
+git 在 Mac 上，所以定期取回来提交：
+
+```bash
+DEPLOY_HOST=39.104.86.200 DEPLOY_KEY=~/.ssh/tios_ecs ./scripts/schedule-server.sh pull-archive
+git add -A backend/src/services && git commit -m "归档 8/17–8/21"
+```
 
 ### 只更新数据，不重建前端
 

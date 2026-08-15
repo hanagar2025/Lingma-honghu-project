@@ -40,57 +40,10 @@ SSH_OPTS=(-o BatchMode=no)
 [[ -f "$KEY" ]] && SSH_OPTS+=(-i "$KEY")
 rsh() { ssh "${SSH_OPTS[@]}" "$USER_@$HOST" "$@"; }
 
-ACTION="${1:-}"
-
-case "$ACTION" in
-install)
-  step "一、检查服务器环境"
-  rsh 'bash -s' <<'PROBE'
-set -euo pipefail
-echo "  系统：$(. /etc/os-release; echo "$PRETTY_NAME")"
-if command -v node >/dev/null 2>&1; then
-  echo "  Node：$(node -v)"
-else
-  echo "  Node：未安装"
-fi
-echo "  站点目录：$(test -d /var/www/tios && echo 存在 || echo 缺失)"
-PROBE
-
-  step "二、安装 Node 20（若需要）与仓库"
-  # Ubuntu 20.04 的 apt 源里 Node 只有 v10/v12，跑不了 tsx（需要 18+），
-  # 故走 NodeSource。已经装了合适版本就跳过，不重复折腾系统。
-  rsh "REPO='$REPO' BRANCH='$BRANCH' REMOTE_DIR='$REMOTE_DIR' bash -s" <<'SETUP'
-set -euo pipefail
-NEED_NODE=1
-if command -v node >/dev/null 2>&1; then
-  MAJOR=$(node -v | sed 's/^v\([0-9]*\).*/\1/')
-  [[ "$MAJOR" -ge 18 ]] && NEED_NODE=0
-fi
-if [[ "$NEED_NODE" == "1" ]]; then
-  echo "  安装 Node 20……"
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - >/dev/null 2>&1
-  sudo apt-get install -y nodejs >/dev/null 2>&1
-fi
-echo "  Node $(node -v)"
-
-command -v git >/dev/null 2>&1 || sudo apt-get install -y git >/dev/null 2>&1
-
-if [[ -d "$REMOTE_DIR/.git" ]]; then
-  echo "  仓库已存在，拉取最新……"
-  sudo git -C "$REMOTE_DIR" fetch --quiet origin "$BRANCH"
-  sudo git -C "$REMOTE_DIR" reset --hard --quiet "origin/$BRANCH"
-else
-  echo "  克隆仓库到 ${REMOTE_DIR}……"
-  sudo git clone --quiet --branch "$BRANCH" --depth 20 "$REPO" "$REMOTE_DIR"
-fi
-
-echo "  安装依赖（npm ci，不会改动 lock 文件）……"
-cd "$REMOTE_DIR"
-sudo npm ci --omit=dev --no-audit --no-fund >/dev/null 2>&1 || sudo npm ci --no-audit --no-fund >/dev/null 2>&1
-echo "  依赖就绪"
-SETUP
-
-  step "三、写入更新脚本"
+# 写入服务器上的更新脚本。install 与 update 共用 ——
+# 缺了共用入口的后果实测过一次：改了 FORCE 支持后服务器仍是旧脚本，
+# 现象看起来像"FORCE 没生效"而不是"脚本没更新"。
+write_updater() {
   # 脚本里带交易日闸门：休市日行情源给出的最新K线仍是上一个交易日的，
   # 此时覆盖线上文件只会把"数据日期"刷成今天，让人误以为看的是今天的数据。
   rsh "REMOTE_DIR='$REMOTE_DIR' WEBROOT='$WEBROOT' bash -s" <<'WRITER'
@@ -143,6 +96,60 @@ sudo chmod +x "$REMOTE_DIR/update-snapshot.sh"
 sudo mkdir -p /var/log && sudo touch /var/log/tios-update.log
 echo "  已写入 $REMOTE_DIR/update-snapshot.sh"
 WRITER
+}
+
+ACTION="${1:-}"
+
+case "$ACTION" in
+install)
+  step "一、检查服务器环境"
+  rsh 'bash -s' <<'PROBE'
+set -euo pipefail
+echo "  系统：$(. /etc/os-release; echo "$PRETTY_NAME")"
+if command -v node >/dev/null 2>&1; then
+  echo "  Node：$(node -v)"
+else
+  echo "  Node：未安装"
+fi
+echo "  站点目录：$(test -d /var/www/tios && echo 存在 || echo 缺失)"
+PROBE
+
+  step "二、安装 Node 20（若需要）与仓库"
+  # Ubuntu 20.04 的 apt 源里 Node 只有 v10/v12，跑不了 tsx（需要 18+），
+  # 故走 NodeSource。已经装了合适版本就跳过，不重复折腾系统。
+  rsh "REPO='$REPO' BRANCH='$BRANCH' REMOTE_DIR='$REMOTE_DIR' bash -s" <<'SETUP'
+set -euo pipefail
+NEED_NODE=1
+if command -v node >/dev/null 2>&1; then
+  MAJOR=$(node -v | sed 's/^v\([0-9]*\).*/\1/')
+  [[ "$MAJOR" -ge 18 ]] && NEED_NODE=0
+fi
+if [[ "$NEED_NODE" == "1" ]]; then
+  echo "  安装 Node 20……"
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - >/dev/null 2>&1
+  sudo apt-get install -y nodejs >/dev/null 2>&1
+fi
+echo "  Node $(node -v)"
+
+command -v git >/dev/null 2>&1 || sudo apt-get install -y git >/dev/null 2>&1
+
+if [[ -d "$REMOTE_DIR/.git" ]]; then
+  echo "  仓库已存在，拉取最新……"
+  sudo git -C "$REMOTE_DIR" fetch --quiet origin "$BRANCH"
+  sudo git -C "$REMOTE_DIR" reset --hard --quiet "origin/$BRANCH"
+else
+  echo "  克隆仓库到 ${REMOTE_DIR}……"
+  sudo git clone --quiet --branch "$BRANCH" --depth 20 "$REPO" "$REMOTE_DIR"
+fi
+
+echo "  安装依赖（npm ci，不会改动 lock 文件）……"
+cd "$REMOTE_DIR"
+sudo npm ci --omit=dev --no-audit --no-fund >/dev/null 2>&1 || sudo npm ci --no-audit --no-fund >/dev/null 2>&1
+echo "  依赖就绪"
+SETUP
+
+  step "三、写入更新脚本"
+  write_updater
 
   step "四、装 cron"
   # 服务器时区可能不是北京，故 cron 项显式带 CRON_TZ，避免"09:20 到底是哪个 09:20"
@@ -181,6 +188,51 @@ $LINE
   服务器这个定时任务只更新数据（data/today.json），不重建 JS/CSS。
 
 EOF
+  ;;
+
+update)
+  # install 会重装 Node、重跑 npm ci，代价大且没必要。
+  # 而缺了这个入口的后果实测过一次：改了 FORCE 支持之后，服务器上仍是旧脚本，
+  # run-now 照旧在闸门处退出，而现象看起来像"FORCE 没用"而不是"脚本没更新"。
+  step "更新服务器上的仓库与脚本（不重装 Node、不重跑 npm ci）"
+  rsh "REMOTE_DIR='$REMOTE_DIR' BRANCH='$BRANCH' bash -s" <<'UPD'
+set -euo pipefail
+cd "$REMOTE_DIR"
+sudo git fetch --quiet origin "$BRANCH"
+sudo git reset --hard --quiet "origin/$BRANCH"
+echo "  仓库已更新到 $(sudo git log --oneline -1)"
+UPD
+  step "重写 update-snapshot.sh"
+  write_updater
+  printf '\n  完成。cron 配置未改动（要改时点请重跑 install）。\n\n'
+  ;;
+
+pull-archive)
+  # ── 档案的唯一归属方是服务器 ──
+  # 服务器不睡，因此它的 changelog/audits 是**连续**的；Mac 侧一律 ARCHIVE=0。
+  # 但 git 在 Mac 上，所以要把服务器那份取回来提交 ——
+  # 否则 30 天后的复盘只能 ssh 上去看，而且没有版本历史可比对。
+  step "把服务器上的档案取回本地（供提交进 git）"
+  mkdir -p "$ROOT/backend/src/services/governance/data/changelog" \
+           "$ROOT/backend/src/services/cockpit/data/audits"
+  SCP_OPTS=()
+  [[ -f "$KEY" ]] && SCP_OPTS+=(-i "$KEY")
+  scp "${SCP_OPTS[@]}" -q \
+    "$USER_@$HOST:$REMOTE_DIR/backend/src/services/governance/data/changelog/*.json" \
+    "$ROOT/backend/src/services/governance/data/changelog/" 2>/dev/null || true
+  scp "${SCP_OPTS[@]}" -q \
+    "$USER_@$HOST:$REMOTE_DIR/backend/src/services/governance/data/discovery.json" \
+    "$ROOT/backend/src/services/governance/data/" 2>/dev/null || true
+  scp "${SCP_OPTS[@]}" -q \
+    "$USER_@$HOST:$REMOTE_DIR/backend/src/services/cockpit/data/audits/*.md" \
+    "$ROOT/backend/src/services/cockpit/data/audits/" 2>/dev/null || true
+  cd "$ROOT"
+  printf '\n  本地档案现状：\n'
+  ls -1 backend/src/services/governance/data/changelog/ | sed 's/^/    /'
+  printf '\n  git 差异：\n'
+  git status --short backend/src/services/governance/data backend/src/services/cockpit/data/audits \
+    | sed 's/^/    /' || true
+  printf '\n  确认无误后提交：git add -A backend/src/services && git commit -m "归档 …"\n\n'
   ;;
 
 run-now)
@@ -223,14 +275,21 @@ uninstall)
 *)
   cat <<EOF
 
-用法：DEPLOY_HOST=… DEPLOY_KEY=… ./scripts/schedule-server.sh <install|status|run-now|uninstall>
+用法：DEPLOY_HOST=… DEPLOY_KEY=… ./scripts/schedule-server.sh <命令>
 
-  install    在服务器上装 Node、仓库与 cron（盘前 09:20 / 盘后 15:10）
-  status     看 cron 配置、数据文件时间、最近日志
-  run-now    立即在服务器上跑一次
-  uninstall  只删 cron，不动仓库与站点文件
+  install       装 Node、仓库与 cron（盘前 09:20 / 盘后 15:10）
+  update        更新服务器上的仓库与更新脚本（不重装 Node、不重跑 npm ci）
+  status        看 cron 配置、数据文件时间、最近日志
+  run-now       立即跑一次并强制发布（休市日也能验证管线）
+  pull-archive  把服务器上的 changelog/审计档取回本地，供提交进 git
+  uninstall     只删 cron，不动仓库与站点文件
 
-装好之后 Mac 可以关机。前端代码变动仍需从 Mac 用 deploy-ecs.sh 重新部署。
+装好之后 Mac 可以关机。两点须知：
+
+  · 前端代码变动仍需从 Mac 用 deploy-ecs.sh 重新部署（服务器只更新数据）。
+  · 档案（changelog / 审计档）的唯一归属方是服务器，因为它不睡。
+    Mac 侧的生成一律带 ARCHIVE=0，避免两台机器各写一份、得到两条不完整的序列。
+    定期用 pull-archive 取回来提交进 git。
 
 EOF
   exit 1
