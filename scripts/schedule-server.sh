@@ -103,9 +103,14 @@ export PATH=/usr/local/bin:/usr/bin:/bin
 cd /opt/tios
 
 SESSION="${1:-post}"
+# FORCE=1 跳过交易日闸门。**只给 run-now 用。**
+# 缺了它，休市日 run-now 会在闸门处退出，于是"管线到底通不通"这件事
+# 要等到下一个交易日才知道 —— 而那时若是坏的，观察期已经丢掉一天。
+# 测试的目的正是在真正需要它之前先失败一次。
+FORCE="${FORCE:-0}"
 LOG=/var/log/tios-update.log
 exec >> "$LOG" 2>&1
-echo "=== $(date '+%F %T %Z') session=$SESSION ==="
+echo "=== $(date '+%F %T %Z') session=$SESSION force=$FORCE ==="
 
 # 盘前只出简报不归档；盘后完整并归档
 if [[ "$SESSION" == "pre" ]]; then
@@ -122,8 +127,13 @@ SRC=/opt/tios/frontend/public/data/today.json
 SNAP_DATE=$(node -e "try{console.log(require('$SRC').date||'')}catch(e){console.log('')}")
 TODAY=$(TZ=Asia/Shanghai date +%F)
 if [[ -n "$SNAP_DATE" && "$SNAP_DATE" != "$TODAY" ]]; then
-  echo "最新K线 $SNAP_DATE ≠ 今天 ${TODAY}（休市或数据未更新），跳过发布"
-  exit 0
+  if [[ "$FORCE" == "1" ]]; then
+    echo "最新K线 $SNAP_DATE ≠ 今天 ${TODAY}，但 FORCE=1 → 仍然发布（用于验证管线）"
+    echo "  注意：页面上显示的交易日会是 ${SNAP_DATE}，不是今天。这是对的。"
+  else
+    echo "最新K线 $SNAP_DATE ≠ 今天 ${TODAY}（休市或数据未更新），跳过发布"
+    exit 0
+  fi
 fi
 
 install -o www-data -g www-data -m 644 "$SRC" /var/www/tios/data/today.json
@@ -174,8 +184,11 @@ EOF
   ;;
 
 run-now)
-  step "立即在服务器上跑一次（等同盘后任务）"
-  rsh "$REMOTE_DIR/update-snapshot.sh post; tail -n 20 /var/log/tios-update.log"
+  step "立即在服务器上跑一次（等同盘后任务，但强制发布）"
+  printf '  FORCE=1：休市日也发布，否则这次测试会在交易日闸门处退出，\n'
+  printf '  于是"管线通不通"要等到下一个交易日才知道。\n'
+  printf '  发布出来的页面会显示最新那个交易日，不是今天 —— 这是对的。\n'
+  rsh "FORCE=1 $REMOTE_DIR/update-snapshot.sh post; tail -n 25 /var/log/tios-update.log"
   printf '\n  线上数据日期：'
   curl -s --max-time 20 "https://hhwealth.cc/data/today.json" \
     | python3 -c "
