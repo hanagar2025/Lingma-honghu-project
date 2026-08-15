@@ -63,9 +63,9 @@ console.log('场景2：中际旭创 2026-07-17 收盘-12.00% —— 熔断边界
 
 console.log('场景3：组合熔断分支 —— 净值高点口径决定判定结果')
 {
-  const branchA = evaluatePortfolioCircuit({ date: '2026-07-17', totalAssets: 3841267, cash: 1403569, positionsValue: 2437598, peakAssets: 4300000 })
+  const branchA = evaluatePortfolioCircuit({ date: '2026-07-17', totalAssets: 3841267, cash: 1403569, positionsValue: 2437598, externalCash: 0, portfolioTotal: 3841267, peakAssets: 4300000, peakBasis: 'PORTFOLIO' })
   check('分支A（高点430万）：回撤10.7%未触发', branchA.positionCap === 1, branchA.detail)
-  const branchB = evaluatePortfolioCircuit({ date: '2026-07-17', totalAssets: 3841267, cash: 1403569, positionsValue: 2437598, peakAssets: 4640000 })
+  const branchB = evaluatePortfolioCircuit({ date: '2026-07-17', totalAssets: 3841267, cash: 1403569, positionsValue: 2437598, externalCash: 0, portfolioTotal: 3841267, peakAssets: 4640000, peakBasis: 'PORTFOLIO' })
   check('分支B（高点464万）：回撤17.2%触发50%上限', branchB.positionCap === 0.5 && !branchB.sellOnly, branchB.detail)
 }
 

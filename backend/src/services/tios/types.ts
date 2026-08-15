@@ -20,13 +20,49 @@ export interface Position {
   marketValue: number
 }
 
+/**
+ * 账户与组合快照。
+ *
+ * ── 委员会 2026-08-15 口径裁定：三个仓位分母必须分开 ──
+ *
+ * 此前只有一个 `totalAssets`（券商账户内的现金 + 持仓），单票 12% 上限也用它做分母。
+ * 后果是一个不符合经济实质的风控：同一笔钱放在券商账户外，系统认为股票风险变大；
+ * 转进券商账户，系统认为风险变小。而钱的用途没有变。
+ *
+ * 裁定后：
+ *   · `brokerTotal`    券商账户内合计 —— 只回答"账户里还有多少现金可以直接下单"
+ *   · `portfolioTotal` 正式股票投资组合 = 持仓 + 账内现金 + 专用于股票的账户外现金
+ *                      —— 单票上限、板块上限、主题上限、现金比例都用它
+ *
+ * 两者不可混用。混用过一次的代价：8/14 系统报出"海光超限 6.6pct、新易盛超限 2.9pct"，
+ * 而按正确分母海光只超 1.1pct、新易盛根本不超限。
+ */
 export interface AccountSnapshot {
   date: string
+  /** 券商账户内合计 = cash + positionsValue。仅用于账户内操作口径 */
   totalAssets: number
+  /** 券商账户内现金 */
   cash: number
   positionsValue: number
-  /** 历史最高净值，用于组合熔断判定 */
+  /**
+   * 专用于股票投资的账户外现金储备。
+   * 委员会已裁定：它计入组合分母，但**不计入家庭安全垫** ——
+   * 委员会明确它"不是家庭日常生活资产"，故按其自身定义排除。
+   */
+  externalCash: number
+  /** 正式股票投资组合总资产 = positionsValue + cash + externalCash */
+  portfolioTotal: number
+  /**
+   * 历史最高净值，用于组合熔断判定。
+   *
+   * **必须与 portfolioTotal 同口径。** 旧值 430 万记的是券商账户口径；
+   * 换算到组合口径前，回撤不可比 —— 若直接沿用，新口径总资产 531 万
+   * 会大于旧峰值 430 万，回撤算成 0，熔断静默失效。
+   * 故用 `peakBasis` 标明它属于哪个口径，未换算时回撤输出"不可比"而非 0。
+   */
   peakAssets: number
+  /** 峰值所属口径。'BROKER' 表示尚未按组合口径重新认定 */
+  peakBasis: 'BROKER' | 'PORTFOLIO'
 }
 
 export interface RuleCard {

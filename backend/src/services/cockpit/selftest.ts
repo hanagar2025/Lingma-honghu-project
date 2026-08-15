@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 // 驾驶舱自检 —— 核心是三条不变量，全部围绕同一件事：
 //   **未经检验的指标不可能产生动作。**
 //
@@ -118,6 +119,7 @@ console.log('\n【不变量二】第①问只用账务事实，且缺数据不�
 
 const snapshot: AccountSnapshot = {
   date: '2026-08-13', totalAssets: 3_500_000, cash: 400_000,
+  externalCash: 0, portfolioTotal: 3_500_000, peakBasis: 'PORTFOLIO' as const,
   positionsValue: 3_100_000, peakAssets: 4_300_000,
 }
 const positions: Position[] = [
@@ -336,6 +338,90 @@ ok('没有任何动作理由包含"跑输"（跑输只能是观察项）',
   !allReasonTexts.includes('跑输'))
 ok('观察项里确实保留了跑输/均线等诊断信息',
   report.actions.some(a => a.reviewTriggers.some(t => t.includes('跑输') || t.includes('MA'))))
+
+// ── 仓位口径（委员会 2026-08-15 裁定）──
+//
+// 这一组是整套风控里最容易被悄悄改错的地方：只要有人把某处分母换回账户口径，
+// 页面上的百分比看着都正常，只是超限结论变了。故逐条钉住。
+console.log('\n【仓位口径】上限一律用组合口径')
+
+const basePos: Position[] = [
+  { code: '688041', name: '海光信息', sector: '电子', theme: 'AI', cost: 700_000, marketValue: 700_000 },
+  { code: '300308', name: '中际旭创', sector: '通信', theme: 'AI', cost: 560_000, marketValue: 560_000 },
+]
+const mkSnap = (cash: number, ext: number, peakBasis: 'BROKER' | 'PORTFOLIO' = 'PORTFOLIO'): AccountSnapshot => {
+  const pv = basePos.reduce((s, p) => s + p.marketValue, 0)
+  return {
+    date: '2026-08-15', totalAssets: cash + pv, cash, positionsValue: pv,
+    externalCash: ext, portfolioTotal: cash + pv + ext,
+    peakAssets: 6_000_000, peakBasis,
+  }
+}
+
+// 核心不变量：**同一笔钱放在账户内还是账户外，不得改变任何单票权重。**
+// 这正是委员会的论证 —— 用账户口径做分母，等于"把钱转进账户就认为风险变小"。
+const outside = mkSnap(583_000, 2_000_000)
+const inside = mkSnap(583_000 + 2_000_000, 0)
+const wOut = findLimitBreaches({ snapshot: outside, positions: basePos, asOf: '2026-08-15' })
+const wIn = findLimitBreaches({ snapshot: inside, positions: basePos, asOf: '2026-08-15' })
+ok('把账户外现金转进账户，组合总资产不变',
+  outside.portfolioTotal === inside.portfolioTotal)
+ok('把账户外现金转进账户，超限清单完全相同（钱的位置不改变股票风险）',
+  JSON.stringify(wOut) === JSON.stringify(wIn),
+  `外置 ${wOut.length} 条 / 内置 ${wIn.length} 条`)
+ok('券商账户口径与组合口径确实不同（否则这组测试是空的）',
+  outside.totalAssets !== outside.portfolioTotal,
+  `${outside.totalAssets} vs ${outside.portfolioTotal}`)
+
+// 分母选错的具体后果：同一持仓在两个口径下一个超限一个不超限
+const bigPos: Position[] = [
+  { code: 'X', name: '测试股', sector: '电子', theme: 'AI', cost: 0, marketValue: 400_000 },
+]
+const snapMixed: AccountSnapshot = {
+  date: '2026-08-15', totalAssets: 2_000_000, cash: 1_600_000, positionsValue: 400_000,
+  externalCash: 2_000_000, portfolioTotal: 4_000_000,
+  peakAssets: 5_000_000, peakBasis: 'PORTFOLIO',
+}
+ok('该持仓按账户口径为 20%（超 12%），按组合口径为 10%（不超）',
+  Math.abs(400_000 / snapMixed.totalAssets - 0.20) < 1e-9
+  && Math.abs(400_000 / snapMixed.portfolioTotal - 0.10) < 1e-9)
+ok('超限清单按组合口径判定 → 不产生减仓',
+  findLimitBreaches({ snapshot: snapMixed, positions: bigPos, asOf: '2026-08-15' }).length === 0)
+
+// 峰值口径不可比时，回撤必须是 null，不能是 0 ——
+// 后者会让熔断静默失效，而页面上一切正常。
+const brokerPeak = mkSnap(583_000, 2_000_000, 'BROKER')
+const ansBroker = evaluateSafety({ snapshot: brokerPeak, positions: basePos, asOf: '2026-08-15' })
+const ddRowB = ansBroker.rows.find(r => r.label.includes('回撤'))
+ok('峰值口径为 BROKER 时，回撤判为数据缺失而非 0',
+  ddRowB?.light === 'UNKNOWN' && ddRowB.status.includes('缺失'),
+  `${ddRowB?.light} / ${ddRowB?.status}`)
+const ddMetric = ansBroker.metrics.find(x => x.label === '自峰值回撤')
+ok('回撤缺失原因写明"口径不可比"，而非笼统的数据缺失',
+  (ddMetric?.missingReason ?? '').includes('不可比'), ddMetric?.missingReason ?? '')
+
+const portPeak = mkSnap(583_000, 2_000_000, 'PORTFOLIO')
+const ansPort = evaluateSafety({ snapshot: portPeak, positions: basePos, asOf: '2026-08-15' })
+ok('峰值口径为 PORTFOLIO 时回撤可算出',
+  ansPort.metrics.find(x => x.label === '自峰值回撤')?.value !== null)
+
+// 家庭安全垫只计账内现金：委员会明确账户外那笔不是家庭日常生活资产
+const ansNet = evaluateSafety({
+  snapshot: mkSnap(583_000, 2_000_000), positions: basePos,
+  householdAnnualExpense: 400_000, asOf: '2026-08-15',
+})
+const netMetric = ansNet.metrics.find(x => x.label === '家庭安全垫年数')
+  ?? ansNet.metrics.find(x => x.label.includes('安全垫'))
+ok('安全垫用账内现金 58.3万 ÷ 40万 ≈ 1.46 年（若误并入 200 万会变成 6.46 年）',
+  netMetric !== undefined && Math.abs((netMetric.value ?? 0) - 583_000 / 400_000) < 0.01,
+  String(netMetric?.value))
+
+const safetySrc = readFileSync(new URL('./safety.ts', import.meta.url), 'utf-8')
+ok('safety.ts 里不存在名为 total 的裸变量（防止两个口径再被混用）',
+  !/\bconst total\b|\blet total\b/.test(safetySrc))
+ok('12% 判据只有一份实现（singleNameWeight），不再各写一遍',
+  (safetySrc.match(/> LIMITS\.singleStock/g) ?? []).length <= 2
+  && /export function singleNameWeight/.test(safetySrc))
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
