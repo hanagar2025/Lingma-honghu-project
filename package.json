@@ -20,7 +20,8 @@
     "web:package": "node scripts/package-deploy.mjs",
     "share": "cd backend && SHARE=1 WEB=1 npx tsx src/services/cockpit/run.ts",
     "share:amounts": "cd backend && SHARE=1 SHARE_AMOUNTS=1 npx tsx src/services/cockpit/run.ts",
-    "web:deploy": "npm run web:build && npm run web:preflight"
+    "web:deploy": "npm run web:build && npm run web:preflight",
+    "web:status": "node scripts/check-live.mjs"
   },
   "workspaces": [
     "backend",
