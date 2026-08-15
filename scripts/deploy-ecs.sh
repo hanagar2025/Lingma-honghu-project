@@ -46,44 +46,18 @@ BASE_PATH="$BASE" npm run web:build
 npm run web:preflight
 BASE_PATH="$BASE" npm run web:package
 
-# ── 交易日闸门（仅定时任务模式）──
-# 不需要节假日日历：**看行情源给出的最新K线日期就够了。**
-# 休市日最新K线仍是上一个交易日的，与线上那份相同 —— 此时发布只是白发一次，
-# 还会把"快照生成时间"刷成今天，让人误以为看的是今天的数据。
-# 日历会过期（调休、临时休市），而"最新K线是哪天"永远是当下的事实。
-if [[ "${NONINTERACTIVE:-0}" == "1" ]]; then
-  NEW_DATE=$(python3 -c "
-import json,sys
-try:
-    d=json.load(open('$ROOT/frontend/dist/data/today.json'))
-    print(d.get('date') or '')
-except Exception:
-    print('')
-" 2>/dev/null || true)
-  TODAY_BJ=$(TZ=Asia/Shanghai date +%F)
-  LIVE_DATE=$(curl -s --max-time 20 "https://$DOMAIN/data/today.json" 2>/dev/null \
-    | python3 -c "
-import json,sys
-try: print(json.load(sys.stdin).get('date') or '')
-except Exception: print('')
-" 2>/dev/null || true)
-
-  printf '\n  最新K线日期 %s，北京日期 %s，线上已发布 %s\n' \
-    "${NEW_DATE:-未知}" "$TODAY_BJ" "${LIVE_DATE:-未知}"
-
-  if [[ -n "$NEW_DATE" && "$NEW_DATE" != "$TODAY_BJ" ]]; then
-    printf '  今日无新K线（休市或数据未更新），跳过发布。线上保持 %s 那份。\n\n' "${LIVE_DATE:-原样}"
-    exit 0
-  fi
-  if [[ -n "$NEW_DATE" && "$NEW_DATE" == "$LIVE_DATE" && "${FORCE:-0}" != "1" ]]; then
-    printf '  线上已是 %s 的数据，跳过发布（要强制覆盖加 FORCE=1）。\n\n' "$NEW_DATE"
-    exit 0
-  fi
-fi
-
-TARBALL="$(ls -t "$ROOT"/frontend/release/*.tar.gz | head -1)"
-[[ -f "$TARBALL" ]] || die "找不到打包产物"
-printf '\n  产物：%s\n' "$TARBALL"
+# ── 这里刻意没有交易日闸门 ──
+#
+# 曾经有过：NONINTERACTIVE=1 时若最新K线不是今天就跳过发布。
+# 那是 Mac 负责定时发布时代的遗留。定时发布移到服务器之后，本脚本只用于
+# **手动部署前端代码**，而前端代码的变动与今天是否交易毫无关系 ——
+# 闸门留在这里的唯一效果，是让周末的手动部署静默跳过，
+# 而后续步骤照样"成功"，于是页面依旧是旧的却查不出原因。
+#
+# 交易日闸门现在只存在于服务器的 update-snapshot.sh 里，那里它才有意义：
+# 避免用上一个交易日的数据覆盖线上、把数据日期刷成今天。
+#
+# NONINTERACTIVE=1 在本脚本里只表示一件事：不要停下来问确认。
 
 # ── 二、生成将在服务器上执行的脚本 ──
 # 单独生成成文件而不是一行行 ssh：这样可以先读一遍再执行。

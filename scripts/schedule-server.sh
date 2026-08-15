@@ -36,8 +36,15 @@ LINE="$(printf '─%.0s' {1..70})"
 die() { printf '\n\033[31m✗ %s\033[0m\n\n' "$1" >&2; exit 1; }
 step() { printf '\n%s\n%s\n%s\n' "$LINE" "$1" "$LINE"; }
 
-SSH_OPTS=(-o BatchMode=no)
-[[ -f "$KEY" ]] && SSH_OPTS+=(-i "$KEY")
+# ── 远端命令一律不许交互 ──
+# 实测踩过：update 在远端 git fetch 处被挂起（^Z suspended）。
+# 任何可能弹提示的远端命令，在没有 TTY 时都会变成 hang，
+# 而 hang 看起来像"脚本坏了"，方向完全指错 —— 失败即退比卡住好得多。
+SSH_OPTS=(-o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+if [[ -f "$KEY" ]]; then
+  # 有密钥就禁掉一切口令提示；没有密钥时保留交互，让人能输服务器密码
+  SSH_OPTS+=(-i "$KEY" -o BatchMode=yes)
+fi
 rsh() { ssh "${SSH_OPTS[@]}" "$USER_@$HOST" "$@"; }
 
 # 写入服务器上的更新脚本。install 与 update 共用 ——
@@ -133,13 +140,15 @@ echo "  Node $(node -v)"
 
 command -v git >/dev/null 2>&1 || sudo apt-get install -y git >/dev/null 2>&1
 
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=/bin/true
 if [[ -d "$REMOTE_DIR/.git" ]]; then
   echo "  仓库已存在，拉取最新……"
-  sudo git -C "$REMOTE_DIR" fetch --quiet origin "$BRANCH"
-  sudo git -C "$REMOTE_DIR" reset --hard --quiet "origin/$BRANCH"
+  sudo -n git -C "$REMOTE_DIR" fetch --quiet origin "$BRANCH"
+  sudo -n git -C "$REMOTE_DIR" reset --hard --quiet "origin/$BRANCH"
 else
   echo "  克隆仓库到 ${REMOTE_DIR}……"
-  sudo git clone --quiet --branch "$BRANCH" --depth 20 "$REPO" "$REMOTE_DIR"
+  sudo -n git clone --quiet --branch "$BRANCH" --depth 20 "$REPO" "$REMOTE_DIR"
 fi
 
 echo "  安装依赖（npm ci，不会改动 lock 文件）……"
@@ -197,10 +206,18 @@ update)
   step "更新服务器上的仓库与脚本（不重装 Node、不重跑 npm ci）"
   rsh "REMOTE_DIR='$REMOTE_DIR' BRANCH='$BRANCH' bash -s" <<'UPD'
 set -euo pipefail
+# GIT_TERMINAL_PROMPT=0：git 若想问凭据就直接失败，而不是等一个不存在的终端。
+# 这是上一次 update 被挂起的直接原因。
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=/bin/true
 cd "$REMOTE_DIR"
-sudo git fetch --quiet origin "$BRANCH"
-sudo git reset --hard --quiet "origin/$BRANCH"
-echo "  仓库已更新到 $(sudo git log --oneline -1)"
+echo "  拉取 origin/$BRANCH ……"
+sudo -n GIT_TERMINAL_PROMPT=0 git fetch --quiet origin "$BRANCH" || {
+  echo "  ✗ git fetch 失败。检查服务器能否访问 GitHub：curl -I https://github.com"
+  exit 1
+}
+sudo -n git reset --hard --quiet "origin/$BRANCH"
+echo "  已更新到 $(sudo -n git log --oneline -1)"
 UPD
   step "重写 update-snapshot.sh"
   write_updater
