@@ -423,5 +423,94 @@ ok('12% 判据只有一份实现（singleNameWeight），不再各写一遍',
   (safetySrc.match(/> LIMITS\.singleStock/g) ?? []).length <= 2
   && /export function singleNameWeight/.test(safetySrc))
 
+// ── 熔断口径（委员会 2026-08-15 要求两套历史，不粗暴覆盖）──
+console.log('\n【熔断口径】不可比必须与正常区分')
+{
+  const { judgeCircuit, PEAK_HISTORY } = await import('../governance/peakBasis')
+
+  const cur = judgeCircuit(5_335_000)
+  ok('组合口径峰值未建立时判为 INCOMPARABLE，而非 NORMAL',
+    cur.state === 'INCOMPARABLE', cur.state)
+  ok('不可比时回撤为 null，不得为 0',
+    cur.drawdown === null, String(cur.drawdown))
+  ok('不可比的理由明写不得判为"回撤0%"或"无熔断"',
+    cur.reason.includes('回撤 0%') && cur.reason.includes('无熔断'))
+
+  // 旧口径历史永不删除：它是 7/17–8/14 全部熔断判定的依据
+  const legacy = PEAK_HISTORY.find(h => h.basis === 'legacy_account_basis')
+  ok('旧口径峰值 430 万仍在册（删掉会让那段历史无法复核）',
+    legacy?.peak === 4_300_000, String(legacy?.peak))
+  const v1 = PEAK_HISTORY.find(h => h.basis === 'portfolio_basis_v1')
+  ok('组合口径峰值标为尚未建立，而不是填上今天的 533 万',
+    v1?.peak === null, String(v1?.peak))
+
+  // 一旦峰值建立，判定必须真的能算出来
+  const withPeak = judgeCircuit(5_335_000, [
+    { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
+    { basis: 'portfolio_basis_v1', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
+  ])
+  ok('峰值建立后可算出回撤（600万 → 533.5万 ≈ 11.1%）',
+    withPeak.drawdown !== null && Math.abs(withPeak.drawdown - (1 - 5_335_000 / 6_000_000)) < 1e-9)
+  ok('11.1% 回撤未触发熔断（一级线 15%）', withPeak.state === 'NORMAL')
+  const deep = judgeCircuit(4_000_000, [
+    { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
+    { basis: 'portfolio_basis_v1', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
+  ])
+  ok('33% 回撤触发二级熔断', deep.state === 'LEVEL2', deep.state)
+}
+
+// ── 执行债务重审（四种终态，不允许模糊的"建议卖"）──
+console.log('\n【执行债务重审】')
+{
+  const { loadDebts, reauditDebts } = await import('../governance/reaudit')
+  const debts = loadDebts()
+  ok('债务台账重建出 7 条', debts.length === 7, String(debts.length))
+  ok('每条都带出处行号（凭记忆分类等于重新编一遍）',
+    debts.every(d => typeof d.sourceLine === 'number' && d.sourceLine > 0))
+
+  const snap: AccountSnapshot = {
+    date: '2026-08-15', totalAssets: 3_335_000, cash: 583_000, positionsValue: 2_752_000,
+    externalCash: 2_000_000, portfolioTotal: 5_335_000,
+    peakAssets: 4_300_000, peakBasis: 'BROKER',
+  }
+  const pos: Position[] = [
+    { code: '300308', name: '中际旭创', sector: '通信', theme: 'AI', cost: 0, marketValue: 560_000 },
+    { code: '300502', name: '新易盛', sector: '通信', theme: 'AI', cost: 0, marketValue: 565_000 },
+    { code: '688008', name: '澜起科技', sector: '电子', theme: '半导体', cost: 0, marketValue: 275_000 },
+    { code: '603986', name: '兆易创新', sector: '电子', theme: '半导体', cost: 0, marketValue: 83_000 },
+  ]
+  const rows = reauditDebts(debts, snap, pos)
+  const by = (id: string) => rows.find(r => r.debt.id === id)!
+
+  ok('D5 中际旭创（纯仓位超限）判为因口径变更失效',
+    by('D5').verdict === 'INVALIDATED_BY_BASIS_CHANGE', by('D5').verdict)
+  ok('D6 新易盛 12%纠偏 判为因口径变更失效',
+    by('D6').verdict === 'INVALIDATED_BY_BASIS_CHANGE', by('D6').verdict)
+  ok('D3 新易盛原趋势指令（状态类，与分母无关）不因此失效',
+    by('D3').verdict === 'PENDING_CONFIRMATION', by('D3').verdict)
+  ok('同一标的的两条指令终态可以不同（新易盛 D3 保留、D6 失效）',
+    by('D3').verdict !== by('D6').verdict)
+  ok('D1 C级清退不因资产口径修正被顺手消掉',
+    by('D1').verdict === 'PENDING_CONFIRMATION', by('D1').verdict)
+  ok('D2 硬止损不因资产口径修正被顺手消掉',
+    by('D2').verdict === 'PENDING_CONFIRMATION', by('D2').verdict)
+  ok('D4 熔断类判为需重算，且理由指向峰值口径不可比',
+    by('D4').verdict === 'RECALC_REQUIRED' && by('D4').reasoning.includes('不可比'),
+    by('D4').verdict)
+  ok('D4 不因"现在看着没超"而被消掉',
+    by('D4').reasoning.includes('不得因'))
+
+  ok('终态只出现在四种之内，不含模糊的"建议卖"',
+    rows.every(r => ['VALID', 'INVALIDATED_BY_BASIS_CHANGE', 'RECALC_REQUIRED', 'PENDING_CONFIRMATION']
+      .includes(r.verdict)))
+  ok('E1 分母由 7 修正为 5（失效的 2 条不计入）',
+    rows.filter(r => r.countsTowardE1).length === 5,
+    String(rows.filter(r => r.countsTowardE1).length))
+
+  const reauditSrc = readFileSync(new URL('../governance/reaudit.ts', import.meta.url), 'utf-8')
+  ok('重审层不调用 makeAction（不生成交易指令）', !/\bmakeAction\s*\(/.test(reauditSrc))
+  ok('重审层不含股数计算（撤销与执行属执行层）', !/quantity|股数\s*=/.test(reauditSrc))
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
