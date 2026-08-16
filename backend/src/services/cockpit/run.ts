@@ -30,6 +30,9 @@ import {
   pendingVerification, paidGaps, wiringBacklog,
   type Hypothesis,
 } from '../research/hypotheses'
+import {
+  buildAttribution, renderAttribution, STORAGE_ATTRIBUTION, type Attribution,
+} from '../research/attribution'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
@@ -231,6 +234,7 @@ async function main(): Promise<void> {
   let ledgerForHtml: DiscoveryLedger | null = null
   let hypothesesForHtml: Hypothesis[] = []
   let hypothesesForWeb: unknown[] = []
+  let attributionForWeb: Attribution | null = null
 
   if (process.env.DASHBOARD === '0' || !internals) {
     printReport(rep)
@@ -289,7 +293,7 @@ async function main(): Promise<void> {
     hypothesesForWeb = hypothesesForHtml.map(h => ({
       ...h,
       fourLine: fourLineVerdict(h),
-      causal: causalLayers(h),
+      causal: causalLayers(h, h.peer),
       pending: pendingVerification(h).map(i => ({
         text: i.text, evidence: i.evidence, checklist: i.verifyChecklist ?? [],
       })),
@@ -297,6 +301,12 @@ async function main(): Promise<void> {
       wiringBacklog: wiringBacklog(h).map(i => i.text),
     }))
     process.stdout.write(`${renderHypotheses(hypothesesForHtml)}\n`)
+
+    // ── 主线收入归因 ──
+    // 委员会 2026-08-16 定为存储的唯一下一步。放在台账之后单列，
+    // 是因为它现在全是缺口 —— 而缺口摆在明处才会被补，混在台账里会被读成"已在做"。
+    attributionForWeb = buildAttribution(STORAGE_ATTRIBUTION)
+    process.stdout.write(`${renderAttribution(attributionForWeb)}\n`)
 
     // ── 变化台账 ──
     // 盘前不落档：盘中读数会污染日间序列，而这份档案要连续读 30 个交易日。
@@ -515,6 +525,7 @@ async function main(): Promise<void> {
       dashboard: dashForHtml,
       verdict: verdictForHtml,
       hypotheses: hypothesesForWeb,
+      attribution: attributionForWeb,
       brief: briefForWeb,
       changes: changesForHtml,
       prevDate: prevDateForHtml,

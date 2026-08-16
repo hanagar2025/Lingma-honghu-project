@@ -478,12 +478,12 @@ export function renderDashboardHtml(input: HtmlInput): string {
       }
       w(`</ol></div>`)
 
-      // 因果强度五层：防止把"行业事实→公司事实→因果→持续性→投资资格"压缩成一句看多
-      w(`<div class=sec style="margin:12px 0 6px">因果强度五层`)
+      // 因果强度六层：防止把"行业事实→公司事实→因果→持续性→投资资格"压缩成一句看多
+      w(`<div class=sec style="margin:12px 0 6px">因果强度六层`)
       w(`<span class=foot>（上一层成立不推出下一层）</span></div>`)
       w(`<div class=tw><table><thead><tr><th>层级</th><th>能证明什么</th>`)
       w(`<th>状态</th><th>依据</th></tr></thead><tbody>`)
-      for (const c of causalLayers(hy)) {
+      for (const c of causalLayers(hy, hy.peer)) {
         const bad = c.status === 'VETOED' || c.status === 'NOT_PROVEN'
         w(`<tr><td>${c.level}. ${esc(c.name)}</td><td>${esc(c.proves)}</td>`)
         w(`<td class="${c.status === 'CONFIRMED' ? 'up' : bad ? 'down' : 'miss'}">`)

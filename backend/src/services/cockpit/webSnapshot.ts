@@ -30,6 +30,8 @@ import { fingerprint } from '../governance/ruleRegistry'
 export interface WebSnapshotInput {
   /** 外部叙事台账。OBSERVATION 级，前端只渲染、不据此产生任何操作入口 */
   hypotheses?: unknown[]
+  /** 主线收入归因。当前全是缺口 —— 摆在明处才会被补 */
+  attribution?: unknown
   report: CockpitReport
   dashboard: Dashboard | null
   /** 今日结论。网页端与 CLI/HTML 必须给出同一份结论，否则三个出口会各说一套 */
@@ -70,6 +72,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     dashboard,
     verdict: input.verdict ?? null,
     hypotheses: input.hypotheses ?? [],
+    attribution: input.attribution ?? null,
     brief: input.brief ?? null,
     dashboardText: null,
     changes: { prevDate, items: changes },

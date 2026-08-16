@@ -181,6 +181,11 @@ export interface Hypothesis {
   doesNotImply: string[]
   /** 阻塞项：即便数据全部兑现，仍需先解决的事 */
   blockers: string[]
+  /** 同业对照。由 withLiveData 注入，供「行业同步」层取用 */
+  peer?: {
+    total: number; currentOutliers: number; baseOutliers: number
+    medianYoyPct: number | null; note: string
+  } | null
   tier: EvidenceTier
 }
 
@@ -370,7 +375,7 @@ export const CAUSAL_STATUS_TEXT: Record<CausalStatus, string> = {
 }
 
 export interface CausalLayer {
-  level: 1 | 2 | 3 | 4 | 5
+  level: 1 | 2 | 3 | 4 | 5 | 6
   name: string
   /** 这一层能证明什么 —— 写清楚它证明的边界，而不只是名字 */
   proves: string
@@ -384,7 +389,10 @@ export interface CausalLayer {
  * 刻意由数据推出而不是手写：手写的表会停留在写它的那一天，
  * 而这张表要在每次数据更新后自动跟着变。
  */
-export function causalLayers(h: Hypothesis): CausalLayer[] {
+export function causalLayers(h: Hypothesis, peer?: {
+  total: number; currentOutliers: number; baseOutliers: number
+  medianYoyPct: number | null; note: string
+} | null): CausalLayer[] {
   const A = h.propositions.find(p => p.id === 'A')
   const B = h.propositions.find(p => p.id === 'B')
   const ind = (pid: 'A' | 'B', no: number) =>
@@ -419,7 +427,20 @@ export function causalLayers(h: Hypothesis): CausalLayer[] {
         + (gm?.status === 'PENDING_VERIFICATION' ? '(读数存在但性质待解释)' : ''),
     },
     {
-      level: 3, name: '主线归因',
+      // 委员会 2026-08-16 追加：「行业层」与「产业景气」是两个不同的问题。
+      // 前者问"整个行业是否同步扩张"，后者问"这条节点的利润份额是否扩大"。
+      // 一个节点份额扩大完全可以发生在行业整体没有同步改善的情况下 ——
+      // 那时份额来自同行掉队，而不是行业变好。
+      level: 3, name: '行业同步',
+      proves: '整个行业发生同步毛利扩张，而非个别公司事件',
+      status: !peer || peer.total === 0 ? 'UNKNOWN'
+        : peer.baseOutliers >= peer.currentOutliers ? 'NOT_PROVEN' : 'PARTIAL',
+      basis: peer
+        ? peer.note
+        : '无同业对照读数 → 无法区分"行业性扩张"与"个别公司事件"',
+    },
+    {
+      level: 4, name: '主线归因',
       proves: '改善主要来自本主线需求，而非其他业务或周期因素',
       // 归因永远不能由"收入/利润增长"推出，故除非第 3、5 步真正完成，一律 UNKNOWN
       status: 'UNKNOWN',
@@ -427,18 +448,18 @@ export function causalLayers(h: Hypothesis): CausalLayer[] {
         + '无法区分"公司赚钱"与"因本主线赚钱"',
     },
     {
-      level: 4, name: '持续性',
+      level: 5, name: '持续性',
       proves: '未来数年仍将持续',
       status: bMet > 0 ? 'PARTIAL' : 'NOT_PROVEN',
       basis: `命题 B 指标 ${bMet}/${B?.indicators.length ?? 0} 兑现；`
         + '持续性一项在定义上无法用任何单期数据满足',
     },
     {
-      level: 5, name: '投资资格',
+      level: 6, name: '投资资格',
       proves: '该标的可以进入候选',
       status: strategyBlocked ? 'VETOED' : 'UNKNOWN',
       basis: strategyBlocked
-        ? '战略层直接否决(C 级清退)。「即便第 1–4 层全部转为可确认，本层仍不改变」——'
+        ? '战略层直接否决(C 级清退)。「即便第 1–5 层全部转为可确认，本层仍不改变」——'
           + '研究证据链 ≠ 投资资格链'
         : '须走 S0–S3 晋级程序',
     },
@@ -626,6 +647,7 @@ export function withLiveData(
 
   return {
     ...h,
+    peer: node?.peerGrossMargin ?? null,
     propositions: h.propositions.map(p => ({ ...p, indicators: p.indicators.map(patch) })),
   }
 }
@@ -688,10 +710,10 @@ export function renderHypotheses(list: Hypothesis[] = HYPOTHESES): string {
 
     // 因果强度表：防止把"行业事实 → 公司事实 → 因果 → 持续性 → 投资资格"压缩成一句看多
     L.push('')
-    L.push('     ── 因果强度五层(上一层成立不推出下一层) ──')
+    L.push('     ── 因果强度六层(上一层成立不推出下一层) ──')
     L.push(`     ${'层级'.padEnd(8)}${'能证明什么'.padEnd(40)}${'状态'.padEnd(10)}`)
     L.push(`     ${'─'.repeat(96)}`)
-    for (const c of causalLayers(h)) {
+    for (const c of causalLayers(h, h.peer)) {
       L.push(`     ${c.level}. ${c.name.padEnd(6)}${c.proves.padEnd(38)}`
         + `${CAUSAL_STATUS_TEXT[c.status]}`)
       L.push(`        依据：${c.basis}`)

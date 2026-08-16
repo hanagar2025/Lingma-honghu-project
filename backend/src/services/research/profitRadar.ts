@@ -272,14 +272,27 @@ export interface GrossMarginAnomaly {
     /** 基期偏离自身历史 → 同比是基期失真，本期只是回归正常 */
     | 'BASE_IS_OUTLIER'
     | 'BOTH_OUTLIERS'
-    /** 两端都在历史区间内 → 同比变动不构成跃升 */
-    | 'NEITHER'
+    /**
+     * 两端都在自身历史区间内 → 同比变动不构成实质偏离。
+     *
+     * 原名 NEITHER（"都不是"），2026-08-16 改名。旧名字只说了它不属于前三种，
+     * 没说它本身是什么，于是读起来像"未判定"。而它是一个明确的结论：
+     * 「这次同比变动没有实质偏离」。
+     */
+    | 'NO_MATERIAL_DEVIATION'
   note: string
 }
 
-/** 偏离判据：超出自身历史 min–max 区间即为偏离，幅度按超出量计。
- *  刻意不用标准差倍数 —— 8 个样本估标准差本身不可靠，而 min–max 是直接可读的事实。 */
-function judgeGmAnomaly(
+/**
+ * 偏离判据：超出自身历史 min–max 区间即为偏离，幅度按超出量计。
+ * 刻意不用标准差倍数 —— 8 个样本估标准差本身不可靠，而 min–max 是直接可读的事实。
+ *
+ * 「导出是为了让回归样本打在真实代码路径上」。
+ * 若只在 selftest 里另写一份等价实现，测的就是那份副本，
+ * 而生产代码可以随便改都不会失败。
+ * 三个不可删除样本见 gmAnomalyRegression.ts。
+ */
+export function judgeGmAnomaly(
   history: number[], currentPct: number, prevPct: number
 ): GrossMarginAnomaly | null {
   if (history.length < 4) return null
@@ -293,7 +306,7 @@ function judgeGmAnomaly(
   const cOut = Math.abs(cd) > 0
   const pOut = Math.abs(pd) > 0
   const verdict: GrossMarginAnomaly['verdict'] = cOut && pOut ? 'BOTH_OUTLIERS'
-    : cOut ? 'CURRENT_IS_OUTLIER' : pOut ? 'BASE_IS_OUTLIER' : 'NEITHER'
+    : cOut ? 'CURRENT_IS_OUTLIER' : pOut ? 'BASE_IS_OUTLIER' : 'NO_MATERIAL_DEVIATION'
   // 措辞必须与偏离幅度相称。偏离 0.3pct 写成"跃升是真实事件"是把噪声说成事件 ——
   // 这里只报事实(偏离多少)，是否构成须解释的事件由台账结合同比幅度另行判断。
   const note = verdict === 'CURRENT_IS_OUTLIER'
@@ -304,7 +317,7 @@ function judgeGmAnomaly(
         + `本期 ${currentPct.toFixed(1)}% 落在区间内 → 「同比变动是基期失真，不是本期改善」`
       : verdict === 'BOTH_OUTLIERS'
         ? '本期与基期均偏离自身历史 → 同比无参考价值，须逐期核对原始报表'
-        : `本期与基期均落在自身历史区间 ${lo.toFixed(1)}–${hi.toFixed(1)}% 内 → 同比变动不构成跃升`
+        : `本期与基期均落在自身历史区间 ${lo.toFixed(1)}–${hi.toFixed(1)}% 内 → 同比变动不构成实质偏离`
   return {
     baseQuarters: history.length, historyMedianPct: med,
     historyMinPct: lo, historyMaxPct: hi,

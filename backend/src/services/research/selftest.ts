@@ -630,20 +630,29 @@ try {
     bd.evidence.includes('基期失真') && bd.evidence.includes('不构成改善证据'))
 
   // ── 因果强度五层 ──
-  const cl = causalLayers(live)
-  ok('因果强度共五层且顺序固定',
-    cl.length === 5 && cl.map(c => c.level).join(',') === '1,2,3,4,5')
-  ok('第 1 层 产业景气 = 可确认', cl[0].status === 'CONFIRMED')
-  ok('第 2 层 公司受益 = 部分（毛利率待核验，不算确认）', cl[1].status === 'PARTIAL')
-  ok('第 3 层 主线归因 = 未知（第 3、5 步未完成）', cl[2].status === 'UNKNOWN')
-  ok('第 3 层依据明说无法区分"公司赚钱"与"因本主线赚钱"',
-    cl[2].basis.includes('公司赚钱') && cl[2].basis.includes('因本主线赚钱'))
-  ok('第 4 层 持续性 = 当前数据不能证明', cl[3].status === 'NOT_PROVEN')
-  ok('第 5 层 投资资格 = 战略否决', cl[4].status === 'VETOED')
-  ok('第 5 层依据明写"即便 1–4 层全部转为可确认，本层仍不改变"',
-    cl[4].basis.includes('即便第 1–4 层全部转为可确认'))
-  ok('第 5 层依据点明"研究证据链 ≠ 投资资格链"',
-    cl[4].basis.includes('研究证据链 ≠ 投资资格链'))
+  const cl = causalLayers(live, node.peerGrossMargin)
+  const by = (name: string) => cl.find(c => c.name === name)!
+  ok('因果强度共六层且顺序固定',
+    cl.length === 6 && cl.map(c => c.level).join(',') === '1,2,3,4,5,6')
+  ok('第 1 层 产业景气 = 可确认', by('产业景气').status === 'CONFIRMED')
+  ok('第 2 层 公司受益 = 部分（毛利率待核验，不算确认）', by('公司受益').status === 'PARTIAL')
+  // 「行业同步」与「产业景气」是两个问题：节点份额扩大可以来自同行掉队，
+  // 那时行业并未同步改善。委员会 2026-08-16 追加此层。
+  ok('第 3 层 行业同步独立成层，且当前判为不能证明',
+    by('行业同步').status === 'NOT_PROVEN', by('行业同步').status)
+  ok('行业同步层依据引用同业对照读数',
+    by('行业同步').basis.includes('有可比读数'))
+  ok('无同业读数时行业同步层为未知，而非"不能证明"',
+    causalLayers(live, null).find(c => c.name === '行业同步')!.status === 'UNKNOWN')
+  ok('第 4 层 主线归因 = 未知（第 3、5 步未完成）', by('主线归因').status === 'UNKNOWN')
+  ok('主线归因层明说无法区分"公司赚钱"与"因本主线赚钱"',
+    by('主线归因').basis.includes('公司赚钱') && by('主线归因').basis.includes('因本主线赚钱'))
+  ok('第 5 层 持续性 = 当前数据不能证明', by('持续性').status === 'NOT_PROVEN')
+  ok('第 6 层 投资资格 = 战略否决', by('投资资格').status === 'VETOED')
+  ok('投资资格层依据明写"即便 1–5 层全部转为可确认，本层仍不改变"',
+    by('投资资格').basis.includes('即便第 1–5 层全部转为可确认'))
+  ok('投资资格层依据点明"研究证据链 ≠ 投资资格链"',
+    by('投资资格').basis.includes('研究证据链 ≠ 投资资格链'))
 
   // 主线归因永不因收入/利润增长而自动转绿 —— 这是跨层跳跃的入口
   const allMet = {
@@ -652,16 +661,18 @@ try {
       ...pp, indicators: pp.indicators.map(i => ({ ...i, status: 'MET' as const })),
     })),
   }
-  ok('即便所有指标翻绿，第 3 层主线归因仍为未知（归因不能由增长推出）',
-    causalLayers(allMet)[2].status === 'UNKNOWN')
-  ok('即便所有指标翻绿，第 5 层仍为战略否决',
-    causalLayers(allMet)[4].status === 'VETOED')
+  ok('即便所有指标翻绿，主线归因层仍为未知（归因不能由增长推出）',
+    causalLayers(allMet, node.peerGrossMargin)
+      .find(c => c.name === '主线归因')!.status === 'UNKNOWN')
+  ok('即便所有指标翻绿，投资资格层仍为战略否决',
+    causalLayers(allMet, node.peerGrossMargin)
+      .find(c => c.name === '投资资格')!.status === 'VETOED')
   ok('即便所有指标翻绿，四句话第 4 句仍是战略层不允许',
     fourLineVerdict(allMet).candidacy.includes('战略层不允许'))
 
   // ── 渲染 ──
   const txt = renderHypotheses([live])
-  ok('渲染层输出因果强度五层', txt.includes('因果强度五层'))
+  ok('渲染层输出因果强度五层', txt.includes('因果强度六层'))
   ok('渲染层声明上一层成立不推出下一层', txt.includes('上一层成立不推出下一层'))
   ok('渲染层单列待核验异常区并说明不计入兑现数',
     txt.includes('待核验异常') && txt.includes('不计入任何命题的兑现数'))
@@ -671,6 +682,171 @@ try {
   ok('pendingVerification 只返回待核验项',
     pendingVerification(live).length === 1
     && pendingVerification(live)[0].no === 4)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 毛利率异常识别：不可删除回归样本
+// ══════════════════════════════════════════════════════════════
+//
+// 委员会 2026-08-16 要求这三个样本不可删除。样本定义在
+// gmAnomalyRegression.ts —— 单独成文件是因为写在 selftest 里的断言
+// 在重写测试时会连同被删掉（我上一轮就干过一次）。
+{
+  const { GM_REGRESSION_CASES } = await import('./gmAnomalyRegression')
+  const { judgeGmAnomaly } = await import('./profitRadar')
+
+  ok('回归样本覆盖三种判定（本期偏离 / 基期失真 / 无实质偏离）',
+    new Set(GM_REGRESSION_CASES.map(c => c.expect)).size === 3
+    && ['CURRENT_IS_OUTLIER', 'BASE_IS_OUTLIER', 'NO_MATERIAL_DEVIATION']
+      .every(e => GM_REGRESSION_CASES.some(c => c.expect === e)))
+
+  for (const c of GM_REGRESSION_CASES) {
+    const a = judgeGmAnomaly(c.history, c.currentPct, c.prevPct)
+    ok(`【不可删除】${c.name}（${c.code}）判定为 ${c.expect}`,
+      a?.verdict === c.expect,
+      `实为 ${a?.verdict ?? 'null'}｜同比 ${(c.currentPct - c.prevPct).toFixed(1)}pct`
+      + `｜历史 ${Math.min(...c.history).toFixed(1)}–${Math.max(...c.history).toFixed(1)}%`)
+    ok(`${c.name} 样本写明为什么必须是这个判定`, c.why.length > 40)
+    ok(`${c.name} 样本标注数据出处（不是编的数字）`, c.asOf.includes('profit.json'))
+  }
+
+  // 兆易与拓荆的同比幅度接近但判定相反 —— 这正是"同比无方向性含义"的证明
+  const gd = GM_REGRESSION_CASES.find(c => c.code === '603986')!
+  const tj = GM_REGRESSION_CASES.find(c => c.code === '688072')!
+  const gdYoy = gd.currentPct - gd.prevPct
+  const tjYoy = tj.currentPct - tj.prevPct
+  ok('两个样本同比方向相同且幅度接近（拓荆甚至更大）',
+    gdYoy > 0 && tjYoy > 0 && tjYoy > gdYoy,
+    `兆易 +${gdYoy.toFixed(1)}pct vs 拓荆 +${tjYoy.toFixed(1)}pct`)
+  ok('但判定相反 —— 同比变化本身没有方向性含义',
+    gd.expect !== tj.expect)
+
+  // 与真实数据一致性：样本端点必须还能在 profit.json 里找到
+  {
+    const raw = JSON.parse(readFileSync(
+      new URL('./data/profit.json', import.meta.url), 'utf-8'
+    )) as { records: { code: string; periods: { grossMarginCumPct: number | null }[] }[] }
+    let matched = 0
+    for (const c of GM_REGRESSION_CASES) {
+      const rec = raw.records.find(r => r.code === c.code)
+      if (!rec) continue
+      const vals = rec.periods
+        .map(x => x.grossMarginCumPct)
+        .filter((v): v is number => v != null)
+        .map(v => Number(v.toFixed(2)))
+      if (vals.includes(Number(c.currentPct.toFixed(2)))
+        && vals.includes(Number(c.prevPct.toFixed(2)))) matched++
+    }
+    ok('三个样本的端点值都能在 profit.json 中找到（样本不是编的）',
+      matched === GM_REGRESSION_CASES.length, `匹配 ${matched}/${GM_REGRESSION_CASES.length}`)
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 主线收入归因：存量占比 ≠ 增长来源
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    buildAttribution, renderAttribution, ATTRIBUTION_CHAIN, ATTRIBUTION_VERDICT_TEXT,
+    STORAGE_ATTRIBUTION,
+  } = await import('./attribution')
+
+  const base = {
+    company: 'X', mainline: 'AI', source: '年报分产品收入表', chainStep: 5 as const,
+  }
+
+  // 委员会 2026-08-16 给的两个反例，逐字构造
+  const bigNotDriver = buildAttribution({
+    ...base,
+    revenuePrev: 100e8, revenueCur: 115e8,
+    mainlineRevenuePrev: 60e8, mainlineRevenueCur: 63e8,   // AI +5%，非 AI +30%
+  })
+  ok('反例一：AI 占 55%（大业务）但增长贡献仅 20% → 判为「大但不驱动」',
+    bigNotDriver.verdict === 'LARGE_BUT_NOT_DRIVER',
+    `占比 ${((bigNotDriver.stockShare ?? 0) * 100).toFixed(1)}%`
+    + ` 贡献 ${((bigNotDriver.growthContribution ?? 0) * 100).toFixed(1)}%`)
+  ok('反例一说明"主线景气无法解释公司当期变化"',
+    bigNotDriver.note.includes('无法解释公司当期变化'))
+
+  const smallDriver = buildAttribution({
+    ...base,
+    revenuePrev: 100e8, revenueCur: 105e8,
+    mainlineRevenuePrev: 8e8, mainlineRevenueCur: 20e8,    // AI +150%，其他下降
+  })
+  ok('反例二：AI 仅占 19% 但增长贡献 240% → 判为「小但驱动」',
+    smallDriver.verdict === 'SMALL_BUT_DRIVER',
+    `占比 ${((smallDriver.stockShare ?? 0) * 100).toFixed(1)}%`
+    + ` 贡献 ${((smallDriver.growthContribution ?? 0) * 100).toFixed(1)}%`)
+  ok('增长贡献允许 >100%（其他业务下滑时），不得截断到 0–1',
+    (smallDriver.growthContribution ?? 0) > 1)
+  ok('反例二提示核查基数过小导致增速失真', smallDriver.note.includes('基数是否过小'))
+
+  // 两个反例的存量占比排序与判定排序相反 —— 这正是必须拆两个字段的证明
+  ok('存量占比更高的那个反而不是增长来源 —— 两个字段不可互相替代',
+    (bigNotDriver.stockShare ?? 0) > (smallDriver.stockShare ?? 0)
+    && bigNotDriver.verdict === 'LARGE_BUT_NOT_DRIVER'
+    && smallDriver.verdict === 'SMALL_BUT_DRIVER')
+
+  // 主线自身下滑而公司仍增长 → 贡献为负，必须保留符号
+  const shrinking = buildAttribution({
+    ...base,
+    revenuePrev: 100e8, revenueCur: 120e8,
+    mainlineRevenuePrev: 30e8, mainlineRevenueCur: 25e8,
+  })
+  ok('主线收入下滑时增长贡献为负（保留符号，否则"主线在拖累公司"被抹掉）',
+    (shrinking.growthContribution ?? 0) < 0,
+    String(shrinking.growthContribution))
+
+  // 总增量非正时不得硬算比值
+  const flat = buildAttribution({
+    ...base,
+    revenuePrev: 100e8, revenueCur: 95e8,
+    mainlineRevenuePrev: 30e8, mainlineRevenueCur: 35e8,
+  })
+  ok('公司总收入增量非正时增长贡献为 null，不硬算比值',
+    flat.growthContribution === null)
+  ok('并说明须改用绝对增量对比',
+    flat.missing.some(m => m.includes('绝对增量')))
+
+  // ── 归因不得凭管理层表述成立 ──
+  const noSource = buildAttribution({
+    ...base, source: '',
+    revenuePrev: 100e8, revenueCur: 115e8,
+    mainlineRevenuePrev: 60e8, mainlineRevenueCur: 63e8,
+  })
+  ok('无数据出处时归因判为 UNKNOWN', noSource.verdict === 'UNKNOWN')
+  ok('并明说不得凭管理层「AI 需求旺盛」一类表述成立',
+    noSource.missing.some(m => m.includes('管理层')))
+
+  // ── 归因链五环 ──
+  ok('归因链为 公司收入 → 产品 → 下游应用 → 目标需求 → 收入变化',
+    ATTRIBUTION_CHAIN.map(c => c.name).join('→')
+      === '公司收入→产品→下游应用→目标需求→收入变化')
+  const partial = buildAttribution({
+    ...base, chainStep: 2,
+    revenuePrev: 100e8, revenueCur: 115e8,
+    mainlineRevenuePrev: 60e8, mainlineRevenueCur: 63e8,
+  })
+  ok('链条未走完时一律 UNKNOWN，且指出下一环要回答什么',
+    partial.verdict === 'UNKNOWN'
+    && partial.missing.some(m => m.includes('下一环要回答')))
+
+  // ── 存储现状 ──
+  const st = buildAttribution(STORAGE_ATTRIBUTION)
+  ok('存储归因当前停在第 1 环，判定为数据不足', st.chainStep === 1 && st.verdict === 'UNKNOWN')
+  ok('存储归因缺口点名"分产品收入表（公开可得但尚未接入）"',
+    st.missing.some(m => m.includes('分产品收入表') && m.includes('尚未接入')))
+  ok('存储归因结论明说不得以占比代替增长来源',
+    st.note.includes('不得以') && st.note.includes('增长来源'))
+
+  const txt = renderAttribution(st)
+  ok('渲染层把"增长贡献"标为比存量占比更重要',
+    txt.includes('这一项比存量占比重要'))
+  ok('渲染层写出要回答的不是"公司收入有没有增长"',
+    txt.includes('不是「公司收入有没有增长」'))
+  ok('四种判定文案各不相同（否则两个反例会显示成同一句话）',
+    new Set(Object.values(ATTRIBUTION_VERDICT_TEXT)).size
+      === Object.keys(ATTRIBUTION_VERDICT_TEXT).length)
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
