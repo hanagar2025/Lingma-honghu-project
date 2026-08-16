@@ -436,20 +436,23 @@ try {
   ok('毛利率证据写明单位为百分数（曾按小数用又乘 100，渲染出 5707.67%）',
     i4.evidence.includes('单位为百分数'))
 
-  // 大幅变动必须标"须核验"，但不替委员会判定原因
-  const bigGm = withLiveData(h1, {
+  // 上一轮这里断言的是文案「量级异常，须核验」。该机制已被更强的
+  // PENDING_VERIFICATION 状态取代（见文件末尾"因果强度五层"一节）：
+  // 大幅跃升不再只是"文案里提一句"，而是**结构上不计入兑现数**。
+  // 故此处只保留一条：没有 anomaly 信息时不得擅自判为待核验 ——
+  // 待核验必须有归因依据，否则它会变成一个万能的搪塞状态。
+  const noAnomaly = withLiveData(h1, {
     npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
     deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
     members: [{
       name: '兆易创新', deductRatio: 0.891, deductRatioAsOf: '2025-12-31',
       grossMarginPct: 57.1, grossMarginYoyPct: 19.6, grossMarginPrevPct: 37.4,
+      grossMarginAnomaly: null,
     }],
   })
-  const bigI4 = bigGm.propositions.find(p => p.id === 'A')!.indicators.find(i => i.no === 4)!
-  ok('毛利率同比 >10pct 时标为量级异常须核验', bigI4.evidence.includes('量级异常，须核验'))
-  ok('并列出两种可能原因而不替委员会选一个',
-    bigI4.evidence.includes('量价齐升') && bigI4.evidence.includes('会计口径')
-    && bigI4.evidence.includes('不替委员会判定原因'))
+  const naGm = noAnomaly.propositions.find(p => p.id === 'A')!.indicators.find(i => i.no === 4)!
+  ok('缺少归因信息时不判为待核验（待核验必须有依据，否则会变成万能搪塞）',
+    naGm.status !== 'PENDING_VERIFICATION', naGm.status)
   ok('毛利率证据明说单季改善不构成对命题 B 的证据',
     i4.evidence.includes('不构成对命题 B 的证据'))
 
@@ -554,6 +557,120 @@ try {
   ok('字段齐全时不报任何异常',
     findEmptyFields(wrap([mk(2025, 2, { deductEps: 0.9 }), mk(2025, 4, { deductEps: 1.8 }),
       mk(2026, 1), mk(2026, 3)])).length === 0)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 因果强度五层与"事实 ≠ 因果证据"
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    HYPOTHESES, withLiveData, causalLayers, pendingVerification, metCount,
+    fourLineVerdict, renderHypotheses, CAUSAL_STATUS_TEXT,
+  } = await import('./hypotheses')
+  const { judgeGmAnomalyForTest } = await import('./profitRadar') as never as {
+    judgeGmAnomalyForTest?: unknown
+  }
+  void judgeGmAnomalyForTest
+
+  const h1 = HYPOTHESES.find(h => h.id === 'H1')!
+  const node = {
+    npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
+    deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
+    members: [{
+      name: '兆易创新', deductRatio: 0.891, deductRatioAsOf: '2025-12-31',
+      grossMarginPct: 57.1, grossMarginYoyPct: 19.6, grossMarginPrevPct: 37.4,
+      grossMarginAnomaly: {
+        verdict: 'CURRENT_IS_OUTLIER', historyMinPct: 26.7, historyMaxPct: 49.5,
+        currentDeviationPct: 7.6,
+        note: '本期 57.1% 落在自身历史区间 26.7–49.5% 之上 7.6pct（基期 37.4% 在区间内）',
+      },
+    }],
+    peerGrossMargin: {
+      total: 15, currentOutliers: 3, baseOutliers: 3, medianYoyPct: 2.9,
+      note: 'semi口径 15 家有可比读数，同比中位数 +2.9pct；其中 3 家本期偏离自身历史、3 家属基期失真。',
+    },
+  }
+  const live = withLiveData(h1, node)
+
+  // ── 57.1% 只能是待核验，不能是利好证据 ──
+  const gm = live.propositions.find(p => p.id === 'A')!.indicators.find(i => i.no === 4)!
+  ok('毛利率跃升判为 PENDING_VERIFICATION，不是 MET',
+    gm.status === 'PENDING_VERIFICATION', gm.status)
+  ok('待核验项不计入 metCount（否则未解释的跃升会自动变成"又多一项证据"）',
+    metCount(live) === 3, `实为 ${metCount(live)}`)
+  ok('证据明写"只能叫事实，不能叫因果证据"',
+    gm.evidence.includes('只能叫事实，不能叫因果证据'))
+  ok('证据列出六项核对清单',
+    (gm.verifyChecklist ?? []).length === 6, `实为 ${(gm.verifyChecklist ?? []).length} 项`)
+  for (const item of ['产品结构', 'ASP', '成本', '存货跌价', '会计口径', '同行']) {
+    ok(`核对清单覆盖「${item}」`,
+      (gm.verifyChecklist ?? []).some(c => c.includes(item)))
+  }
+  ok('证据同屏给出自身历史区间与偏离幅度',
+    gm.evidence.includes('26.7–49.5%') && gm.evidence.includes('7.6pct'))
+  ok('证据同屏给出同业对照', gm.evidence.includes('同业对照'))
+
+  // 基期失真必须判为不构成改善证据 —— 这是拓荆科技那个真实案例
+  const baseDistorted = withLiveData(h1, {
+    ...node,
+    members: [{
+      ...node.members[0], name: '拓荆科技',
+      grossMarginPct: 41.7, grossMarginYoyPct: 21.8, grossMarginPrevPct: 19.9,
+      grossMarginAnomaly: {
+        verdict: 'BASE_IS_OUTLIER', historyMinPct: 27.6, historyMaxPct: 50.3,
+        currentDeviationPct: 0,
+        note: '基期 19.9% 才是偏离项(自身历史区间 27.6–50.3%)，本期 41.7% 落在区间内',
+      },
+    }],
+  })
+  const bd = baseDistorted.propositions.find(p => p.id === 'A')!.indicators.find(i => i.no === 4)!
+  ok('基期失真时同比 +21.8pct 不构成改善证据（判为 UNVERIFIED）',
+    bd.status === 'UNVERIFIED', bd.status)
+  ok('并明说同比来自基期失真、本期未偏离自身历史',
+    bd.evidence.includes('基期失真') && bd.evidence.includes('不构成改善证据'))
+
+  // ── 因果强度五层 ──
+  const cl = causalLayers(live)
+  ok('因果强度共五层且顺序固定',
+    cl.length === 5 && cl.map(c => c.level).join(',') === '1,2,3,4,5')
+  ok('第 1 层 产业景气 = 可确认', cl[0].status === 'CONFIRMED')
+  ok('第 2 层 公司受益 = 部分（毛利率待核验，不算确认）', cl[1].status === 'PARTIAL')
+  ok('第 3 层 主线归因 = 未知（第 3、5 步未完成）', cl[2].status === 'UNKNOWN')
+  ok('第 3 层依据明说无法区分"公司赚钱"与"因本主线赚钱"',
+    cl[2].basis.includes('公司赚钱') && cl[2].basis.includes('因本主线赚钱'))
+  ok('第 4 层 持续性 = 当前数据不能证明', cl[3].status === 'NOT_PROVEN')
+  ok('第 5 层 投资资格 = 战略否决', cl[4].status === 'VETOED')
+  ok('第 5 层依据明写"即便 1–4 层全部转为可确认，本层仍不改变"',
+    cl[4].basis.includes('即便第 1–4 层全部转为可确认'))
+  ok('第 5 层依据点明"研究证据链 ≠ 投资资格链"',
+    cl[4].basis.includes('研究证据链 ≠ 投资资格链'))
+
+  // 主线归因永不因收入/利润增长而自动转绿 —— 这是跨层跳跃的入口
+  const allMet = {
+    ...live,
+    propositions: live.propositions.map(pp => ({
+      ...pp, indicators: pp.indicators.map(i => ({ ...i, status: 'MET' as const })),
+    })),
+  }
+  ok('即便所有指标翻绿，第 3 层主线归因仍为未知（归因不能由增长推出）',
+    causalLayers(allMet)[2].status === 'UNKNOWN')
+  ok('即便所有指标翻绿，第 5 层仍为战略否决',
+    causalLayers(allMet)[4].status === 'VETOED')
+  ok('即便所有指标翻绿，四句话第 4 句仍是战略层不允许',
+    fourLineVerdict(allMet).candidacy.includes('战略层不允许'))
+
+  // ── 渲染 ──
+  const txt = renderHypotheses([live])
+  ok('渲染层输出因果强度五层', txt.includes('因果强度五层'))
+  ok('渲染层声明上一层成立不推出下一层', txt.includes('上一层成立不推出下一层'))
+  ok('渲染层单列待核验异常区并说明不计入兑现数',
+    txt.includes('待核验异常') && txt.includes('不计入任何命题的兑现数'))
+  ok('渲染层逐条列出核对清单（□）', txt.includes('□ 产品结构'))
+  ok('状态文案区分"未知"与"当前数据不能证明"',
+    CAUSAL_STATUS_TEXT.UNKNOWN !== CAUSAL_STATUS_TEXT.NOT_PROVEN)
+  ok('pendingVerification 只返回待核验项',
+    pendingVerification(live).length === 1
+    && pendingVerification(live)[0].no === 4)
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

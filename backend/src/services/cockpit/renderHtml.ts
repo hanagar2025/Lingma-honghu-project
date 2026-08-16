@@ -11,7 +11,8 @@
 import type { Dashboard } from './dashboard'
 import type { Verdict } from './verdict'
 import {
-  VERIFICATION_CHAIN, SOURCE_TIER_TEXT, fourLineVerdict, paidGaps, wiringBacklog,
+  VERIFICATION_CHAIN, SOURCE_TIER_TEXT, CAUSAL_STATUS_TEXT,
+  fourLineVerdict, causalLayers, pendingVerification, paidGaps, wiringBacklog,
   type Hypothesis,
 } from '../research/hypotheses'
 import type { Change } from '../governance/changeLog'
@@ -476,6 +477,35 @@ export function renderDashboardHtml(input: HtmlInput): string {
         w(`<li style="font-size:12.5px;line-height:1.8">${esc(line)}</li>`)
       }
       w(`</ol></div>`)
+
+      // 因果强度五层：防止把"行业事实→公司事实→因果→持续性→投资资格"压缩成一句看多
+      w(`<div class=sec style="margin:12px 0 6px">因果强度五层`)
+      w(`<span class=foot>（上一层成立不推出下一层）</span></div>`)
+      w(`<div class=tw><table><thead><tr><th>层级</th><th>能证明什么</th>`)
+      w(`<th>状态</th><th>依据</th></tr></thead><tbody>`)
+      for (const c of causalLayers(hy)) {
+        const bad = c.status === 'VETOED' || c.status === 'NOT_PROVEN'
+        w(`<tr><td>${c.level}. ${esc(c.name)}</td><td>${esc(c.proves)}</td>`)
+        w(`<td class="${c.status === 'CONFIRMED' ? 'up' : bad ? 'down' : 'miss'}">`)
+        w(`${esc(CAUSAL_STATUS_TEXT[c.status])}</td>`)
+        w(`<td class=foot>${esc(c.basis)}</td></tr>`)
+      }
+      w(`</tbody></table></div>`)
+
+      // 待核验异常单列：它们是事实，但在解释完成前不构成因果证据
+      const pv = pendingVerification(hy)
+      if (pv.length) {
+        w(`<div class="banner warn" style="margin-top:12px">`)
+        w(`<b>待核验异常（${pv.length} 项）</b>`)
+        w(`<div class=foot>这些读数是事实，但在解释完成之前不构成因果证据，`)
+        w(`故不计入任何命题的兑现数。</div></div>`)
+        for (const ind of pv) {
+          w(`<div style="margin-bottom:10px"><b>? ${esc(ind.text)}</b>`)
+          w(`<div class=foot>${esc(ind.evidence)}</div><ul>`)
+          for (const c of ind.verifyChecklist ?? []) w(`<li class=foot>□ ${esc(c)}</li>`)
+          w(`</ul></div>`)
+        }
+      }
 
       // 验证链：停在最早一个未完成的步骤
       w(`<div class=sec style="margin:10px 0 6px">验证链`)

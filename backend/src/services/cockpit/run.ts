@@ -26,7 +26,8 @@ import { buildVerdict, type Verdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
 import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import {
-  HYPOTHESES, withLiveData, renderHypotheses, fourLineVerdict, paidGaps, wiringBacklog,
+  HYPOTHESES, withLiveData, renderHypotheses, fourLineVerdict, causalLayers,
+  pendingVerification, paidGaps, wiringBacklog,
   type Hypothesis,
 } from '../research/hypotheses'
 import { renderDashboardHtml } from './renderHtml'
@@ -37,7 +38,7 @@ import {
   stageAdvances, isIntraday, loadAllSnapshots, driftOver,
   type Change, type DiscoveryLedger,
 } from '../governance/changeLog'
-import { buildProfitMap } from '../research/profitRadar'
+import { buildPeerGrossMargin, buildProfitMap } from '../research/profitRadar'
 import type { ProfitMap } from '../research/profitRadar'
 import type { MsrReport } from '../msr'
 import type { MomentumRow } from './momentum'
@@ -272,13 +273,26 @@ async function main(): Promise<void> {
     // 放在研究表之后、动作区之外。它的证据等级恒为 OBSERVATION，
     // 按 EvidenceTier 约定不得产生动作 —— 这里也没有任何函数能产生动作。
     hypothesesForHtml = HYPOTHESES.map(h => withLiveData(
-      h, profit?.nodes.find(n => n.node === h.node) ?? null
+      h,
+      (() => {
+        const n = profit?.nodes.find(x => x.node === h.node)
+        // 同业对照挂在节点上传下去 —— 它回答的是是否行业性，
+        // 与偏离自身历史是两个问题，缺一个就会读错跃升的性质。
+        if (!n || !profit) return n ?? null
+        // 同业对照限定同主线：拿存储公司去和光模块、电力设备比毛利率，
+        // 回答的是另一个问题，噪声也大得多。
+        return { ...n, peerGrossMargin: buildPeerGrossMargin(profit.nodes, n.mainlineId) }
+      })()
     ))
     // 四句话结论与两类缺口在后端算好再下发。
     // 前端重算的后果是两套口径：同一份数据在网页与终端给出不同的句子。
     hypothesesForWeb = hypothesesForHtml.map(h => ({
       ...h,
       fourLine: fourLineVerdict(h),
+      causal: causalLayers(h),
+      pending: pendingVerification(h).map(i => ({
+        text: i.text, evidence: i.evidence, checklist: i.verifyChecklist ?? [],
+      })),
       paidGaps: paidGaps(h).map(i => i.text),
       wiringBacklog: wiringBacklog(h).map(i => i.text),
     }))

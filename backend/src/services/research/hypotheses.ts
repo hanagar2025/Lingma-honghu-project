@@ -130,8 +130,18 @@ export type ChainStep = typeof VERIFICATION_CHAIN[number]
 export interface Indicator {
   no: number
   text: string
-  /** MET = 已有数据支持；UNVERIFIED = 无数据；REFUTED = 数据反向 */
-  status: 'MET' | 'UNVERIFIED' | 'REFUTED'
+  /**
+   * MET = 已有数据支持；UNVERIFIED = 无数据；REFUTED = 数据反向；
+   * PENDING_VERIFICATION = 「读数存在但性质待解释」。
+   *
+   * 最后一种是 2026-08-16 新增，来自一个具体case：兆易创新毛利率 37.4% → 57.1%。
+   * 这个读数是真的，但在解释清楚之前它「只能叫事实，不能叫因果证据」——
+   * 它同样可以来自产品结构变化、存货跌价转回或会计重分类。
+   * 故 PENDING_VERIFICATION 不计入 metCount，也不提升任何命题的判定。
+   */
+  status: 'MET' | 'UNVERIFIED' | 'REFUTED' | 'PENDING_VERIFICATION'
+  /** 待核验时的核对清单。空数组表示无须核对 */
+  verifyChecklist?: string[]
   /** 这条证据回答的是当前事实还是未来假设 */
   horizon: EvidenceHorizon
   sourceTier: SourceTier
@@ -324,9 +334,115 @@ export function allIndicators(h: Hypothesis): Indicator[] {
   return h.propositions.flatMap(p => p.indicators)
 }
 
-/** 已兑现的指标数。用于渲染，不参与任何排序或打分 */
+/**
+ * 已兑现的指标数。用于渲染，不参与任何排序或打分。
+ *
+ * 「PENDING_VERIFICATION 不计入」 —— 这是该状态存在的全部意义：
+ * 若它计入，一个未解释的毛利率跃升就会自动变成"又多一项证据兑现"，
+ * 而那正是把事实当因果证据用。
+ */
 export function metCount(h: Hypothesis): number {
   return allIndicators(h).filter(i => i.status === 'MET').length
+}
+
+/** 待核验项。它们是事实，但在解释完成前不构成因果证据 */
+export function pendingVerification(h: Hypothesis): Indicator[] {
+  return allIndicators(h).filter(i => i.status === 'PENDING_VERIFICATION')
+}
+
+/**
+ * 因果强度五层。
+ *
+ * 委员会 2026-08-16 指定。存在理由是防止把
+ * 「行业事实 → 公司事实 → 因果关系 → 持续性 → 投资资格」压缩成一句"看多"。
+ *
+ * 五层各自回答一个不同的问题，且**上一层成立不推出下一层**。
+ * 最后一层由战略层裁定，不由证据决定 —— 这是"研究证据链 ≠ 投资资格链"的落点。
+ */
+export type CausalStatus = 'CONFIRMED' | 'PARTIAL' | 'UNKNOWN' | 'NOT_PROVEN' | 'VETOED'
+
+export const CAUSAL_STATUS_TEXT: Record<CausalStatus, string> = {
+  CONFIRMED: '✅ 可确认',
+  PARTIAL: '部分',
+  UNKNOWN: '❓ 未知',
+  NOT_PROVEN: '❌ 当前数据不能证明',
+  VETOED: '❌ 战略否决',
+}
+
+export interface CausalLayer {
+  level: 1 | 2 | 3 | 4 | 5
+  name: string
+  /** 这一层能证明什么 —— 写清楚它证明的边界，而不只是名字 */
+  proves: string
+  status: CausalStatus
+  basis: string
+}
+
+/**
+ * 按当前读数生成因果强度表。
+ *
+ * 刻意由数据推出而不是手写：手写的表会停留在写它的那一天，
+ * 而这张表要在每次数据更新后自动跟着变。
+ */
+export function causalLayers(h: Hypothesis): CausalLayer[] {
+  const A = h.propositions.find(p => p.id === 'A')
+  const B = h.propositions.find(p => p.id === 'B')
+  const ind = (pid: 'A' | 'B', no: number) =>
+    (pid === 'A' ? A : B)?.indicators.find(i => i.no === no)
+  const aMet = A ? A.indicators.filter(i => i.status === 'MET').length : 0
+  const aPending = A ? A.indicators.filter(i => i.status === 'PENDING_VERIFICATION').length : 0
+  const bMet = B ? B.indicators.filter(i => i.status === 'MET').length : 0
+  const strategyBlocked = h.blockers.some(b => b.includes('strategyAllows = false'))
+
+  // 第 2 层"公司受益"取扣非与毛利率两项：两项都 MET 才算确认，
+  // 有待核验项则只能是"部分" —— 待核验不是半个证据，但它确实说明"有读数在动"
+  const deduct = ind('A', 3)
+  const gm = ind('A', 4)
+  const companyStatus: CausalStatus =
+    deduct?.status === 'MET' && gm?.status === 'MET' ? 'CONFIRMED'
+      : deduct?.status === 'MET' || gm?.status === 'MET' || aPending > 0 ? 'PARTIAL'
+        : 'UNKNOWN'
+
+  return [
+    {
+      level: 1, name: '产业景气',
+      proves: `${h.node}行业正在改善`,
+      status: aMet > 0 ? 'CONFIRMED' : 'UNKNOWN',
+      basis: `命题 A 当期指标 ${aMet}/${A?.indicators.length ?? 0} 兑现`
+        + (aPending ? `，另有 ${aPending} 项待核验(不计入)` : ''),
+    },
+    {
+      level: 2, name: '公司受益',
+      proves: '在册公司利润改善',
+      status: companyStatus,
+      basis: `扣非占比 ${deduct?.status ?? '?'}；毛利率 ${gm?.status ?? '?'}`
+        + (gm?.status === 'PENDING_VERIFICATION' ? '(读数存在但性质待解释)' : ''),
+    },
+    {
+      level: 3, name: '主线归因',
+      proves: '改善主要来自本主线需求，而非其他业务或周期因素',
+      // 归因永远不能由"收入/利润增长"推出，故除非第 3、5 步真正完成，一律 UNKNOWN
+      status: 'UNKNOWN',
+      basis: '第 3 步(主线收入归因)与第 5 步(主线利润归因)均未完成 → '
+        + '无法区分"公司赚钱"与"因本主线赚钱"',
+    },
+    {
+      level: 4, name: '持续性',
+      proves: '未来数年仍将持续',
+      status: bMet > 0 ? 'PARTIAL' : 'NOT_PROVEN',
+      basis: `命题 B 指标 ${bMet}/${B?.indicators.length ?? 0} 兑现；`
+        + '持续性一项在定义上无法用任何单期数据满足',
+    },
+    {
+      level: 5, name: '投资资格',
+      proves: '该标的可以进入候选',
+      status: strategyBlocked ? 'VETOED' : 'UNKNOWN',
+      basis: strategyBlocked
+        ? '战略层直接否决(C 级清退)。「即便第 1–4 层全部转为可确认，本层仍不改变」——'
+          + '研究证据链 ≠ 投资资格链'
+        : '须走 S0–S3 晋级程序',
+    },
+  ]
 }
 
 /**
@@ -367,7 +483,23 @@ export function withLiveData(
       grossMarginPct: number | null
       grossMarginYoyPct: number | null
       grossMarginPrevPct: number | null
+      /** 偏离的是本期还是基期。只看同比会把"回归正常"读成"大幅改善" */
+      grossMarginAnomaly?: {
+        verdict: string
+        historyMinPct: number
+        historyMaxPct: number
+        currentDeviationPct: number
+        note: string
+      } | null
     }[]
+    /** 同业当期毛利率对照。用于回答"是否行业性" —— 与自身历史对照是两个不同的问题 */
+    peerGrossMargin?: {
+      total: number
+      currentOutliers: number
+      baseOutliers: number
+      medianYoyPct: number | null
+      note: string
+    } | null
   } | null
 ): Hypothesis {
   const patch = (ind: Indicator): Indicator => {
@@ -432,24 +564,60 @@ export function withLiveData(
       if (!m || m.grossMarginYoyPct === null) {
         return { ...ind, status: 'UNVERIFIED', evidence: '毛利率同比基期缺失 → 本项无法判定。' }
       }
+      const an = m.grossMarginAnomaly
+      const big = Math.abs(m.grossMarginYoyPct) >= 10
+
+      // 基期失真：同比大幅变动但本期落在自身历史区间内 → 不是改善，是回归正常。
+      // 这一条把"看着像大利好"的读数直接判掉，不进入待核验也不算兑现。
+      if (an && an.verdict === 'BASE_IS_OUTLIER') {
+        return {
+          ...ind, status: 'UNVERIFIED',
+          evidence: `${m.name} 同比 ${m.grossMarginYoyPct > 0 ? '+' : ''}`
+            + `${m.grossMarginYoyPct.toFixed(1)}pct，但${an.note}。`
+            + '「同比变动来自基期失真，本期并未偏离自身历史」 → 不构成改善证据。',
+        }
+      }
+
+      // 本期偏离自身历史 + 同比幅度大 → 待核验异常。
+      // 委员会 2026-08-16 明确：在解释完成之前，它只能叫事实，不能叫因果证据。
+      if (big && an && (an.verdict === 'CURRENT_IS_OUTLIER' || an.verdict === 'BOTH_OUTLIERS')) {
+        const ends = m.grossMarginPrevPct !== null && m.grossMarginPct !== null
+          ? `${m.grossMarginPrevPct.toFixed(1)}% → ${m.grossMarginPct.toFixed(1)}%`
+          : '?'
+        const peer = node?.peerGrossMargin
+        return {
+          ...ind, status: 'PENDING_VERIFICATION',
+          evidence: `${m.name} 累计毛利率 ${ends}`
+            + `(同比 ${m.grossMarginYoyPct > 0 ? '+' : ''}${m.grossMarginYoyPct.toFixed(1)}pct，`
+            + '公开财报 XSMLL 字段，单位为百分数)。'
+            + `${an.note}。`
+            + (peer ? `同业对照：${peer.note}` : '')
+            + '「在解释完成之前，这只能叫事实，不能叫因果证据」 ——'
+            + '它同样可以来自产品结构变化、存货跌价转回或会计重分类。'
+            + '故本项不计入任何命题的兑现数。',
+          verifyChecklist: [
+            '产品结构变化(高毛利产品占比是否上升)',
+            '产品售价 / ASP 变化',
+            '成本变化(晶圆代工与封测报价)',
+            '存货跌价准备的计提或转回',
+            '会计口径或业务重分类',
+            `同期同行毛利率是否同步变化${peer ? `(当前对照：${peer.note})` : ''}`,
+          ],
+        }
+      }
+
+      // 走到这里：同比幅度不大，或两端都落在自身历史区间内 —— 属常规读数
       const up = m.grossMarginYoyPct > 0
-      // 同屏显示两个端点，不只给差值 —— 只看 +19.6pct 看不出它是从 37% 到 57%，
-      // 而后者这个量级本身就要求核验，不能当成一条平常的改善记录。
       const ends = m.grossMarginPrevPct !== null && m.grossMarginPct !== null
         ? `${m.grossMarginPrevPct.toFixed(1)}% → ${m.grossMarginPct.toFixed(1)}%`
         : m.grossMarginPct === null ? '?' : `${m.grossMarginPct.toFixed(1)}%`
-      const big = Math.abs(m.grossMarginYoyPct) >= 10
       return {
         ...ind, status: up ? 'MET' : 'REFUTED',
         evidence: `${m.name} 累计毛利率 ${ends}`
           + `(同比 ${m.grossMarginYoyPct > 0 ? '+' : ''}${m.grossMarginYoyPct.toFixed(1)}pct，`
           + '公开财报 XSMLL 字段，单位为百分数)。'
           + `方向${up ? '改善' : '恶化'}。`
-          + (big
-            ? '「同比变动超过 10pct，量级异常，须核验」 ——'
-            + '毛利率一年内出现这种幅度的变化，可能是量价齐升的真实反映，'
-            + '也可能是产品结构重分类或会计口径调整。台账只记录读数与量级，不替委员会判定原因。'
-            : '')
+          + (an ? `${an.note}。` : '')
           + '单季毛利率改善属命题 A 的当期事实，不构成对命题 B 的证据。',
       }
     }
@@ -517,6 +685,29 @@ export function renderHypotheses(list: Hypothesis[] = HYPOTHESES): string {
     L.push(`     2. ${v.aiAsDriver}`)
     L.push(`     3. ${v.superCycle}`)
     L.push(`     4. ${v.candidacy}`)
+
+    // 因果强度表：防止把"行业事实 → 公司事实 → 因果 → 持续性 → 投资资格"压缩成一句看多
+    L.push('')
+    L.push('     ── 因果强度五层(上一层成立不推出下一层) ──')
+    L.push(`     ${'层级'.padEnd(8)}${'能证明什么'.padEnd(40)}${'状态'.padEnd(10)}`)
+    L.push(`     ${'─'.repeat(96)}`)
+    for (const c of causalLayers(h)) {
+      L.push(`     ${c.level}. ${c.name.padEnd(6)}${c.proves.padEnd(38)}`
+        + `${CAUSAL_STATUS_TEXT[c.status]}`)
+      L.push(`        依据：${c.basis}`)
+    }
+
+    const pend = pendingVerification(h)
+    if (pend.length) {
+      L.push('')
+      L.push(`     ── 待核验异常(${pend.length} 项) ──`)
+      L.push('     这些读数是事实，但在解释完成之前不构成因果证据，故不计入任何命题的兑现数。')
+      for (const i of pend) {
+        L.push(`       ? ${i.text}`)
+        L.push(`         ${i.evidence}`)
+        for (const c of i.verifyChecklist ?? []) L.push(`           □ ${c}`)
+      }
+    }
 
     L.push('')
     L.push('     验证链(停在最早一个未完成的步骤，不是最晚一个已完成的)：')

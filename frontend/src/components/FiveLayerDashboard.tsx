@@ -239,6 +239,10 @@ interface HypothesisView {
   tier: string
   /** 后端已算好的四句话结论。前端不重算 —— 重算就会有两套口径 */
   fourLine?: { currentFact: string; aiAsDriver: string; superCycle: string; candidacy: string }
+  /** 因果强度五层。防止把"行业事实→公司事实→因果→持续性→投资资格"压缩成一句看多 */
+  causal?: { level: number; name: string; proves: string; status: string; basis: string }[]
+  /** 待核验异常：是事实，但在解释完成前不构成因果证据 */
+  pending?: { text: string; evidence: string; checklist: string[] }[]
   paidGaps?: string[]
   wiringBacklog?: string[]
 }
@@ -247,6 +251,14 @@ interface HypothesisView {
 const CHAIN = [
   '产业事实', '公司收入', '主线收入归因', '扣非利润', '主线利润归因', '节点内利润份额', '战略许可',
 ] as const
+
+const CAUSAL_STATUS_TEXT: Record<string, string> = {
+  CONFIRMED: '✅ 可确认',
+  PARTIAL: '部分',
+  UNKNOWN: '❓ 未知',
+  NOT_PROVEN: '❌ 当前数据不能证明',
+  VETOED: '❌ 战略否决',
+}
 
 const SOURCE_TIER_TEXT: Record<string, string> = {
   PUBLIC_IN_PIPELINE: '公开财报·已在管道内',
@@ -874,6 +886,79 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
                     </ol>
                   }
                 />
+              )}
+
+              {/* 因果强度五层：上一层成立不推出下一层 */}
+              {hy.causal && hy.causal.length > 0 && (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+                    因果强度五层
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+                      　上一层成立不推出下一层
+                    </Text>
+                  </div>
+                  <Table
+                    size="small"
+                    pagination={false}
+                    rowKey="level"
+                    dataSource={hy.causal}
+                    columns={[
+                      {
+                        title: '层级', dataIndex: 'name', width: 92,
+                        render: (v: string, r) => `${r.level}. ${v}`,
+                      },
+                      { title: '能证明什么', dataIndex: 'proves' },
+                      {
+                        title: '状态', dataIndex: 'status', width: 148,
+                        render: (v: string) => (
+                          <Text
+                            strong
+                            type={v === 'CONFIRMED' ? 'danger'
+                              : v === 'VETOED' || v === 'NOT_PROVEN' ? 'secondary' : undefined}
+                          >
+                            {CAUSAL_STATUS_TEXT[v] ?? v}
+                          </Text>
+                        ),
+                      },
+                      {
+                        title: '依据', dataIndex: 'basis',
+                        render: (v: string) => (
+                          <span style={{ fontSize: 11, color: '#8e8e93' }}>{v}</span>
+                        ),
+                      },
+                    ]}
+                  />
+                </>
+              )}
+
+              {/* 待核验异常：是事实，但不是因果证据 */}
+              {hy.pending && hy.pending.length > 0 && (
+                <>
+                  <Alert
+                    type="warning"
+                    style={{ marginTop: 12 }}
+                    message={
+                      <Text strong style={{ fontSize: 13 }}>
+                        待核验异常（{hy.pending.length} 项）
+                      </Text>
+                    }
+                    description={
+                      <span style={{ fontSize: 12 }}>
+                        这些读数是事实，但在解释完成之前不构成因果证据，
+                        故不计入任何命题的兑现数。
+                      </span>
+                    }
+                  />
+                  {hy.pending.map(pv => (
+                    <div key={pv.text} style={{ margin: '10px 0', fontSize: 12, lineHeight: 1.8 }}>
+                      <Text strong>? {pv.text}</Text>
+                      <div style={{ paddingLeft: 16, color: '#8e8e93' }}>{pv.evidence}</div>
+                      <ul style={{ margin: '4px 0', paddingLeft: 32, color: '#8e8e93' }}>
+                        {pv.checklist.map(c => <li key={c}>□ {c}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </>
               )}
 
               {/* 两个命题分开渲染。合在一起会让 A 的证据被读成 B 的背书 */}

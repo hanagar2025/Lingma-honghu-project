@@ -138,6 +138,17 @@ export interface MemberProfit {
   grossMarginYoyPct: number | null
   /** 去年同季的累计毛利率。用于同屏显示两个端点 —— 只给差值看不出量级 */
   grossMarginPrevPct: number | null
+  /**
+   * 毛利率同比大幅变动时，「变的是本期还是基期」。
+   *
+   * 存在理由是一次真实的对照：2026Q1 同业里两家毛利率同比都跳升 20pct 上下，
+   * 但性质完全相反 ——
+   *   兆易创新：前 8 季稳定 37–40%，基期 37.4% 正常，本期 57.1% 偏离自身历史
+   *   拓荆科技：前 8 季 40–44%，基期 19.9% 才是异常，本期 41.7% 只是回归正常
+   * 同比数字（+19.6pct / +21.8pct）把这个区别完全掩盖了。
+   * 只看同比会把"回归正常"读成"大幅改善"。
+   */
+  grossMarginAnomaly: GrossMarginAnomaly | null
   /** 扣非占净利比。仅半年报/年报可得 */
   deductRatio: number | null
   deductRatioAsOf: string | null
@@ -164,11 +175,17 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
   // 毛利率同比：与去年同季的累计毛利率比
   let gmYoy: number | null = null
   let gmPrev: number | null = null
+  let gmAnomaly: GrossMarginAnomaly | null = null
   if (latest) {
     const lastYearSame = rec.periods.find(p => p.year === latest.year - 1 && p.quarter === latest.quarter)
     if (latest.grossMarginCumPct != null && lastYearSame?.grossMarginCumPct != null) {
       gmYoy = latest.grossMarginCumPct - lastYearSame.grossMarginCumPct
       gmPrev = lastYearSame.grossMarginCumPct
+      // 自身历史 = 除本期与基期之外的各季，用于判别"偏离的是哪一端"
+      const hist = rec.periods
+        .filter(x => x !== latest && x !== lastYearSame && x.grossMarginCumPct != null)
+        .map(x => x.grossMarginCumPct as number)
+      gmAnomaly = judgeGmAnomaly(hist, latest.grossMarginCumPct, lastYearSame.grossMarginCumPct)
     } else gaps.push('毛利率同比基期缺失')
   }
 
@@ -217,6 +234,7 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
     grossMarginPct: latest?.grossMarginCumPct ?? null,
     grossMarginYoyPct: gmYoy,
     grossMarginPrevPct: gmPrev,
+    grossMarginAnomaly: gmAnomaly,
     deductRatio, deductRatioAsOf: deductAsOf,
     cashMatch,
     roe: latest?.roeCum ?? null,
@@ -230,6 +248,70 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
  * `status` 是**描述性标签（OBSERVATION）**，不得作为动作依据。
  * 它只陈述"该节点在册标的的单季利润同比是加速还是减速"，不预测股价。
  */
+/**
+ * 毛利率跃升的归因：偏离的是本期，还是基期？
+ *
+ * 纯描述统计，不含预测。判据是与「自身前若干季」的偏离，
+ * 而不是与同业比 —— 同业比回答的是另一个问题(是否行业性)，两者都要看。
+ */
+export interface GrossMarginAnomaly {
+  /** 参与比较的历史季数(不含本期与基期) */
+  baseQuarters: number
+  /** 自身历史中位数 */
+  historyMedianPct: number
+  /** 历史区间 */
+  historyMinPct: number
+  historyMaxPct: number
+  /** 本期偏离历史区间的幅度(pct点)。0 = 落在区间内 */
+  currentDeviationPct: number
+  /** 基期偏离历史区间的幅度(pct点) */
+  prevDeviationPct: number
+  verdict:
+    /** 本期偏离自身历史 → 跃升是真实事件，须解释 */
+    | 'CURRENT_IS_OUTLIER'
+    /** 基期偏离自身历史 → 同比是基期失真，本期只是回归正常 */
+    | 'BASE_IS_OUTLIER'
+    | 'BOTH_OUTLIERS'
+    /** 两端都在历史区间内 → 同比变动不构成跃升 */
+    | 'NEITHER'
+  note: string
+}
+
+/** 偏离判据：超出自身历史 min–max 区间即为偏离，幅度按超出量计。
+ *  刻意不用标准差倍数 —— 8 个样本估标准差本身不可靠，而 min–max 是直接可读的事实。 */
+function judgeGmAnomaly(
+  history: number[], currentPct: number, prevPct: number
+): GrossMarginAnomaly | null {
+  if (history.length < 4) return null
+  const sorted = [...history].sort((a, b) => a - b)
+  const med = sorted[Math.floor(sorted.length / 2)]
+  const lo = sorted[0]
+  const hi = sorted[sorted.length - 1]
+  const dev = (v: number) => (v > hi ? v - hi : v < lo ? v - lo : 0)
+  const cd = dev(currentPct)
+  const pd = dev(prevPct)
+  const cOut = Math.abs(cd) > 0
+  const pOut = Math.abs(pd) > 0
+  const verdict: GrossMarginAnomaly['verdict'] = cOut && pOut ? 'BOTH_OUTLIERS'
+    : cOut ? 'CURRENT_IS_OUTLIER' : pOut ? 'BASE_IS_OUTLIER' : 'NEITHER'
+  // 措辞必须与偏离幅度相称。偏离 0.3pct 写成"跃升是真实事件"是把噪声说成事件 ——
+  // 这里只报事实(偏离多少)，是否构成须解释的事件由台账结合同比幅度另行判断。
+  const note = verdict === 'CURRENT_IS_OUTLIER'
+    ? `本期 ${currentPct.toFixed(1)}% 落在自身历史区间 ${lo.toFixed(1)}–${hi.toFixed(1)}% 之`
+      + `${cd > 0 ? '上' : '下'} ${Math.abs(cd).toFixed(1)}pct（基期 ${prevPct.toFixed(1)}% 在区间内）`
+    : verdict === 'BASE_IS_OUTLIER'
+      ? `基期 ${prevPct.toFixed(1)}% 才是偏离项(自身历史区间 ${lo.toFixed(1)}–${hi.toFixed(1)}%)，`
+        + `本期 ${currentPct.toFixed(1)}% 落在区间内 → 「同比变动是基期失真，不是本期改善」`
+      : verdict === 'BOTH_OUTLIERS'
+        ? '本期与基期均偏离自身历史 → 同比无参考价值，须逐期核对原始报表'
+        : `本期与基期均落在自身历史区间 ${lo.toFixed(1)}–${hi.toFixed(1)}% 内 → 同比变动不构成跃升`
+  return {
+    baseQuarters: history.length, historyMedianPct: med,
+    historyMinPct: lo, historyMaxPct: hi,
+    currentDeviationPct: cd, prevDeviationPct: pd, verdict, note,
+  }
+}
+
 export interface NodeProfit {
   mainlineId: string
   node: string
@@ -328,7 +410,58 @@ export interface ProfitMap {
     warning: string
   }
   nodes: NodeProfit[]
+  /**
+   * 同业当期毛利率对照。
+   *
+   * 回答的是「这次跃升是否行业性」—— 与"偏离自身历史"是两个不同的问题，
+   * 两者都要看：只看自身历史无法区分公司特有事件与行业周期；
+   * 只看同业无法区分本期跃升与基期失真。
+   */
+  peerGrossMargin: PeerGrossMargin
   unavailableFields: readonly string[]
+}
+
+export interface PeerGrossMargin {
+  /** 有可比同比读数的家数 */
+  total: number
+  /** 本期偏离自身历史的家数 */
+  currentOutliers: number
+  /** 基期偏离自身历史的家数(其同比属失真) */
+  baseOutliers: number
+  medianYoyPct: number | null
+  note: string
+}
+
+/**
+ * @param mainlineId 限定同主线。拿一家存储公司去和光模块、电力设备比毛利率，
+ *   回答的不是"是否行业性"，而是"A股半导体与新能源的毛利率是否一起动" ——
+ *   那是另一个问题，而且噪声大得多。传 null 时才退回全域比较。
+ */
+export function buildPeerGrossMargin(
+  nodes: NodeProfit[], mainlineId: string | null = null
+): PeerGrossMargin {
+  const scope = mainlineId === null ? nodes : nodes.filter(n => n.mainlineId === mainlineId)
+  const ms = scope.flatMap(n => n.members).filter(m => m.grossMarginYoyPct != null)
+  if (!ms.length) {
+    return {
+      total: 0, currentOutliers: 0, baseOutliers: 0, medianYoyPct: null,
+      note: '无可比同业读数',
+    }
+  }
+  const ys = ms.map(m => m.grossMarginYoyPct as number).sort((a, b) => a - b)
+  const med = ys[Math.floor(ys.length / 2)]
+  const cur = ms.filter(m => m.grossMarginAnomaly?.verdict === 'CURRENT_IS_OUTLIER').length
+  const base = ms.filter(m => m.grossMarginAnomaly?.verdict === 'BASE_IS_OUTLIER').length
+  return {
+    total: ms.length, currentOutliers: cur, baseOutliers: base, medianYoyPct: med,
+    note: `${mainlineId === null ? '全域' : mainlineId}口径 ${ms.length} 家有可比读数，`
+      + `同比中位数 ${med > 0 ? '+' : ''}${med.toFixed(1)}pct；`
+      + `其中 ${cur} 家本期偏离自身历史、${base} 家属基期失真。`
+      + (base >= cur
+        ? '「同业里基期失真的家数不少于本期偏离的家数」 —— '
+        + '说明这批大幅同比读数里相当一部分并非当期改善，不足以支撑"行业性毛利扩张"。'
+        : '同业中本期偏离者占多数，须进一步核对是否行业性因素。'),
+  }
 }
 
 /**
@@ -587,6 +720,7 @@ export function buildProfitMap(today: string, file?: ProfitFile): ProfitMap {
         '利润雷达一年只更新四次，结构上不可能每天变化；把它放进每日表会让日间变动全部来自价格。',
     },
     nodes,
+    peerGrossMargin: buildPeerGrossMargin(nodes),
     unavailableFields: f.methodology.unavailable,
   }
 }
