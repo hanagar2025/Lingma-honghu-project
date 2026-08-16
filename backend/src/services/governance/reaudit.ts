@@ -102,7 +102,7 @@ export function reauditDebts(
               + `${dd >= 0.25 ? '二级' : '一级'}熔断成立，股票上限 ${(cap * 100).toFixed(0)}%`
               + `（= ${wan(snapshot.portfolioTotal * cap)}）。`
               + `当前股票 ${wan(snapshot.positionsValue)}（${(eqPct * 100).toFixed(2)}%）`
-              + ` → ${need > 0 ? `**须降低组合股票敞口 ${wan(need)}**` : '已符合上限'}。`
+              + ` → ${need > 0 ? `「须降低组合股票敞口 ${wan(need)}」` : '已符合上限'}。`
               + '原指令记录的"持仓 ≤132 万"是券商口径下的目标，已作废。'
               + '具体由哪一持仓承担，不由技术指标决定 —— 须委员会指派。',
             countsTowardE1: true,
@@ -150,7 +150,7 @@ export function reauditDebts(
         reasoning: `原指令的唯一法定理由是"券商账户口径下超过 ${(LIMITS.singleStock * 100).toFixed(0)}%"`
           + `（${(oldPct * 100).toFixed(1)}%）。组合口径下为 ${(newPct * 100).toFixed(2)}%，未超限 →`
           + ' 原命题的输入数据口径错误，因此原指令失效。'
-          + '**这不是"市场观点改变"**，也不构成对该标的的任何新判断。',
+          + '「这不是"市场观点改变"」，也不构成对该标的的任何新判断。',
         countsTowardE1: false,
       }
     }
@@ -159,7 +159,7 @@ export function reauditDebts(
         debt: d, verdict: 'VALID' as DebtVerdict,
         oldPct, newPct, oldOver, newOver,
         reasoning: `两个口径下均超限（${(oldPct * 100).toFixed(1)}% → ${(newPct * 100).toFixed(2)}%）→`
-          + ` 法定理由仍成立，但**幅度须按新口径重算**：超出 ${((newPct - LIMITS.singleStock) * 100).toFixed(2)}pct。`
+          + ` 法定理由仍成立，但「幅度须按新口径重算」：超出 ${((newPct - LIMITS.singleStock) * 100).toFixed(2)}pct。`
           + '原指令记录的股数是按旧分母算的，不可直接沿用。',
         countsTowardE1: true,
       }

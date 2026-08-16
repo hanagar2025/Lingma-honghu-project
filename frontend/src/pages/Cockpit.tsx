@@ -285,6 +285,7 @@ const Cockpit: React.FC = () => {
         dashboard={data.dashboard}
         changes={data.changes}
         discovery={data.discovery}
+        hypotheses={data.hypotheses}
         provisional={data.provisional}
       />
 

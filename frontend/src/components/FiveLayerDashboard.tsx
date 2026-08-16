@@ -209,6 +209,31 @@ const TodayChanges: React.FC<{ changes: any; discovery: any }> = ({ changes, dis
   )
 }
 
+/** 外部叙事台账。OBSERVATION 级 —— 只渲染，不提供任何操作入口 */
+interface IndicatorView {
+  no: number
+  text: string
+  status: 'MET' | 'UNVERIFIED' | 'REFUTED'
+  evidence: string
+}
+interface HypothesisView {
+  id: string
+  claim: string
+  source: string
+  loggedOn: string
+  node: string
+  mainline: string
+  stage: number
+  indicators: IndicatorView[]
+  doesNotImply: string[]
+  blockers: string[]
+  tier: string
+}
+
+const CHAIN = [
+  '叙事', '产业数据', '公司收入', '扣非利润', '主线利润份额', '节点内份额', '战略许可',
+] as const
+
 /** 风控四层。后端 dashboard.ts 的 RiskLayer，此处只声明渲染用到的字段 */
 interface RiskLayerView {
   id: string
@@ -223,12 +248,14 @@ export interface FiveLayerDashboardProps {
   dashboard: any
   changes?: any
   discovery?: any
+  /** 外部叙事台账。只渲染，不产生任何操作入口 */
+  hypotheses?: HypothesisView[]
   /** 后端下发的盘中标记。未定价读数必须显式标注，否则会被当成收盘读数用 */
   provisional?: any
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
-  dashboard: d, changes, discovery, provisional,
+  dashboard: d, changes, discovery, hypotheses, provisional,
 }) => {
   if (!d) {
     return (
@@ -747,6 +774,103 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           展开任意一行可见逐条阻断项。
         </Text>
       </Card>
+
+      {/* ══ 外部叙事台账：与四张研究表并列，不进动作区 ══ */}
+      {hypotheses && hypotheses.length > 0 && (
+        <Card
+          style={SECTION}
+          title={
+            <Title level={5} style={{ margin: 0 }}>
+              外部叙事台账 —— 拆回它实际所处的验证阶段
+            </Title>
+          }
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。证据等级恒为 OBSERVATION。
+          </div>
+          {hypotheses.map(hy => (
+            <div key={hy.id} style={{ marginBottom: 20 }}>
+              <Alert
+                type="info"
+                message={
+                  <span style={{ fontSize: 13 }}>
+                    <Text strong>{hy.id}｜{hy.node}</Text>
+                    <Tag style={{ marginLeft: 8 }}>{hy.mainline}</Tag>
+                  </span>
+                }
+                description={
+                  <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                    <div>主张：{hy.claim}</div>
+                    <div style={{ color: '#8e8e93' }}>
+                      来源：{hy.source}　登记于 {hy.loggedOn}
+                    </div>
+                  </div>
+                }
+              />
+
+              {/* 验证链：当前步高亮。灰色是「还没走到」,不是「已否决」 */}
+              <div
+                style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+                  gap: 4, margin: '10px 0', fontSize: 12,
+                }}
+              >
+                {CHAIN.map((stg, i) => (
+                  <React.Fragment key={stg}>
+                    <span
+                      style={{
+                        padding: '3px 8px', borderRadius: 6,
+                        background: i + 1 === hy.stage ? '#fff4e5' : '#f2f2f7',
+                        color: i + 1 === hy.stage ? '#b26a00' : '#8e8e93',
+                        fontWeight: i + 1 === hy.stage ? 600 : 400,
+                      }}
+                    >
+                      {stg}
+                    </span>
+                    {i < CHAIN.length - 1 && <span style={{ color: '#c7c7cc' }}>→</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.8 }}>
+                停在第 {hy.stage}／{CHAIN.length} 步。
+                每一步是上一步的兑现,不是上一步的推论,故不可跳步。
+              </div>
+
+              <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>
+                五项硬指标（{hy.indicators.filter(i => i.status === 'MET').length}／
+                {hy.indicators.length} 已有数据支持）
+              </div>
+              {hy.indicators.map(ind => (
+                <div key={ind.no} style={{ marginBottom: 8, fontSize: 12, lineHeight: 1.8 }}>
+                  <span
+                    style={{
+                      color: ind.status === 'MET' ? '#d4380d'
+                        : ind.status === 'REFUTED' ? '#1677ff' : '#c7c7cc',
+                      marginRight: 6,
+                    }}
+                  >
+                    {ind.status === 'MET' ? '✓' : ind.status === 'REFUTED' ? '✗' : '·'}
+                  </span>
+                  <Text strong>{ind.no}. {ind.text}</Text>
+                  <div style={{ paddingLeft: 18, color: '#8e8e93' }}>{ind.evidence}</div>
+                </div>
+              ))}
+
+              <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>
+                本条成立也不意味着
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                {hy.doesNotImply.map(dn => <li key={dn}>{dn}</li>)}
+              </ul>
+
+              <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                {hy.blockers.map(bl => <li key={bl}>{bl}</li>)}
+              </ul>
+            </div>
+          ))}
+        </Card>
+      )}
 
       {/* ══ 数据缺口 ══ */}
       <Card style={SECTION} size="small" title="数据缺口 —— 不知道，本身就是信息">

@@ -10,6 +10,9 @@
 
 import type { Dashboard } from './dashboard'
 import type { Verdict } from './verdict'
+import {
+  VERIFICATION_CHAIN, metCount, statementOf, type Hypothesis,
+} from '../research/hypotheses'
 import type { Change } from '../governance/changeLog'
 
 function esc(s: unknown): string {
@@ -85,6 +88,11 @@ tr:hover td{background:#fafafd}
 .dashcell{flex:1 1 120px;background:#f7f7fa;border-radius:10px;padding:10px 12px}
 .dashk{font-size:11px;color:var(--sec);margin-bottom:4px}
 .dashv{font-size:17px;font-weight:600}
+/* 验证链：当前步高亮。灰色部分是"还没走到"，不是"已否决" */
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:8px 0;font-size:12px}
+.step{padding:3px 8px;border-radius:6px;background:#f2f2f7;color:var(--sec)}
+.step.now{background:#fff4e5;color:#b26a00;font-weight:600}
+.arrow{color:#c7c7cc}
 ul{margin:4px 0;padding-left:20px}
 .chg{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
 .chg .who{min-width:230px;color:var(--sec)}
@@ -116,6 +124,8 @@ export interface HtmlInput {
   prevDate: string | null
   discovery: { nodeCount: number; advances: { key: string; date: string; from: number; to: number; gates: string }[] }
   freeze: { baselineHash: string | null; currentHash: string; drifted: boolean; detail: string }
+  /** 外部叙事台账。OBSERVATION 级，只供研究，不得产生动作 */
+  hypotheses?: Hypothesis[]
   /** 最新K线尚未定价（盘中运行）。为真时全表读数为临时值且未归档 */
   intraday?: boolean
   /** 今日结论。放在四张表之前 —— 结论先于依据 */
@@ -124,7 +134,7 @@ export interface HtmlInput {
 
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
-    dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict,
+    dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, hypotheses,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -443,6 +453,49 @@ export function renderDashboardHtml(input: HtmlInput): string {
     w(`<li><b>${esc(r.node)}</b>${r.members.length ? `（${esc(r.members.map(m => m.name).join('、'))}）` : ''}：${esc(r.actionBlockedBy.join('；'))}</li>`)
   }
   w(`</ul></div>`)
+
+  // ── 外部叙事台账 ──
+  // 与四张研究表并列，不进动作区。它回答的是"这句话走到哪一步了"，
+  // 而不是"该不该买"。
+  if (hypotheses && hypotheses.length) {
+    w(`</div><div class=card><h2>外部叙事台账 —— 拆回它实际所处的验证阶段</h2>`)
+    w(`<div class=foot style="margin-bottom:10px">本区不打分、不排序、不产生候选、不产生动作。`)
+    w(`证据等级恒为 OBSERVATION。</div>`)
+    for (const hy of hypotheses) {
+      w(`<div class="banner info"><b>${esc(hy.id)}｜${esc(hy.node)}</b>`)
+      w(`<span class="tag grey">${esc(hy.mainline)}</span>`)
+      w(`<div class=foot>主张：${esc(hy.claim)}</div>`)
+      w(`<div class=foot>来源：${esc(hy.source)}　登记于 ${esc(hy.loggedOn)}</div></div>`)
+
+      // 验证链：当前步高亮，一眼看出还有多远
+      w(`<div class=chain>`)
+      VERIFICATION_CHAIN.forEach((stg, i) => {
+        const cur = i + 1 === hy.stage
+        w(`<span class="step${cur ? ' now' : ''}">${esc(stg)}</span>`)
+        if (i < VERIFICATION_CHAIN.length - 1) w(`<span class=arrow>→</span>`)
+      })
+      w(`</div>`)
+      w(`<div class=foot>停在第 ${hy.stage}/${VERIFICATION_CHAIN.length} 步。`)
+      w(`每一步是上一步的兑现，不是上一步的推论，故不可跳步。</div>`)
+
+      w(`<div class=sec style="margin:10px 0 6px">五项硬指标`)
+      w(`（${metCount(hy)}/${hy.indicators.length} 已有数据支持）</div><ul>`)
+      for (const ind of hy.indicators) {
+        const mk = ind.status === 'MET' ? '✓' : ind.status === 'REFUTED' ? '✗' : '·'
+        const cls = ind.status === 'MET' ? 'up' : ind.status === 'REFUTED' ? 'down' : 'miss'
+        w(`<li><span class=${cls}>${mk}</span> ${esc(ind.text)}`)
+        w(`<div class=foot>${esc(ind.evidence)}</div></li>`)
+      }
+      w(`</ul>`)
+      w(`<div class=sec style="margin:10px 0 6px">本条成立也不意味着</div><ul>`)
+      for (const dn of hy.doesNotImply) w(`<li>${esc(dn)}</li>`)
+      w(`</ul>`)
+      w(`<div class=sec style="margin:10px 0 6px">阻塞项</div><ul>`)
+      for (const bl of hy.blockers) w(`<li>${esc(bl)}</li>`)
+      w(`</ul>`)
+      w(`<div class="banner warn"><b>今日结论</b><div class=foot>${esc(statementOf(hy))}</div></div>`)
+    }
+  }
 
   // ── 数据缺口 ──
   w(`<div class=card><h2>数据缺口 —— 不知道，本身就是信息</h2><ul>`)

@@ -429,6 +429,7 @@ async function main(): Promise<void> {
       },
       intraday: isIntraday(dashForHtml.date),
       verdict: verdictForHtml,
+      hypotheses: hypothesesForHtml,
     })
     const reportDir = join(HERE, 'data', 'reports')
     mkdirSync(reportDir, { recursive: true })
@@ -489,6 +490,7 @@ async function main(): Promise<void> {
       report: rep,
       dashboard: dashForHtml,
       verdict: verdictForHtml,
+      hypotheses: hypothesesForHtml,
       brief: briefForWeb,
       changes: changesForHtml,
       prevDate: prevDateForHtml,

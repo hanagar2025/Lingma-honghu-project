@@ -47,7 +47,7 @@ function main(): void {
   out.write(`已归档交易日：${tradingDays} 天（${snaps[0].date} → ${snaps[tradingDays - 1].date}）\n`)
   const baseline = loadBaseline()
   const target = baseline?.tradingDays ?? 30
-  out.write(`观察期目标：${target} 个交易日${tradingDays >= target ? ' —— **已达标，可以开始讨论下一阶段**' : `，还差 ${target - tradingDays} 天`}\n\n`)
+  out.write(`观察期目标：${target} 个交易日${tradingDays >= target ? ' —— 「已达标，可以开始讨论下一阶段」' : `，还差 ${target - tradingDays} 天`}\n\n`)
 
   // ── E3 规则有没有被偷偷改变 ──
   out.write(`${'─'.repeat(W)}\nE3 规则有没有被偷偷改变\n${'─'.repeat(W)}\n`)

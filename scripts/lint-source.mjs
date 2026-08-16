@@ -66,9 +66,14 @@ for (const f of files) {
 // 页面上会老老实实显示两个星号。这个错误犯过两次（HTML 报告一次、解锁页一次），
 // 且只有截图才看得出来，代码评审时完全不显眼，故做成机械检查。
 // 要强调就用「」。
+// 范围一度只有 frontend/src 与 cockpit/ —— 定义依据是"哪些目录会输出 UI 文本"。
+// 但这个集合会长：research/hypotheses.ts 新增后立刻输出到 CLI 与 HTML，
+// 而它不在范围内，于是带 ** 的字符串一路混到 HTML 里没被拦住。
+// 改为扫 backend/src/services 全部 —— 任何一个服务都可能把文本送到界面上，
+// 靠人记得"新目录要加进白名单"是靠不住的。
 const UI_DIRS = [
   join(HERE, '..', 'frontend', 'src'),
-  join(HERE, '..', 'backend', 'src', 'services', 'cockpit'),
+  join(HERE, '..', 'backend', 'src', 'services'),
 ]
 
 function walk(dir, out = []) {

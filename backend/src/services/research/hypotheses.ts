@@ -120,7 +120,7 @@ export const HYPOTHESES: Hypothesis[] = [
         status: 'UNVERIFIED',
         evidence:
           '主线归因字段尚未接入（与 S2 盈利验证同一缺口）。'
-          + '**这是仕佳光子那次教训对应的那一条** —— 利润增长是真的，'
+          + '「这是仕佳光子那次教训对应的那一条」 —— 利润增长是真的，'
           + '穿透后驱动来自非 AI 业务。不做归因就等于重犯。',
       },
       {
@@ -205,7 +205,7 @@ export function withLiveData(
   }
   let evidence = `${parts.join('，')}。方向${expanding ? '为扩大' : '未扩大'}。`
   if (age !== null) {
-    evidence += `**数据滞后 ${age} 天。**`
+    evidence += `「数据滞后 ${age} 天。」`
     if (stale) {
       evidence += `一个关于"当下 AI 内存周期"的叙事，用 ${age} 天前的财报既无法证实也无法证伪 ——`
         + '本项只说明历史份额在扩大，不构成对当期需求的任何判断。'
