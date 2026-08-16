@@ -214,7 +214,16 @@ interface IndicatorView {
   no: number
   text: string
   status: 'MET' | 'UNVERIFIED' | 'REFUTED'
+  horizon: 'CURRENT_FACT' | 'FUTURE_HYPOTHESIS'
+  sourceTier: string
   evidence: string
+}
+interface PropositionView {
+  id: 'A' | 'B'
+  claim: string
+  horizon: 'CURRENT_FACT' | 'FUTURE_HYPOTHESIS'
+  indicators: IndicatorView[]
+  verdictText: string
 }
 interface HypothesisView {
   id: string
@@ -224,15 +233,29 @@ interface HypothesisView {
   node: string
   mainline: string
   stage: number
-  indicators: IndicatorView[]
+  propositions: PropositionView[]
   doesNotImply: string[]
   blockers: string[]
   tier: string
+  /** 后端已算好的四句话结论。前端不重算 —— 重算就会有两套口径 */
+  fourLine?: { currentFact: string; aiAsDriver: string; superCycle: string; candidacy: string }
+  paidGaps?: string[]
+  wiringBacklog?: string[]
 }
 
+// 七步链的步名。source 层级由后端下发，前端只显示不判断。
 const CHAIN = [
-  '叙事', '产业数据', '公司收入', '扣非利润', '主线利润份额', '节点内份额', '战略许可',
+  '产业事实', '公司收入', '主线收入归因', '扣非利润', '主线利润归因', '节点内利润份额', '战略许可',
 ] as const
+
+const SOURCE_TIER_TEXT: Record<string, string> = {
+  PUBLIC_IN_PIPELINE: '公开财报·已在管道内',
+  PUBLIC_NOT_YET_WIRED: '公开财报·尚未接入（工作量问题，非数据可得性问题）',
+  PUBLIC_PARTIAL: '公开披露·仅可部分拆分，余下须人工核验',
+  SYSTEM_COMPUTED: '系统自算',
+  STRATEGY_RULING: '战略层裁定·非数据问题',
+  NEEDS_PAID: '公开披露无法回答·须付费数据源',
+}
 
 /** 风控四层。后端 dashboard.ts 的 RiskLayer，此处只声明渲染用到的字段 */
 interface RiskLayerView {
@@ -836,25 +859,92 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
                 每一步是上一步的兑现,不是上一步的推论,故不可跳步。
               </div>
 
-              <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>
-                五项硬指标（{hy.indicators.filter(i => i.status === 'MET').length}／
-                {hy.indicators.length} 已有数据支持）
+              {/* 四句话结论置顶：后端已算好，前端不重算 —— 重算就会有两套口径 */}
+              {hy.fourLine && (
+                <Alert
+                  type="warning"
+                  style={{ marginTop: 12 }}
+                  message={<Text strong style={{ fontSize: 13 }}>机器结论（四句话）</Text>}
+                  description={
+                    <ol style={{ margin: '6px 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                      <li>{hy.fourLine.currentFact}</li>
+                      <li>{hy.fourLine.aiAsDriver}</li>
+                      <li>{hy.fourLine.superCycle}</li>
+                      <li>{hy.fourLine.candidacy}</li>
+                    </ol>
+                  }
+                />
+              )}
+
+              {/* 两个命题分开渲染。合在一起会让 A 的证据被读成 B 的背书 */}
+              {hy.propositions?.map(pr => {
+                const isFact = pr.horizon === 'CURRENT_FACT'
+                return (
+                  <div key={pr.id} style={{ marginTop: 14 }}>
+                    <Alert
+                      type={isFact ? 'success' : 'info'}
+                      message={
+                        <span style={{ fontSize: 13 }}>
+                          <Text strong>命题 {pr.id}：{pr.claim}</Text>
+                        </span>
+                      }
+                      description={
+                        <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                          性质：{isFact
+                            ? '当前事实 · 可被单期数据证实或证伪'
+                            : '未来假设 · 任何单期数据都不能证明，须逐季累积'}
+                          　判定：<Text strong>{pr.verdictText}</Text>
+                          （{pr.indicators.filter(i => i.status === 'MET').length}／
+                          {pr.indicators.length} 兑现）
+                        </div>
+                      }
+                    />
+                    {pr.indicators.map(ind => (
+                      <div
+                        key={ind.no}
+                        style={{ margin: '8px 0', fontSize: 12, lineHeight: 1.8 }}
+                      >
+                        <span
+                          style={{
+                            color: ind.status === 'MET' ? '#d4380d'
+                              : ind.status === 'REFUTED' ? '#1677ff' : '#c7c7cc',
+                            marginRight: 6,
+                          }}
+                        >
+                          {ind.status === 'MET' ? '✓' : ind.status === 'REFUTED' ? '✗' : '·'}
+                        </span>
+                        <Text strong>{pr.id}-{ind.no}. {ind.text}</Text>
+                        <div style={{ paddingLeft: 18, color: '#8e8e93' }}>
+                          取数：{SOURCE_TIER_TEXT[ind.sourceTier] ?? ind.sourceTier}
+                        </div>
+                        <div style={{ paddingLeft: 18, color: '#8e8e93' }}>{ind.evidence}</div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+
+              {/* 付费缺口与「尚未接入」必须分区：混在一起就会用「要买数据」掩盖「还没做」 */}
+              <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+                付费数据缺口（{hy.paidGaps?.length ?? 0} 项）
+                <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+                  　只有走完公开优先各层仍无法回答的才列入
+                </Text>
               </div>
-              {hy.indicators.map(ind => (
-                <div key={ind.no} style={{ marginBottom: 8, fontSize: 12, lineHeight: 1.8 }}>
-                  <span
-                    style={{
-                      color: ind.status === 'MET' ? '#d4380d'
-                        : ind.status === 'REFUTED' ? '#1677ff' : '#c7c7cc',
-                      marginRight: 6,
-                    }}
-                  >
-                    {ind.status === 'MET' ? '✓' : ind.status === 'REFUTED' ? '✗' : '·'}
-                  </span>
-                  <Text strong>{ind.no}. {ind.text}</Text>
-                  <div style={{ paddingLeft: 18, color: '#8e8e93' }}>{ind.evidence}</div>
-                </div>
-              ))}
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                {(hy.paidGaps ?? []).map(g => <li key={g}>{g}</li>)}
+                {!hy.paidGaps?.length && <li style={{ color: '#c7c7cc' }}>无</li>}
+              </ul>
+              <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>
+                公开可得但尚未接入（{hy.wiringBacklog?.length ?? 0} 项）
+                <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+                  　这些是工作量，不是缺口
+                </Text>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                {(hy.wiringBacklog ?? []).map(g => <li key={g}>{g}</li>)}
+                {!hy.wiringBacklog?.length && <li style={{ color: '#c7c7cc' }}>无</li>}
+              </ul>
 
               <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>
                 本条成立也不意味着

@@ -11,7 +11,8 @@
 import type { Dashboard } from './dashboard'
 import type { Verdict } from './verdict'
 import {
-  VERIFICATION_CHAIN, metCount, statementOf, type Hypothesis,
+  VERIFICATION_CHAIN, SOURCE_TIER_TEXT, fourLineVerdict, paidGaps, wiringBacklog,
+  type Hypothesis,
 } from '../research/hypotheses'
 import type { Change } from '../governance/changeLog'
 
@@ -455,45 +456,85 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(`</ul></div>`)
 
   // ── 外部叙事台账 ──
-  // 与四张研究表并列，不进动作区。它回答的是"这句话走到哪一步了"，
+  // 与四张研究表并列，不进动作区。它回答的是"这条证据到底证明了什么"，
   // 而不是"该不该买"。
   if (hypotheses && hypotheses.length) {
-    w(`</div><div class=card><h2>外部叙事台账 —— 拆回它实际所处的验证阶段</h2>`)
+    w(`</div><div class=card><h2>外部叙事台账 —— 这条证据到底证明了什么？</h2>`)
     w(`<div class=foot style="margin-bottom:10px">本区不打分、不排序、不产生候选、不产生动作。`)
-    w(`证据等级恒为 OBSERVATION。</div>`)
+    w(`证据等级恒为 OBSERVATION。取数原则：能公开验证的绝不列为付费缺口；`)
+    w(`只有公开披露无法完成归因时，才进入付费/人工缺口。</div>`)
     for (const hy of hypotheses) {
       w(`<div class="banner info"><b>${esc(hy.id)}｜${esc(hy.node)}</b>`)
       w(`<span class="tag grey">${esc(hy.mainline)}</span>`)
-      w(`<div class=foot>主张：${esc(hy.claim)}</div>`)
+      w(`<div class=foot>原始主张：${esc(hy.claim)}</div>`)
       w(`<div class=foot>来源：${esc(hy.source)}　登记于 ${esc(hy.loggedOn)}</div></div>`)
 
-      // 验证链：当前步高亮，一眼看出还有多远
-      w(`<div class=chain>`)
-      VERIFICATION_CHAIN.forEach((stg, i) => {
-        const cur = i + 1 === hy.stage
-        w(`<span class="step${cur ? ' now' : ''}">${esc(stg)}</span>`)
-        if (i < VERIFICATION_CHAIN.length - 1) w(`<span class=arrow>→</span>`)
-      })
-      w(`</div>`)
-      w(`<div class=foot>停在第 ${hy.stage}/${VERIFICATION_CHAIN.length} 步。`)
-      w(`每一步是上一步的兑现，不是上一步的推论，故不可跳步。</div>`)
-
-      w(`<div class=sec style="margin:10px 0 6px">五项硬指标`)
-      w(`（${metCount(hy)}/${hy.indicators.length} 已有数据支持）</div><ul>`)
-      for (const ind of hy.indicators) {
-        const mk = ind.status === 'MET' ? '✓' : ind.status === 'REFUTED' ? '✗' : '·'
-        const cls = ind.status === 'MET' ? 'up' : ind.status === 'REFUTED' ? 'down' : 'miss'
-        w(`<li><span class=${cls}>${mk}</span> ${esc(ind.text)}`)
-        w(`<div class=foot>${esc(ind.evidence)}</div></li>`)
+      // 四句话结论置顶：委员会明确不想再从指标表里自己提炼
+      const fv = fourLineVerdict(hy)
+      w(`<div class="banner warn"><b>机器结论（四句话）</b><ol style="margin:6px 0;padding-left:20px">`)
+      for (const line of [fv.currentFact, fv.aiAsDriver, fv.superCycle, fv.candidacy]) {
+        w(`<li style="font-size:12.5px;line-height:1.8">${esc(line)}</li>`)
       }
+      w(`</ol></div>`)
+
+      // 验证链：停在最早一个未完成的步骤
+      w(`<div class=sec style="margin:10px 0 6px">验证链`)
+      w(`<span class=foot>（停在最早一个未完成的步骤，不是最晚一个已完成的）</span></div>`)
+      w(`<div class=chain>`)
+      for (const st of VERIFICATION_CHAIN) {
+        const cur = st.no === hy.stage
+        w(`<span class="step${cur ? ' now' : ''}">${st.no}. ${esc(st.name)}</span>`)
+        if (st.no < VERIFICATION_CHAIN.length) w(`<span class=arrow>→</span>`)
+      }
+      w(`</div>`)
+      for (const st of VERIFICATION_CHAIN) {
+        const cur = st.no === hy.stage
+        w(`<div class=foot>${cur ? '▶ ' : '　'}${st.no}. ${esc(st.name)}`)
+        w(`　<span class=miss>${esc(SOURCE_TIER_TEXT[st.source])}</span>`)
+        if (cur) w(`<div style="padding-left:16px">问的是：${esc(st.asks)}</div>`)
+        w(`</div>`)
+      }
+
+      for (const pr of hy.propositions) {
+        const isFact = pr.horizon === 'CURRENT_FACT'
+        w(`<div class="banner ${isFact ? 'ok' : 'grey'}" style="margin-top:12px">`)
+        w(`<b>命题 ${esc(pr.id)}：${esc(pr.claim)}</b>`)
+        w(`<div class=foot>性质：${isFact
+          ? '当前事实 · 可被单期数据证实或证伪'
+          : '未来假设 · 任何单期数据都不能证明，须逐季累积'}`)
+        w(`　判定：<b>${esc(pr.verdictText)}</b>`)
+        w(`（${pr.indicators.filter(i => i.status === 'MET').length}/${pr.indicators.length} 兑现）`)
+        w(`</div></div><ul>`)
+        for (const ind of pr.indicators) {
+          const mk = ind.status === 'MET' ? '✓' : ind.status === 'REFUTED' ? '✗' : '·'
+          const cls = ind.status === 'MET' ? 'up' : ind.status === 'REFUTED' ? 'down' : 'miss'
+          w(`<li><span class=${cls}>${mk}</span> ${esc(pr.id)}-${ind.no}. ${esc(ind.text)}`)
+          w(`<div class=foot>取数：${esc(SOURCE_TIER_TEXT[ind.sourceTier])}</div>`)
+          w(`<div class=foot>${esc(ind.evidence)}</div></li>`)
+        }
+        w(`</ul>`)
+      }
+
+      // 付费缺口与"尚未接入"必须分区 —— 混在一起就会用"要买数据"掩盖"还没做"
+      const pg = paidGaps(hy)
+      const wb = wiringBacklog(hy)
+      w(`<div class=sec style="margin:10px 0 6px">付费数据缺口（${pg.length} 项）`)
+      w(`<span class=foot>只有走完公开优先各层仍无法回答的才列入</span></div><ul>`)
+      for (const ind of pg) w(`<li>${esc(ind.text)}</li>`)
+      if (!pg.length) w(`<li class=miss>无</li>`)
       w(`</ul>`)
+      w(`<div class=sec style="margin:10px 0 6px">公开可得但尚未接入（${wb.length} 项）`)
+      w(`<span class=foot>这些是工作量，不是缺口 —— 不得用"要买数据"掩盖"还没做"</span></div><ul>`)
+      for (const ind of wb) w(`<li>${esc(ind.text)}</li>`)
+      if (!wb.length) w(`<li class=miss>无</li>`)
+      w(`</ul>`)
+
       w(`<div class=sec style="margin:10px 0 6px">本条成立也不意味着</div><ul>`)
       for (const dn of hy.doesNotImply) w(`<li>${esc(dn)}</li>`)
       w(`</ul>`)
       w(`<div class=sec style="margin:10px 0 6px">阻塞项</div><ul>`)
       for (const bl of hy.blockers) w(`<li>${esc(bl)}</li>`)
       w(`</ul>`)
-      w(`<div class="banner warn"><b>今日结论</b><div class=foot>${esc(statementOf(hy))}</div></div>`)
     }
   }
 

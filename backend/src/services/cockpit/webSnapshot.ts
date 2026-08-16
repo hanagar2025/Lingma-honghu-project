@@ -25,11 +25,11 @@ import { stageAdvances, type DiscoveryLedger } from '../governance/changeLog'
 import type { DailyAudit } from '../governance/audit'
 import type { FreezeBaseline } from '../governance/ruleRegistry'
 import { fingerprint } from '../governance/ruleRegistry'
-import type { Hypothesis } from '../research/hypotheses'
+
 
 export interface WebSnapshotInput {
   /** 外部叙事台账。OBSERVATION 级，前端只渲染、不据此产生任何操作入口 */
-  hypotheses?: Hypothesis[]
+  hypotheses?: unknown[]
   report: CockpitReport
   dashboard: Dashboard | null
   /** 今日结论。网页端与 CLI/HTML 必须给出同一份结论，否则三个出口会各说一套 */

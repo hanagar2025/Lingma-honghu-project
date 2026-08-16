@@ -128,9 +128,16 @@ export interface MemberProfit {
    * 本字段是第 ② 个条件的度量。单标的节点恒为 1，此时该条件无判别力，须标注。
    */
   shareWithinNode: number | null
-  /** 累计毛利率及其同比变化（pct点） */
-  grossMargin: number | null
+  /**
+   * 累计毛利率，「单位为百分数」（37.21 表示 37.21%），不是小数。
+   * 名字里带 Pct 是因为曾有人（我）当成小数又乘了 100，渲染出 5707.67%。
+   * 一个数值字段不写明单位，就一定会被按错的单位用一次。
+   */
+  grossMarginPct: number | null
+  /** 同比变化（pct 点）= 本期 − 去年同季 */
   grossMarginYoyPct: number | null
+  /** 去年同季的累计毛利率。用于同屏显示两个端点 —— 只给差值看不出量级 */
+  grossMarginPrevPct: number | null
   /** 扣非占净利比。仅半年报/年报可得 */
   deductRatio: number | null
   deductRatioAsOf: string | null
@@ -156,10 +163,12 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
 
   // 毛利率同比：与去年同季的累计毛利率比
   let gmYoy: number | null = null
+  let gmPrev: number | null = null
   if (latest) {
     const lastYearSame = rec.periods.find(p => p.year === latest.year - 1 && p.quarter === latest.quarter)
-    if (latest.grossMarginCum != null && lastYearSame?.grossMarginCum != null) {
-      gmYoy = latest.grossMarginCum - lastYearSame.grossMarginCum
+    if (latest.grossMarginCumPct != null && lastYearSame?.grossMarginCumPct != null) {
+      gmYoy = latest.grossMarginCumPct - lastYearSame.grossMarginCumPct
+      gmPrev = lastYearSame.grossMarginCumPct
     } else gaps.push('毛利率同比基期缺失')
   }
 
@@ -205,8 +214,9 @@ export function computeMemberProfit(rec: ProfitRecord, node: string, mainlineId:
     npYoyAccelPct: accel,
     npAbsDelta,
     shareWithinNode: null,
-    grossMargin: latest?.grossMarginCum ?? null,
+    grossMarginPct: latest?.grossMarginCumPct ?? null,
     grossMarginYoyPct: gmYoy,
+    grossMarginPrevPct: gmPrev,
     deductRatio, deductRatioAsOf: deductAsOf,
     cashMatch,
     roe: latest?.roeCum ?? null,
@@ -321,8 +331,59 @@ export interface ProfitMap {
   unavailableFields: readonly string[]
 }
 
+/**
+ * 数据文件完整性检查：某个字段在全部记录里都是 null 时报出来。
+ *
+ * 存在理由是一次真实的静默故障：把 grossMarginCum 改名为 grossMarginCumPct
+ * 之后，代码读新键、磁盘存旧键，于是 1826 个报告期的毛利率全部变成 null。
+ * 没有任何报错 —— 只是所有毛利率读数悄悄消失，页面显示"基期缺失"，
+ * 看起来像"数据源本来就没有这一项"。
+ *
+ * 「全 null 与部分 null 必须区别对待」：后者是正常的披露缺失
+ * （一季报不披露扣非），前者几乎一定是代码与数据不匹配。
+ */
+export function findEmptyFields(f: ProfitFile): string[] {
+  const all = f.records.flatMap(r => r.periods)
+  const out: string[] = []
+
+  // 逐季披露的字段：只要样本够，全 null 就是异常。
+  // 4 期是最低样本 —— 少于此的小样本（单测 fixture）全 null 可能只是巧合。
+  const everyQuarter: (keyof RawPeriod)[] = ['revenueCum', 'netProfitCum', 'grossMarginCumPct']
+  if (all.length >= 4) {
+    for (const k of everyQuarter) {
+      if (all.every(p => p[k] == null)) {
+        out.push(`${k}：${all.length} 个报告期全为 null。该字段每季披露，`
+          + '全空几乎一定是代码与数据文件字段名不匹配，而不是数据源缺失该项')
+      }
+    }
+  }
+
+  // 扣非只在中报/年报披露，故只在"存在中报/年报期"的前提下检查那些期。
+  // 按季度数拍一个阈值会同时产生误报与漏报；按披露节奏判断才是准的。
+  const semiAnnual = all.filter(p => p.quarter === 2 || p.quarter === 4)
+  if (semiAnnual.length >= 2 && semiAnnual.every(p => p.deductEps == null)) {
+    out.push(`deductEps：${semiAnnual.length} 个中报/年报期全为 null。`
+      + '该字段仅中报/年报披露，但这些期全空仍属异常')
+  }
+  return out
+}
+
 export function buildProfitMap(today: string, file?: ProfitFile): ProfitMap {
+  const fromDisk = file === undefined
   const f = file ?? (JSON.parse(readFileSync(PROFIT_FILE, 'utf-8')) as ProfitFile)
+
+  // 字段全 null 直接抛错而不是继续跑。继续跑的后果是每一处读数都显示"缺失"，
+  // 而"缺失"是一个合法输出 —— 于是一个代码 bug 会被读成数据源的问题。
+  //
+  // 「只检查磁盘文件」：注入的 fixture 是调用方自己构造的，
+  // 通常只填被测属性所需的字段，对它做完整性检查等于要求每个单测都填满全部字段。
+  // 这道检查要防的是"改了字段名但没迁移数据文件"，那只发生在磁盘那一份上。
+  if (fromDisk) {
+    const empty = findEmptyFields(f)
+    if (empty.length) {
+      throw new Error(`利润数据文件字段异常：\n  ${empty.join('\n  ')}`)
+    }
+  }
 
   // 节点归属：决策域取 universe.ts，研究域取 nodeCandidates.ts
   const attribution = new Map<string, { node: string; mainlineId: string }>()

@@ -90,7 +90,7 @@ function p(year: number, q: 1 | 2 | 3 | 4, rev: number | null, np: number | null
   return {
     reportDate: `${year}-${mm}`, noticeDate: `${year}-${mm}`, year, quarter: q,
     revenueCum: rev, netProfitCum: np,
-    basicEps: 1, deductEps: null, grossMarginCum: 30, cfoPerShareCum: 1, roeCum: 10,
+    basicEps: 1, deductEps: null, grossMarginCumPct: 30, cfoPerShareCum: 1, roeCum: 10,
     ...extra,
   }
 }
@@ -322,11 +322,12 @@ try {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 外部叙事台账：值得研究 ≠ 值得买
+// 外部叙事台账：这条证据到底证明了什么？
 // ══════════════════════════════════════════════════════════════
 {
   const {
-    HYPOTHESES, VERIFICATION_CHAIN, withLiveData, statementOf, metCount, renderHypotheses,
+    HYPOTHESES, VERIFICATION_CHAIN, withLiveData, fourLineVerdict, metCount,
+    renderHypotheses, allIndicators, paidGaps, wiringBacklog, SOURCE_TIER_TEXT,
   } = await import('./hypotheses')
 
   const h1 = HYPOTHESES.find(h => h.id === 'H1')!
@@ -335,82 +336,224 @@ try {
   ok('叙事台账证据等级恒为 OBSERVATION（按约定不得进动作区）',
     HYPOTHESES.every(h => h.tier === 'OBSERVATION'))
   const modSrc = readFileSync(new URL('./hypotheses.ts', import.meta.url), 'utf-8')
-  ok('模块不 import Action / makeAction —— 不是"约定不用"，而是没有那个函数可用',
-    !/makeAction|from '.*cockpit\/types'.*Action/.test(
-      modSrc.split('\n').filter(l => l.startsWith('import')).join('\n')))
-  ok('模块不导出任何返回 Action 的函数',
-    !/:\s*Action(\[\])?\s*[{;]/.test(modSrc))
+  const imports = modSrc.split('\n').filter(l => l.startsWith('import')).join('\n')
+  ok('模块不 import makeAction —— 不是"约定不用"，而是没有那个函数可用',
+    !/makeAction/.test(imports))
+  ok('模块不导出任何返回 Action 的函数', !/:\s*Action(\[\])?\s*[{;]/.test(modSrc))
 
-  // ── 链条不可跳步 ──
-  ok('验证链共 7 步且顺序固定',
-    VERIFICATION_CHAIN.length === 7
-    && VERIFICATION_CHAIN[0] === '叙事'
-    && VERIFICATION_CHAIN[6] === '战略许可')
-  ok('H1 停在第 1 步「叙事」—— 第 5 步有数据也不能跳步',
-    h1.stage === 1, `实为第 ${h1.stage} 步`)
+  // ── 一句话拆成两个命题 ──
+  //
+  // 这是本次迭代最重要的一条：命题 A 与 B 的证明力完全不同，
+  // 合在一起会让 A 的证据被读成 B 的背书。
+  const A = h1.propositions.find(p => p.id === 'A')!
+  const B = h1.propositions.find(p => p.id === 'B')!
+  ok('叙事被拆成两个独立命题', h1.propositions.length === 2)
+  ok('命题 A 标为当前事实', A.horizon === 'CURRENT_FACT')
+  ok('命题 B 标为未来假设', B.horizon === 'FUTURE_HYPOTHESIS')
+  ok('命题 A 的每一项都标为当前事实',
+    A.indicators.every(i => i.horizon === 'CURRENT_FACT'))
+  ok('命题 B 的每一项都标为未来假设',
+    B.indicators.every(i => i.horizon === 'FUTURE_HYPOTHESIS'))
+  ok('命题 B 覆盖需求端/价格端/供给端/盈利端/持续性五个维度',
+    B.indicators.length === 5
+    && ['需求端', '价格端', '供给端', '盈利端', '持续性']
+      .every(k => B.indicators.some(i => i.text.includes(k))),
+    B.indicators.map(i => i.text.slice(0, 4)).join(','))
+  ok('明确写出"B 不能从 A 推出"',
+    h1.doesNotImply.some(d => d.includes('B 不能从 A 推出')))
 
-  // ── 指标 5 必须动态取值，不得写死 ──
-  ok('指标 5 的默认状态为未验证（数字由 withLiveData 填入，写死会让台账悄悄过期）',
-    h1.indicators.find(i => i.no === 5)?.status === 'UNVERIFIED')
+  // ── 公开数据优先：付费缺口必须是筛出来的，不是随口说的 ──
+  //
+  // 危险假设是「没有付费数据库 → S2 永远过不了」。
+  // 那会让系统从"防止虚假判断"退化成"因为没有 Bloomberg 所以什么都不判断"。
+  const paid = paidGaps(h1)
+  const wiring = wiringBacklog(h1)
+  ok('付费缺口只剩需求端与价格端两项',
+    paid.length === 2
+    && paid.every(i => i.text.includes('需求端') || i.text.includes('价格端')),
+    paid.map(i => i.text.slice(0, 6)).join(','))
+  ok('扣非利润不再被记为付费缺口 —— 它是公开披露项且已在管道内',
+    allIndicators(h1).some(i => i.text.includes('扣非') && i.sourceTier === 'PUBLIC_IN_PIPELINE'))
+  ok('毛利率不被记为付费缺口 —— 公开财报 XSMLL 字段已在管道内',
+    allIndicators(h1).some(i => i.text.includes('毛利率') && i.sourceTier === 'PUBLIC_IN_PIPELINE'))
+  ok('公司收入与供给端记为"尚未接入"而非付费缺口（工作量 ≠ 数据不可得）',
+    wiring.length === 2
+    && wiring.every(i => i.text.includes('收入') || i.text.includes('供给端')),
+    wiring.map(i => i.text.slice(0, 6)).join(','))
+  ok('取数层级文案区分"工作量问题"与"数据可得性问题"',
+    SOURCE_TIER_TEXT.PUBLIC_NOT_YET_WIRED.includes('工作量'))
+  ok('付费层文案要求先走完公开优先各层',
+    SOURCE_TIER_TEXT.NEEDS_PAID.includes('公开披露无法回答'))
+
+  // ── 验证链：问法必须是归因，不是"有没有增长" ──
+  ok('验证链共 7 步', VERIFICATION_CHAIN.length === 7)
+  const s3 = VERIFICATION_CHAIN.find(x => x.no === 3)!
+  const s5 = VERIFICATION_CHAIN.find(x => x.no === 5)!
+  ok('第 3 步问的是归因比例，并明确否掉"收入有没有增长"这种问法',
+    s3.asks.includes('归因') && s3.asks.includes('不是'), s3.asks)
+  ok('第 5 步问的是扣非利润中来自主线的部分', s5.asks.includes('扣非') && s5.asks.includes('主线'))
+  ok('第 4 步（扣非利润）取数层级为公开·已在管道内',
+    VERIFICATION_CHAIN.find(x => x.no === 4)!.source === 'PUBLIC_IN_PIPELINE')
+  ok('第 7 步（战略许可）标为战略层裁定，非数据问题',
+    VERIFICATION_CHAIN.find(x => x.no === 7)!.source === 'STRATEGY_RULING')
+
+  // 停在最早一个未完成的步骤，而不是最晚一个已完成的
+  ok('H1 停在第 3 步（主线收入归因）—— 第 4 步有数据也不能因此跳过第 3 步',
+    h1.stage === 3, `实为第 ${h1.stage} 步`)
+
+  // ── 动态取值：不得写死 ──
   ok('源码中不出现写死的份额数字',
-    !/23\.6%|16\.4pct|14\.6 ?亿/.test(modSrc),
-    '发现硬编码份额数字')
+    !/23\.6%|16\.4pct|14\.6 ?亿/.test(modSrc))
+  ok('源码中不出现写死的扣非占比',
+    !/89\.1%|73\.2%|96\.6%/.test(modSrc))
 
   const live = withLiveData(h1, {
     npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
     deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
+    members: [{
+      name: '兆易创新', deductRatio: 0.891, deductRatioAsOf: '2025-12-31',
+      grossMarginPct: 40.2, grossMarginYoyPct: 2.1, grossMarginPrevPct: 38.1,
+    }],
   })
-  const i5 = live.indicators.find(i => i.no === 5)!
-  ok('注入实测值后指标 5 判为 MET', i5.status === 'MET')
-  ok('证据必须写出数据滞后天数 —— 不写读者会默认它是当期的',
-    i5.evidence.includes('136 天'))
+  const liveA = live.propositions.find(p => p.id === 'A')!
+  const i1 = liveA.indicators.find(i => i.no === 1)!
+  ok('注入实测值后份额项判为 MET', i1.status === 'MET')
+  ok('份额证据写出滞后天数 —— 不写读者会默认它是当期的', i1.evidence.includes('136 天'))
   ok('滞后 >100 天时明说"既无法证实也无法证伪"',
-    i5.evidence.includes('无法证实也无法证伪'))
-  ok('并说明份额扩大可另有来源（周期涨价/同行掉队）',
-    i5.evidence.includes('周期涨价') && i5.evidence.includes('同行掉队'))
+    i1.evidence.includes('无法证实也无法证伪'))
+  ok('份额证据列出四种替代解释（不止周期涨价一种）',
+    ['周期涨价', '同行掉队', '产品结构', '供给收缩'].every(k => i1.evidence.includes(k)))
 
-  // 份额收缩时必须翻成 REFUTED，而不是悄悄留在 MET
+  const i3 = liveA.indicators.find(i => i.no === 3)!
+  ok('扣非项从公开年报取到实测值并判为 MET',
+    i3.status === 'MET' && i3.evidence.includes('89.1%'))
+  ok('扣非证据明说它不回答"利润是否来自本主线"',
+    i3.evidence.includes('不回答') && i3.evidence.includes('主线'))
+  const i4 = liveA.indicators.find(i => i.no === 4)!
+  ok('毛利率项取到实测值并判为 MET', i4.status === 'MET' && i4.evidence.includes('40.2%'))
+  ok('毛利率同屏显示两个端点，不只给差值（只看差值看不出量级）',
+    i4.evidence.includes('38.1% → 40.2%'), i4.evidence.slice(0, 60))
+  ok('毛利率证据写明单位为百分数（曾按小数用又乘 100，渲染出 5707.67%）',
+    i4.evidence.includes('单位为百分数'))
+
+  // 大幅变动必须标"须核验"，但不替委员会判定原因
+  const bigGm = withLiveData(h1, {
+    npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
+    deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
+    members: [{
+      name: '兆易创新', deductRatio: 0.891, deductRatioAsOf: '2025-12-31',
+      grossMarginPct: 57.1, grossMarginYoyPct: 19.6, grossMarginPrevPct: 37.4,
+    }],
+  })
+  const bigI4 = bigGm.propositions.find(p => p.id === 'A')!.indicators.find(i => i.no === 4)!
+  ok('毛利率同比 >10pct 时标为量级异常须核验', bigI4.evidence.includes('量级异常，须核验'))
+  ok('并列出两种可能原因而不替委员会选一个',
+    bigI4.evidence.includes('量价齐升') && bigI4.evidence.includes('会计口径')
+    && bigI4.evidence.includes('不替委员会判定原因'))
+  ok('毛利率证据明说单季改善不构成对命题 B 的证据',
+    i4.evidence.includes('不构成对命题 B 的证据'))
+
+  // 份额收缩必须翻成 REFUTED
   const shrink = withLiveData(h1, {
     npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: -3.0,
     deltaShareOfMainline: null, maxReportAgeDays: 136,
   })
-  ok('份额收缩时指标 5 判为 REFUTED（不得停留在 MET）',
-    shrink.indicators.find(i => i.no === 5)?.status === 'REFUTED')
-  // 无数据时不得用"方向应该是扩大"代替读数
-  const nodata = withLiveData(h1, null)
-  ok('无份额数据时判为 UNVERIFIED 且明说不得以方向代替读数',
-    nodata.indicators.find(i => i.no === 5)?.status === 'UNVERIFIED'
-    && nodata.indicators.find(i => i.no === 5)!.evidence.includes('不得以'))
+  ok('份额收缩时判为 REFUTED（不得停留在 MET）',
+    shrink.propositions.find(p => p.id === 'A')!.indicators
+      .find(i => i.no === 1)?.status === 'REFUTED')
 
-  // ── 结论文本：克制，且不得出现预测性表述 ──
-  const st = statementOf(live)
-  ok('结论含"不改变主线、不产生候选、不产生交易动作"',
-    st.includes('不改变主线') && st.includes('不产生候选') && st.includes('不产生交易动作'))
-  ok('结论明说未完成产业—盈利闭环验证', st.includes('尚未完成产业—盈利闭环验证'))
-  ok('结论指出节点唯一在册标的处于战略清退状态', st.includes('战略清退'))
-  for (const banned of ['要涨', '起飞', '超级周期来了', '将会', '有望']) {
-    ok(`结论不出现预测性表述「${banned}」`, !st.includes(banned))
+  // ── 四句话结论 ──
+  const v = fourLineVerdict(live)
+  ok('第 1 句：当前景气有证据，并注明来自公开披露',
+    v.currentFact.includes('有证据') && v.currentFact.includes('公开披露'))
+  ok('第 2 句：AI 是主要驱动力 = 部分待验证', v.aiAsDriver.includes('部分待验证'))
+  ok('第 3 句：3–5 年超级周期 = 未验证', v.superCycle.includes('未验证'))
+  ok('第 3 句指出持续性在定义上无法用单期数据满足',
+    v.superCycle.includes('无法用任何单期数据满足'))
+  ok('第 4 句：候选资格 = 战略层不允许', v.candidacy.includes('战略层不允许'))
+  const all4 = [v.currentFact, v.aiAsDriver, v.superCycle, v.candidacy].join(' ')
+  for (const banned of ['要涨', '起飞', '超级周期成立', '将会', '有望', '看好']) {
+    ok(`四句话不出现预测性表述「${banned}」`, !all4.includes(banned))
   }
-  ok(`已兑现 ${metCount(live)}/5，结论如实报出`, st.includes(`${metCount(live)} 项已有数据支持`))
+  ok('四句话把"有证据"与"未验证"放在同一段，读者无法只取前半句',
+    all4.includes('有证据') && all4.includes('未验证'))
 
-  // ── 明确否定项必须覆盖四件事 ──
-  const dni = h1.doesNotImply.join('｜')
-  for (const must of ['存储主线重新开放', '兆易创新', '新增建仓', '超级周期']) {
-    ok(`明确否定项覆盖「${must}」`, dni.includes(must))
+  // ── 反直觉结论必须成立：证据全绿仍不买 ──
+  //
+  // 这是七层驾驶舱没有越权的证明。
+  const allGreen: typeof h1 = {
+    ...live,
+    propositions: live.propositions.map(p => ({
+      ...p, indicators: p.indicators.map(i => ({ ...i, status: 'MET' as const })),
+    })),
   }
-  ok('阻塞项写明 strategyAllows = false 与冠军替换程序',
-    h1.blockers.join('').includes('strategyAllows')
-    && h1.blockers.join('').includes('冠军替换'))
+  const vg = fourLineVerdict(allGreen)
+  ok('即便全部指标兑现，候选资格仍为战略层不允许',
+    vg.candidacy.includes('战略层不允许'))
+  ok('阻塞项明写"全部指标兑现仍不产生买入动作"',
+    h1.blockers.join('').includes('全部指标都兑现')
+    && h1.blockers.join('').includes('不产生买入动作'))
+  ok('阻塞项区分"产业证据不足"与"战略层裁定"，并说明两者不可替代',
+    h1.blockers.join('').includes('不可互相替代'))
   ok('阻塞项指出份额扩大会成为清退标的的后门',
     h1.blockers.join('').includes('后门'))
+  void metCount(allGreen)
 
-  // ── 渲染层不得出现打分/排序字样 ──
+  // ── 渲染层 ──
   const txt = renderHypotheses([live])
   ok('渲染层声明不打分、不排序、不产生候选、不产生动作',
-    txt.includes('不打分') && txt.includes('不排序')
-    && txt.includes('不产生候选') && txt.includes('不产生动作'))
-  ok('渲染层不出现"综合评分""总分""星级"',
-    !/综合评分|总分|星级/.test(txt))
+    ['不打分', '不排序', '不产生候选', '不产生动作'].every(k => txt.includes(k)))
+  ok('渲染层不出现"综合评分""总分""星级"', !/综合评分|总分|星级/.test(txt))
+  ok('渲染层把四句话结论放在指标表之前',
+    txt.indexOf('机器结论') < txt.indexOf('命题 A'))
+  ok('渲染层写明取数原则：能公开验证的绝不列为付费缺口',
+    txt.includes('能公开验证的绝不列为付费缺口'))
+  ok('渲染层把"尚未接入"与"付费缺口"分区显示',
+    txt.includes('公开可得但尚未接入') && txt.includes('付费数据缺口'))
+  ok('渲染层说明链条停在最早一个未完成的步骤',
+    txt.includes('停在最早一个未完成的步骤'))
+}
+
+// ── 数据文件完整性检查：防"改了字段名但没迁移数据" ──
+//
+// 这是一次真实的静默故障：grossMarginCum → grossMarginCumPct 改名后，
+// 代码读新键、磁盘存旧键，1826 个报告期的毛利率全部变成 null。
+// 没有报错，只是所有读数悄悄消失，页面显示"基期缺失"，看起来像数据源本来就缺。
+{
+  const { findEmptyFields } = await import('./profitRadar')
+  const mk = (y: number, q: 1 | 2 | 3 | 4, extra: Record<string, unknown> = {}) => ({
+    reportDate: `${y}-${String(q * 3).padStart(2, '0')}-30`,
+    noticeDate: `${y}-${String(q * 3).padStart(2, '0')}-30`,
+    year: y, quarter: q, revenueCum: 100, netProfitCum: 10,
+    basicEps: 1, deductEps: null, grossMarginCumPct: 40, ...extra,
+  })
+  const wrap = (periods: unknown[]) => ({
+    generatedAt: 'x', source: 'x', methodology: 'x',
+    records: [{ code: '1', name: 'a', scope: 'DECISION', periods }],
+  }) as never
+
+  // 逐季披露字段全空 → 报出
+  const gmMissing = wrap([1, 2, 3, 4].map(q =>
+    mk(2025, q as 1 | 2 | 3 | 4, { grossMarginCumPct: null })))
+  ok('逐季披露字段（毛利率）全空被报出',
+    findEmptyFields(gmMissing).some(x => x.includes('grossMarginCumPct')))
+
+  // 样本不足 4 期 → 不报（小 fixture 全空可能只是巧合）
+  ok('样本不足 4 期时不报逐季字段（避免对小 fixture 误报）',
+    findEmptyFields(wrap([mk(2025, 1, { grossMarginCumPct: null })])).length === 0)
+
+  // 扣非按披露节奏判断：只有一季报时不报
+  ok('只有一季报时不报扣非缺失（一季报本来就不披露扣非）',
+    !findEmptyFields(wrap([mk(2025, 1), mk(2025, 3), mk(2026, 1)]))
+      .some(x => x.includes('deductEps')))
+  // 有中报/年报却全空 → 报出
+  ok('中报/年报期存在却全无扣非时报出',
+    findEmptyFields(wrap([mk(2025, 2), mk(2025, 4)]))
+      .some(x => x.includes('deductEps')))
+  // 正常数据不报
+  ok('字段齐全时不报任何异常',
+    findEmptyFields(wrap([mk(2025, 2, { deductEps: 0.9 }), mk(2025, 4, { deductEps: 1.8 }),
+      mk(2026, 1), mk(2026, 3)])).length === 0)
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

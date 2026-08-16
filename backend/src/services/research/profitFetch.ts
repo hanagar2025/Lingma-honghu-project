@@ -62,7 +62,7 @@ export interface RawPeriod {
   /** 扣非每股收益。一季报/三季报通常为 null */
   deductEps: number | null
   /** 累计销售毛利率（%） */
-  grossMarginCum: number | null
+  grossMarginCumPct: number | null
   /** 累计每股经营现金流（元） */
   cfoPerShareCum: number | null
   /** 累计加权ROE（%） */
@@ -119,7 +119,7 @@ async function fetchPeriods(code: string): Promise<RawPeriod[]> {
       netProfitCum: r.PARENT_NETPROFIT ?? null,
       basicEps: r.BASIC_EPS ?? null,
       deductEps: r.DEDUCT_BASIC_EPS ?? null,
-      grossMarginCum: r.XSMLL ?? null,
+      grossMarginCumPct: r.XSMLL ?? null,
       cfoPerShareCum: r.MGJYXJJE ?? null,
       roeCum: r.WEIGHTAVG_ROE ?? null,
     }

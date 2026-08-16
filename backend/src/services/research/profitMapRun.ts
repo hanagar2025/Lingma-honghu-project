@@ -129,7 +129,7 @@ function main(): void {
         )
         out.write(
           `        净利绝对增量 ${yi(m.npAbsDelta)}  同比加速 ${pp(m.npYoyAccelPct)}  ` +
-          `毛利率 ${m.grossMargin === null ? '—' : `${m.grossMargin.toFixed(1)}%`}` +
+          `毛利率 ${m.grossMarginPct === null ? '—' : `${m.grossMarginPct.toFixed(1)}%`}` +
           `（同比 ${pp(m.grossMarginYoyPct)}）  扣非占比 ${m.deductRatio === null ? '—' : `${(m.deductRatio * 100).toFixed(0)}%`}` +
           `${m.deductRatioAsOf ? `@${m.deductRatioAsOf}` : ''}  现金含量 ${m.cashMatch === null ? '—' : m.cashMatch.toFixed(2)}\n`
         )

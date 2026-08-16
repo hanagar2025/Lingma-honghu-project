@@ -26,7 +26,8 @@ import { buildVerdict, type Verdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
 import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import {
-  HYPOTHESES, withLiveData, renderHypotheses, type Hypothesis,
+  HYPOTHESES, withLiveData, renderHypotheses, fourLineVerdict, paidGaps, wiringBacklog,
+  type Hypothesis,
 } from '../research/hypotheses'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
@@ -228,6 +229,7 @@ async function main(): Promise<void> {
   let prevDateForHtml: string | null = null
   let ledgerForHtml: DiscoveryLedger | null = null
   let hypothesesForHtml: Hypothesis[] = []
+  let hypothesesForWeb: unknown[] = []
 
   if (process.env.DASHBOARD === '0' || !internals) {
     printReport(rep)
@@ -272,6 +274,14 @@ async function main(): Promise<void> {
     hypothesesForHtml = HYPOTHESES.map(h => withLiveData(
       h, profit?.nodes.find(n => n.node === h.node) ?? null
     ))
+    // 四句话结论与两类缺口在后端算好再下发。
+    // 前端重算的后果是两套口径：同一份数据在网页与终端给出不同的句子。
+    hypothesesForWeb = hypothesesForHtml.map(h => ({
+      ...h,
+      fourLine: fourLineVerdict(h),
+      paidGaps: paidGaps(h).map(i => i.text),
+      wiringBacklog: wiringBacklog(h).map(i => i.text),
+    }))
     process.stdout.write(`${renderHypotheses(hypothesesForHtml)}\n`)
 
     // ── 变化台账 ──
@@ -490,7 +500,7 @@ async function main(): Promise<void> {
       report: rep,
       dashboard: dashForHtml,
       verdict: verdictForHtml,
-      hypotheses: hypothesesForHtml,
+      hypotheses: hypothesesForWeb,
       brief: briefForWeb,
       changes: changesForHtml,
       prevDate: prevDateForHtml,
