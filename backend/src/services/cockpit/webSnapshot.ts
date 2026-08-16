@@ -28,6 +28,17 @@ import { fingerprint } from '../governance/ruleRegistry'
 
 
 export interface WebSnapshotInput {
+  /**
+   * 生成这份快照的代码版本。由 update-snapshot.sh 通过 TIOS_CODE_COMMIT 注入。
+   *
+   * 存在理由是一次真实的隐性故障:服务器的 cron 每天忠实地用同一份旧代码跑,
+   * 而快照里没有任何版本标记 —— 于是从外部完全看不出它在跑哪一版。
+   * 报告照样每天出,数字全错却不报错。
+   *
+   * 有了这两个字段,只要 curl 一下线上快照就能判断服务器代码新不新。
+   */
+  codeCommit?: string
+  codeCommittedAt?: string
   /** 外部叙事台账。OBSERVATION 级，前端只渲染、不据此产生任何操作入口 */
   hypotheses?: unknown[]
   /** 主线收入归因。当前全是缺口 —— 摆在明处才会被补 */
@@ -72,6 +83,10 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
   return {
     ...report,
     dashboard,
+    // 版本与生成时刻置于顶层,便于 curl 一眼看到
+    codeCommit: input.codeCommit ?? process.env.TIOS_CODE_COMMIT ?? 'unknown',
+    codeCommittedAt: input.codeCommittedAt ?? process.env.TIOS_CODE_COMMITTED_AT ?? null,
+    generatedAt: new Date().toISOString(),
     verdict: input.verdict ?? null,
     hypotheses: input.hypotheses ?? [],
     attribution: input.attribution ?? null,

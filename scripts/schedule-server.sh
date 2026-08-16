@@ -71,9 +71,38 @@ SESSION="${1:-post}"
 # 要等到下一个交易日才知道 —— 而那时若是坏的，观察期已经丢掉一天。
 # 测试的目的正是在真正需要它之前先失败一次。
 FORCE="${FORCE:-0}"
+# NOPULL=1 跳过拉代码（排障时用）。默认拉 —— 见下方理由。
+NOPULL="${NOPULL:-0}"
+BRANCH_REF="${TIOS_BRANCH:-cursor/decision-audit-c819}"
 LOG=/var/log/tios-update.log
 exec >> "$LOG" 2>&1
 echo "=== $(date '+%F %T %Z') session=$SESSION force=$FORCE ==="
+
+# ── 先拉代码，再生成 ──
+#
+# 实测踩过：此脚本原本不拉代码，于是 cron 每天忠实地用同一份旧代码跑下去。
+# 8/15 08:20 GMT 部署过一次，而资产层是 09:45 GMT 提交的 ——
+# 之后两天的全部改动（组合口径分母、630 万峰值、一级熔断、风控四层）都不在服务器上。
+#
+# 最糟的部分不是"没更新"，而是**它不会报错**：
+# 旧代码照样生成一份完整报告，只是用的是旧口径与旧持仓。
+# 一份看起来正常、数字全错的报告，比一份生成失败的报告危险得多。
+if [[ "$NOPULL" != "1" ]]; then
+  if git -C /opt/tios fetch --quiet origin "$BRANCH_REF" 2>/dev/null \
+    && git -C /opt/tios reset --hard --quiet "origin/$BRANCH_REF" 2>/dev/null; then
+    echo "已拉取 origin/$BRANCH_REF → $(git -C /opt/tios rev-parse --short HEAD)"
+    # 依赖可能随代码变化。--omit=dev 保持轻量；失败不阻断（多数改动不涉及新依赖）
+    npm ci --omit=dev --silent 2>/dev/null || echo "  npm ci 跳过（不影响 tsx 直跑）"
+  else
+    echo "⚠ 拉取失败，继续用本地代码 $(git -C /opt/tios rev-parse --short HEAD 2>/dev/null || echo '未知')"
+  fi
+fi
+
+# 把正在运行的代码版本写进环境，供快照自报版本 ——
+# 缺了这个，从外部完全无法判断服务器在跑哪一版（这次就是这样被瞒过去的）。
+export TIOS_CODE_COMMIT="$(git -C /opt/tios rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+export TIOS_CODE_COMMITTED_AT="$(git -C /opt/tios log -1 --format=%cI 2>/dev/null || echo '')"
+echo "代码版本 $TIOS_CODE_COMMIT （提交于 ${TIOS_CODE_COMMITTED_AT:-未知}）"
 
 # 盘前只出简报不归档；盘后完整并归档
 if [[ "$SESSION" == "pre" ]]; then

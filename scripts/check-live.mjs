@@ -100,6 +100,40 @@ if (snap.status === 200 && snap.type.includes('json')) {
     console.log(`  ${F.ok} 快照可取：交易日 ${snapDate}，${kb}KB`)
     if (!d.dashboard?.holdings?.length) bad('快照里没有持仓数据')
     if (typeof d.brief !== 'string') bad('快照里没有外发摘要（brief）')
+
+    // ── 代码版本核对 ──
+    //
+    // 这一段来自一次真实的隐性故障：服务器的 cron 不拉代码，每天忠实地用同一份
+    // 旧代码跑；而快照里没有版本标记，于是从外部完全看不出它在跑哪一版。
+    // 报告照样每天出，数字全错却不报错。
+    //
+    // 「一份看起来正常、数字全错的报告，比一份生成失败的报告危险得多」——
+    // 后者会让人立刻去修，前者会被当成事实用来做决定。
+    const liveCommit = d.codeCommit ?? null
+    if (!liveCommit || liveCommit === 'unknown') {
+      bad('快照没有代码版本标记（codeCommit）　→ 服务器在跑旧版脚本，'
+        + '须从本机跑 scripts/schedule-server.sh update')
+    } else {
+      let localCommit = null
+      try {
+        const { execSync } = await import('node:child_process')
+        localCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+      } catch { /* 不在 git 仓库里就跳过比较 */ }
+      if (localCommit && liveCommit !== localCommit) {
+        bad(`线上代码版本 ${liveCommit} ≠ 本地 ${localCommit}`
+          + '　→ 服务器落后，明日报告会用旧代码生成（不会报错，只会给出旧数字）')
+      } else if (localCommit) {
+        console.log(`  ${F.ok} 代码版本一致：${liveCommit}`)
+      } else {
+        console.log(`  ${F.ok} 线上代码版本 ${liveCommit}（本地非 git 仓库，跳过比较）`)
+      }
+    }
+    if (d.generatedAt) {
+      const ageH = (Date.now() - Date.parse(d.generatedAt)) / 3600000
+      console.log(`  ${F.ok} 快照生成于 ${d.generatedAt}（${ageH.toFixed(1)} 小时前）`)
+    } else {
+      bad('快照没有生成时刻（generatedAt）　→ 无法判断它是哪次运行的产物')
+    }
   } catch {
     bad('快照不是合法 JSON')
   }
