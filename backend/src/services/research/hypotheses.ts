@@ -260,15 +260,13 @@ export const HYPOTHESES: Hypothesis[] = [
           },
           {
             no: 2,
-            text: '在册公司存储业务收入是否增长(公司收入，第 2 步)',
-            status: 'MET',
+            text: '在册公司目标产品线收入是否增长（验证链第 2 环）',
+            // 由 withLiveData 从 link2Revenue 的实测结果填入。
+            // 曾在此处手抄「65.66 亿、+26.41%」—— 手抄的数字会在下一期悄悄过期。
+            status: 'UNVERIFIED',
             horizon: 'CURRENT_FACT',
-            sourceTier: 'PUBLIC_NOT_YET_WIRED',
-            evidence:
-              '公开披露可得：兆易创新 2025 年报存储芯片收入约 65.66 亿元、同比 +26.41%、'
-              + '毛利率 42.84%；2026Q1 公告提到存储芯片供不应求、量价齐升。'
-              + '「按产品线拆分的收入尚未接入管道」 —— 这是工作量问题，不是数据可得性问题，'
-              + '不得记为付费数据缺口。',
+            sourceTier: 'PUBLIC_IN_PIPELINE',
+            evidence: '待从分产品收入表读取（segments.json，MAINOP_TYPE=2 按产品）',
           },
           {
             no: 3,
@@ -565,6 +563,17 @@ export function withLiveData(
     levelShareDelta4Q: number | null
     deltaShareOfMainline: number | null
     maxReportAgeDays: number | null
+    /** 第 2 环实测结果。由 run.ts 注入 */
+    link2?: {
+      period: string
+      revenueYoy: number
+      improved: boolean
+      ageDays: number | null
+      target: { group: string; yoy: number | null; shareOfRevenue: number | null
+        shareOfTotalDelta: number | null } | null
+      fastestGrowing: { group: string; yoy: number } | null
+      targetIsFastestGrowing: boolean | null
+    } | null
     members?: {
       name: string
       deductRatio: number | null
@@ -625,6 +634,32 @@ export function withLiveData(
       evidence += '且份额扩大另有解释：周期涨价、同行掉队、产品结构变化、供给收缩 ——'
         + '与 AI 需求无必然关系。'
       return { ...ind, status: expanding ? 'MET' : 'REFUTED', evidence }
+    }
+
+    // A-2 公司收入（第 2 环实测）
+    if (ind.no === 2) {
+      const l2 = node?.link2
+      if (!l2) {
+        return {
+          ...ind, status: 'UNVERIFIED',
+          evidence: '分产品收入表未接入或读取失败 → 本项无法判定。',
+        }
+      }
+      const pc = (v: number | null) => (v === null ? '?' : `${(v * 100).toFixed(1)}%`)
+      let ev = `${l2.period}：主营收入同比 ${pc(l2.revenueYoy)}。`
+      if (l2.target) {
+        ev += `目标产品线「${l2.target.group}」同比 ${pc(l2.target.yoy)}，`
+          + `占期末收入 ${pc(l2.target.shareOfRevenue)}，`
+          + `占总增量 ${pc(l2.target.shareOfTotalDelta)}。`
+      }
+      if (l2.targetIsFastestGrowing === false && l2.fastestGrowing) {
+        ev += `「增速最快的产品线是${l2.fastestGrowing.group}（${pc(l2.fastestGrowing.yoy)}），`
+          + '不是目标产品线」—— 目标线占总增量高是因为体量大，不是因为长得快。'
+      }
+      ev += `数据距今 ${l2.ageDays ?? '?'} 天。`
+        + '「本项只说明收入改善，不说明改善来自 AI 需求」——'
+        + '产品类别不等于下游应用，后者是第 3 环。'
+      return { ...ind, status: l2.improved ? 'MET' : 'REFUTED', evidence: ev }
     }
 
     // A-3 扣非占比

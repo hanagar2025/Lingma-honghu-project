@@ -1,0 +1,872 @@
+{
+ "code": "603986",
+ "name": "兆易创新",
+ "fetchedAt": "2026-08-16T15:16:35.909Z",
+ "source": "东方财富 RPT_F10_FN_MAINOP（MAINOP_TYPE=2 按产品）",
+ "periods": [
+  {
+   "reportDate": "2025-12-31",
+   "reportName": "2025年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2025-12-31",
+     "reportName": "2025年报",
+     "itemName": "其他(补充)",
+     "income": 1205145.66,
+     "incomeRatio": 0.000131,
+     "grossMargin": 0.96246
+    },
+    {
+     "reportDate": "2025-12-31",
+     "reportName": "2025年报",
+     "itemName": "技术服务及其他收入",
+     "income": 4221536.5,
+     "incomeRatio": 0.000459,
+     "grossMargin": 0.876797
+    },
+    {
+     "reportDate": "2025-12-31",
+     "reportName": "2025年报",
+     "itemName": "模拟产品",
+     "income": 332843600.57,
+     "incomeRatio": 0.036165,
+     "grossMargin": 0.369612
+    },
+    {
+     "reportDate": "2025-12-31",
+     "reportName": "2025年报",
+     "itemName": "传感器",
+     "income": 389354949.48,
+     "incomeRatio": 0.042305,
+     "grossMargin": 0.195698
+    },
+    {
+     "reportDate": "2025-12-31",
+     "reportName": "2025年报",
+     "itemName": "微控制器",
+     "income": 1909897922.87,
+     "incomeRatio": 0.207519,
+     "grossMargin": 0.358204
+    },
+    {
+     "reportDate": "2025-12-31",
+     "reportName": "2025年报",
+     "itemName": "存储芯片",
+     "income": 6565939969.5,
+     "incomeRatio": 0.713421,
+     "grossMargin": 0.428434
+    }
+   ],
+   "total": 9203463124.58
+  },
+  {
+   "reportDate": "2025-06-30",
+   "reportName": "2025中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2025-06-30",
+     "reportName": "2025中报",
+     "itemName": "技术服务收入及其他收入",
+     "income": 799128.53,
+     "incomeRatio": 0.000193,
+     "grossMargin": 0.968641
+    },
+    {
+     "reportDate": "2025-06-30",
+     "reportName": "2025中报",
+     "itemName": "模拟产品",
+     "income": 152276194.73,
+     "incomeRatio": 0.03669,
+     "grossMargin": 0.389827
+    },
+    {
+     "reportDate": "2025-06-30",
+     "reportName": "2025中报",
+     "itemName": "传感器",
+     "income": 193193188.94,
+     "incomeRatio": 0.046549,
+     "grossMargin": 0.160154
+    },
+    {
+     "reportDate": "2025-06-30",
+     "reportName": "2025中报",
+     "itemName": "微控制器",
+     "income": 959105724.88,
+     "incomeRatio": 0.231093,
+     "grossMargin": 0.373139
+    },
+    {
+     "reportDate": "2025-06-30",
+     "reportName": "2025中报",
+     "itemName": "存储芯片",
+     "income": 2844934395.8,
+     "incomeRatio": 0.685475,
+     "grossMargin": 0.385027
+    }
+   ],
+   "total": 4150308632.88
+  },
+  {
+   "reportDate": "2024-12-31",
+   "reportName": "2024年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2024-12-31",
+     "reportName": "2024年报",
+     "itemName": "其他(补充)",
+     "income": 349845.51,
+     "incomeRatio": 0.000048,
+     "grossMargin": 0.766661
+    },
+    {
+     "reportDate": "2024-12-31",
+     "reportName": "2024年报",
+     "itemName": "技术服务及其他收入",
+     "income": 7139707.61,
+     "incomeRatio": 0.000971,
+     "grossMargin": 0.990915
+    },
+    {
+     "reportDate": "2024-12-31",
+     "reportName": "2024年报",
+     "itemName": "传感器",
+     "income": 448300100.78,
+     "incomeRatio": 0.060944,
+     "grossMargin": 0.164615
+    },
+    {
+     "reportDate": "2024-12-31",
+     "reportName": "2024年报",
+     "itemName": "MCU及模拟产品",
+     "income": 1706014797.54,
+     "incomeRatio": 0.231922,
+     "grossMargin": 0.36501
+    },
+    {
+     "reportDate": "2024-12-31",
+     "reportName": "2024年报",
+     "itemName": "存储芯片",
+     "income": 5194173225.67,
+     "incomeRatio": 0.706116,
+     "grossMargin": 0.402663
+    }
+   ],
+   "total": 7355977677.110001
+  },
+  {
+   "reportDate": "2024-06-30",
+   "reportName": "2024中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2024-06-30",
+     "reportName": "2024中报",
+     "itemName": "技术服务收入及其他收入",
+     "income": 7131025.96,
+     "incomeRatio": 0.001976,
+     "grossMargin": 0.986483
+    },
+    {
+     "reportDate": "2024-06-30",
+     "reportName": "2024中报",
+     "itemName": "传感器",
+     "income": 192172880.33,
+     "incomeRatio": 0.053248,
+     "grossMargin": 0.199509
+    },
+    {
+     "reportDate": "2024-06-30",
+     "reportName": "2024中报",
+     "itemName": "微控制器",
+     "income": 805212756.67,
+     "incomeRatio": 0.22311,
+     "grossMargin": 0.384596
+    },
+    {
+     "reportDate": "2024-06-30",
+     "reportName": "2024中报",
+     "itemName": "存储芯片",
+     "income": 2604520657.21,
+     "incomeRatio": 0.721666,
+     "grossMargin": 0.392398
+    }
+   ],
+   "total": 3609037320.17
+  },
+  {
+   "reportDate": "2023-12-31",
+   "reportName": "2023年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2023-12-31",
+     "reportName": "2023年报",
+     "itemName": "其他(补充)",
+     "income": 355493.64,
+     "incomeRatio": 0.000062,
+     "grossMargin": 0.843135
+    },
+    {
+     "reportDate": "2023-12-31",
+     "reportName": "2023年报",
+     "itemName": "技术服务及其他收入",
+     "income": 13894483.2,
+     "incomeRatio": 0.002412,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2023-12-31",
+     "reportName": "2023年报",
+     "itemName": "传感器",
+     "income": 352448660.29,
+     "incomeRatio": 0.06118,
+     "grossMargin": 0.159973
+    },
+    {
+     "reportDate": "2023-12-31",
+     "reportName": "2023年报",
+     "itemName": "微控制器",
+     "income": 1316813511.75,
+     "incomeRatio": 0.228581,
+     "grossMargin": 0.43095
+    },
+    {
+     "reportDate": "2023-12-31",
+     "reportName": "2023年报",
+     "itemName": "存储芯片",
+     "income": 4077311265.77,
+     "incomeRatio": 0.707765,
+     "grossMargin": 0.329864
+    }
+   ],
+   "total": 5760823414.65
+  },
+  {
+   "reportDate": "2023-06-30",
+   "reportName": "2023中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2023-06-30",
+     "reportName": "2023中报",
+     "itemName": "存储芯片",
+     "income": 2012604651.81,
+     "incomeRatio": 0.678602,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2023-06-30",
+     "reportName": "2023中报",
+     "itemName": "微控制器",
+     "income": 771737278.59,
+     "incomeRatio": 0.260211,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2023-06-30",
+     "reportName": "2023中报",
+     "itemName": "存储芯片",
+     "income": 2012604651.81,
+     "incomeRatio": 0.678602,
+     "grossMargin": null
+    }
+   ],
+   "total": 4796946582.21
+  },
+  {
+   "reportDate": "2022-12-31",
+   "reportName": "2022年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2022-12-31",
+     "reportName": "2022年报",
+     "itemName": "其他(补充)",
+     "income": 549577.52,
+     "incomeRatio": 0.000068,
+     "grossMargin": 0.809448
+    },
+    {
+     "reportDate": "2022-12-31",
+     "reportName": "2022年报",
+     "itemName": "技术服务及其他收入",
+     "income": 39404660.23,
+     "incomeRatio": 0.004847,
+     "grossMargin": 0.847928
+    },
+    {
+     "reportDate": "2022-12-31",
+     "reportName": "2022年报",
+     "itemName": "传感器",
+     "income": 434973724.55,
+     "incomeRatio": 0.053502,
+     "grossMargin": 0.163614
+    },
+    {
+     "reportDate": "2022-12-31",
+     "reportName": "2022年报",
+     "itemName": "微控制器",
+     "income": 2829208750.75,
+     "incomeRatio": 0.347996,
+     "grossMargin": 0.648543
+    },
+    {
+     "reportDate": "2022-12-31",
+     "reportName": "2022年报",
+     "itemName": "存储芯片",
+     "income": 4825855711.94,
+     "incomeRatio": 0.593587,
+     "grossMargin": 0.400913
+    }
+   ],
+   "total": 8129992424.99
+  },
+  {
+   "reportDate": "2022-06-30",
+   "reportName": "2022中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2022-06-30",
+     "reportName": "2022中报",
+     "itemName": "技术服务及其他收入",
+     "income": 25829030.15,
+     "incomeRatio": 0.005402,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2022-06-30",
+     "reportName": "2022中报",
+     "itemName": "传感器",
+     "income": 214349565.59,
+     "incomeRatio": 0.044833,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2022-06-30",
+     "reportName": "2022中报",
+     "itemName": "微控制器",
+     "income": 1746286352.67,
+     "incomeRatio": 0.365252,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2022-06-30",
+     "reportName": "2022中报",
+     "itemName": "存储芯片",
+     "income": 2794581740.81,
+     "incomeRatio": 0.584513,
+     "grossMargin": null
+    }
+   ],
+   "total": 4781046689.22
+  },
+  {
+   "reportDate": "2021-12-31",
+   "reportName": "2021年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2021-12-31",
+     "reportName": "2021年报",
+     "itemName": "其他(补充)",
+     "income": 4500929.51,
+     "incomeRatio": 0.000529,
+     "grossMargin": 0.175418
+    },
+    {
+     "reportDate": "2021-12-31",
+     "reportName": "2021年报",
+     "itemName": "技术服务及其他收入",
+     "income": 52859619.31,
+     "incomeRatio": 0.006211,
+     "grossMargin": 0.640139
+    },
+    {
+     "reportDate": "2021-12-31",
+     "reportName": "2021年报",
+     "itemName": "传感器",
+     "income": 546099383.86,
+     "incomeRatio": 0.06417,
+     "grossMargin": 0.241338
+    },
+    {
+     "reportDate": "2021-12-31",
+     "reportName": "2021年报",
+     "itemName": "微控制器",
+     "income": 2456210916.28,
+     "incomeRatio": 0.288619,
+     "grossMargin": 0.663566
+    },
+    {
+     "reportDate": "2021-12-31",
+     "reportName": "2021年报",
+     "itemName": "存储芯片",
+     "income": 5450552619.77,
+     "incomeRatio": 0.640471,
+     "grossMargin": 0.397127
+    }
+   ],
+   "total": 8510223468.7300005
+  },
+  {
+   "reportDate": "2021-06-30",
+   "reportName": "2021中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2021-06-30",
+     "reportName": "2021中报",
+     "itemName": "技术服务及其他收入",
+     "income": 6589802.86,
+     "incomeRatio": 0.00181,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2021-06-30",
+     "reportName": "2021中报",
+     "itemName": "传感器",
+     "income": 238683876.21,
+     "incomeRatio": 0.065557,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2021-06-30",
+     "reportName": "2021中报",
+     "itemName": "微控制器",
+     "income": 797112137.07,
+     "incomeRatio": 0.218934,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2021-06-30",
+     "reportName": "2021中报",
+     "itemName": "存储芯片",
+     "income": 2598498242.02,
+     "incomeRatio": 0.7137,
+     "grossMargin": null
+    }
+   ],
+   "total": 3640884058.16
+  },
+  {
+   "reportDate": "2020-12-31",
+   "reportName": "2020年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2020-12-31",
+     "reportName": "2020年报",
+     "itemName": "其他(补充)",
+     "income": 1190989.51,
+     "incomeRatio": 0.000265,
+     "grossMargin": 0.498691
+    },
+    {
+     "reportDate": "2020-12-31",
+     "reportName": "2020年报",
+     "itemName": "技术服务及其他收入",
+     "income": 8114087.17,
+     "incomeRatio": 0.001804,
+     "grossMargin": 0.656128
+    },
+    {
+     "reportDate": "2020-12-31",
+     "reportName": "2020年报",
+     "itemName": "传感器",
+     "income": 449986998.49,
+     "incomeRatio": 0.100066,
+     "grossMargin": 0.369951
+    },
+    {
+     "reportDate": "2020-12-31",
+     "reportName": "2020年报",
+     "itemName": "微控制器",
+     "income": 754914773.18,
+     "incomeRatio": 0.167875,
+     "grossMargin": 0.476137
+    },
+    {
+     "reportDate": "2020-12-31",
+     "reportName": "2020年报",
+     "itemName": "存储芯片",
+     "income": 3282688019.46,
+     "incomeRatio": 0.72999,
+     "grossMargin": 0.350039
+    }
+   ],
+   "total": 4496894867.809999
+  },
+  {
+   "reportDate": "2020-06-30",
+   "reportName": "2020中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2020-06-30",
+     "reportName": "2020中报",
+     "itemName": "技术服务及其他收入",
+     "income": 3783093.2,
+     "incomeRatio": 0.002282,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2020-06-30",
+     "reportName": "2020中报",
+     "itemName": "传感器",
+     "income": 91002434.37,
+     "incomeRatio": 0.054893,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2020-06-30",
+     "reportName": "2020中报",
+     "itemName": "微控制器",
+     "income": 247456042.21,
+     "incomeRatio": 0.149267,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2020-06-30",
+     "reportName": "2020中报",
+     "itemName": "存储芯片",
+     "income": 1315562333.93,
+     "incomeRatio": 0.793557,
+     "grossMargin": null
+    }
+   ],
+   "total": 1657803903.71
+  },
+  {
+   "reportDate": "2019-12-31",
+   "reportName": "2019年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2019-12-31",
+     "reportName": "2019年报",
+     "itemName": "技术服务及其他收入",
+     "income": 40321.6,
+     "incomeRatio": 0.000013,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2019-12-31",
+     "reportName": "2019年报",
+     "itemName": "其他(补充)",
+     "income": 581548.29,
+     "incomeRatio": 0.000182,
+     "grossMargin": 0.426242
+    },
+    {
+     "reportDate": "2019-12-31",
+     "reportName": "2019年报",
+     "itemName": "传感器",
+     "income": 203004505.08,
+     "incomeRatio": 0.063381,
+     "grossMargin": 0.502591
+    },
+    {
+     "reportDate": "2019-12-31",
+     "reportName": "2019年报",
+     "itemName": "微控制器",
+     "income": 443704306.07,
+     "incomeRatio": 0.138531,
+     "grossMargin": 0.453825
+    },
+    {
+     "reportDate": "2019-12-31",
+     "reportName": "2019年报",
+     "itemName": "存储芯片",
+     "income": 2555586422.16,
+     "incomeRatio": 0.797893,
+     "grossMargin": 0.389009
+    }
+   ],
+   "total": 3202917103.2
+  },
+  {
+   "reportDate": "2018-12-31",
+   "reportName": "2018年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2018-12-31",
+     "reportName": "2018年报",
+     "itemName": "其他(补充)",
+     "income": 409222.19,
+     "incomeRatio": 0.000182,
+     "grossMargin": 0.267929
+    },
+    {
+     "reportDate": "2018-12-31",
+     "reportName": "2018年报",
+     "itemName": "技术服务及其他收入",
+     "income": 2128506.2,
+     "incomeRatio": 0.000948,
+     "grossMargin": 0.481822
+    },
+    {
+     "reportDate": "2018-12-31",
+     "reportName": "2018年报",
+     "itemName": "微控制器",
+     "income": 404498501.99,
+     "incomeRatio": 0.180114,
+     "grossMargin": 0.437152
+    },
+    {
+     "reportDate": "2018-12-31",
+     "reportName": "2018年报",
+     "itemName": "存储芯片",
+     "income": 1838750091.74,
+     "incomeRatio": 0.818756,
+     "grossMargin": 0.370395
+    }
+   ],
+   "total": 2245786322.12
+  },
+  {
+   "reportDate": "2017-12-31",
+   "reportName": "2017年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2017-12-31",
+     "reportName": "2017年报",
+     "itemName": "其他(补充)",
+     "income": 404361.19,
+     "incomeRatio": 0.000199,
+     "grossMargin": 0.23622
+    },
+    {
+     "reportDate": "2017-12-31",
+     "reportName": "2017年报",
+     "itemName": "技术服务及其他收入",
+     "income": 2391923.3,
+     "incomeRatio": 0.001178,
+     "grossMargin": 0.372011
+    },
+    {
+     "reportDate": "2017-12-31",
+     "reportName": "2017年报",
+     "itemName": "微控制器",
+     "income": 311093923.82,
+     "incomeRatio": 0.15327,
+     "grossMargin": 0.477731
+    },
+    {
+     "reportDate": "2017-12-31",
+     "reportName": "2017年报",
+     "itemName": "存储芯片",
+     "income": 1715818623.2,
+     "incomeRatio": 0.845352,
+     "grossMargin": 0.376061
+    }
+   ],
+   "total": 2029708831.51
+  },
+  {
+   "reportDate": "2016-12-31",
+   "reportName": "2016年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2016-12-31",
+     "reportName": "2016年报",
+     "itemName": "其他(补充)",
+     "income": 118497.59,
+     "incomeRatio": 0.00008,
+     "grossMargin": 0.34439
+    },
+    {
+     "reportDate": "2016-12-31",
+     "reportName": "2016年报",
+     "itemName": "技术服务及其他收入",
+     "income": 337018.94,
+     "incomeRatio": 0.000226,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2016-12-31",
+     "reportName": "2016年报",
+     "itemName": "微控制器",
+     "income": 196606246.75,
+     "incomeRatio": 0.132044,
+     "grossMargin": 0.431315
+    },
+    {
+     "reportDate": "2016-12-31",
+     "reportName": "2016年报",
+     "itemName": "存储芯片",
+     "income": 1291886408.74,
+     "incomeRatio": 0.86765,
+     "grossMargin": 0.242034
+    }
+   ],
+   "total": 1488948172.02
+  },
+  {
+   "reportDate": "2016-06-30",
+   "reportName": "2016中报",
+   "isAnnual": false,
+   "rows": [
+    {
+     "reportDate": "2016-06-30",
+     "reportName": "2016中报",
+     "itemName": "微控制器销售收入",
+     "income": 90077408.38,
+     "incomeRatio": 0.137501,
+     "grossMargin": 0.40159
+    },
+    {
+     "reportDate": "2016-06-30",
+     "reportName": "2016中报",
+     "itemName": "晶圆销售收入",
+     "income": 185280564.6,
+     "incomeRatio": 0.282826,
+     "grossMargin": 0.295303
+    },
+    {
+     "reportDate": "2016-06-30",
+     "reportName": "2016中报",
+     "itemName": "存储芯片销售收入",
+     "income": 379437794.04,
+     "incomeRatio": 0.579202,
+     "grossMargin": 0.232717
+    }
+   ],
+   "total": 654795767.02
+  },
+  {
+   "reportDate": "2015-12-31",
+   "reportName": "2015年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2015-12-31",
+     "reportName": "2015年报",
+     "itemName": "技术服务及其他收入",
+     "income": 180385.23,
+     "incomeRatio": 0.000152,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2015-12-31",
+     "reportName": "2015年报",
+     "itemName": "其他(补充)",
+     "income": 405966.52,
+     "incomeRatio": 0.000341,
+     "grossMargin": 0.928127
+    },
+    {
+     "reportDate": "2015-12-31",
+     "reportName": "2015年报",
+     "itemName": "微控制器销售收入",
+     "income": 126677944.41,
+     "incomeRatio": 0.106561,
+     "grossMargin": 0.393375
+    },
+    {
+     "reportDate": "2015-12-31",
+     "reportName": "2015年报",
+     "itemName": "晶圆销售收入",
+     "income": 394854952.05,
+     "incomeRatio": 0.332151,
+     "grossMargin": 0.349438
+    },
+    {
+     "reportDate": "2015-12-31",
+     "reportName": "2015年报",
+     "itemName": "存储芯片销售收入",
+     "income": 666660971.57,
+     "incomeRatio": 0.560794,
+     "grossMargin": 0.228619
+    }
+   ],
+   "total": 1188780219.7800002
+  },
+  {
+   "reportDate": "2014-12-31",
+   "reportName": "2014年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2014-12-31",
+     "reportName": "2014年报",
+     "itemName": "技术服务及其他收入",
+     "income": 293912.75,
+     "incomeRatio": 0.00031,
+     "grossMargin": null
+    },
+    {
+     "reportDate": "2014-12-31",
+     "reportName": "2014年报",
+     "itemName": "微控制器销售收入",
+     "income": 14942536.1,
+     "incomeRatio": 0.015783,
+     "grossMargin": 0.429121
+    },
+    {
+     "reportDate": "2014-12-31",
+     "reportName": "2014年报",
+     "itemName": "晶圆销售收入",
+     "income": 313472556.97,
+     "incomeRatio": 0.331113,
+     "grossMargin": 0.313491
+    },
+    {
+     "reportDate": "2014-12-31",
+     "reportName": "2014年报",
+     "itemName": "存储芯片销售收入",
+     "income": 618014196.27,
+     "incomeRatio": 0.652793,
+     "grossMargin": 0.216412
+    }
+   ],
+   "total": 946723202.09
+  },
+  {
+   "reportDate": "2013-12-31",
+   "reportName": "2013年报",
+   "isAnnual": true,
+   "rows": [
+    {
+     "reportDate": "2013-12-31",
+     "reportName": "2013年报",
+     "itemName": "存储芯片销售收入",
+     "income": 541059793.5,
+     "incomeRatio": 0.68592,
+     "grossMargin": 0.188214
+    },
+    {
+     "reportDate": "2013-12-31",
+     "reportName": "2013年报",
+     "itemName": "晶圆销售收入",
+     "income": 245876539.7,
+     "incomeRatio": 0.311706,
+     "grossMargin": 0.283694
+    },
+    {
+     "reportDate": "2013-12-31",
+     "reportName": "2013年报",
+     "itemName": "微控制器销售收入",
+     "income": 1448985.78,
+     "incomeRatio": 0.001837,
+     "grossMargin": 0.659622
+    },
+    {
+     "reportDate": "2013-12-31",
+     "reportName": "2013年报",
+     "itemName": "技术服务及其他收入",
+     "income": 423088.65,
+     "incomeRatio": 0.000536,
+     "grossMargin": null
+    }
+   ],
+   "total": 788808407.63
+  }
+ ]
+}

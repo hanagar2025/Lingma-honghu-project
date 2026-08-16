@@ -36,6 +36,8 @@ import {
 import {
   judgeAlternatives, renderAlternatives, ALTERNATIVES, type AltGate,
 } from '../research/alternatives'
+import { groupPeriod, type SegmentFile } from '../research/segmentFetch'
+import { buildLink2, renderLink2, type Link2Result } from '../research/link2Revenue'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
@@ -280,6 +282,23 @@ async function main(): Promise<void> {
     // ── 外围叙事台账 ──
     // 放在研究表之后、动作区之外。它的证据等级恒为 OBSERVATION，
     // 按 EvidenceTier 约定不得产生动作 —— 这里也没有任何函数能产生动作。
+    // ── 验证链第 2 环：公司收入 ──
+    // 只回答"收入是否确实改善"，不回答"是不是 AI 导致的"。
+    // 分产品收入只在年报/中报披露，故本环最快半年更新一次。
+    let link2: Link2Result | null = null
+    try {
+      const segFile = JSON.parse(
+        readFileSync(join(HERE, '..', 'research', 'data', 'segments.json'), 'utf-8')
+      ) as SegmentFile
+      const annual = segFile.periods.filter(x => x.reportDate.endsWith('-12-31'))
+      if (annual.length >= 2) {
+        link2 = buildLink2(segFile.name, groupPeriod(annual[0]!), groupPeriod(annual[1]!), date)
+        process.stdout.write(`${renderLink2(link2)}\n`)
+      }
+    } catch {
+      process.stdout.write('⚠ 分产品收入表不可用（先跑 npm run segments:fetch）→ 第 2 环显示未判定\n')
+    }
+
     hypothesesForHtml = HYPOTHESES.map(h => withLiveData(
       h,
       (() => {
@@ -289,7 +308,21 @@ async function main(): Promise<void> {
         if (!n || !profit) return n ?? null
         // 同业对照限定同主线：拿存储公司去和光模块、电力设备比毛利率，
         // 回答的是另一个问题，噪声也大得多。
-        return { ...n, peerGrossMargin: buildPeerGrossMargin(profit.nodes, n.mainlineId) }
+        return {
+          ...n,
+          peerGrossMargin: buildPeerGrossMargin(profit.nodes, n.mainlineId),
+          link2: link2 && {
+            period: link2.period, revenueYoy: link2.revenueYoy, improved: link2.improved,
+            ageDays: link2.ageDays,
+            target: link2.target && {
+              group: link2.target.group, yoy: link2.target.yoy,
+              shareOfRevenue: link2.target.shareOfRevenue,
+              shareOfTotalDelta: link2.target.shareOfTotalDelta,
+            },
+            fastestGrowing: link2.fastestGrowing,
+            targetIsFastestGrowing: link2.targetIsFastestGrowing,
+          },
+        }
       })()
     ))
     // 四句话结论与两类缺口在后端算好再下发。

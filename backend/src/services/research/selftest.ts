@@ -376,10 +376,14 @@ try {
     allIndicators(h1).some(i => i.text.includes('扣非') && i.sourceTier === 'PUBLIC_IN_PIPELINE'))
   ok('毛利率不被记为付费缺口 —— 公开财报 XSMLL 字段已在管道内',
     allIndicators(h1).some(i => i.text.includes('毛利率') && i.sourceTier === 'PUBLIC_IN_PIPELINE'))
-  ok('公司收入与供给端记为"尚未接入"而非付费缺口（工作量 ≠ 数据不可得）',
-    wiring.length === 2
-    && wiring.every(i => i.text.includes('收入') || i.text.includes('供给端')),
-    wiring.map(i => i.text.slice(0, 6)).join(','))
+  // 公司收入已于 2026-08-16 接入管道（分产品收入表），故从"尚未接入"移出。
+  // 剩下的只有供给端 —— 它仍是工作量缺口，不是付费缺口。
+  ok('公司收入已接入管道，不再记为"尚未接入"',
+    allIndicators(h1).some(i => i.text.includes('收入')
+      && i.sourceTier === 'PUBLIC_IN_PIPELINE'))
+  ok('供给端仍记为"尚未接入"而非付费缺口（工作量 ≠ 数据不可得）',
+    wiring.length === 1 && wiring[0]!.text.includes('供给端'),
+    wiring.map(i => i.text.slice(0, 8)).join(','))
   ok('取数层级文案区分"工作量问题"与"数据可得性问题"',
     SOURCE_TIER_TEXT.PUBLIC_NOT_YET_WIRED.includes('工作量'))
   ok('付费层文案要求先走完公开优先各层',
@@ -576,6 +580,13 @@ try {
   const node = {
     npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
     deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
+    // 第 2 环实测（分产品收入表已接入）
+    link2: {
+      period: '2025年报（2025-12-31）', revenueYoy: 0.251, improved: true, ageDays: 228,
+      target: { group: '存储芯片', yoy: 0.264, shareOfRevenue: 0.713, shareOfTotalDelta: 0.743 },
+      fastestGrowing: { group: 'MCU与模拟', yoy: 0.315 },
+      targetIsFastestGrowing: false,
+    },
     members: [{
       name: '兆易创新', deductRatio: 0.891, deductRatioAsOf: '2025-12-31',
       grossMarginPct: 57.1, grossMarginYoyPct: 19.6, grossMarginPrevPct: 37.4,
@@ -1013,6 +1024,107 @@ try {
       && VERIFICATION_CHAIN[2]!.asks.includes('主线占比高不高'))
     ok('存储仍停在第 3 环', h1.stage === 3)
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 验证链第 2 环：只回答"收入是否改善"，不得偷渡到第 3 环
+// ══════════════════════════════════════════════════════════════
+{
+  const { groupPeriod, reconcile, groupOf, SEGMENT_GROUPS, secuCode } =
+    await import('./segmentFetch')
+  const { buildLink2, renderLink2 } = await import('./link2Revenue')
+
+  // 交易所后缀：603986 是沪市，曾被误写成 SZ
+  ok('6 开头判为沪市', secuCode('603986') === '603986.SH')
+  ok('0/3 开头判为深市',
+    secuCode('300308') === '300308.SZ' && secuCode('002371') === '002371.SZ')
+
+  // ── 口径别名：分项名称会变，按名字直接匹配会整段丢数据 ──
+  //
+  // 兆易创新实际披露：
+  //   2023年报 微控制器 13.17亿          （无独立模拟产品）
+  //   2024年报 MCU及模拟产品 17.06亿     （合并）
+  //   2025年报 微控制器 + 模拟产品        （拆开）
+  ok('「MCU及模拟产品」与「微控制器」「模拟产品」归入同一组',
+    groupOf('MCU及模拟产品') === groupOf('微控制器')
+    && groupOf('模拟产品') === groupOf('微控制器'))
+  ok('存储芯片单独成组', groupOf('存储芯片') === '存储芯片')
+  ok('未知分项返回 null（而不是塞进"其他"悄悄消失）',
+    groupOf('某个没见过的分项') === null)
+  ok('别名表覆盖四组', SEGMENT_GROUPS.length === 4)
+
+  // ── 配平校验 ──
+  const mk = (rows: [string, number][], date = '2025-12-31') => groupPeriod({
+    reportDate: date, reportName: '测试期', isAnnual: date.endsWith('-12-31'),
+    rows: rows.map(([itemName, income]) => ({
+      reportDate: date, reportName: '测试期', itemName, income,
+      incomeRatio: null, grossMargin: null,
+    })),
+    total: rows.reduce((s, [, v]) => s + v, 0),
+  })
+  ok('全部分项可归组时配平通过',
+    reconcile(mk([['存储芯片', 100], ['微控制器', 20]])).ok)
+  const bad = reconcile(mk([['存储芯片', 100], ['某未知分项', 20]]))
+  ok('存在未归组分项时配平失败', !bad.ok)
+  ok('并指出须补别名表', bad.note.includes('须补 SEGMENT_GROUPS'))
+
+  // ── 第 2 环：真实数据 ──
+  const { readFileSync: rf2 } = await import('node:fs')
+  const segFile = JSON.parse(rf2(
+    new URL('./data/segments.json', import.meta.url), 'utf-8'
+  )) as { name: string; periods: Parameters<typeof groupPeriod>[0][] }
+  const annual = segFile.periods.filter(x => x.reportDate.endsWith('-12-31'))
+  ok('分产品数据至少两个年报期（否则无法算同比）', annual.length >= 2)
+
+  const l2 = buildLink2(segFile.name, groupPeriod(annual[0]!), groupPeriod(annual[1]!), '2026-08-16')
+  ok('第 2 环判定收入确实改善', l2.improved)
+  ok('各组增量之和与总增量配平（无遗漏警告）',
+    !l2.warnings.some(w => w.includes('不可用')), l2.warnings.join('；'))
+  ok('目标产品线为存储芯片且能取到读数', l2.target?.group === '存储芯片')
+  ok('数据期间与口径同屏输出',
+    l2.period.includes('年报') && l2.basis === 'ANNUAL')
+  ok('标注数据距今天数（不写读者会默认它是当期的）',
+    l2.ageDays !== null && l2.ageDays > 180)
+  ok('并提示本环最快半年更新一次',
+    l2.warnings.some(w => w.includes('半年更新一次')))
+
+  // 「占总增量高」≠「增速最快」
+  ok('实测：增速最快的产品线不是存储芯片',
+    l2.targetIsFastestGrowing === false, String(l2.fastestGrowing?.group))
+  ok('结论文本点明"占总增量高是因为体量大，不是因为长得快"',
+    l2.conclusion.includes('因为体量大') && l2.conclusion.includes('不是因为长得快'))
+
+  // ── 关键：第 2 环不得推进第 3 环 ──
+  ok('advancesLink3 恒为 false', l2.advancesLink3 === false)
+  ok('阻断理由说明"产品类别不等于下游应用"',
+    l2.link3Blocker.includes('产品类别') && l2.link3Blocker.includes('下游应用'))
+  ok('阻断理由点名存储芯片内含 NOR/NAND/DRAM',
+    ['NOR', 'NAND', 'DRAM'].every(k => l2.link3Blocker.includes(k)))
+
+  // 类型/文本层面都不许出现 AI 归因字段
+  const l2src = rf2(new URL('./link2Revenue.ts', import.meta.url), 'utf-8')
+  // 只检查代码行。注释里写"本模块不导出 aiRevenue"这句说明本身含有该词 ——
+  // 不跳过注释会让一条正确的文档把检查绊倒，这次就绊了一次。
+  const l2code = l2src.split('\n')
+    .filter(l => {
+      const t = l.trim()
+      return !t.startsWith('*') && !t.startsWith('//') && !t.startsWith('/*')
+    })
+    .join('\n')
+  ok('第 2 环模块的代码中不出现 aiRevenue / aiShare / aiDriven 一类字段',
+    !/\b(aiRevenue|aiShare|aiDriven|aiAttribution)\b/.test(l2code))
+  const j = JSON.stringify(l2)
+  for (const banned of ['AI 驱动', 'AI导致', '超级周期', '验证通过']) {
+    ok(`第 2 环输出不出现「${banned}」`, !j.includes(banned))
+  }
+  ok('结论文本明说本项不说明改善来自 AI 需求',
+    renderLink2(l2).includes('不回答「是不是 AI 导致的」'))
+
+  // 年报与中报不可混比
+  const interim = segFile.periods.find(x => x.reportDate.endsWith('-06-30'))!
+  const mixed = buildLink2(segFile.name, groupPeriod(annual[0]!), groupPeriod(interim), '2026-08-16')
+  ok('年报与中报混比时给出口径警告',
+    mixed.warnings.some(w => w.includes('口径不同')))
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
