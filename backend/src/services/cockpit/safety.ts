@@ -70,6 +70,51 @@ export function worstLight(lights: Light[]): Light {
  * 两者在系统里的表现必须不同:缺数据要持续提示补,裁定排除则不再出现在待办里。
  * 直接推论:FAMILY_SAFETY_NET 同时退出减仓法定理由白名单。
  */
+/**
+ * 回撤与熔断的**唯一**计算入口。
+ *
+ * 存在理由是两次真实事故。同一个公式散在五个地方，两处用了错的分母：
+ *
+ * | 位置 | 用的分母 | 算出回撤 | 后果 |
+ * |---|---|---|---|
+ * | 动作层熔断 | brokerTotal | 46.9% | 误判二级，索要 175.7 万降仓 |
+ * | 禁止建仓理由 | brokerTotal | 46.9% | 误判"只卖不买"，封死全部买入 |
+ * | 显示层 | portfolioTotal | 15.2% | 正确 |
+ *
+ * 值得单独记一句：**两次泄漏都是偏严方向。** 偏严的错误比偏松的更难发现 ——
+ * 它看起来像谨慎，没人会去质疑一个"要求你少买、多卖"的风控。
+ * 所以不能靠"输出看着合理"来验证分母，只能靠唯一入口。
+ *
+ * 口径不可比时返回 null，而不是 0：0% 读作"没跌过"，null 读作"算不出"。
+ */
+export interface CircuitCalc {
+  /** 自峰值回撤。null = 峰值与当前值不同口径或峰值缺失 */
+  drawdown: number | null
+  /** 触发的股票占比上限。null = 未触发或不可判定 */
+  equityCap: number | null
+  /** 二级熔断：只卖不买 */
+  sellOnly: boolean
+  level: 'NORMAL' | 'LEVEL1' | 'LEVEL2' | 'INCOMPARABLE'
+}
+
+export function computeCircuit(snapshot: {
+  portfolioTotal: number
+  peakAssets: number
+  peakBasis: 'BROKER' | 'PORTFOLIO'
+}): CircuitCalc {
+  if (snapshot.peakBasis !== 'PORTFOLIO' || !(snapshot.peakAssets > 0)) {
+    return { drawdown: null, equityCap: null, sellOnly: false, level: 'INCOMPARABLE' }
+  }
+  const drawdown = 1 - snapshot.portfolioTotal / snapshot.peakAssets
+  if (drawdown >= LIMITS.circuitLevel2) {
+    return { drawdown, equityCap: 0.30, sellOnly: true, level: 'LEVEL2' }
+  }
+  if (drawdown >= LIMITS.circuitLevel1) {
+    return { drawdown, equityCap: 0.50, sellOnly: false, level: 'LEVEL1' }
+  }
+  return { drawdown, equityCap: null, sellOnly: false, level: 'NORMAL' }
+}
+
 export const SAFETY_NET_POLICY = {
   mode: 'EXCLUDED_BY_STRATEGY' as 'REQUIRED' | 'EXCLUDED_BY_STRATEGY',
   ruledOn: '2026-08-15',
@@ -243,7 +288,7 @@ export function evaluateSafety(input: SafetyInput): Answer {
   // 这是换分母最危险的连带后果：风控开关被关掉，而页面上一切正常。
   // 故峰值未按组合口径重新认定时，回撤输出 null 并明写"不可比"。
   const peakComparable = snapshot.peakBasis === 'PORTFOLIO' && snapshot.peakAssets > 0
-  const dd = peakComparable ? 1 - portfolioTotal / snapshot.peakAssets : null
+  const dd = computeCircuit(snapshot).drawdown
   const ddMissing = peakComparable
     ? undefined
     : snapshot.peakAssets > 0

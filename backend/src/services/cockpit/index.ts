@@ -18,7 +18,10 @@ import { STAGE_TEXT, WINDOW_COLOR_TEXT } from '../msr/promotion'
 import type { ValuationInjection } from '../msr/valuation'
 import { MAINLINES } from '../msr/universe'
 import type { MainlineHealth } from '../msr/health'
-import { evaluateSafety, findLimitBreaches, worstLight, LIMITS, SAFETY_NET_POLICY, type SafetyInput } from './safety'
+import {
+  evaluateSafety, findLimitBreaches, worstLight, computeCircuit,
+  LIMITS, SAFETY_NET_POLICY, type SafetyInput,
+} from './safety'
 import { evaluateMomentum, type MomentumRow } from './momentum'
 import { evaluateNodes, nodeOf } from './nodes'
 import {
@@ -185,10 +188,9 @@ function evaluateActions(
   // 不加这道守卫的后果不是报错，而是**静默失效**——
   // 用券商口径峰值 430 万减组合口径 534 万会得出负回撤，
   // capByDd 变 null，熔断一句话都不说就消失了。
-  const basisComparable = input.snapshot.peakBasis === 'PORTFOLIO'
-  const dd = basisComparable && input.snapshot.peakAssets > 0
-    ? 1 - total / input.snapshot.peakAssets : null
-  const capByDd = dd === null ? null : dd >= LIMITS.circuitLevel2 ? 0.30 : dd >= LIMITS.circuitLevel1 ? 0.50 : null
+  const circuit = computeCircuit(input.snapshot)
+  const dd = circuit.drawdown
+  const capByDd = circuit.equityCap
   const posPct = total > 0 ? input.snapshot.positionsValue / total : null
   if (capByDd !== null && posPct !== null && posPct > capByDd) {
     const need = (posPct - capByDd) * total
@@ -312,9 +314,16 @@ function evaluateNoNewEntry(
   if (input.marketAllows !== true) {
     reasons.push('市场阶段不允许建仓（下跌期/熔断期，或阶段判定未确认）')
   }
-  const dd = input.snapshot.peakAssets > 0 ? 1 - input.snapshot.brokerTotal / input.snapshot.peakAssets : null
-  if (dd !== null && dd >= LIMITS.circuitLevel2) {
-    reasons.push(`组合回撤${pctStr(dd)} ≥ ${pctStr(LIMITS.circuitLevel2)} → 只卖不买`)
+  // 曾在此处用 brokerTotal 做分母 → 算出 46.9% → 误判"只卖不买"，封死全部买入。
+  // 现在与显示层、动作层共用 computeCircuit 这一个入口。
+  const circ = computeCircuit(input.snapshot)
+  if (circ.sellOnly) {
+    reasons.push(`组合回撤${pctStr(circ.drawdown)} ≥ ${pctStr(LIMITS.circuitLevel2)} → 只卖不买`)
+  } else if (circ.level === 'LEVEL1') {
+    reasons.push(`组合回撤${pctStr(circ.drawdown)} ≥ ${pctStr(LIMITS.circuitLevel1)}`
+      + ` → 一级熔断，股票上限${pctStr(circ.equityCap)}，暂停左侧买入`)
+  } else if (circ.level === 'INCOMPARABLE') {
+    reasons.push('净值峰值与组合口径不可比 → 回撤无法计算，按从严处理暂不新增建仓')
   }
 
   const buyCount = actions.filter(a => a.kind === 'BUY').length

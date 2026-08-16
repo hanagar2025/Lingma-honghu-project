@@ -1,6 +1,7 @@
 // 执行层引擎 —— 《AI半导体趋势投资操作系统 V1.0》第2.1节卖出默认模板的代码化
 // 全部以收盘价确认触发，动作对应「次日开盘执行」
 
+import { computeCircuit } from '../cockpit/safety'
 import type { AccountSnapshot, DailyBar, MarketStage, Position, PortfolioCircuitResult, RuleCard, TriggerAction, TriggerEvent } from './types'
 import { consecutiveDaysBelowMA, dayChangePct, sma } from './indicators'
 
@@ -127,14 +128,15 @@ export function evaluatePortfolioCircuit(snapshot: AccountSnapshot): PortfolioCi
   // 峰值与当前值必须同口径才能相减。跨口径相减不会报错，只会静默给出错误的回撤：
   // 用券商口径 334 万减组合口径峰值 630 万 → 回撤 46.9% → 误报二级熔断；
   // 反向（组合 534 万减券商峰值 430 万）→ 负回撤 → 熔断一句话不说就消失。
-  if (snapshot.peakBasis !== 'PORTFOLIO') {
+  const c = computeCircuit(snapshot)
+  if (c.level === 'INCOMPARABLE') {
     return {
       drawdownPct: null, positionCap: null, sellOnly: false,
       detail: `净值峰值记于${snapshot.peakBasis}口径，与组合口径不可比 → 回撤无法计算。`
         + '不得显示为"正常"或"回撤 0%"，须委员会先按组合口径认定峰值',
     }
   }
-  const dd = 1 - snapshot.portfolioTotal / snapshot.peakAssets
+  const dd = c.drawdown!
   if (dd >= 0.25) {
     return { drawdownPct: dd, positionCap: 0.3, sellOnly: true, detail: `组合回撤${(dd * 100).toFixed(1)}% ≥ 25%：仓位上限30%，只卖不买` }
   }

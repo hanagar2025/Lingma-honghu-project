@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { LIMITS, singleNameWeight } from '../cockpit/safety'
 import type { AccountSnapshot, Position } from '../tios/types'
+import { computeCircuit } from '../cockpit/safety'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const DEBTS_FILE = join(HERE, 'data', 'executionDebts.json')
@@ -76,8 +77,9 @@ export function reauditDebts(
         // 峰值已按组合口径认定后，熔断缺口就不该再停在"需重算"——
         // 停在那里等于把一个能算的数留成待办，而待办不会自己变成执行。
         if (peakComparable && snapshot.peakAssets > 0) {
-          const dd = 1 - snapshot.portfolioTotal / snapshot.peakAssets
-          const cap = dd >= 0.25 ? 0.30 : dd >= 0.15 ? 0.50 : null
+          const c = computeCircuit(snapshot)
+          const dd = c.drawdown!
+          const cap = c.equityCap
           const eqPct = snapshot.portfolioTotal > 0
             ? snapshot.positionsValue / snapshot.portfolioTotal : 0
           if (cap === null) {

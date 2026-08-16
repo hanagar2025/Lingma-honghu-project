@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 // 研究层自检 —— 守三条不变量：
 //
 //   ① 研究域与决策域永不相交。「发现 ≠ 许可」必须在数据层成立，而不是靠下游闸门补救。
@@ -318,6 +319,98 @@ try {
   ok('存在"仅研究域覆盖"的节点并被标记', researchNodes.length > 0, String(researchNodes.length))
 } catch (e) {
   ok('真实数据可构建地图（需先跑 npm run profit:fetch）', false, e instanceof Error ? e.message : String(e))
+}
+
+// ══════════════════════════════════════════════════════════════
+// 外部叙事台账：值得研究 ≠ 值得买
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    HYPOTHESES, VERIFICATION_CHAIN, withLiveData, statementOf, metCount, renderHypotheses,
+  } = await import('./hypotheses')
+
+  const h1 = HYPOTHESES.find(h => h.id === 'H1')!
+
+  // ── 类型层面：不得产生动作 ──
+  ok('叙事台账证据等级恒为 OBSERVATION（按约定不得进动作区）',
+    HYPOTHESES.every(h => h.tier === 'OBSERVATION'))
+  const modSrc = readFileSync(new URL('./hypotheses.ts', import.meta.url), 'utf-8')
+  ok('模块不 import Action / makeAction —— 不是"约定不用"，而是没有那个函数可用',
+    !/makeAction|from '.*cockpit\/types'.*Action/.test(
+      modSrc.split('\n').filter(l => l.startsWith('import')).join('\n')))
+  ok('模块不导出任何返回 Action 的函数',
+    !/:\s*Action(\[\])?\s*[{;]/.test(modSrc))
+
+  // ── 链条不可跳步 ──
+  ok('验证链共 7 步且顺序固定',
+    VERIFICATION_CHAIN.length === 7
+    && VERIFICATION_CHAIN[0] === '叙事'
+    && VERIFICATION_CHAIN[6] === '战略许可')
+  ok('H1 停在第 1 步「叙事」—— 第 5 步有数据也不能跳步',
+    h1.stage === 1, `实为第 ${h1.stage} 步`)
+
+  // ── 指标 5 必须动态取值，不得写死 ──
+  ok('指标 5 的默认状态为未验证（数字由 withLiveData 填入，写死会让台账悄悄过期）',
+    h1.indicators.find(i => i.no === 5)?.status === 'UNVERIFIED')
+  ok('源码中不出现写死的份额数字',
+    !/23\.6%|16\.4pct|14\.6 ?亿/.test(modSrc),
+    '发现硬编码份额数字')
+
+  const live = withLiveData(h1, {
+    npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
+    deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
+  })
+  const i5 = live.indicators.find(i => i.no === 5)!
+  ok('注入实测值后指标 5 判为 MET', i5.status === 'MET')
+  ok('证据必须写出数据滞后天数 —— 不写读者会默认它是当期的',
+    i5.evidence.includes('136 天'))
+  ok('滞后 >100 天时明说"既无法证实也无法证伪"',
+    i5.evidence.includes('无法证实也无法证伪'))
+  ok('并说明份额扩大可另有来源（周期涨价/同行掉队）',
+    i5.evidence.includes('周期涨价') && i5.evidence.includes('同行掉队'))
+
+  // 份额收缩时必须翻成 REFUTED，而不是悄悄留在 MET
+  const shrink = withLiveData(h1, {
+    npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: -3.0,
+    deltaShareOfMainline: null, maxReportAgeDays: 136,
+  })
+  ok('份额收缩时指标 5 判为 REFUTED（不得停留在 MET）',
+    shrink.indicators.find(i => i.no === 5)?.status === 'REFUTED')
+  // 无数据时不得用"方向应该是扩大"代替读数
+  const nodata = withLiveData(h1, null)
+  ok('无份额数据时判为 UNVERIFIED 且明说不得以方向代替读数',
+    nodata.indicators.find(i => i.no === 5)?.status === 'UNVERIFIED'
+    && nodata.indicators.find(i => i.no === 5)!.evidence.includes('不得以'))
+
+  // ── 结论文本：克制，且不得出现预测性表述 ──
+  const st = statementOf(live)
+  ok('结论含"不改变主线、不产生候选、不产生交易动作"',
+    st.includes('不改变主线') && st.includes('不产生候选') && st.includes('不产生交易动作'))
+  ok('结论明说未完成产业—盈利闭环验证', st.includes('尚未完成产业—盈利闭环验证'))
+  ok('结论指出节点唯一在册标的处于战略清退状态', st.includes('战略清退'))
+  for (const banned of ['要涨', '起飞', '超级周期来了', '将会', '有望']) {
+    ok(`结论不出现预测性表述「${banned}」`, !st.includes(banned))
+  }
+  ok(`已兑现 ${metCount(live)}/5，结论如实报出`, st.includes(`${metCount(live)} 项已有数据支持`))
+
+  // ── 明确否定项必须覆盖四件事 ──
+  const dni = h1.doesNotImply.join('｜')
+  for (const must of ['存储主线重新开放', '兆易创新', '新增建仓', '超级周期']) {
+    ok(`明确否定项覆盖「${must}」`, dni.includes(must))
+  }
+  ok('阻塞项写明 strategyAllows = false 与冠军替换程序',
+    h1.blockers.join('').includes('strategyAllows')
+    && h1.blockers.join('').includes('冠军替换'))
+  ok('阻塞项指出份额扩大会成为清退标的的后门',
+    h1.blockers.join('').includes('后门'))
+
+  // ── 渲染层不得出现打分/排序字样 ──
+  const txt = renderHypotheses([live])
+  ok('渲染层声明不打分、不排序、不产生候选、不产生动作',
+    txt.includes('不打分') && txt.includes('不排序')
+    && txt.includes('不产生候选') && txt.includes('不产生动作'))
+  ok('渲染层不出现"综合评分""总分""星级"',
+    !/综合评分|总分|星级/.test(txt))
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

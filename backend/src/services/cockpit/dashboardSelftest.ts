@@ -684,5 +684,55 @@ console.log('\n【外发摘要脱敏】')
   ok('未采纳项显式标注', txt.includes('（未采纳）'))
 }
 
+// ══════════════════════════════════════════════════════════════
+// 回撤只能有一个计算入口
+// ══════════════════════════════════════════════════════════════
+//
+// 同一公式曾散在五处，两处用了 brokerTotal → 算出 46.9% →
+// 一处误判二级熔断索要 175.7 万降仓，一处误判"只卖不买"封死全部买入。
+// 两次都是**偏严**方向，所以没人质疑 —— 偏严的错误看起来像谨慎。
+{
+  const { computeCircuit } = await import('./safety')
+  const base = { portfolioTotal: 5_342_513, peakAssets: 6_300_000, peakBasis: 'PORTFOLIO' as const }
+  const c = computeCircuit(base)
+  ok('统一入口：一级熔断，回撤 15.2%，上限 50%，非只卖不买',
+    c.level === 'LEVEL1' && c.equityCap === 0.50 && !c.sellOnly
+    && Math.abs((c.drawdown ?? 0) - 0.152) < 0.002,
+    `${c.level} / ${c.drawdown} / ${c.equityCap}`)
+
+  // 若误用券商口径，会得到 46.9% 与二级熔断 —— 钉住这个差异，
+  // 让将来任何人改回去时立刻看到后果
+  const wrong = computeCircuit({ ...base, portfolioTotal: 3_342_513 })
+  ok('用券商口径会误判二级熔断（钉住这个差异，防止有人改回去）',
+    wrong.level === 'LEVEL2' && wrong.sellOnly === true,
+    `${wrong.level} / 回撤 ${((wrong.drawdown ?? 0) * 100).toFixed(1)}%`)
+
+  ok('口径不可比 → INCOMPARABLE 且回撤为 null，不是 0',
+    computeCircuit({ ...base, peakBasis: 'BROKER' }).level === 'INCOMPARABLE'
+    && computeCircuit({ ...base, peakBasis: 'BROKER' }).drawdown === null)
+  ok('峰值为 0 视同不可比，不得算出 100% 回撤',
+    computeCircuit({ ...base, peakAssets: 0 }).level === 'INCOMPARABLE')
+
+  // 源码层面：公式只允许出现在 computeCircuit 内
+  const { readFileSync: rf } = await import('node:fs')
+  const files = [
+    '../cockpit/index.ts', '../cockpit/safety.ts', '../tios/executionEngine.ts',
+    '../governance/reaudit.ts', '../cockpit/dashboard.ts',
+  ]
+  const offenders: string[] = []
+  for (const f of files) {
+    const src = rf(new URL(f, import.meta.url), 'utf-8')
+    // 排除注释行与 formula 展示字符串（后者用全角 − ，不是运算）
+    for (const line of src.split('\n')) {
+      const t = line.trim()
+      if (t.startsWith('*') || t.startsWith('//') || t.startsWith('|')) continue
+      if (/1 - [^/]*\/ *[a-zA-Z.]*peakAssets/.test(t)
+        && !t.includes('const drawdown =')) offenders.push(`${f}: ${t.slice(0, 60)}`)
+    }
+  }
+  ok('回撤公式只出现在 computeCircuit 内（其余一律走统一入口）',
+    offenders.length === 0, offenders.join(' ｜ '))
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

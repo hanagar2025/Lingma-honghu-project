@@ -25,6 +25,9 @@ import { renderDashboard } from './renderDashboard'
 import { buildVerdict, type Verdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
 import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
+import {
+  HYPOTHESES, withLiveData, renderHypotheses, type Hypothesis,
+} from '../research/hypotheses'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
@@ -224,6 +227,7 @@ async function main(): Promise<void> {
   let changesForHtml: Change[] = []
   let prevDateForHtml: string | null = null
   let ledgerForHtml: DiscoveryLedger | null = null
+  let hypothesesForHtml: Hypothesis[] = []
 
   if (process.env.DASHBOARD === '0' || !internals) {
     printReport(rep)
@@ -261,6 +265,14 @@ async function main(): Promise<void> {
 
     process.stdout.write(`${renderDashboard(dash)}\n`)
     dashForHtml = dash
+
+    // ── 外围叙事台账 ──
+    // 放在研究表之后、动作区之外。它的证据等级恒为 OBSERVATION，
+    // 按 EvidenceTier 约定不得产生动作 —— 这里也没有任何函数能产生动作。
+    hypothesesForHtml = HYPOTHESES.map(h => withLiveData(
+      h, profit?.nodes.find(n => n.node === h.node) ?? null
+    ))
+    process.stdout.write(`${renderHypotheses(hypothesesForHtml)}\n`)
 
     // ── 变化台账 ──
     // 盘前不落档：盘中读数会污染日间序列，而这份档案要连续读 30 个交易日。
