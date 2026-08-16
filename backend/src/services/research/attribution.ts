@@ -87,11 +87,24 @@ export interface AttributionInput {
   chainStep: 1 | 2 | 3 | 4 | 5
 }
 
+/**
+ * 委员会 2026-08-16 指定的四个字段。顺序即阅读顺序,**最后一项最重要**。
+ *
+ * 前三项都可能给出"看着不错"的读数而结论错误:
+ *   有主线收入            → 不说明它是核心业务
+ *   占比高                → 不说明它是增长来源（本文件顶部第一个反例）
+ *   自身增速高            → 不说明它是公司增长的主要来源（基数可能极小）
+ * 只有第四项直接回答"公司这次增长到底是不是它贡献的"。
+ */
 export interface Attribution {
   company: string
   mainline: string
-  /** 主线收入存量占比 */
+  /** ① 主线产品收入(元)。公司有多少收入来自目标主线 */
+  mainlineRevenue: number | null
+  /** ② 主线收入占比。这是不是公司的核心业务 */
   stockShare: number | null
+  /** ③ 主线收入同比增速。这条业务本身是否在增长 */
+  mainlineYoy: number | null
   /**
    * 主线收入增长贡献 = 主线收入增量 ÷ 公司总收入增量。
    *
@@ -137,6 +150,13 @@ export function buildAttribution(input: AttributionInput): Attribution {
   const stockShare = revenueCur != null && revenueCur > 0 && mainlineRevenueCur != null
     ? mainlineRevenueCur / revenueCur : null
 
+  // ③ 主线自身增速。与 ④ 增长贡献是两个不同的问题:
+  // 增速高说明这条业务在长，贡献高说明公司的增长主要由它带来。
+  // 基数极小时增速可以很高而贡献极低 —— 那是"故事很好但不影响业绩"。
+  const mainlineYoy = mainlineRevenuePrev != null && mainlineRevenuePrev > 0
+    && mainlineRevenueCur != null
+    ? mainlineRevenueCur / mainlineRevenuePrev - 1 : null
+
   let growthContribution: number | null = null
   if (revenueCur != null && revenuePrev != null
     && mainlineRevenueCur != null && mainlineRevenuePrev != null) {
@@ -160,12 +180,15 @@ export function buildAttribution(input: AttributionInput): Attribution {
         : driver ? 'SMALL_BUT_DRIVER' : 'NEITHER_LARGE_NOR_DRIVER'
   })()
 
+  const mainlineRevenue = mainlineRevenueCur
   const pct = (v: number | null) => (v === null ? '?' : `${(v * 100).toFixed(1)}%`)
   const note = verdict === 'UNKNOWN'
     ? `${company} 的${mainline}归因尚不成立：${missing.length} 项缺口。`
       + '「不得以"主线收入占比高"代替"主线是增长来源"」 —— 两者是不同的问题。'
-    : `${company}：${mainline}收入存量占比 ${pct(stockShare)}，`
-      + `增长贡献 ${pct(growthContribution)}。`
+    : `${company}：${mainline}收入 ${
+      mainlineRevenue === null ? '?' : `${(mainlineRevenue / 1e8).toFixed(2)}亿`
+    }，存量占比 ${pct(stockShare)}，自身同比 ${pct(mainlineYoy)}，`
+      + `对公司收入增量的贡献 ${pct(growthContribution)}。`
       + `${ATTRIBUTION_VERDICT_TEXT[verdict]}。`
       + (verdict === 'LARGE_BUT_NOT_DRIVER'
         ? '占比高但不驱动增长 —— 这种情形下"主线景气"无法解释公司当期变化。'
@@ -174,7 +197,12 @@ export function buildAttribution(input: AttributionInput): Attribution {
           : '')
 
   return {
-    company, mainline, stockShare, growthContribution, verdict, chainStep, missing, note,
+    company, mainline,
+    mainlineRevenue: mainlineRevenueCur,
+    stockShare,
+    mainlineYoy,
+    growthContribution,
+    verdict, chainStep, missing, note,
   }
 }
 
@@ -210,8 +238,13 @@ export function renderAttribution(a: Attribution): string {
   }
   L.push('')
   const pct = (v: number | null) => (v === null ? '缺失' : `${(v * 100).toFixed(1)}%`)
-  L.push(`  主线收入存量占比　${pct(a.stockShare)}`)
-  L.push(`  主线收入增长贡献　${pct(a.growthContribution)}　← 这一项比存量占比重要`)
+  const yi = (v: number | null) => (v === null ? '缺失' : `${(v / 1e8).toFixed(2)}亿`)
+  L.push('  四个字段（顺序即阅读顺序，最后一项最重要）：')
+  L.push(`    ① 主线产品收入　　　　　　　${yi(a.mainlineRevenue)}`)
+  L.push(`    ② 主线收入占比　　　　　　　${pct(a.stockShare)}　是不是核心业务`)
+  L.push(`    ③ 主线收入同比增速　　　　　${pct(a.mainlineYoy)}　这条业务本身是否在增长`)
+  L.push(`    ④ 对公司收入增量的贡献　　　${pct(a.growthContribution)}　`
+    + '← 「最重要」：这次增长到底是不是它贡献的')
   L.push(`  判定　${ATTRIBUTION_VERDICT_TEXT[a.verdict]}`)
   if (a.missing.length) {
     L.push('')

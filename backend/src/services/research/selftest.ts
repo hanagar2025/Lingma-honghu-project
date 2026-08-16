@@ -386,16 +386,16 @@ try {
     SOURCE_TIER_TEXT.NEEDS_PAID.includes('公开披露无法回答'))
 
   // ── 验证链：问法必须是归因，不是"有没有增长" ──
-  ok('验证链共 7 步', VERIFICATION_CHAIN.length === 7)
-  const s3 = VERIFICATION_CHAIN.find(x => x.no === 3)!
-  const s5 = VERIFICATION_CHAIN.find(x => x.no === 5)!
-  ok('第 3 步问的是归因比例，并明确否掉"收入有没有增长"这种问法',
-    s3.asks.includes('归因') && s3.asks.includes('不是'), s3.asks)
-  ok('第 5 步问的是扣非利润中来自主线的部分', s5.asks.includes('扣非') && s5.asks.includes('主线'))
-  ok('第 4 步（扣非利润）取数层级为公开·已在管道内',
-    VERIFICATION_CHAIN.find(x => x.no === 4)!.source === 'PUBLIC_IN_PIPELINE')
-  ok('第 7 步（战略许可）标为战略层裁定，非数据问题',
-    VERIFICATION_CHAIN.find(x => x.no === 7)!.source === 'STRATEGY_RULING')
+  // 链条已于 2026-08-16 由七步扩为九环（新增「数量/价格拆分」与「同行验证」），
+  // 逐环断言移至文件末尾「三条系统边界」一节，此处只留数量与关键取数层级。
+  ok('验证链共 9 环', VERIFICATION_CHAIN.length === 9)
+  const byName = (n: string) => VERIFICATION_CHAIN.find(x => x.name === n)!
+  ok('「扣非利润」取数层级为公开·已在管道内',
+    byName('扣非利润').source === 'PUBLIC_IN_PIPELINE')
+  ok('「利润主线归因」问的是扣非利润中来自主线的部分',
+    byName('利润主线归因').asks.includes('扣非') && byName('利润主线归因').asks.includes('主线'))
+  ok('「战略资格」标为战略层裁定，非数据问题',
+    byName('战略资格').source === 'STRATEGY_RULING')
 
   // 停在最早一个未完成的步骤，而不是最晚一个已完成的
   ok('H1 停在第 3 步（主线收入归因）—— 第 4 步有数据也不能因此跳过第 3 步',
@@ -840,13 +840,179 @@ try {
     st.note.includes('不得以') && st.note.includes('增长来源'))
 
   const txt = renderAttribution(st)
-  ok('渲染层把"增长贡献"标为比存量占比更重要',
-    txt.includes('这一项比存量占比重要'))
+  ok('渲染层把第四项标为最重要（四字段改版后文案随之调整）',
+    txt.includes('最重要'))
   ok('渲染层写出要回答的不是"公司收入有没有增长"',
     txt.includes('不是「公司收入有没有增长」'))
   ok('四种判定文案各不相同（否则两个反例会显示成同一句话）',
     new Set(Object.values(ATTRIBUTION_VERDICT_TEXT)).size
       === Object.keys(ATTRIBUTION_VERDICT_TEXT).length)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 三条系统边界（委员会 2026-08-16 追加）
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    HYPOTHESES, withLiveData, causalLayers, VERIFICATION_CHAIN,
+  } = await import('./hypotheses')
+  const {
+    ALTERNATIVES, judgeAlternatives, renderAlternatives, ALT_STATUS_TEXT,
+  } = await import('./alternatives')
+  const { buildAttribution } = await import('./attribution')
+
+  const h1 = HYPOTHESES.find(h => h.id === 'H1')!
+  const node = {
+    npLevelSum: 14.6e8, levelShare: 0.236, levelShareDelta4Q: 16.4,
+    deltaShareOfMainline: 0.388, maxReportAgeDays: 136,
+    members: [{
+      name: '兆易创新', deductRatio: 0.891, deductRatioAsOf: '2025-12-31',
+      grossMarginPct: 57.1, grossMarginYoyPct: 19.6, grossMarginPrevPct: 37.4,
+      grossMarginAnomaly: {
+        verdict: 'CURRENT_IS_OUTLIER', historyMinPct: 26.7, historyMaxPct: 49.5,
+        currentDeviationPct: 7.6, note: '本期偏离',
+      },
+    }],
+    peerGrossMargin: {
+      total: 15, currentOutliers: 3, baseOutliers: 3, medianYoyPct: 2.9, note: '同业对照',
+    },
+  }
+  const live = withLiveData(h1, node)
+
+  // ── 边界一：「同比改善」与「主线归因」彻底解耦 ──
+  //
+  // 委员会明确列出四种情形：毛利率恢复、收入增长、扣非利润增长、同行业绩同步。
+  // 四项全部成立时，主线归因层仍不得转绿。
+  {
+    // 构造"四项全绿"的最强输入：所有指标 MET + 同业全部本期偏离（视作同步改善）
+    const allGreen = {
+      ...live,
+      propositions: live.propositions.map(pp => ({
+        ...pp, indicators: pp.indicators.map(i => ({ ...i, status: 'MET' as const })),
+      })),
+    }
+    const syncedPeer = {
+      total: 15, currentOutliers: 15, baseOutliers: 0, medianYoyPct: 18.0,
+      note: '同业 15 家全部本期偏离（同步改善）',
+    }
+    const layers = causalLayers(allGreen, syncedPeer, null)
+    const attr = layers.find(c => c.name === '主线归因')!
+    ok('【边界一】四项全绿 + 同业同步改善，主线归因层仍为未知',
+      attr.status === 'UNKNOWN', attr.status)
+    // 行业同步层这时应当转正 —— 证明"全绿"确实被系统读到了，
+    // 而主线归因层的不动不是因为输入没生效
+    ok('同一输入下行业同步层确实转为 PARTIAL（证明全绿输入已生效）',
+      layers.find(c => c.name === '行业同步')!.status === 'PARTIAL')
+    ok('主线归因层依据明写"那四项回答是否变好，本层问是否因本主线而变好"',
+      attr.basis.includes('是否变好') && attr.basis.includes('因本主线而变好'))
+    ok('主线归因层不读取任何指标的 MET 数量（只由归因与闸门决定）',
+      !/MET|兑现/.test(attr.basis), attr.basis.slice(0, 50))
+
+    // 只有归因完成 + 闸门放行，才允许转绿
+    ok('归因完成但闸门不放行 → 仍为未知',
+      causalLayers(allGreen, syncedPeer, {
+        attributionDone: true, altGateOpen: false, altNote: 'x',
+      }).find(c => c.name === '主线归因')!.status === 'UNKNOWN')
+    ok('闸门放行但归因未完成 → 仍为未知',
+      causalLayers(allGreen, syncedPeer, {
+        attributionDone: false, altGateOpen: true, altNote: 'x',
+      }).find(c => c.name === '主线归因')!.status === 'UNKNOWN')
+    ok('两者同时满足才转为可确认',
+      causalLayers(allGreen, syncedPeer, {
+        attributionDone: true, altGateOpen: true, altNote: 'x',
+      }).find(c => c.name === '主线归因')!.status === 'CONFIRMED')
+  }
+
+  // ── 边界二：归因四字段，最后一项最重要 ──
+  {
+    const base = { company: 'X', mainline: 'AI', source: '年报分产品收入表', chainStep: 5 as const }
+    const a = buildAttribution({
+      ...base, revenuePrev: 100e8, revenueCur: 115e8,
+      mainlineRevenuePrev: 60e8, mainlineRevenueCur: 63e8,
+    })
+    ok('【边界二】四个字段齐备：收入 / 占比 / 自身增速 / 增量贡献',
+      a.mainlineRevenue !== null && a.stockShare !== null
+      && a.mainlineYoy !== null && a.growthContribution !== null)
+    ok('自身增速与增量贡献是两个不同的数（+5.0% vs 20.0%）',
+      Math.abs((a.mainlineYoy ?? 0) - (a.growthContribution ?? 0)) > 0.1,
+      `增速 ${((a.mainlineYoy ?? 0) * 100).toFixed(1)}% vs 贡献 ${((a.growthContribution ?? 0) * 100).toFixed(1)}%`)
+
+    // 增速极高但基数极小 → 贡献低 → 判定不得为"驱动"
+    const tiny = buildAttribution({
+      ...base, revenuePrev: 100e8, revenueCur: 130e8,
+      mainlineRevenuePrev: 0.5e8, mainlineRevenueCur: 2e8,
+    })
+    ok('增速 300% 但贡献仅 5% → 不判为增长驱动（故事很好但不影响业绩）',
+      (tiny.mainlineYoy ?? 0) > 2 && (tiny.growthContribution ?? 1) < 0.1
+      && tiny.verdict === 'NEITHER_LARGE_NOR_DRIVER',
+      `增速 ${((tiny.mainlineYoy ?? 0) * 100).toFixed(0)}% 贡献 ${((tiny.growthContribution ?? 0) * 100).toFixed(1)}%`)
+    ok('渲染层标出第四项为最重要',
+      (await import('./attribution')).renderAttribution(a).includes('最重要'))
+  }
+
+  // ── 边界三：替代解释闸门 ──
+  {
+    ok('【边界三】五项竞争性解释齐备', ALTERNATIVES.length === 5)
+    for (const k of ['ASP', '产品结构', '同行退出', '库存周期', '会计']) {
+      ok(`闸门覆盖「${k}」`, ALTERNATIVES.some(a => a.name.includes(k)))
+    }
+    const g0 = judgeAlternatives()
+    ok('当前五项均未核查 → 闸门不放行', !g0.allowsCausalClaim && g0.unchecked === 5)
+
+    // 四项排除、一项未查 → 仍不放行（析取关系，不是打分）
+    const four = ALTERNATIVES.map((a, i) => (i < 4 ? { ...a, status: 'RULED_OUT' as const } : a))
+    const g4 = judgeAlternatives(four)
+    ok('四项排除、一项未查 → 仍不放行（竞争性解释是析取关系，不可加权求和）',
+      !g4.allowsCausalClaim)
+    ok('并说明未查那项可能正是全部解释',
+      g4.verdict.includes('可能正是全部解释'))
+
+    // 五项全排除 → 放行，但明说仍不等于允许买入
+    const all5 = ALTERNATIVES.map(a => ({ ...a, status: 'RULED_OUT' as const }))
+    const g5 = judgeAlternatives(all5)
+    ok('五项全部排除 → 放行', g5.allowsCausalClaim)
+    ok('放行文案明说"仍不等于允许买入"', g5.verdict.includes('仍不等于允许买入'))
+
+    // 任一项被证实成立 → AI 因果被替代
+    const inv = ALTERNATIVES.map((a, i) => (i === 3
+      ? { ...a, status: 'CONFIRMED_AS_CAUSE' as const }
+      : { ...a, status: 'RULED_OUT' as const }))
+    const gi = judgeAlternatives(inv)
+    ok('任一替代解释被证实 → 不放行，且明说 AI 因果被替代',
+      !gi.allowsCausalClaim && gi.verdict.includes('被该解释替代'))
+    ok('并点名是哪一项', gi.confirmedAlternatives.includes('库存周期'))
+
+    // 会计口径那项必须保留（与 57.1% 直接相关）
+    const acct = ALTERNATIVES.find(a => a.name.includes('会计'))!
+    ok('会计/分类变化项写明"必须保留"并引用 57.1%',
+      acct.basis.includes('必须保留') && acct.basis.includes('57.1%'))
+    // 同业同步不得用来排除"同行退出"
+    const supply = ALTERNATIVES.find(a => a.name.includes('同行退出'))!
+    ok('同行退出项明说同业毛利率同步改善不能排除本项',
+      supply.basis.includes('不能排除本项'))
+    ok('交叉引用避免两处各写一份',
+      ALTERNATIVES.filter(a => a.crossRef).length >= 2)
+    ok('状态文案四种各不相同',
+      new Set(Object.values(ALT_STATUS_TEXT)).size === 4)
+    const txt = renderAlternatives()
+    ok('渲染层区分"归因"与"替代解释"两个问题',
+      txt.includes('钱从哪条产品线来') && txt.includes('为什么多赚了'))
+  }
+
+  // ── 九环验证链 ──
+  {
+    const names = VERIFICATION_CHAIN.map(c => c.name).join('→')
+    ok('验证链为九环，且与委员会给定顺序一致',
+      names === '产业景气→公司收入→主线收入归因→数量/价格拆分→扣非利润'
+        + '→利润主线归因→同行验证→持续性→战略资格',
+      names)
+    ok('第 4 环「数量/价格拆分」问的是销量与 ASP 的拆分',
+      VERIFICATION_CHAIN[3]!.asks.includes('销量') && VERIFICATION_CHAIN[3]!.asks.includes('ASP'))
+    ok('第 3 环同时否掉"收入有没有增长"与"主线占比高不高"两种错问法',
+      VERIFICATION_CHAIN[2]!.asks.includes('收入有没有增长')
+      && VERIFICATION_CHAIN[2]!.asks.includes('主线占比高不高'))
+    ok('存储仍停在第 3 环', h1.stage === 3)
+  }
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

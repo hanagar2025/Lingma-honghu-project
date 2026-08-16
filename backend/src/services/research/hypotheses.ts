@@ -104,25 +104,60 @@ export const SOURCE_TIER_TEXT: Record<SourceTier, string> = {
  * 兆易创新同时做 NOR/NAND/DRAM/MCU/传感器/模拟芯片 ——
  * 「存储收入 ↑」不能自动写成「AI 内存收入 ↑」。
  */
-export const VERIFICATION_CHAIN = [
-  { no: 1, name: '产业事实', asks: '该产业的公开经营数据是否在改善', source: 'PUBLIC_IN_PIPELINE' },
-  { no: 2, name: '公司收入', asks: '在册公司的收入是否增长', source: 'PUBLIC_IN_PIPELINE' },
+export const VERIFICATION_CHAIN: readonly {
+  no: number; name: string; asks: string; source: SourceTier
+}[] = [
+  {
+    no: 1, name: '产业景气',
+    asks: '该产业的公开经营数据是否在改善',
+    source: 'PUBLIC_IN_PIPELINE',
+  },
+  {
+    no: 2, name: '公司收入',
+    asks: '在册公司的收入总额与增量是多少',
+    source: 'PUBLIC_IN_PIPELINE',
+  },
   {
     no: 3, name: '主线收入归因',
-    asks: '收入增长中有多少可合理归因于我们定义的节点(不是"收入有没有增长")',
+    asks: '收入增量中有多少可合理归因于我们定义的节点'
+      + '（不是"收入有没有增长"，也不是"主线占比高不高"）',
     source: 'PUBLIC_PARTIAL',
   },
-  { no: 4, name: '扣非利润', asks: '扣非利润绝对增量是否扩大', source: 'PUBLIC_IN_PIPELINE' },
   {
-    no: 5, name: '主线利润归因',
-    asks: '扣非利润中有多少来自目标主线(财报不能拆则标未知)',
+    // 委员会 2026-08-16 追加。收入增长可能主要来自涨价而不是需求量 ——
+    // 那时"需求爆发"这句话就不成立，而只看收入金额看不出这个区别。
+    no: 4, name: '数量/价格拆分',
+    asks: '主线收入增长中，多少来自销量、多少来自 ASP 上涨',
     source: 'PUBLIC_PARTIAL',
   },
-  { no: 6, name: '节点内利润份额', asks: '该公司在节点利润中的份额是否扩大', source: 'SYSTEM_COMPUTED' },
-  { no: 7, name: '战略许可', asks: '战略层是否允许该标的持仓', source: 'STRATEGY_RULING' },
-] as const satisfies readonly {
-  no: number; name: string; asks: string; source: SourceTier
-}[]
+  {
+    no: 5, name: '扣非利润',
+    asks: '扣非利润绝对增量是否扩大',
+    source: 'PUBLIC_IN_PIPELINE',
+  },
+  {
+    no: 6, name: '利润主线归因',
+    asks: '扣非利润增量中有多少来自目标主线（财报不能拆则标未知）',
+    source: 'PUBLIC_PARTIAL',
+  },
+  {
+    // 这一环已经算出来了，而且结论是负面的 —— 见 peerGrossMargin。
+    // 后续环节的先行读数不改变链条的停留位置，但负面读数必须显示。
+    no: 7, name: '同行验证',
+    asks: '同业是否出现同步改善，还是仅本公司个别事件',
+    source: 'PUBLIC_IN_PIPELINE',
+  },
+  {
+    no: 8, name: '持续性',
+    asks: '上述各项是否连续多个季度同向，而非单季价格上涨',
+    source: 'SYSTEM_COMPUTED',
+  },
+  {
+    no: 9, name: '战略资格',
+    asks: '战略层是否允许该标的持仓',
+    source: 'STRATEGY_RULING',
+  },
+]
 
 export type ChainStep = typeof VERIFICATION_CHAIN[number]
 
@@ -389,10 +424,22 @@ export interface CausalLayer {
  * 刻意由数据推出而不是手写：手写的表会停留在写它的那一天，
  * 而这张表要在每次数据更新后自动跟着变。
  */
-export function causalLayers(h: Hypothesis, peer?: {
-  total: number; currentOutliers: number; baseOutliers: number
-  medianYoyPct: number | null; note: string
-} | null): CausalLayer[] {
+export function causalLayers(
+  h: Hypothesis,
+  peer?: {
+    total: number; currentOutliers: number; baseOutliers: number
+    medianYoyPct: number | null; note: string
+  } | null,
+  /**
+   * 归因与替代解释闸门的状态。
+   * 缺省时主线归因层一律 UNKNOWN —— 不传等于没做，没做就不能算成立。
+   */
+  gate?: {
+    attributionDone: boolean
+    altGateOpen: boolean
+    altNote: string
+  } | null
+): CausalLayer[] {
   const A = h.propositions.find(p => p.id === 'A')
   const B = h.propositions.find(p => p.id === 'B')
   const ind = (pid: 'A' | 'B', no: number) =>
@@ -442,10 +489,31 @@ export function causalLayers(h: Hypothesis, peer?: {
     {
       level: 4, name: '主线归因',
       proves: '改善主要来自本主线需求，而非其他业务或周期因素',
-      // 归因永远不能由"收入/利润增长"推出，故除非第 3、5 步真正完成，一律 UNKNOWN
-      status: 'UNKNOWN',
-      basis: '第 3 步(主线收入归因)与第 5 步(主线利润归因)均未完成 → '
-        + '无法区分"公司赚钱"与"因本主线赚钱"',
+      /**
+       * 「本层与"同比改善"彻底解耦」。
+       *
+       * 委员会 2026-08-16 明确:即使毛利率恢复、收入增长、扣非利润增长、
+       * 同行业绩同步**四项全部成立**,本层也不得自动转绿。
+       *
+       * 理由是这四项回答的都是"公司/行业变好了吗",而本层问的是
+       * "变好是因为本主线需求吗"。前者无论多绿都不蕴含后者 ——
+       * 中间必须经过归因(钱从哪条产品线来)与替代解释闸门
+       * (那条产品线为什么多赚了)两道关。
+       *
+       * 故本层的 status 只由 attributionDone && altGateOpen 决定,
+       * **不读任何指标的 MET 数量**。这不是保守,而是逻辑上的必要:
+       * 一个由指标数量驱动的归因层,等于允许用增长证明归因。
+       */
+      status: gate?.attributionDone && gate?.altGateOpen ? 'CONFIRMED' : 'UNKNOWN',
+      // 解耦声明在两个分支都出现 —— 它是本层的定义性质，
+      // 不是"有闸门信息时才附带说明的一句话"。
+      basis: (gate
+        ? `归因${gate.attributionDone ? '已完成' : '未完成'}；`
+          + `替代解释闸门${gate.altGateOpen ? '放行' : '不放行'}（${gate.altNote}）。`
+        : '归因与替代解释闸门状态未传入 → 视同未完成。'
+          + '无法区分"公司赚钱"与"因本主线赚钱"。')
+        + '「即使毛利率恢复、收入增长、扣非增长、同行同步四项全部成立，'
+        + '本层也不会因此转绿」—— 那四项回答"是否变好"，本层问"是否因本主线而变好"。',
     },
     {
       level: 5, name: '持续性',
@@ -713,7 +781,11 @@ export function renderHypotheses(list: Hypothesis[] = HYPOTHESES): string {
     L.push('     ── 因果强度六层(上一层成立不推出下一层) ──')
     L.push(`     ${'层级'.padEnd(8)}${'能证明什么'.padEnd(40)}${'状态'.padEnd(10)}`)
     L.push(`     ${'─'.repeat(96)}`)
-    for (const c of causalLayers(h, h.peer)) {
+    for (const c of causalLayers(h, h.peer, {
+      attributionDone: false,
+      altGateOpen: false,
+      altNote: '见替代解释闸门一节',
+    })) {
       L.push(`     ${c.level}. ${c.name.padEnd(6)}${c.proves.padEnd(38)}`
         + `${CAUSAL_STATUS_TEXT[c.status]}`)
       L.push(`        依据：${c.basis}`)

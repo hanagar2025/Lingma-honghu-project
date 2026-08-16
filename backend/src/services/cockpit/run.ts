@@ -33,6 +33,9 @@ import {
 import {
   buildAttribution, renderAttribution, STORAGE_ATTRIBUTION, type Attribution,
 } from '../research/attribution'
+import {
+  judgeAlternatives, renderAlternatives, ALTERNATIVES, type AltGate,
+} from '../research/alternatives'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
@@ -235,6 +238,7 @@ async function main(): Promise<void> {
   let hypothesesForHtml: Hypothesis[] = []
   let hypothesesForWeb: unknown[] = []
   let attributionForWeb: Attribution | null = null
+  let altGateForWeb: AltGate | null = null
 
   if (process.env.DASHBOARD === '0' || !internals) {
     printReport(rep)
@@ -293,7 +297,12 @@ async function main(): Promise<void> {
     hypothesesForWeb = hypothesesForHtml.map(h => ({
       ...h,
       fourLine: fourLineVerdict(h),
-      causal: causalLayers(h, h.peer),
+      causal: causalLayers(h, h.peer, {
+        attributionDone: attributionForWeb !== null
+          && attributionForWeb.verdict !== 'UNKNOWN',
+        altGateOpen: judgeAlternatives().allowsCausalClaim,
+        altNote: judgeAlternatives().verdict,
+      }),
       pending: pendingVerification(h).map(i => ({
         text: i.text, evidence: i.evidence, checklist: i.verifyChecklist ?? [],
       })),
@@ -307,6 +316,12 @@ async function main(): Promise<void> {
     // 是因为它现在全是缺口 —— 而缺口摆在明处才会被补，混在台账里会被读成"已在做"。
     attributionForWeb = buildAttribution(STORAGE_ATTRIBUTION)
     process.stdout.write(`${renderAttribution(attributionForWeb)}\n`)
+
+    // ── 替代解释闸门 ──
+    // 归因回答"钱从哪条产品线来"，本闸门回答"那条产品线为什么多赚了"。
+    // 两道关都过，主线归因层才允许转绿。
+    altGateForWeb = judgeAlternatives()
+    process.stdout.write(`${renderAlternatives()}\n`)
 
     // ── 变化台账 ──
     // 盘前不落档：盘中读数会污染日间序列，而这份档案要连续读 30 个交易日。
@@ -526,6 +541,7 @@ async function main(): Promise<void> {
       verdict: verdictForHtml,
       hypotheses: hypothesesForWeb,
       attribution: attributionForWeb,
+      alternatives: { gate: altGateForWeb, items: ALTERNATIVES },
       brief: briefForWeb,
       changes: changesForHtml,
       prevDate: prevDateForHtml,

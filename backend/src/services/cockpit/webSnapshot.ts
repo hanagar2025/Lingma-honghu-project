@@ -32,6 +32,8 @@ export interface WebSnapshotInput {
   hypotheses?: unknown[]
   /** 主线收入归因。当前全是缺口 —— 摆在明处才会被补 */
   attribution?: unknown
+  /** 替代解释闸门。五项全排除才允许讨论 AI 因果 */
+  alternatives?: unknown
   report: CockpitReport
   dashboard: Dashboard | null
   /** 今日结论。网页端与 CLI/HTML 必须给出同一份结论，否则三个出口会各说一套 */
@@ -73,6 +75,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     verdict: input.verdict ?? null,
     hypotheses: input.hypotheses ?? [],
     attribution: input.attribution ?? null,
+    alternatives: input.alternatives ?? null,
     brief: input.brief ?? null,
     dashboardText: null,
     changes: { prevDate, items: changes },
