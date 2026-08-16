@@ -51,7 +51,11 @@ export function renderDashboard(d: Dashboard): string {
 
   w()
   w('═'.repeat(W))
-  w(`  五层驾驶舱  ${d.date}   组合 × 主线 × 产业链 × 新势能 × 执行`)
+  // 阅读顺序即模型顺序：战略 → 战术 → 执行。
+  // 委员会 2026-08-16 指出一次方向性偏离：研究模块一度占据最显眼位置，
+  // 读起来像决策中心。研究是给投资决策提供证据的，不是它自己成为决策。
+  w(`  驾驶舱  ${d.date}`)
+  w('  阅读顺序 = 模型顺序：战略主线 → 战略资格 → 核心标的池 → 战术强弱 → TPO → 仓位执行')
   w(`  ${d.sessionNote}`)
   w('═'.repeat(W))
 
@@ -136,7 +140,7 @@ export function renderDashboard(d: Dashboard): string {
   // ══ ① 持仓表 ══
   w()
   w('═'.repeat(W))
-  w('① 持仓表 —— 我手里的东西发生了什么？')
+  w('【执行层·L2】① 持仓表 —— 我手里的东西发生了什么？')
   w('═'.repeat(W))
   w(
     `  ${pad('持仓', 12)}${pad('仓位', 8)}${pad('今日', 8)}${pad('5日', 9)}${pad('20日', 9)}` +
@@ -168,7 +172,7 @@ export function renderDashboard(d: Dashboard): string {
   // ══ ② 主线表 ══
   w()
   w('═'.repeat(W))
-  w('② 主线表 —— 市场现在在哪？哪条主线强？有没有切换？')
+  w('【战术层】② 主线表 —— 主线强弱与中军状态（决定何时加/减，不决定买什么）')
   w('═'.repeat(W))
   w(
     `  ${pad('主线', 20)}${pad('趋势', 8)}${pad('相对强度', 10)}${pad('成交/资金代理', 15)}` +
@@ -202,7 +206,7 @@ export function renderDashboard(d: Dashboard): string {
   // ══ ③ 产业结构表 ══
   w()
   w('═'.repeat(W))
-  w('③ 产业结构表 —— 主线内部的钱在哪里？是继续集中在原核心，还是向下一层扩散？')
+  w('【战略研究层】③ 产业结构表 —— 主线内部的钱在哪里？是继续集中在原核心，还是向下一层扩散？')
   w('═'.repeat(W))
   for (const [mlId, rows] of Object.entries(d.nodeStructure)) {
     const ml = d.mainlines.find(m => m.mainlineId === mlId)
@@ -229,7 +233,7 @@ export function renderDashboard(d: Dashboard): string {
   // ══ ④ 下一观察层 ══
   w()
   w('═'.repeat(W))
-  w('④ 下一观察层 —— 接下来应该盯谁？（发现 ≠ 候选 ≠ 买入）')
+  w('【战略研究层】④ 下一观察层 —— 接下来应该盯谁？（发现 ≠ 候选 ≠ 买入）')
   w('═'.repeat(W))
   w(
     `  ${pad('节点', 18)}${pad('产业', 8)}${pad('利润', 8)}${pad('节点份额', 10)}${pad('资金', 8)}` +

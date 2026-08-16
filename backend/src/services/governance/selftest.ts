@@ -522,5 +522,84 @@ ok('新增变化台账后规则指纹仍为冻结基线值',
   loadBaseline() === null || fingerprint().hash === loadBaseline()!.hash,
   `${fingerprint().hash} vs ${loadBaseline()?.hash}`)
 
+// ══════════════════════════════════════════════════════════════
+// 研究层隔离：研究不得移动投资
+// ══════════════════════════════════════════════════════════════
+//
+// 委员会 2026-08-16 指出一次方向性偏离：研究模块一度占据驾驶舱最显眼位置，
+// 读起来像决策中心。「研究模块是给投资决策提供证据的，不是它自己成为投资决策。」
+//
+// 这句话写在文档里是零成本的。真正会发生的偏离是：某天有人为了让驾驶舱
+// "更聪明"，把叙事台账的评分接进候选池排序 —— 那时文档还在，约束已经没了。
+{
+  const {
+    findDecisionInputLeaks, findResearchActionImports, findRenderedResearchLeaks,
+    readServiceSources, RESEARCH_MODULES, RESEARCH_FIELD_NAMES,
+    RESEARCH_TEXT_MARKERS, PROTECTED_OUTPUTS,
+  } = await import('./researchIsolation')
+
+  const base = new URL('../', import.meta.url)
+  const decision = readServiceSources(base, [
+    'cockpit/dashboard.ts', 'cockpit/index.ts', 'cockpit/safety.ts', 'tios/gates.ts',
+  ])
+  const research = readServiceSources(base, RESEARCH_MODULES)
+
+  ok('决策层与研究层源码都能读到（读不到等于检查空转）',
+    decision.length === 4 && research.length === RESEARCH_MODULES.length,
+    `决策 ${decision.length}/4，研究 ${research.length}/${RESEARCH_MODULES.length}`)
+
+  ok('六项受保护的决策输出已登记', PROTECTED_OUTPUTS.length === 6)
+  for (const p of ['长期主线', '战略资格', '核心仓位结构', 'TPO', 'L1', 'L2']) {
+    ok(`受保护清单覆盖「${p}」`, PROTECTED_OUTPUTS.some(x => x.name.includes(p)))
+  }
+
+  // ── 结构证明：决策层输入类型里没有研究台账字段 ──
+  const leaks = findDecisionInputLeaks(decision)
+  ok('决策层输入类型中不存在研究台账字段（不是"约定不用"，而是没有参数可传）',
+    leaks.length === 0, leaks.map(l => `${l.where}`).join('；'))
+
+  // 检查器本身必须能抓到泄漏 —— 否则"未发现泄漏"可能只是检查失灵
+  const planted = findDecisionInputLeaks([{
+    path: 'fake.ts',
+    text: 'export interface FakeInput {\n  date: string\n  hypotheses: unknown[]\n}\n',
+  }])
+  ok('检查器能抓到植入的泄漏（证明"未发现"不是失灵）', planted.length === 1)
+  const plantedComment = findDecisionInputLeaks([{
+    path: 'fake2.ts',
+    text: 'export interface FakeInput {\n  // 本类型刻意不含 hypotheses 字段\n  date: string\n}\n',
+  }])
+  ok('注释里提到字段名不算泄漏（否则一条正确的说明会把检查绊倒）',
+    plantedComment.length === 0)
+
+  // ── 研究层不得 import 任何能产生动作或算风控闸门的函数 ──
+  const actionImports = findResearchActionImports(research)
+  ok('研究层不 import makeAction / findLimitBreaches / computeCircuit',
+    actionImports.length === 0, actionImports.map(l => l.where).join('；'))
+  const plantedImport = findResearchActionImports([{
+    path: 'fake3.ts', text: "import { makeAction } from '../cockpit/types'\n",
+  }])
+  ok('检查器能抓到植入的动作 import', plantedImport.length === 1)
+
+  // ── 行为证明：决策层输出里不得出现研究台账的特征文本 ──
+  //
+  // 这一条拦的是比类型泄漏更可能发生的失败：不改任何类型，
+  // 只在动作区多写一行研究结论。
+  ok('特征文本表已登记且覆盖关键词',
+    RESEARCH_TEXT_MARKERS.length >= 10
+    && ['命题 A', '因果强度', '替代解释', '超级周期']
+      .every(m => (RESEARCH_TEXT_MARKERS as readonly string[]).includes(m)))
+  const dashJson = JSON.stringify(s1)
+  ok('决策层快照 JSON 中不出现研究台账特征文本',
+    findRenderedResearchLeaks(dashJson).length === 0,
+    findRenderedResearchLeaks(dashJson).map(x => x.detail.slice(0, 30)).join('；'))
+  ok('检查器能抓到植入的渲染泄漏',
+    findRenderedResearchLeaks('{"reason":"命题 A 已验证"}').length === 1)
+
+  // 字段名表必须随研究模块一起扩 —— 漏登记的字段不受保护
+  ok('字段名表覆盖当前研究模块导出的关键字段',
+    ['hypotheses', 'attribution', 'alternatives', 'link2', 'causal']
+      .every(f => (RESEARCH_FIELD_NAMES as readonly string[]).includes(f)))
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
