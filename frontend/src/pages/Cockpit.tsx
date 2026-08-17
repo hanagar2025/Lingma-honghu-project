@@ -278,7 +278,7 @@ const Cockpit: React.FC = () => {
         </>
       )}
 
-      {/* ── V2 决策驾驶舱：战略—战术—仓位，先于一切表格 ── */}
+      {/* ── V3 资本生命线：决策在表之前 ── */}
       <DecisionCockpit cockpit={data.decisionV2} />
 
       {/* ── 今日结论：法定动作摘要。决策在上面，依据在下面 ── */}

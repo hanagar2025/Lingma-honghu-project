@@ -20,6 +20,9 @@ import {
 import {
   STRATEGIC_TEXT, TACTICAL_TEXT, EXIT_TEXT,
 } from '../decision/strategy'
+import { HUNTER_TEXT } from '../decision/hunter'
+import { CONVICTION_CAP, PORTFOLIO_HARD_CAP, QUALITY_NEVER_IMPLIES_FULL } from '../decision/triaxis'
+import { LAYER_DEFS } from '../decision/evidence'
 import { NODE_TAXONOMY } from '../cockpit/nodes'
 import { RED_EXTREME_RET10_THRESHOLD } from '../msr/promotion'
 import { PE_SANITY_CEILING } from '../msr/valuation'
@@ -171,6 +174,46 @@ export function buildRuleRegistry(): RuleEntry[] {
     domain: 'GUARD', key: 'r1DoesNotDemoteLifecycle', value: true,
     tier: 'ACCOUNTING',
     definedIn: 'decision/judge.ts:judgeLifecycle（超限是组合预算，不把 CORE 降成 REDUCE）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'hunterStages',
+    value: Object.keys(HUNTER_TEXT).join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/hunter.ts:HunterStage（猎人生命线九段；组合超限不是其中一段）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'evidenceLayers',
+    value: LAYER_DEFS.map(l => `${l.id}:${l.measurable ? 1 : 0}`).join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/evidence.ts:LAYER_DEFS（九层；不可测层必须 UNKNOWN）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'convictionCap',
+    value: CONVICTION_CAP,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/triaxis.ts:CONVICTION_CAP（愿望上限，不生产动作）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'portfolioHardCapEqualsSingleStock',
+    value: PORTFOLIO_HARD_CAP,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/triaxis.ts:PORTFOLIO_HARD_CAP（与 LIMITS.singleStock 同源）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'qualityNeverImpliesFull',
+    value: QUALITY_NEVER_IMPLIES_FULL,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/triaxis.ts:QUALITY_NEVER_IMPLIES_FULL',
+  })
+  out.push({
+    domain: 'GUARD', key: 'priceCanMigrate', value: false,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/migrate.ts:priceCanMigrate（涨跌不能迁移生命线）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'r1DoesNotMigrateHunter', value: true,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/migrate.ts:migrate（R1 不把核心持有改写成战术减仓）',
   })
 
   // ── 价格窗口（唯一具备决策效力的价格阈值） ──

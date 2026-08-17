@@ -1,19 +1,19 @@
 /**
- * 《鸿鹄理财》V2 决策驾驶舱 —— 装配层。
+ * 《鸿鹄理财》V3 资本生命线 —— 投资人首屏装配层。
  *
- * 投资人每天只需要看见 6 个问题：
- *   ① 我们的战略有没有变化？
+ * 机器每天只回答六句话：
+ *   ① 战略有没有变？
  *   ② 哪些公司仍然值得拥有？
- *   ③ 哪些公司正在被事实强化？
- *   ④ 哪些公司出现了真正的风险？
- *   ⑤ 现在仓位处于哪个生命阶段？
- *   ⑥ 如果发生调整，原因属于战略、公司、预期还是组合风险？
+ *   ③ 哪些公司的证据正在强化？
+ *   ④ 哪些公司的风险正在增加？
+ *   ⑤ 当前每家公司处于生命线哪一段？
+ *   ⑥ 如果今天必须调整资本，调整的唯一合法理由是什么？
  *
- * 本文件不生产动作、不新增指标、不打分。
- * 它把 dashboard / 利润地图 / 已有法定动作 交给 judgeOne，再按规则类别归堆。
+ * 第一屏五块：战略 / 资本流向 / 持仓生命线 / 风险 / 今日最多三件事。
+ * 复杂数据全部折叠。本文件不生产动作、不新增指标、不打分。
  *
- * 技术数据的位置：持仓上的复核项只进「风险复核」，
- * 句子里禁止出现「跌破均线所以卖」。
+ * V2 字段（strategy / capital / holdings / questions）仍保留，
+ * 以免下游接口和自检在过渡期各说一套。
  */
 
 import { MAINLINES, findMember } from '../msr/universe'
@@ -24,15 +24,25 @@ import type {
 import type { ProfitMap, NodeProfit, MemberProfit } from '../research/profitRadar'
 import { judgeOne, type AccountingTrigger, type CompanyFacts, type Judged, type NodeFacts } from './judge'
 import {
-  EXIT_TEXT, LANE_TEXT, R4_STATUS_TEXT, STRATEGIC_DOT, STRATEGIC_TEXT,
-  TACTICAL_TEXT, type CapitalLane, type StrategicState,
+  EXIT_TEXT, R4_STATUS_TEXT, STRATEGIC_DOT, STRATEGIC_TEXT,
+  type CapitalLane, type StrategicState,
 } from './strategy'
+import { HUNTER_TEXT, type HunterStage } from './hunter'
+import {
+  CAPITAL_ACTION_TEXT, OWNERSHIP_TEXT,
+  type CapitalAction, type Ownership,
+} from './triaxis'
+import { LAYER_STATUS_TEXT } from './evidence'
+
+/** 投资人首屏主线只允许这四个词。不是评分。 */
+export type MainlineBoard = '成立' | '强化' | '弱化' | '不可判断'
 
 export interface MainlineStrategyRow {
   mainlineId: string
   name: string
   combat: boolean
   strategic: StrategicState
+  board: MainlineBoard
   headline: string
   why: readonly string[]
   judgable: boolean
@@ -67,10 +77,47 @@ export interface V2Question {
   lines: readonly string[]
 }
 
+export interface CapitalMove {
+  code: string
+  name: string
+  action: CapitalAction
+  oneReason: string
+}
+
+export interface LifelineRow {
+  code: string
+  name: string
+  posPct: number | null
+  ownership: Ownership
+  hunter: HunterStage
+  action: CapitalAction
+  oneReason: string
+  ownYes: boolean
+}
+
+export type RiskLevel = '低' | '中' | '高' | '未知'
+export type ExpectationLevel = '未测' | '低' | '中' | '高'
+export type PortfolioRisk = '超限' | '正常'
+
+export interface RiskBoard {
+  strategy: RiskLevel
+  company: RiskLevel
+  expectation: ExpectationLevel
+  portfolio: PortfolioRisk
+  dataGaps: readonly string[]
+}
+
+export interface Sentence {
+  no: 1 | 2 | 3 | 4 | 5 | 6
+  question: string
+  answer: string
+}
+
 export interface DecisionCockpit {
   date: string
   productName: '鸿鹄理财'
-  productModel: '战略—战术投资决策驾驶舱'
+  productModel: '资本生命线'
+  version: 'V3'
   strategy: MainlineStrategyRow[]
   capital: { enhance: CapitalRow[]; observe: CapitalRow[]; forbid: CapitalRow[] }
   holdings: HoldingStateRow[]
@@ -78,6 +125,11 @@ export interface DecisionCockpit {
   cards: Judged[]
   missingForDecision: readonly string[]
   noCompositeScoreNote: string
+  capitalMoves: CapitalMove[]
+  lifeline: LifelineRow[]
+  riskBoard: RiskBoard
+  todayTasks: readonly string[]
+  sentences: Sentence[]
 }
 
 export interface DecisionCockpitInput {
@@ -124,16 +176,31 @@ export function buildDecisionCockpit(input: DecisionCockpitInput): DecisionCockp
   const questions = sixQuestions({
     strategy, holdings, cards, input,
   })
+  const capitalMoves = holdings.map(h => ({
+    code: h.code, name: h.name,
+    action: h.judged.capitalAction,
+    oneReason: h.judged.oneReason,
+  }))
+  const lifeline = holdings.map(toLifeline)
+  const riskBoard = buildRiskBoard(strategy, holdings, input)
+  const todayTasks = buildTodayTasks(holdings, strategy, input)
+  const sentences = questions.map(q => ({
+    no: q.no, question: q.question, answer: q.headline,
+  }))
 
   return {
     date: input.date,
     productName: '鸿鹄理财',
-    productModel: '战略—战术投资决策驾驶舱',
+    productModel: '资本生命线',
+    version: 'V3',
     strategy, capital, holdings, questions, cards,
     missingForDecision: MISSING,
     noCompositeScoreNote:
       '本驾驶舱不输出综合评分、总分或排名。'
-      + '战略是状态，战术是阶段，仓位是预算，三者不可加权。',
+      + '战略决定拥有什么；证据决定是否继续值得拥有；'
+      + '战术决定现在拥有多少；组合规则决定最多能拥有多少；'
+      + '生命线决定下一步资本往哪走。',
+    capitalMoves, lifeline, riskBoard, todayTasks, sentences,
   }
 }
 
@@ -246,7 +313,8 @@ function judgeMainline(
     why.push(row?.blockers.join('；') || '利润结构数据不足，不具备机会判断资格')
     return {
       mainlineId: id, name, combat,
-      strategic: combat ? 'WATCH' : 'WATCH',
+      strategic: 'WATCH',
+      board: '不可判断',
       headline: combat ? '需要核查（数据不足）' : '数据不足 · 只研究不进组合',
       why, judgable: false,
     }
@@ -259,14 +327,18 @@ function judgeMainline(
     why.push('首位节点份额缩小，须核查是扩散还是主线走弱 —— 这不是股价判断')
     return {
       mainlineId: id, name, combat, strategic: 'WATCH',
+      board: '弱化',
       headline: '主线分化，需要核查',
       why, judgable: true,
     }
   }
   why.push('首位节点利润份额未缩小，战略主线未被这份利润数据证伪')
+  const rising = (d ?? 0) > 0
   return {
-    mainlineId: id, name, combat, strategic: 'HOLDS',
-    headline: '战略成立',
+    mainlineId: id, name, combat,
+    strategic: rising ? 'STRENGTHENED' : 'HOLDS',
+    board: rising ? '强化' : '成立',
+    headline: rising ? '战略强化' : '战略成立',
     why, judgable: true,
   }
 }
@@ -330,7 +402,7 @@ function sixQuestions(p: {
   input: DecisionCockpitInput
 }): V2Question[] {
   const { strategy, holdings, cards, input } = p
-  const changed = strategy.filter(s => s.strategic !== 'HOLDS')
+  const changed = strategy.filter(s => s.board === '弱化' || s.board === '不可判断')
   const stillOwn = holdings.filter(h => h.judged.worthOwning === 'YES')
   const stronger = holdings.filter(h => h.judged.factsStrengthening)
   const realRisk = holdings.filter(h =>
@@ -341,7 +413,7 @@ function sixQuestions(p: {
   return [
     {
       no: 1,
-      question: '我们的战略有没有变化？',
+      question: '战略有没有变？',
       headline: changed.length === 0
         ? '作战主线均未被这份数据证伪。战略没有因为股价涨跌而改变。'
         : `需要核查：${changed.map(s => `${s.name}（${s.headline}）`).join('、')}`,
@@ -359,7 +431,7 @@ function sixQuestions(p: {
     },
     {
       no: 3,
-      question: '哪些公司正在被事实强化？',
+      question: '哪些公司的证据正在强化？',
       headline: stronger.length
         ? `${stronger.map(h => h.name).join('、')}：盈利继续兑现且节点份额未恶化。`
         : '今日没有持仓同时满足「盈利增量 > 0 且节点份额未缩小」。价格上涨不计入。',
@@ -369,7 +441,7 @@ function sixQuestions(p: {
     },
     {
       no: 4,
-      question: '哪些公司出现了真正的风险？',
+      question: '哪些公司的风险正在增加？',
       headline: realRisk.length
         ? realRisk.map(h =>
           `${h.name}（${h.judged.strategic === 'FALSIFIED' ? '战略证伪' : h.judged.risks.join('、')}）`
@@ -385,16 +457,16 @@ function sixQuestions(p: {
     },
     {
       no: 5,
-      question: '现在仓位处于建仓、加仓、核心、减仓还是退出阶段？',
+      question: '当前每家公司处于生命线哪一段？',
       headline: holdings.map(h =>
-        `${h.name} ${TACTICAL_TEXT[h.judged.tactical]}`
+        `${h.name} ${HUNTER_TEXT[h.judged.hunter]}`
       ).join('　│　') || '无持仓',
       lines: holdings.map(h =>
-        `${h.name}　${TACTICAL_TEXT[h.judged.tactical]}　${h.decision}`),
+        `${h.name}　${HUNTER_TEXT[h.judged.hunter]}　${CAPITAL_ACTION_TEXT[h.judged.capitalAction]}　${h.judged.oneReason}`),
     },
     {
       no: 6,
-      question: '如果发生调整，调整的原因到底属于战略、公司、预期还是组合风险？',
+      question: '如果今天必须调整资本，调整的唯一合法理由是什么？',
       headline: headlineQ6(holdings, input),
       lines: [
         ...holdings.filter(h => h.judged.exit !== 'HOLD').map(h =>
@@ -425,6 +497,78 @@ function headlineQ6(holdings: HoldingStateRow[], input: DecisionCockpitInput): s
   return parts.join('。')
 }
 
+function toLifeline(h: HoldingStateRow): LifelineRow {
+  return {
+    code: h.code, name: h.name, posPct: h.posPct,
+    ownership: h.judged.ownership,
+    hunter: h.judged.hunter,
+    action: h.judged.capitalAction,
+    oneReason: h.judged.oneReason,
+    ownYes: h.judged.worthOwning === 'YES',
+  }
+}
+
+function buildRiskBoard(
+  strategy: MainlineStrategyRow[],
+  holdings: HoldingStateRow[],
+  input: DecisionCockpitInput,
+): RiskBoard {
+  const combat = strategy.filter(s => s.combat)
+  const strategyLevel: RiskLevel = combat.some(s => s.strategic === 'FALSIFIED')
+    ? '高'
+    : combat.some(s => s.board === '弱化')
+      ? '中'
+      : combat.every(s => s.board === '不可判断')
+        ? '未知'
+        : '低'
+  const companyLevel: RiskLevel = holdings.some(h => h.judged.risks.includes('R2_COMPANY'))
+    ? '高'
+    : holdings.some(h => h.judged.strategic === 'WEAKENED')
+      ? '中'
+      : '低'
+  const portfolio: PortfolioRisk =
+    holdings.some(h => h.judged.risks.includes('R1_PORTFOLIO'))
+    || input.circuitState === 'LEVEL1' || input.circuitState === 'LEVEL2'
+      ? '超限'
+      : '正常'
+  const dataGaps = [
+    '预期风险未测（R4：没有价格隐含增长 vs 可证明增长）',
+    ...strategy.filter(s => s.board === '不可判断').map(s => `${s.name}：数据不足，不能做主线切换判断`),
+    '目标主线利润核验、前瞻盈利证据、现金流质量均未接入',
+  ]
+  return {
+    strategy: strategyLevel,
+    company: companyLevel,
+    expectation: '未测',
+    portfolio,
+    dataGaps,
+  }
+}
+
+function buildTodayTasks(
+  holdings: HoldingStateRow[],
+  strategy: MainlineStrategyRow[],
+  input: DecisionCockpitInput,
+): string[] {
+  const tasks: string[] = []
+  for (const h of holdings.filter(x => x.judged.exit === 'PORTFOLIO_FORCE')) {
+    tasks.push(`${h.name}：执行组合超限调整。`)
+  }
+  for (const h of holdings.filter(x => x.judged.strategic === 'FALSIFIED')) {
+    tasks.push(`不因${h.name}技术弱化减仓。战略资格已经否决。`)
+  }
+  for (const s of strategy.filter(x => x.board === '不可判断')) {
+    tasks.push(`${s.name}：数据不足，不做主线切换判断。`)
+  }
+  for (const h of holdings.filter(x => x.judged.exit === 'TACTICAL_REDUCE')) {
+    tasks.push(`${h.name}：进入战术减仓评估（评估 ≠ 自动卖出）。`)
+  }
+  if (input.pendingSellCount > 0) {
+    tasks.push(`执行债务 ${input.pendingSellCount} 笔未清偿 —— 清偿前禁止新增建仓。`)
+  }
+  return tasks.slice(0, 3)
+}
+
 export function renderDecisionCockpit(d: DecisionCockpit): string {
   const W = 108
   const L: string[] = []
@@ -432,46 +576,63 @@ export function renderDecisionCockpit(d: DecisionCockpit): string {
   w()
   w('═'.repeat(W))
   w(`  《${d.productName}》${d.productModel}  ${d.date}`)
-  w('  阅读顺序：战略有没有变 → 谁仍值得拥有 → 谁被事实强化 → 真正的风险 → 生命阶段 → 调整属于哪一类')
-  w('  本页回答决策。下面的表是依据。')
+  w('  第一层看决策。第二层看理由。第三层看证据。第四层机器看原始数据。')
+  w('  战略决定拥有什么；证据决定是否继续值得拥有；生命线决定下一步资本往哪走。')
   w('═'.repeat(W))
 
   w()
-  w('【第一块】战略')
+  w('【① 战略】')
   for (const s of d.strategy) {
-    w(`  ${STRATEGIC_DOT[s.strategic]} ${s.name}　${s.headline}`)
-    for (const x of s.why) w(`      · ${x}`)
+    w(`  ${s.name}　${s.board}`)
+    for (const x of s.why.slice(0, 2)) w(`      · ${x}`)
   }
 
   w()
-  w('【第二块】资本应该往哪里去？（不是排名）')
-  for (const lane of ['ENHANCE', 'OBSERVE', 'FORBID'] as const) {
-    const rows = d.capital[lane === 'ENHANCE' ? 'enhance' : lane === 'OBSERVE' ? 'observe' : 'forbid']
-    w(`  ${LANE_TEXT[lane]}`)
-    if (!rows.length) w('      （无）')
-    for (const r of rows) {
-      w(`      ${r.name}　${r.node}　${STRATEGIC_TEXT[r.strategic]}`)
-      w(`        ${r.facts.slice(0, 3).join('；')}`)
-    }
+  w('【② 资本应该往哪里走】')
+  if (!d.capitalMoves.length) w('  （无持仓）')
+  for (const m of d.capitalMoves) {
+    w(`  ${m.name}　${CAPITAL_ACTION_TEXT[m.action]}　${m.oneReason}`)
   }
 
   w()
-  w('【第三块】每一只持仓一句投资状态')
-  for (const h of d.holdings) {
-    w(`  ${h.name}${h.posPct === null ? '' : `　${(h.posPct * 100).toFixed(1)}%`}`)
-    w(`      ${h.ownLogic}`)
-    w(`      ${h.riskLine}`)
-    w(`      ${h.portfolioLine}`)
-    w(`      ${h.decision}`)
-    w(`      ${h.why}`)
+  w('【③ 当前持仓生命线】')
+  w('  标的　　战略　　生命线　　当前动作　　核心原因')
+  for (const r of d.lifeline) {
+    const own = r.ownYes ? '✓' : '✗'
+    const pct = r.posPct === null ? '' : `${(r.posPct * 100).toFixed(1)}%`
+    w(`  ${r.name}${pct ? ` ${pct}` : ''}　${own} ${OWNERSHIP_TEXT[r.ownership]}　${HUNTER_TEXT[r.hunter]}　${CAPITAL_ACTION_TEXT[r.action]}　${r.oneReason}`)
   }
 
   w()
-  w('【六问】')
-  for (const q of d.questions) {
+  w('【④ 风险】')
+  w(`  战略风险　${d.riskBoard.strategy}`)
+  w(`  公司风险　${d.riskBoard.company}`)
+  w(`  预期风险　${d.riskBoard.expectation}`)
+  w(`  组合风险　${d.riskBoard.portfolio}`)
+  w('  数据风险')
+  for (const g of d.riskBoard.dataGaps) w(`      · ${g}`)
+
+  w()
+  w('【⑤ 今天真正需要投资人做的事】')
+  if (!d.todayTasks.length) w('  今日没有必须由投资人执行的事。')
+  d.todayTasks.forEach((t, i) => w(`  ${i + 1}. ${t}`))
+
+  w()
+  w('【六句话】')
+  for (const q of d.sentences) {
     w(`  ${['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]} ${q.question}`)
-    w(`      ${q.headline}`)
-    for (const line of q.lines.slice(0, 8)) w(`        · ${line}`)
+    w(`      ${q.answer}`)
+  }
+
+  w()
+  w('【理由与证据（折叠）】')
+  for (const h of d.holdings) {
+    w(`  ${h.name}　${HUNTER_TEXT[h.judged.hunter]}`)
+    w(`      理由　${h.judged.oneReason}`)
+    w(`      迁移　${h.judged.migration.why}`)
+    for (const layer of h.judged.evidence.layers) {
+      w(`      ${layer.name}　${LAYER_STATUS_TEXT[layer.status]}　${layer.fact}`)
+    }
   }
 
   w()

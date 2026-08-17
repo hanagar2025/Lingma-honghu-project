@@ -109,6 +109,11 @@ const techOnly: JudgeInput = {
   ok('海光不因技术复核增加卖出种类',
     !j.acts.sellKinds.includes('TACTICAL_REDUCE')
     && !j.acts.sellKinds.includes('VALUE_EXIT'))
+  ok('海光 Ownership 是战略核心', j.ownership === 'STRATEGIC_CORE')
+  ok('海光生命线仍是核心持有（猎人段）', j.hunter === 'CORE', j.hunter)
+  ok('海光资本动作是减少暴露', j.capitalAction === 'REDUCE_EXPOSURE')
+  ok('海光唯一理由写明组合超限不是公司恶化',
+    j.oneReason.includes('组合超限') && j.oneReason.includes('不是公司价值恶化'))
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -126,6 +131,9 @@ const techOnly: JudgeInput = {
   ok('兆易资本流向是禁止', j.lane === 'FORBID')
   ok('兆易节点份额上升不能推翻清退',
     j.strategicWhy.some(x => x.includes('C级清退')))
+  ok('兆易 Ownership 是清退', j.ownership === 'RETIRED')
+  ok('兆易猎人段是价值退出', j.hunter === 'VALUE_EXIT')
+  ok('兆易资本动作是退出', j.capitalAction === 'EXIT')
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -201,7 +209,7 @@ ok('R4 文案拒绝用 PE 或均线代替',
 // 八、源码不引入新指标、不出现评分
 // ══════════════════════════════════════════════════════════════
 {
-  const files = ['strategy.ts', 'judge.ts', 'cockpitV2.ts']
+  const files = ['strategy.ts', 'judge.ts', 'cockpitV2.ts', 'hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts']
   for (const f of files) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf-8')
     const code = src.split('\n').filter(l => {
@@ -305,16 +313,17 @@ ok('R4 文案拒绝用 PE 或均线代替',
 
   const v2 = buildDecisionCockpit(dashLike)
   ok('产品名是鸿鹄理财', v2.productName === '鸿鹄理财')
-  ok('产品模型是战略—战术投资决策驾驶舱', v2.productModel.includes('战略—战术'))
+  ok('产品模型是资本生命线', v2.productModel === '资本生命线')
+  ok('版本是 V3', v2.version === 'V3')
   ok('六问正好 6 条且编号 1–6',
     v2.questions.length === 6 && v2.questions.every((q, i) => q.no === i + 1))
-  ok('六问覆盖委员会钉死的原话',
-    v2.questions[0]!.question.includes('战略有没有变化')
+  ok('六句话覆盖委员会钉死的原话',
+    v2.questions[0]!.question.includes('战略有没有变')
     && v2.questions[1]!.question.includes('仍然值得拥有')
-    && v2.questions[2]!.question.includes('事实强化')
-    && v2.questions[3]!.question.includes('真正的风险')
-    && v2.questions[4]!.question.includes('建仓、加仓、核心、减仓还是退出')
-    && v2.questions[5]!.question.includes('战略、公司、预期还是组合'))
+    && v2.questions[2]!.question.includes('证据正在强化')
+    && v2.questions[3]!.question.includes('风险正在增加')
+    && v2.questions[4]!.question.includes('生命线哪一段')
+    && v2.questions[5]!.question.includes('唯一合法理由'))
 
   const hg = v2.holdings.find(h => h.code === '688041')
   const zy = v2.holdings.find(h => h.code === '603986')
@@ -329,11 +338,13 @@ ok('R4 文案拒绝用 PE 或均线代替',
     v2.strategy.find(s => s.mainlineId === 'power')?.strategic === 'WATCH')
 
   const txt = renderDecisionCockpit(v2)
-  ok('渲染含三块标题',
-    txt.includes('【第一块】战略')
-    && txt.includes('【第二块】资本应该往哪里去')
-    && txt.includes('【第三块】每一只持仓一句投资状态'))
-  ok('渲染声明本页是决策、下面的表是依据', txt.includes('本页回答决策'))
+  ok('渲染含五块首屏',
+    txt.includes('【① 战略】')
+    && txt.includes('【② 资本应该往哪里走】')
+    && txt.includes('【③ 当前持仓生命线】')
+    && txt.includes('【④ 风险】')
+    && txt.includes('【⑤ 今天真正需要投资人做的事】'))
+  ok('渲染声明第一层看决策', txt.includes('第一层看决策'))
   ok('渲染只在禁令里提到评分，不把它当成输出',
     txt.includes('不输出综合评分') && !/综合评分\s*\d|第\s*\d+\s*名/.test(txt))
   ok('渲染不含预测措辞', !/见顶|要跌|将涨|底部已现/.test(txt))

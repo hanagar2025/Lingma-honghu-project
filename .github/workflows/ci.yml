@@ -61,6 +61,10 @@ jobs:
       # 海光超限是组合风险不是公司变坏；兆易不因技术卖。
       - name: Decision V2 selftest (战略—战术—仓位因果链)
         run: npm -w backend run decision:v2
+      # 守 V3 资本生命线：证据变化才能迁移；涨跌不能迁移；
+      # 三种减仓不混；R4 不填；质量不能推出 100%。
+      - name: Decision V3 selftest (资本生命线)
+        run: npm -w backend run decision:v3
       # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
       # 让 CI 变绿，把审计变成盖章。漂移只需在基线文件的 git diff 里显形即可。
       - name: Rule freeze check (打印指纹，漂移不失败)
