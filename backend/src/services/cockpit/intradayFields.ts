@@ -71,10 +71,10 @@ export const FIELD_GRADES: readonly FieldGrade[] = [
   { field: '股票市值 / 组合总资产', grade: 'PROVISIONAL',
     why: '股数 × 当前价。收盘后自动为正确值' },
   { field: '单票仓位 % / 是否超限', grade: 'PROVISIONAL',
-    why: '随价格变。**贴着 12% 线的标的可能盘中超限、收盘不超限**' },
+    why: '随价格变。「贴着 12% 线的标的可能盘中超限、收盘不超限」' },
   { field: '自峰值回撤 / 熔断等级', grade: 'PROVISIONAL',
     why: '随组合总资产变。2026-08-17 实测：09:58 报 15.65%（一级成立），'
-      + '11:07 报 14.51%（未触发）—— **同一上午翻转过**' },
+      + '11:07 报 14.51%（未触发）—— 「同一上午翻转过」' },
   { field: 'PE 三年分位', grade: 'PROVISIONAL',
     why: '分子用当前价，分母是三年历史 PE 序列。收盘后自动为正确值' },
 
@@ -108,7 +108,7 @@ export function intradayVerdict(): string {
     + `（账务事实与季报数据），可直接用于研判；`
     + `${byGrade('PROVISIONAL').length} 类为临时值，量级可信但阈值附近会翻转；`
     + `${byGrade('DISTORTED').length} 类系统性失真，`
-    + `**不可用于研判** —— 它们把不完整的当日 K 线当成完整的来算。`
+    + `「不可用于研判」 —— 它们把不完整的当日 K 线当成完整的来算。`
 }
 
 export function renderIntradayFields(): string {
