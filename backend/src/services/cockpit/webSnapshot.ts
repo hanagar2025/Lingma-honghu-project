@@ -50,6 +50,8 @@ export interface WebSnapshotInput {
   dashboard: Dashboard | null
   /** 今日结论。网页端与 CLI/HTML 必须给出同一份结论，否则三个出口会各说一套 */
   verdict?: unknown
+  /** V2 决策驾驶舱。与 CLI/HTML 同一份，前端只渲染不重算 */
+  decisionV2?: unknown
   /**
    * 外发摘要（Markdown）。由后端生成后随快照下发，前端不自己拼 ——
    * 否则同一份数据会有两套措辞，而其中一套迟早会漏掉那段约束前言。
@@ -113,6 +115,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
       ?? process.env.TIOS_CODE_COMMITTED_AT ?? gitHead().at,
     generatedAt: new Date().toISOString(),
     verdict: input.verdict ?? null,
+    decisionV2: input.decisionV2 ?? null,
     hypotheses: input.hypotheses ?? [],
     attribution: input.attribution ?? null,
     alternatives: input.alternatives ?? null,

@@ -23,6 +23,7 @@ import { runCockpit } from './index'
 import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
 import { buildVerdict, type Verdict } from './verdict'
+import { buildDecisionCockpit, renderDecisionCockpit, type DecisionCockpit } from '../decision/cockpitV2'
 import { renderVerdict } from './renderVerdict'
 import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import {
@@ -233,6 +234,7 @@ async function main(): Promise<void> {
     | undefined
 
   let dashForHtml: Dashboard | null = null
+  let v2ForHtml: DecisionCockpit | null = null
   let verdictForHtml: Verdict | null = null
   let changesForHtml: Change[] = []
   let prevDateForHtml: string | null = null
@@ -261,6 +263,21 @@ async function main(): Promise<void> {
       noNewEntryReasons: rep.noNewEntry.reasons,
       dataGaps: rep.dataGaps,
     })
+    const v2 = buildDecisionCockpit({
+      date,
+      holdings: dash.holdings,
+      mainlines: dash.mainlines,
+      nextLayer: dash.nextLayer,
+      nodeStructure: dash.nodeStructure,
+      actions: rep.actions,
+      pendingSellCount,
+      profit,
+      circuitState: dash.assets.circuitState,
+      circuitReason: dash.assets.circuitReason,
+    })
+    v2ForHtml = v2
+    process.stdout.write(`${renderDecisionCockpit(v2)}\n`)
+
     // 结论先于依据：委员会明确不想再从四张表里自己提炼。
     // 这一层不产生新判断，只按规则类别筛选归类，并把答不了的问题一并列出。
     const snaps = loadAllSnapshots()
@@ -511,6 +528,7 @@ async function main(): Promise<void> {
       },
       intraday: isIntraday(dashForHtml.date),
       verdict: verdictForHtml,
+      decisionV2: v2ForHtml,
       hypotheses: hypothesesForHtml,
     })
     const reportDir = join(HERE, 'data', 'reports')
@@ -533,6 +551,7 @@ async function main(): Promise<void> {
     briefForWeb = buildBrief({
       dashboard: dashForHtml,
       verdict: verdictForHtml,
+      decisionV2: v2ForHtml,
       includeAmounts: withAmounts,
       intraday: isIntraday(dashForHtml.date),
     })
@@ -570,6 +589,7 @@ async function main(): Promise<void> {
       report: rep,
       dashboard: dashForHtml,
       verdict: verdictForHtml,
+      decisionV2: v2ForHtml,
       hypotheses: hypothesesForWeb,
       attribution: attributionForWeb,
       alternatives: { gate: altGateForWeb, items: ALTERNATIVES },

@@ -14,6 +14,7 @@ import {
 } from 'antd'
 import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/icons'
 import { cockpitAPI, tiosAPI } from '../services/api'
+import DecisionCockpit from '../components/DecisionCockpit'
 import FiveLayerDashboard from '../components/FiveLayerDashboard'
 import TodayVerdict from '../components/TodayVerdict'
 import ShareButton, { ShareHint } from '../components/ShareButton'
@@ -277,7 +278,10 @@ const Cockpit: React.FC = () => {
         </>
       )}
 
-      {/* ── 今日结论：结论先于依据，放在四张表之前 ── */}
+      {/* ── V2 决策驾驶舱：战略—战术—仓位，先于一切表格 ── */}
+      <DecisionCockpit cockpit={data.decisionV2} />
+
+      {/* ── 今日结论：法定动作摘要。决策在上面，依据在下面 ── */}
       <TodayVerdict verdict={data.verdict} />
 
       {/* ── 五层驾驶舱：四张研究表 + 隔离的动作区 ── */}

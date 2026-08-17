@@ -17,6 +17,9 @@ import { PEAK_HISTORY } from './peakBasis'
 import {
   RISK_CAN_PRODUCE, EVIDENCE_CAN_REDUCE, STATES,
 } from '../decision/lifecycle'
+import {
+  STRATEGIC_TEXT, TACTICAL_TEXT, EXIT_TEXT,
+} from '../decision/strategy'
 import { NODE_TAXONOMY } from '../cockpit/nodes'
 import { RED_EXTREME_RET10_THRESHOLD } from '../msr/promotion'
 import { PE_SANITY_CEILING } from '../msr/valuation'
@@ -138,6 +141,36 @@ export function buildRuleRegistry(): RuleEntry[] {
     domain: 'GUARD', key: 'lifecycleStates', value: STATES.map(x => x.state).join(','),
     tier: 'ACCOUNTING',
     definedIn: 'decision/lifecycle.ts:STATES（状态机取值；风险状态只允许评估，不允许终局动作）',
+  })
+  // V2 决策链取值。新增一种战略状态或一个决策出口，等于改了投资人每天看到的答案，
+  // 必须对指纹可见。R4 尚未可测也登记：一旦有人用 PE 分位去填 R4，这里会变。
+  out.push({
+    domain: 'GUARD', key: 'strategicStates',
+    value: Object.keys(STRATEGIC_TEXT).join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/strategy.ts:StrategicState（五种状态，不是分数）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'tacticalStages',
+    value: Object.keys(TACTICAL_TEXT).join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/strategy.ts:TacticalStage（阶段由事实决定，不由价格决定）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'decisionExits',
+    value: Object.keys(EXIT_TEXT).join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/strategy.ts:DecisionExit（五个出口不得压成一个卖出）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'r4NotFilledFromPeOrMa', value: true,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/judge.ts:judgeRisks（R4 恒不写入；PE/均线没有进入风险轴的通道）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'r1DoesNotDemoteLifecycle', value: true,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/judge.ts:judgeLifecycle（超限是组合预算，不把 CORE 降成 REDUCE）',
   })
 
   // ── 价格窗口（唯一具备决策效力的价格阈值） ──

@@ -57,6 +57,10 @@ jobs:
       # 否定式约束在重构时不会报错，只会静默消失 —— 故必须由 CI 每次确认。
       - name: Decision layer selftest (技术信号不得单独减仓)
         run: npm -w backend run decision:selftest
+      # 守 V2 决策链：现有数据组织成战略—战术—仓位；R4 不得用 PE/均线填；
+      # 海光超限是组合风险不是公司变坏；兆易不因技术卖。
+      - name: Decision V2 selftest (战略—战术—仓位因果链)
+        run: npm -w backend run decision:v2
       # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
       # 让 CI 变绿，把审计变成盖章。漂移只需在基线文件的 git diff 里显形即可。
       - name: Rule freeze check (打印指纹，漂移不失败)

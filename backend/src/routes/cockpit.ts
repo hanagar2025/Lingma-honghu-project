@@ -14,6 +14,7 @@ import { runCockpit } from '../services/cockpit'
 import { buildDashboard, type SessionKind } from '../services/cockpit/dashboard'
 import { renderDashboard } from '../services/cockpit/renderDashboard'
 import { buildVerdict } from '../services/cockpit/verdict'
+import { buildDecisionCockpit } from '../services/decision/cockpitV2'
 import { buildBrief } from '../services/cockpit/share'
 import type { MomentumRow } from '../services/cockpit/momentum'
 import {
@@ -240,16 +241,32 @@ router.get('/today', authenticateToken, asyncHandler(async (req: AuthRequest, re
     })
     : null
 
+  const decisionV2 = dashboard
+    ? buildDecisionCockpit({
+      date,
+      holdings: dashboard.holdings,
+      mainlines: dashboard.mainlines,
+      nextLayer: dashboard.nextLayer,
+      nodeStructure: dashboard.nodeStructure,
+      actions: report.actions,
+      pendingSellCount,
+      profit,
+      circuitState: dashboard.assets.circuitState,
+      circuitReason: dashboard.assets.circuitReason,
+    })
+    : null
+
   res.json({
     success: true,
     data: {
       ...report,
       dashboard,
       verdict,
+      decisionV2,
       // 外发摘要由后端统一生成：前端若自己拼，同一份数据会有两套措辞，
       // 而其中一套迟早会漏掉那段约束前言。默认脱敏，不含金额与总资产。
       brief: dashboard
-        ? buildBrief({ dashboard, verdict, includeAmounts: false })
+        ? buildBrief({ dashboard, verdict, decisionV2, includeAmounts: false })
         : null,
       dashboardText: dashboard ? renderDashboard(dashboard) : null,
       changes: { prevDate, items: changes },

@@ -1,10 +1,10 @@
 {
   "frozenAt": "2026-08-17",
   "tradingDays": 30,
-  "hash": "e59cdde33bed",
-  "entryCount": 31,
+  "hash": "c9ad1931d30a",
+  "entryCount": 36,
   "byDomain": {
-    "GUARD": "68434286ad76",
+    "GUARD": "fec9675dc7cb",
     "LEGAL_REASON": "0de3f52d932c",
     "POSITION_LIMIT": "b481dd150240",
     "PRICE_WINDOW": "7f8a35934192",
@@ -13,9 +13,9 @@
     "VALUATION": "5d9de12e91c1"
   },
   "tierCounts": {
-    "ACCOUNTING": 29,
+    "ACCOUNTING": 34,
     "VALIDATED": 1,
     "OBSERVATION": 1
   },
-  "note": "委员会 2026-08-13 决议：冻结 30 个交易日，期间不新增决策规则，只修 Bug、补数据、记录结果。本文件即该承诺的可验证凭据。重新生成基线须在提交信息中写明授权来源。"
+  "note": "委员会 2026-08-17 授权《鸿鹄 V2 决策架构》：把已有数据组织成战略状态→战术阶段→仓位生命线→动作资格→动作原因。不新增技术指标、不填 R4、不把三种卖出压成一个减仓。GUARD +5 条是这套取值的指纹登记，不是新的买卖阈值。冻结期内仍不新增决策规则。"
 }
