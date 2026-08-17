@@ -756,8 +756,24 @@ console.log('\n【外发摘要脱敏】')
   const live = buildBrief({ dashboard: dash, verdict: null, intraday: true })
 
   // ── ① 口径已裁定 ──
+  //
+  // 「检查限定在它管辖的小节内，不扫整篇」——
+  // 这是第三次被自己的文档绊倒后定下的规矩：
+  //   第一次 lint 抓到注释里的 Markdown 星号
+  //   第二次禁字检查抓到注释里"本模块不导出 aiRevenue"这句说明
+  //   第三次「怎么问」小节引用历史矛盾作为实证，引用文本含被禁字样
+  // 三次的共同点是：**文档合法地会引用它所禁止的东西。**
+  // 扫整篇必然把"说明"与"违规"混为一谈，于是正确的文档反而通不过检查。
+  const section = (t: string, title: string): string => {
+    const i = t.indexOf(title)
+    if (i < 0) return ''
+    const j = t.indexOf('\n## ', i + title.length)
+    return t.slice(i, j < 0 ? undefined : j)
+  }
+  const denomSection = section(closed, '### 仓位分母口径')
+  ok('简报存在分母口径小节', denomSection.length > 0)
   for (const banned of ['未裁定', '以券商账户总资产为分母', '从严口径', '请勿代为裁定']) {
-    ok(`简报不再出现旧口径文案「${banned}」`, !closed.includes(banned))
+    ok(`分母口径小节中不出现旧文案「${banned}」`, !denomSection.includes(banned))
   }
   ok('简报写明分母是组合总资产', closed.includes('分母是「组合总资产」'))
   ok('简报写明券商口径不参与上限判定',
@@ -768,7 +784,10 @@ console.log('\n【外发摘要脱敏】')
   const contradiction = (t: string) =>
     (t.includes('未裁定') || t.includes('券商账户总资产为分母'))
     && (t.includes('一级熔断') || t.includes('二级熔断'))
-  ok('简报中不存在「分母未裁定」与「熔断成立」并存的矛盾', !contradiction(closed))
+  // 矛盾检测同样限定小节：整篇里「熔断成立」出现在动作区，
+  // 而「未裁定」若出现只可能出现在分母口径小节 —— 混扫会永远报矛盾。
+  ok('分母口径小节不声称未裁定（与同一份文件里的熔断结论矛盾）',
+    !contradiction(denomSection + '\n一级熔断'))
 
   // ── ② 盘中必须自报，且必须在最前 ──
   ok('盘后运行不出现盘中横幅', !closed.includes('盘中生成'))
@@ -783,6 +802,43 @@ console.log('\n【外发摘要脱敏】')
     live.split('\n').find(l => l.startsWith('# ')))
   ok('盘后标题不带盘中标记',
     closed.split('\n').find(l => l.startsWith('# '))?.includes('盘中运行') === false)
+}
+
+// ── 外发简报必须自带提问模板 ──
+//
+// 来自一次真实提问:「分享给 ChatGPT/豆包/DeepSeek 判断走势做决策,能做到吗?」
+// 答案是不能 —— 摘要的前瞻性内容为零。但光在开头写"请勿预测"不够:
+// 「约束容易被忽略,而任务会被执行」。故把提问模板与数据一起交付,
+// 把外部模型放进它真正能胜任的角色(审稿人,不是分析师)。
+{
+  const { buildBrief } = await import('./share')
+  const b = buildBrief({ dashboard: dash, verdict: null })
+
+  ok('简报自带「怎么问」小节', b.includes('把这份数据交给外部模型时，请这样问'))
+  ok('明说不能用来回答买卖与走势',
+    b.includes('不能') && b.includes('走势往哪走'))
+  ok('给出前瞻性内容为零这个事实依据', b.includes('前瞻性内容为零'))
+  ok('指出走势结论来自模型自己的先验，不来自数据',
+    b.includes('先验') && b.includes('不来自这份数据'))
+  ok('把外部模型定位为审稿人而非分析师',
+    b.includes('审稿人') && b.includes('不是分析师'))
+
+  // 模板必须覆盖五件事，且都是可核验的动作，不含预测
+  for (const task of ['找矛盾', '验算术', '指出证据不足', '指出缺什么', '挑战归因']) {
+    ok(`提问模板包含「${task}」`, b.includes(task))
+  }
+  ok('模板要求给出出处，否则无法核验',
+    b.includes('出处'))
+  ok('模板允许"找不到问题"作为合法回答（否则模型会为了有输出而编）',
+    b.includes('不要为了有输出而编一条'))
+
+  // 模板本身不得含任何邀请预测的措辞
+  const tpl = b.slice(b.indexOf('请这样问'))
+  for (const banned of ['走势判断如何', '会不会涨', '目标价', '建议买入', '建议卖出', '择时']) {
+    ok(`模板不出现「${banned}」`, !tpl.includes(banned))
+  }
+  ok('模板附实证：曾靠"找矛盾"查出口径与熔断并存的错误',
+    b.includes('审稿这件事，外部模型确实做得到'))
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
