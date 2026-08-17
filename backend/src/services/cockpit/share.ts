@@ -31,6 +31,7 @@
 
 import type { Dashboard, HoldingRow, MainlineRow, NextLayerRow } from './dashboard'
 import type { Verdict } from './verdict'
+import { byGrade } from './intradayFields'
 
 export interface ShareInput {
   dashboard: Dashboard
@@ -85,7 +86,7 @@ function preamble(date: string, session: string, intraday = false): string {
     // 标题里必须带上"盘中运行"。只在正文里放横幅是不够的 ——
     // 标题写「盘后」而数据是盘中的，标题自己就在误导，
     // 而标题恰恰是被引用、被截图、被摘录时唯一一定会带上的那一行。
-    `# 投资驾驶舱数据摘要　${date}　${session}${intraday ? '口径·⚠ 盘中运行（数据未定价）' : ''}`,
+    `# 《鸿鹄理财》数据摘要　${date}　${session}${intraday ? '口径·⚠ 盘中运行（数据未定价）' : ''}`,
     '',
     '## 读这份数据前请先读这一段（对人与对大模型同样适用）',
     '',
@@ -202,11 +203,25 @@ export function buildBrief(input: ShareInput): string {
   const w = (s = '') => L.push(s)
 
   // 盘中横幅置于最前 —— 放在后面等于没放：贴进外部模型时经常只取前半段。
+  // 盘中横幅不只说"仅供参考"——那会让三类读数被一起打折。
+  // 逐类点明：哪些可直接用、哪些是临时值、哪些系统性失真。
   const banner = intraday
     ? [
       '> ⚠ **本摘要为盘中生成，不是收盘数据。**',
-      '> 最新K线尚未定价，表中「今日」「5日」「20日」等读数为当日临时值，',
-      '> 收盘后会变。**请勿据此判断当日涨跌幅或做任何跨日比较。**',
+      '> 最新一根 K 线是当天的未完成 K 线：「收」是当前价而非收盘价，',
+      '> 「高/低」只到目前为止，「量」不完整。以它为输入的计算拿到的是一根',
+      '> "假装已完成"的日线。**盘中读数分三类，性质完全不同：**',
+      '>',
+      `> · **可直接用（${byGrade('STABLE').length} 类）**：`
+      + '持仓与现金、执行债务、战略资格、节点利润份额、扣非占比与毛利率、S1/S2 核验 ——',
+      '>   全是账务事实或季报数据，盘中盘后同一个值。',
+      `> · **临时值（${byGrade('PROVISIONAL').length} 类）**：`
+      + '股票市值与组合总资产、单票仓位与是否超限、回撤与熔断等级、PE 分位 ——',
+      '>   量级可信，但**阈值附近会翻转**。',
+      `> · **系统性失真（${byGrade('DISTORTED').length} 类，不可用于研判）**：`
+      + '今日涨跌幅、涨跌量比、成交额比值、MA 距离、相对强度、市场阶段 ——',
+      '>   它们把不完整的当日 K 线当成完整的来算；等收盘不会收敛到现在这个数附近，而是换一个数。',
+      '>',
       '> 本次运行未归档，不进入 30 天观察期记录。',
       '',
     ]
@@ -400,7 +415,7 @@ export function buildBrief(input: ShareInput): string {
   w('')
   w('---')
   w('')
-  w(`本摘要由 TIOS 驾驶舱导出。规则指纹随每日审计归档，冻结期内不新增决策规则。`)
+  w(`本摘要由《鸿鹄理财》驾驶舱导出。规则指纹随每日审计归档，冻结期内不新增决策规则。`)
   w(`${d.noCompositeScoreNote}`)
 
   return L.join('\n')

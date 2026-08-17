@@ -793,9 +793,9 @@ console.log('\n【外发摘要脱敏】')
   ok('盘后运行不出现盘中横幅', !closed.includes('盘中生成'))
   ok('盘中运行出现横幅', live.includes('盘中生成'))
   ok('横幅在标题之前（贴进模型时常只取前半段，放后面等于没放）',
-    live.indexOf('盘中生成') < live.indexOf('# 投资驾驶舱数据摘要'))
-  ok('横幅说明读数为临时值且收盘后会变',
-    live.includes('临时值') && live.includes('收盘后会变'))
+    live.indexOf('盘中生成') < live.indexOf('# 《鸿鹄理财》数据摘要'))
+  ok('横幅说明读数为临时值，且说明失真类不会自动变准',
+    live.includes('临时值') && live.includes('换一个数'))
   ok('横幅说明本次未归档', live.includes('未归档'))
   ok('标题本身带盘中标记（标题是被摘录时唯一一定会带上的那一行）',
     live.split('\n').find(l => l.startsWith('# '))?.includes('盘中运行') === true,
@@ -839,6 +839,72 @@ console.log('\n【外发摘要脱敏】')
   }
   ok('模板附实证：曾靠"找矛盾"查出口径与熔断并存的错误',
     b.includes('审稿这件事，外部模型确实做得到'))
+}
+
+// ── 盘中读数分级：三类必须分开，不能一起打折 ──
+//
+// 来自委员会的提问：「盘中更新一次，数据是什么样子？能不能当研判依据？」
+// 只给一个"仅供参考"的横幅是不够的 —— 那会让三类读数被一起怀疑，
+// 于是完全可靠的那些（持仓、利润份额、执行债务）也被打折，
+// 而真正会误导人的那类（用不完整 K 线算的相对强度）反倒没被单独点出来。
+{
+  const { FIELD_GRADES, byGrade, intradayVerdict, GRADE_TEXT } =
+    await import('./intradayFields')
+  const { buildBrief } = await import('./share')
+
+  ok('分级表覆盖三档', new Set(FIELD_GRADES.map(f => f.grade)).size === 3)
+  ok('三档文案各不相同（否则读者无法区分）',
+    new Set(Object.values(GRADE_TEXT)).size === 3)
+  ok('每一项都写明理由（无理由的分级等于拍脑袋）',
+    FIELD_GRADES.every(f => f.why.length >= 10))
+  // 「同上」会在按档筛选与逗号连排后指向别的项 —— 每条理由必须自足
+  ok('理由中不出现「同上」（按档筛选后它会指向别的项）',
+    FIELD_GRADES.every(f => !f.why.includes('同上')),
+    FIELD_GRADES.filter(f => f.why.includes('同上')).map(f => f.field).join('、'))
+
+  // 关键分类必须落在正确的档里
+  const gradeOf = (kw: string) => FIELD_GRADES.find(f => f.field.includes(kw))?.grade
+  ok('持仓与现金 = 可直接用', gradeOf('持仓股数') === 'STABLE')
+  ok('节点利润份额 = 可直接用（来自季报，与盘中无关）',
+    gradeOf('存量份额') === 'STABLE')
+  ok('战略资格 = 可直接用（战略层裁定，非数据推出）',
+    gradeOf('战略资格') === 'STABLE')
+  ok('回撤与熔断 = 临时值（阈值附近会翻转）',
+    gradeOf('自峰值回撤') === 'PROVISIONAL')
+  ok('单票仓位 = 临时值', gradeOf('单票仓位') === 'PROVISIONAL')
+  ok('涨跌量比 = 系统性失真（用不完整成交量算）',
+    gradeOf('涨跌量比') === 'DISTORTED')
+  ok('MA 距离 = 系统性失真（未完成的今日价进了均线）',
+    gradeOf('MA20') === 'DISTORTED')
+  ok('相对强度 = 系统性失真', gradeOf('相对强度') === 'DISTORTED')
+  ok('市场阶段 = 系统性失真', gradeOf('市场阶段') === 'DISTORTED')
+
+  // 熔断那条必须附实测证据，否则"会翻转"只是一句断言
+  ok('熔断项引用了同一上午翻转的实测',
+    FIELD_GRADES.find(f => f.field.includes('熔断'))!.why.includes('翻转'))
+
+  // 结论刻意不给二元答案
+  const v = intradayVerdict()
+  ok('结论不是"能/不能"的二元答案，而是逐类说明',
+    v.includes('可直接用') && v.includes('临时值') && v.includes('系统性失真'))
+  ok('结论明确指出系统性失真那类不可用于研判', v.includes('不可用于研判'))
+
+  // 盘中横幅必须带上三类
+  const live = buildBrief({ dashboard: dash, verdict: null, intraday: true })
+  ok('盘中横幅逐类点明三档',
+    live.includes('可直接用（') && live.includes('临时值（')
+    && live.includes('系统性失真（'))
+  ok('横幅说明未完成 K 线是"假装已完成"的日线',
+    live.includes('假装已完成'))
+  ok('横幅点明失真类等收盘不会收敛而是换一个数',
+    live.includes('换一个数'))
+  ok('横幅里的类数与分级表一致（写死数字会与表脱节）',
+    live.includes(`可直接用（${byGrade('STABLE').length} 类）`)
+    && live.includes(`系统性失真（${byGrade('DISTORTED').length} 类`))
+
+  // 产品名
+  ok('简报标题使用《鸿鹄理财》', live.includes('《鸿鹄理财》数据摘要'))
+  ok('简报落款使用《鸿鹄理财》', live.includes('本摘要由《鸿鹄理财》驾驶舱导出'))
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

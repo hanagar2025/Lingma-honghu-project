@@ -49,7 +49,7 @@ if (home.status === 0) {
   bad(`首页取不到：${home.error}`)
 } else {
   const title = /<title>(.*?)<\/title>/.exec(home.body ?? '')?.[1] ?? '（无标题）'
-  if ((home.body ?? '').includes('TIOS')) console.log(`  ${F.ok} 首页是本项目（${title}）`)
+  if ((home.body ?? '').includes('鸿鹄理财') || (home.body ?? '').includes('TIOS')) console.log(`  ${F.ok} 首页是本项目（${title}）`)
   else bad(`首页不是本项目，实际标题「${title}」`)
 }
 
