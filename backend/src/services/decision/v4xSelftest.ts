@@ -29,20 +29,21 @@ import {
 import { CORE_MEANS_OWN_NOT_ADD } from './hunter'
 import {
   APPARENT_ERROR_LAYERS, ARCHITECTURE_CLOSED_AT_V4X, AUDITABLE_NOT_CORRECT,
-  CHALLENGE_RULES_REQUIRES, DAILY_AUDIT, DAILY_QUESTION, DAILY_WORK,
+  CHALLENGE_RULES_REQUIRES, DAILY_AUDIT, DAILY_QUESTION, DAILY_WORK, DO_NOT_RUSH,
   EVIDENCE_OUTCOME_CANNOT_REVISE_QUALITY, EVIDENCE_OUTCOME_MAY_REVISE_RULE_BELIEF,
-  FIRST_QUESTION_ON_PROBLEM, FOUR_CANNOTS, FROZEN_RULE_FINGERPRINT,
-  HOLD_AS_DECISION, HOLD_IS_AN_ACTIVE_DECISION, INDICATORS_FROZEN,
-  LEGAL_MOVE_QUESTION, LIFELINE_FROZEN, MATURITY, MISSION, MOST_VALUABLE_NOW,
-  ONE_CASE_CANNOT_CHANGE_RULES, OWN_BUT_CANNOT_RAISE, PAGE_ARCHITECTURE_FROZEN,
-  PHASE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME, PRIMARY_ARTIFACT, PROBLEM_GAPS,
-  RETURNS_CANNOT_JUDGE_SYSTEM, RULES_FROZEN, SEVEN_QUESTIONS, THREE_LEDGERS,
-  V5_MUST_BE_FORCED_BY_DATA, admits, answerIsIllegal, askAddIndicator,
-  classifyProblem, discardFamilyBecauseOneLoss, evidenceOutcomeCannotReviseQuality,
-  laterLossCannotMarkViolation, laterReturnCannotReviseQuality,
-  laterRiseCannotDemandAdd, legalMoveOf, lowerAddThresholdBecauseMissedRally,
-  oneInterestingCaseCannotChangeRules, priceCannotFillEvidenceOutcome,
-  splitApparentError,
+  FIRST_QUESTION_ON_PROBLEM, FOUR_CANNOTS, FREEZE_BASELINE, FROZEN_RULE_FINGERPRINT,
+  HOLD_AS_DECISION, HOLD_IS_AN_ACTIVE_DECISION, INDICATORS_FROZEN, LET_IT_RUN,
+  LEGAL_MOVE_QUESTION, LIFELINE_FROZEN, LONG_TERM_GOAL, MATURITY, MISSION,
+  MOST_VALUABLE_NOW, ONE_CASE_CANNOT_CHANGE_RULES, OWN_BUT_CANNOT_RAISE,
+  PAGE_ARCHITECTURE_FROZEN, PHASE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME,
+  PRIMARY_ARTIFACT, PROBLEM_GAPS, RETURNS_CANNOT_JUDGE_SYSTEM, RULES_FROZEN,
+  SEMANTICS_FROZEN, SEVEN_QUESTIONS, THREE_LEDGERS, V5_MUST_BE_FORCED_BY_DATA,
+  V5_UNDEFINED, admits, answerIsIllegal, askAddIndicator, classifyProblem,
+  discardFamilyBecauseOneLoss, evidenceOutcomeCannotReviseQuality,
+  feelingSystemIsInsufficient, laterLossCannotMarkViolation,
+  laterReturnCannotReviseQuality, laterRiseCannotDemandAdd, legalMoveOf,
+  lowerAddThresholdBecauseMissedRally, oneInterestingCaseCannotChangeRules,
+  priceCannotFillEvidenceOutcome, qualifiesToChallengeFreeze, splitApparentError,
 } from './charter'
 import { RISK_CAN_PRODUCE } from './lifecycle'
 import { buildEvidence } from './evidence'
@@ -484,9 +485,14 @@ ok('架构开发停在 V4.x，V5 由数据逼出',
 // ══════════════════════════════════════════════════════════════
 ok('里程碑是 Decision Validation Phase',
   PHASE === '鸿鹄 V4.x — Decision Validation Phase')
-ok('规则 / 指标 / 生命线 / 页面架构全部冻结',
-  RULES_FROZEN && INDICATORS_FROZEN && LIFELINE_FROZEN && PAGE_ARCHITECTURE_FROZEN)
+ok('规则 / 指标 / 生命线 / 页面架构 / 决策语义全部冻结',
+  RULES_FROZEN && INDICATORS_FROZEN && LIFELINE_FROZEN
+  && PAGE_ARCHITECTURE_FROZEN && SEMANTICS_FROZEN)
 ok('冻结指纹仍是 a401aaf3271e', FROZEN_RULE_FINGERPRINT === 'a401aaf3271e')
+ok('冻结基线完整，V5 不定义',
+  FREEZE_BASELINE.fingerprint === 'a401aaf3271e'
+  && FREEZE_BASELINE.v5 === null
+  && V5_UNDEFINED === true)
 ok('不追求每天正确，追求每天可审计',
   AUDITABLE_NOT_CORRECT.includes('可审计的动作')
   && AUDITABLE_NOT_CORRECT.includes('不追求每天都做出正确动作'))
@@ -589,6 +595,23 @@ ok('未来一年要形成三张表：决策 / 证据兑现 / 规则审计',
   && THREE_LEDGERS[2]!.asks.includes('系统性偏差'))
 ok('现在最有价值的动作是让 V4.x 安静地运行',
   MOST_VALUABLE_NOW.includes('安静地运行') && !('V5' in MATURITY))
+ok('「系统好像不够」本身不是理由', feelingSystemIsInsufficient() === false)
+ok('缺数据不能挑战冻结',
+  qualifiesToChallengeFreeze('MISSING_DATA', true) === false)
+ok('缺证据不能挑战冻结',
+  qualifiesToChallengeFreeze('MISSING_EVIDENCE', true) === false)
+ok('规则被样本证伪但只有一例，仍不能挑战冻结',
+  qualifiesToChallengeFreeze('RULE_FALSIFIED_BY_SAMPLE', false) === false)
+ok('只有第三种且同类样本反复出现，才有资格挑战冻结',
+  qualifiesToChallengeFreeze('RULE_FALSIFIED_BY_SAMPLE', true) === true)
+ok('有资格挑战 ≠ 现在改规则',
+  admits({ improves: 'EVIDENCE', why: '规则被样本证伪' }) === false)
+ok('长期目标是用自己的历史决策数据证明哪些证据真的重要',
+  LONG_TERM_GOAL.includes('我们认为哪些证据重要')
+  && LONG_TERM_GOAL.includes('历史决策数据证明哪些证据真的重要'))
+ok('这一步不能急，现在就让它跑',
+  DO_NOT_RUSH === true && LET_IT_RUN.includes('现在就让它跑')
+  && LET_IT_RUN.includes('运行，而不是发明'))
 
 console.log(`\n═══ 结果：${pass} 通过 / ${fail} 失败 ═══\n`)
 if (fail > 0) process.exit(1)

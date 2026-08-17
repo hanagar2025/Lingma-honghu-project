@@ -42,7 +42,20 @@ export const RULES_FROZEN = true
 export const INDICATORS_FROZEN = true
 export const LIFELINE_FROZEN = true
 export const PAGE_ARCHITECTURE_FROZEN = true
+export const SEMANTICS_FROZEN = true
 export const FROZEN_RULE_FINGERPRINT = 'a401aaf3271e'
+export const V5_UNDEFINED = true
+
+export const FREEZE_BASELINE = {
+  rules: RULES_FROZEN,
+  indicators: INDICATORS_FROZEN,
+  lifeline: LIFELINE_FROZEN,
+  pages: PAGE_ARCHITECTURE_FROZEN,
+  semantics: SEMANTICS_FROZEN,
+  fingerprint: FROZEN_RULE_FINGERPRINT,
+  phase: PHASE,
+  v5: null,
+} as const
 
 /**
  * 鸿鹄不追求每天都做出正确动作，而追求每天都做出可审计的动作。
@@ -78,6 +91,22 @@ export function classifyProblem(gap: {
   if (gap.missingData) return 'MISSING_DATA'
   if (gap.missingEvidence) return 'MISSING_EVIDENCE'
   return 'RULE_FALSIFIED_BY_SAMPLE'
+}
+
+/** 「系统好像不够」本身不是理由。必须先过三问。 */
+export function feelingSystemIsInsufficient(): false {
+  return false
+}
+
+/**
+ * 只有「规则已经被样本证明有问题」，并且同类样本反复出现，
+ * 才有资格挑战冻结规则。缺数据、缺证据都不构成资格。
+ * 有资格 ≠ 现在改规则。
+ */
+export function qualifiesToChallengeFreeze(
+  gap: ProblemGap | null, repeatedSameKind: boolean,
+): boolean {
+  return gap === 'RULE_FALSIFIED_BY_SAMPLE' && repeatedSameKind === true
 }
 
 export const DAILY_WORK = [
@@ -275,6 +304,12 @@ export const THREE_LEDGERS = [
 
 export const MOST_VALUABLE_NOW =
   '现在最有价值的动作就是：让 V4.x 安静地运行。'
+
+export const LONG_TERM_GOAL =
+  '让鸿鹄逐渐从「我们认为哪些证据重要」，变成「鸿鹄自己的历史决策数据证明哪些证据真的重要」。'
+
+export const DO_NOT_RUSH = true
+export const LET_IT_RUN = '现在就让它跑。运行，而不是发明；记录，而不是解释；验证，而不是猜测。'
 
 export const MATURITY = {
   V1: '风险监控器：哪里违规？',
