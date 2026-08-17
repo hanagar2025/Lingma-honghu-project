@@ -1,10 +1,10 @@
 {
   "frozenAt": "2026-08-17",
   "tradingDays": 30,
-  "hash": "aa4bd8dfca46",
-  "entryCount": 43,
+  "hash": "a401aaf3271e",
+  "entryCount": 51,
   "byDomain": {
-    "GUARD": "d771824c9e3a",
+    "GUARD": "4b68be0acd64",
     "LEGAL_REASON": "0de3f52d932c",
     "POSITION_LIMIT": "b481dd150240",
     "PRICE_WINDOW": "7f8a35934192",
@@ -13,9 +13,9 @@
     "VALUATION": "5d9de12e91c1"
   },
   "tierCounts": {
-    "ACCOUNTING": 41,
+    "ACCOUNTING": 49,
     "VALIDATED": 1,
     "OBSERVATION": 1
   },
-  "note": "委员会 2026-08-17 授权《鸿鹄 V3：资本生命线》：Ownership/Exposure/Action 三轴、猎人九段、九层证据链、证据变化→生命线迁移。不新增技术指标、不填 R4、不把组合超限写成公司变坏、质量不能推出 100%。GUARD +7 条是这套取值的指纹登记，不是新的买卖阈值。冻结期内仍不新增决策规则。"
+  "note": "委员会 2026-08-17 授权《鸿鹄 V4：证据 → 资本向上迁移》：R4 市场隐含 vs 可证明增长、未来盈利证据链、资本向上迁移闸门。PE 不能填 R4，价格不能冒充前瞻，预期差本身不能加仓，STRETCHED 不产生卖出。GUARD +8 条是这套取值的指纹登记，不是新的买卖阈值。冻结期内仍不新增决策规则。"
 }

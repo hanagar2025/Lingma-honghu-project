@@ -10,7 +10,7 @@
  *   5. 海光：值得拥有 + 核心持有 + 降暴露
  *   6. 兆易：清退 + 存储变好也不能回来
  *   7. 加仓看证据层变多（3→5），不看价格
- *   8. 首屏五块 + 六句话 + 今日最多三件事
+ *   8. 首屏五块 + 鸿鹄五问 + 今日最多三件事
  */
 
 import { readFileSync } from 'node:fs'
@@ -107,8 +107,8 @@ const tianfu: JudgeInput = {
 
 {
   const j = judgeOne(zhongwei)
-  ok('中微猎人段是加仓（证据强化，不是涨了）', j.hunter === 'ADD', j.hunter)
-  ok('中微资本动作是增加资本', j.capitalAction === 'INCREASE_CAPITAL')
+  ok('中微猎人段是核心持有（证据强化 ≠ 加仓资格）', j.hunter === 'CORE', j.hunter)
+  ok('中微资本动作是维持', j.capitalAction === 'HOLD_CAPITAL')
   ok('中微理由写明不是因为涨了', j.oneReason.includes('不是因为涨了'))
 }
 
@@ -138,7 +138,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
 }
 
 {
-  const files = ['migrate.ts', 'evidence.ts', 'hunter.ts', 'triaxis.ts']
+  const files = ['migrate.ts', 'evidence.ts', 'hunter.ts', 'triaxis.ts', 'r4.ts', 'forward.ts', 'capitalGates.ts']
   for (const f of files) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf-8')
     const code = src.split('\n').filter(l => {
@@ -177,6 +177,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'STRATEGIC_CORE',
     evidence: strong, prevEvidence: weak,
     risks: [], reviewOnly: false,
+    companyProfitUp: true, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('观察不能直接跳到核心', blocked.to === 'OBSERVE' || blocked.to === 'ENTRY', blocked.to)
   ok('非法跳跃被标成 legal=false 或停在建仓门槛',
@@ -187,10 +188,11 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'STRATEGIC_CORE',
     evidence: strong, prevEvidence: weak,
     risks: [], reviewOnly: false,
+    companyProfitUp: true, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('建仓 + 证据层增加 → 加仓', add.to === 'ADD' && add.direction === 'FORWARD', add.to)
   ok('加仓理由写明证据层增加、不是价格',
-    add.why.includes('证据') && add.why.includes('不是因为价格'))
+    add.why.includes('证据') && add.why.includes('不是因为涨了'))
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -203,6 +205,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'STRATEGIC_CORE',
     evidence: core.evidence, prevEvidence: core.evidence,
     risks: ['R1_PORTFOLIO'], reviewOnly: false,
+    companyProfitUp: true, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('R1 不把核心迁成战术减仓', fromCore.to === 'CORE' && fromCore.direction === 'HOLD')
 
@@ -211,6 +214,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'STRATEGIC_CORE',
     evidence: core.evidence, prevEvidence: core.evidence,
     risks: ['R2_COMPANY'], reviewOnly: false,
+    companyProfitUp: true, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('R2 把核心迁成战术减仓（公司减仓）', r2.to === 'TACTICAL_REDUCE')
   ok('R2 理由点明公司减仓，并写明不是组合超限、不是战略证伪',
@@ -221,6 +225,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'RETIRED',
     evidence: judgeOne(zhaoyi).evidence, prevEvidence: core.evidence,
     risks: [], reviewOnly: false,
+    companyProfitUp: false, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('清退把核心迁成价值退出（战略减仓）', exit.to === 'VALUE_EXIT')
   ok('价值退出理由点明不是战术、不是组合',
@@ -234,6 +239,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'RETIRED',
     evidence: zy.evidence, prevEvidence: zy.evidence,
     risks: [], reviewOnly: false,
+    companyProfitUp: false, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('存储节点变好也不能从价值退出迁走', stay.to === 'VALUE_EXIT' && stay.direction === 'HOLD')
 }
@@ -244,6 +250,7 @@ ok('priceCanMigrate() 恒为 false', priceCanMigrate() === false)
     ownership: 'STRATEGIC_ALLOWED',
     evidence: judgeOne(tianfu).evidence, prevEvidence: judgeOne(zhaoyi).evidence,
     risks: [], reviewOnly: false,
+    companyProfitUp: true, forward: 'UNKNOWN', r4: 'UNKNOWN',
   })
   ok('资格重新打开才进入退出后重新观察', released.to === 'REOBSERVE', released.to)
 }
@@ -278,7 +285,8 @@ ok('后四层不可测',
     ok(`${id} 恒为 UNKNOWN`, layerOf(j.evidence, id).status === 'UNKNOWN')
   }
   ok('预期层事实拒绝 PE/均线',
-    layerOf(j.evidence, 'EXPECTATION').fact.includes('不得用 PE'))
+    layerOf(j.evidence, 'EXPECTATION').fact.includes('PE')
+    && layerOf(j.evidence, 'EXPECTATION').fact.includes('不允许进行预期风险判断'))
   ok('风险轴仍不含 R4', !j.risks.includes('R4_EXPECTATION'))
 }
 
@@ -304,7 +312,7 @@ ok('核心持有文案不含减仓', !HUNTER_TEXT.CORE.includes('减仓'))
 }
 
 // ══════════════════════════════════════════════════════════════
-// 八、首屏：五块 + 六句话 + 最多三件事
+// 八、首屏：五块 + 鸿鹄五问 + 最多三件事
 // ══════════════════════════════════════════════════════════════
 {
   const actions: Action[] = [{
@@ -391,14 +399,14 @@ ok('核心持有文案不含减仓', !HUNTER_TEXT.CORE.includes('减仓'))
   ok('今日任务含海光组合超限', v3.todayTasks.some(t => t.includes('海光') && t.includes('组合超限')))
   ok('今日任务含兆易不因技术减仓', v3.todayTasks.some(t => t.includes('兆易') && t.includes('战略资格已经否决')))
   ok('今日任务含电力不做主线切换', v3.todayTasks.some(t => t.includes('电力') && t.includes('不做主线切换')))
-  ok('六句话正好 6 条', v3.sentences.length === 6)
+  ok('鸿鹄五问正好 5 条', v3.sentences.length === 5)
   ok('预期风险恒为未测', v3.riskBoard.expectation === '未测')
   ok('组合风险为超限', v3.riskBoard.portfolio === '超限')
-  ok('光通信板面是成立或强化',
+  ok('光通信板面是强化或稳定',
     v3.strategy.find(s => s.mainlineId === 'optical')?.board === '强化'
-    || v3.strategy.find(s => s.mainlineId === 'optical')?.board === '成立')
-  ok('电力板面是不可判断',
-    v3.strategy.find(s => s.mainlineId === 'power')?.board === '不可判断')
+    || v3.strategy.find(s => s.mainlineId === 'optical')?.board === '稳定')
+  ok('电力板面是 UNKNOWN',
+    v3.strategy.find(s => s.mainlineId === 'power')?.board === 'UNKNOWN')
   ok('生命线表海光 ✓ 核心 减少暴露', (() => {
     const r = v3.lifeline.find(x => x.code === '688041')
     return !!r && r.ownYes && r.hunter === 'CORE' && r.action === 'REDUCE_EXPOSURE'
@@ -432,7 +440,7 @@ ok('核心持有文案不含减仓', !HUNTER_TEXT.CORE.includes('减仓'))
 // 九、源码不引入新指标
 // ══════════════════════════════════════════════════════════════
 {
-  const files = ['hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts']
+  const files = ['hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts', 'r4.ts', 'forward.ts', 'capitalGates.ts']
   for (const f of files) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf-8')
     const imports = src.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n')
@@ -460,7 +468,8 @@ ok('核心持有文案不含减仓', !HUNTER_TEXT.CORE.includes('减仓'))
   })
   ok('未入册 → 发现', inferHunter({
     held: false, ownership: 'STRATEGIC_WATCH', strategic: 'WATCH',
-    risks: [], evidence: ev, factsStrengthening: false, inUniverse: false,
+    risks: [], evidence: ev, inUniverse: false,
+    companyProfitUp: false, forward: 'UNKNOWN', r4: 'UNKNOWN',
   }) === 'DISCOVER')
 }
 

@@ -20,9 +20,12 @@ import {
 import {
   STRATEGIC_TEXT, TACTICAL_TEXT, EXIT_TEXT,
 } from '../decision/strategy'
-import { HUNTER_TEXT } from '../decision/hunter'
+import { HUNTER_TEXT, PRICE_IS_NOT_A_MIGRATION_CAUSE } from '../decision/hunter'
 import { CONVICTION_CAP, PORTFOLIO_HARD_CAP, QUALITY_NEVER_IMPLIES_FULL } from '../decision/triaxis'
 import { LAYER_DEFS } from '../decision/evidence'
+import { ALIGNED_BAND, peCanFillR4 } from '../decision/r4'
+import { FORWARD_ITEMS, priceCanFillForward } from '../decision/forward'
+import { CORE_MIN, ENTRY_MIN, TOP_UP_NEW } from '../decision/capitalGates'
 import { NODE_TAXONOMY } from '../cockpit/nodes'
 import { RED_EXTREME_RET10_THRESHOLD } from '../msr/promotion'
 import { PE_SANITY_CEILING } from '../msr/valuation'
@@ -214,6 +217,52 @@ export function buildRuleRegistry(): RuleEntry[] {
     domain: 'GUARD', key: 'r1DoesNotMigrateHunter', value: true,
     tier: 'ACCOUNTING',
     definedIn: 'decision/migrate.ts:migrate（R1 不把核心持有改写成战术减仓）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'peCanFillR4', value: peCanFillR4(),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/r4.ts:peCanFillR4（PE 分位不是市场价格隐含增长）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'priceCanFillForward', value: priceCanFillForward(),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/forward.ts:priceCanFillForward（价格不能冒充未来盈利证据）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'entryMinFamilies',
+    value: ENTRY_MIN.join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/capitalGates.ts:ENTRY_MIN（建仓最低完整度，不是分数）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'coreMinFamilies',
+    value: CORE_MIN.join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/capitalGates.ts:CORE_MIN（前瞻与 R4 未知不挡核心）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'topUpNewFamilies',
+    value: TOP_UP_NEW.join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/capitalGates.ts:TOP_UP_NEW（追加必须是新的独立证据族）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'r4AlignedBand',
+    value: ALIGNED_BAND,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/r4.ts:ALIGNED_BAND（分档，不是评分）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'forwardItemIds',
+    value: FORWARD_ITEMS.join('|'),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/forward.ts:FORWARD_ITEMS（细项给机器，投资人只看一个词）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'priceIsNotAMigrationCause',
+    value: PRICE_IS_NOT_A_MIGRATION_CAUSE,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/hunter.ts:PRICE_IS_NOT_A_MIGRATION_CAUSE',
   })
 
   // ── 价格窗口（唯一具备决策效力的价格阈值） ──

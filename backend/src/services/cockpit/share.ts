@@ -33,7 +33,7 @@ import type { Dashboard, HoldingRow, MainlineRow, NextLayerRow } from './dashboa
 import type { Verdict } from './verdict'
 import type { DecisionCockpit } from '../decision/cockpitV2'
 import { HUNTER_TEXT } from '../decision/hunter'
-import { CAPITAL_ACTION_TEXT } from '../decision/triaxis'
+import { CAPITAL_ACTION_TEXT, EVIDENCE_TONE_TEXT, OWNERSHIP_TEXT } from '../decision/triaxis'
 import { byGrade } from './intradayFields'
 
 export interface ShareInput {
@@ -236,12 +236,14 @@ export function buildBrief(input: ShareInput): string {
   w(preamble(d.date, d.session === 'PRE_OPEN' ? '盘前' : '盘后', intraday))
 
   if (v2) {
-    w('## 〇、资本生命线（先读这一节）')
+    w('## 〇、资本配置操作系统（先读这一节）')
     w('')
-    w('机器每天只回答这六句话。后面的表是依据，不是另一套判断。')
+    w('机器每天只回答鸿鹄五问。后面的表是依据，不是另一套判断。')
+    w('')
+    w(v2.maxim)
     w('')
     for (const q of v2.sentences) {
-      w(`**${['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]} ${q.question}**`)
+      w(`**${['①', '②', '③', '④', '⑤'][q.no - 1]} ${q.question}**`)
       w('')
       w(q.answer)
       w('')
@@ -252,15 +254,23 @@ export function buildBrief(input: ShareInput): string {
       v2.todayTasks.forEach((t, i) => w(`${i + 1}. ${t}`))
       w('')
     }
-    w('### 当前持仓生命线')
+    w('### 资本生命线')
     w('')
-    w('| 标的 | 战略 | 生命线 | 当前动作 | 核心原因 |')
-    w('|---|---|---|---|---|')
+    w('| 公司 | Ownership | Evidence | Exposure | Action | 生命线 | 为什么 |')
+    w('|---|---|---|---|---|---|---|')
     for (const r of v2.lifeline ?? []) {
-      const own = r.ownYes ? '✓' : '✗'
-      w(`| ${r.name} | ${own} | ${HUNTER_TEXT[r.hunter]} | ${CAPITAL_ACTION_TEXT[r.action]} | ${r.oneReason} |`)
+      const own = `${r.ownYes ? '✓' : '✗'} ${OWNERSHIP_TEXT[r.ownership]}`
+      w(`| ${r.name} | ${own} | ${EVIDENCE_TONE_TEXT[r.evidenceTone]} | ${r.exposure} | ${CAPITAL_ACTION_TEXT[r.action]} | ${HUNTER_TEXT[r.hunter]} | ${r.oneReason} |`)
     }
     w('')
+    if (v2.unjudgable?.length) {
+      w('### 当前无法判断')
+      w('')
+      for (const u of v2.unjudgable) {
+        w(`- **${u.topic}**：${u.why} → ${u.forbidden}`)
+      }
+      w('')
+    }
     if (v2.riskBoard) {
       w('### 风险')
       w('')

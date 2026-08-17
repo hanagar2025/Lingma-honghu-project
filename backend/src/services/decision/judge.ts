@@ -36,9 +36,11 @@ import { buildEvidence, type EvidenceChain, type EvidenceFacts } from './evidenc
 import { inferHunter, migrate, type Migration } from './migrate'
 import { type HunterStage } from './hunter'
 import {
-  buildExposure, judgeOwnership,
-  type CapitalAction, type Exposure, type Ownership,
+  buildExposure, judgeEvidenceAxis, judgeOwnership,
+  type CapitalAction, type EvidenceTone, type Exposure, type Ownership,
 } from './triaxis'
+import { measureExpectation, type ExpectationGap } from './r4'
+import { buildForward, type ForwardEvidence, type ForwardFact } from './forward'
 
 /** 账务层已经成立的法定触发。本文件不重算阈值。 */
 export type AccountingTrigger =
@@ -85,6 +87,12 @@ export interface JudgeInput {
   /** 昨日生命线。缺省则只落位、不迁移。 */
   prevHunter?: HunterStage | null
   prevEvidence?: EvidenceChain | null
+  /** R4 两端。缺省不可测。PE 分位若传入也会被丢掉。 */
+  impliedGrowth?: number | null
+  supportedGrowth?: number | null
+  pePercentile?: number | null
+  /** 前瞻细项。缺省整链 UNKNOWN。 */
+  forwardFacts?: readonly ForwardFact[]
 }
 
 export type WorthOwning = 'YES' | 'NO' | 'UNKNOWN'
@@ -130,6 +138,10 @@ export interface Judged {
   evidence: EvidenceChain
   migration: Migration
   oneReason: string
+  evidenceTone: EvidenceTone
+  evidenceNote: string
+  expectation: ExpectationGap
+  forward: ForwardEvidence
 }
 
 const R1_TRIGGERS: readonly AccountingTrigger[] = [
@@ -162,7 +174,6 @@ export function judgeOne(input: JudgeInput): Judged {
   const positionBudget = input.posPct === null
     ? 'UNKNOWN'
     : input.accounting.some(t => R1_TRIGGERS.includes(t)) ? 'OVER' : 'WITHIN'
-  const exit = pickExit(strategic, risks, factsStrengthening, acts)
   const technicalRole: TechnicalRole = input.reviewTriggers.length > 0 ? 'REVIEW' : 'NONE'
   const ownership = judgeOwnership({
     retiredC: !!member?.retiredC,
@@ -173,10 +184,31 @@ export function judgeOne(input: JudgeInput): Judged {
     inUniverse: !!member,
   })
   const exposure = buildExposure(input.posPct, ownership)
-  const evidence = buildEvidence(toEvidenceFacts(member, combat, strategyAllows, input))
+  const forward = buildForward(input.forwardFacts ?? [])
+  const expectation = measureExpectation({
+    impliedGrowth: input.impliedGrowth ?? null,
+    supportedGrowth: input.supportedGrowth ?? null,
+    pePercentile: input.pePercentile ?? null,
+  })
+  const companyProfitUp = (input.company?.npAbsDelta ?? 0) > 0
+  const evidence = buildEvidence({
+    ...toEvidenceFacts(member, combat, strategyAllows, input),
+    forwardTone: forward.tone,
+    forwardFact: forward.why,
+    r4Verdict: expectation.verdict,
+    r4Fact: expectation.why,
+  })
+  const evidenceAxis = judgeEvidenceAxis({
+    ownership,
+    factsStrengthening,
+    nodeDelta: input.node?.delta4Q ?? null,
+    companyProfitUp,
+    attributionVerified: member?.mainlineAttributionVerified ?? null,
+  })
   const inferred = inferHunter({
     held: input.held, ownership, strategic, risks, evidence,
-    factsStrengthening, inUniverse: !!member,
+    inUniverse: !!member, companyProfitUp,
+    forward: forward.tone, r4: expectation.verdict,
   })
   const reviewOnly = input.reviewTriggers.length > 0
     && !risks.includes('R2_COMPANY') && !risks.includes('R3_MAINLINE')
@@ -189,8 +221,12 @@ export function judgeOne(input: JudgeInput): Judged {
     prevEvidence: input.prevEvidence ?? null,
     risks,
     reviewOnly,
+    companyProfitUp,
+    forward: forward.tone,
+    r4: expectation.verdict,
   })
   const hunter = migration.to
+  const exit = pickExit(strategic, risks, hunter)
   const capitalAction = pickCapitalAction({
     ownership, exit, hunter, held: input.held, risks,
   })
@@ -209,6 +245,8 @@ export function judgeOne(input: JudgeInput): Judged {
     lane: laneOf(strategic, strategyAllows, factsStrengthening),
     factsStrengthening, technicalRole, reviewTriggers: input.reviewTriggers,
     ownership, exposure, capitalAction, hunter, evidence, migration, oneReason,
+    evidenceTone: evidenceAxis.tone, evidenceNote: evidenceAxis.note,
+    expectation, forward,
   }
 }
 
@@ -382,15 +420,12 @@ function laneOf(
 function pickExit(
   strategic: StrategicState,
   risks: readonly RiskCategory[],
-  strengthening: boolean,
-  acts: ActVerdict,
+  hunter: HunterStage,
 ): DecisionExit {
   if (strategic === 'FALSIFIED') return 'VALUE_EXIT'
   if (risks.includes('R1_PORTFOLIO')) return 'PORTFOLIO_FORCE'
   if (risks.includes('R2_COMPANY') || risks.includes('R3_MAINLINE')) return 'TACTICAL_REDUCE'
-  if (strengthening && (acts.allowed.includes('ADD') || acts.allowed.includes('TOP_UP'))) {
-    return 'ADD_CAPITAL'
-  }
+  if (hunter === 'ADD' || hunter === 'TOP_UP') return 'ADD_CAPITAL'
   return 'HOLD'
 }
 
@@ -525,6 +560,9 @@ function oneReasonOf(
   }
   if (action === 'INCREASE_CAPITAL') {
     return '关键证据进一步确认，不是因为涨了。'
+  }
+  if (action === 'HOLD_CAPITAL' && hunter === 'CORE') {
+    return '战略资格仍成立。证据强化本身不能推出加仓，不是因为涨了。'
   }
   if (action === 'OBSERVE') {
     return hunter === 'DISCOVER'

@@ -278,7 +278,7 @@ const Cockpit: React.FC = () => {
         </>
       )}
 
-      {/* ── V3 资本生命线：决策在表之前 ── */}
+      {/* ── V4 资本配置操作系统：决策在表之前 ── */}
       <DecisionCockpit cockpit={data.decisionV2} />
 
       {/* ── 今日结论：法定动作摘要。决策在上面，依据在下面 ── */}

@@ -90,6 +90,12 @@ export interface EvidenceFacts {
   npAbsDeltaSum: number | null
   shareWithinNode: number | null
   npAbsDelta: number | null
+  /** 前瞻链的投资人词。缺省 UNKNOWN，不得用价格填。 */
+  forwardTone?: 'STRENGTHENING' | 'STABLE' | 'WEAKENING' | 'UNKNOWN'
+  forwardFact?: string
+  /** R4 结论。缺省 UNKNOWN，不得用 PE 填。 */
+  r4Verdict?: 'UNKNOWN' | 'OPPORTUNITY' | 'ALIGNED' | 'STRETCHED'
+  r4Fact?: string
 }
 
 export function standingOf(chain: EvidenceChain): number {
@@ -114,18 +120,12 @@ export function buildEvidence(f: EvidenceFacts): EvidenceChain {
         status: 'UNKNOWN',
         fact: '目标主线对利润的贡献尚未可测。公司净利增量 ≠ 主线利润核验。',
       })
-      case 'FORWARD': return layer(def, {
-        status: 'UNKNOWN',
-        fact: '订单、客户、产能、ASP、出货、资本开支、库存与指引尚未接入决策层。',
-      })
+      case 'FORWARD': return layer(def, forwardOf(f))
       case 'CASHFLOW': return layer(def, {
         status: 'UNKNOWN',
         fact: '经营现金流、应收、存货、资本开支与自由现金流尚未接入决策层。盈利验证旗标不是现金流质量。',
       })
-      case 'EXPECTATION': return layer(def, {
-        status: 'UNKNOWN',
-        fact: 'R4 预期—估值错配尚未可测。不得用 PE 历史分位或均线位置代替。',
-      })
+      case 'EXPECTATION': return layer(def, expectationOf(f))
       case 'QUALIFICATION': return layer(def, qualificationOf(f))
     }
   })
@@ -190,6 +190,39 @@ function revenueOf(f: EvidenceFacts): { status: LayerStatus; fact: string } {
     return { status: 'ESTABLISHED', fact: '目标主线收入核验旗标已通过。这是旗标，不是产品线拆分。' }
   }
   return { status: 'UNKNOWN', fact: '目标主线收入核验尚未完成。收入增长 ≠ 目标主线在创造增长。' }
+}
+
+function forwardOf(f: EvidenceFacts): { status: LayerStatus; fact: string } {
+  const tone = f.forwardTone ?? 'UNKNOWN'
+  if (tone === 'UNKNOWN') {
+    return {
+      status: 'UNKNOWN',
+      fact: f.forwardFact
+        ?? '订单、客户、产能、ASP、出货、资本开支、库存与指引尚未接入决策层。',
+    }
+  }
+  const status: LayerStatus = tone === 'STRENGTHENING'
+    ? 'STRENGTHENING'
+    : tone === 'WEAKENING' ? 'WEAKENING' : 'ESTABLISHED'
+  return { status, fact: f.forwardFact ?? `未来盈利证据${tone === 'STRENGTHENING' ? '强化' : tone === 'WEAKENING' ? '弱化' : '稳定'}。` }
+}
+
+function expectationOf(f: EvidenceFacts): { status: LayerStatus; fact: string } {
+  const v = f.r4Verdict ?? 'UNKNOWN'
+  if (v === 'UNKNOWN') {
+    return {
+      status: 'UNKNOWN',
+      fact: f.r4Fact
+        ?? 'R4 预期—估值错配尚未可测。不得用 PE 历史分位或均线位置代替。',
+    }
+  }
+  if (v === 'STRETCHED') {
+    return { status: 'WEAKENING', fact: f.r4Fact ?? '市场隐含增长高于可证明增长。不得加仓，不是减仓理由。' }
+  }
+  if (v === 'OPPORTUNITY') {
+    return { status: 'STRENGTHENING', fact: f.r4Fact ?? '证据支持的增长高于市场隐含。预期差本身不能加仓。' }
+  }
+  return { status: 'ESTABLISHED', fact: f.r4Fact ?? '市场隐含与可证明增长大致匹配。' }
 }
 
 function qualificationOf(f: EvidenceFacts): { status: LayerStatus; fact: string } {
