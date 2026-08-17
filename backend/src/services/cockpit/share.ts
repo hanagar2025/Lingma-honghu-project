@@ -238,7 +238,9 @@ export function buildBrief(input: ShareInput): string {
   if (v2) {
     w('## 〇、资本配置操作系统（先读这一节）')
     w('')
-    w('机器每天只回答鸿鹄五问。后面的表是依据，不是另一套判断。')
+    w(v2.dailyQuestion ?? '今天有没有出现足以改变资本状态的新事实？')
+    w('')
+    w('没有 → 维持。有 → 进入证据审查。后面的表是依据，不是另一套判断。')
     w('')
     w(v2.maxim)
     w('')

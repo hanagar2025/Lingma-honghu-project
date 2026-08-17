@@ -76,7 +76,7 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="战略决定拥有什么；证据决定是否继续值得拥有；战术决定现在拥有多少；组合规则决定最多能拥有多少；生命线决定下一步资本往哪走。"
+          message={d.dailyQuestion ?? '今天有没有出现足以改变资本状态的新事实？'}
           description={d.maxim ?? d.noCompositeScoreNote}
         />
 

@@ -117,3 +117,12 @@ function finiteOrNull(v: number | null | undefined): number | null {
 export function peCanFillR4(): boolean {
   return false
 }
+
+/** R4 不是估值排名。PE 高 ≠ STRETCHED，PE 低 ≠ OPPORTUNITY。 */
+export const R4_IS_NOT_A_PE_RANKING = true
+
+/** 市场低估 ≠ 公司值得拥有，更不等于应该加仓。 */
+export const OPPORTUNITY_CANNOT_ADD = true
+
+/** 贵 ≠ 必须卖。STRETCHED 只停新资本进入。 */
+export const STRETCHED_CANNOT_SELL = true

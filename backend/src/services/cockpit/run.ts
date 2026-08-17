@@ -24,6 +24,7 @@ import { buildDashboard, type Dashboard, type SessionKind } from './dashboard'
 import { renderDashboard } from './renderDashboard'
 import { buildVerdict, type Verdict } from './verdict'
 import { buildDecisionCockpit, renderDecisionCockpit, type DecisionCockpit } from '../decision/cockpitV2'
+import { persistJournal } from '../decision/migrationJournal'
 import { renderVerdict } from './renderVerdict'
 import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import {
@@ -276,6 +277,7 @@ async function main(): Promise<void> {
       circuitReason: dash.assets.circuitReason,
     })
     v2ForHtml = v2
+    persistJournal(date, v2.cards)
     process.stdout.write(`${renderDecisionCockpit(v2)}\n`)
 
     // 结论先于依据：委员会明确不想再从四张表里自己提炼。

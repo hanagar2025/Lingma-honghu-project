@@ -28,7 +28,8 @@
     "decision:selftest": "tsx src/services/decision/selftest.ts",
     "decision:v2": "tsx src/services/decision/v2Selftest.ts",
     "decision:v3": "tsx src/services/decision/v3Selftest.ts",
-    "decision:v4": "tsx src/services/decision/v4Selftest.ts"
+    "decision:v4": "tsx src/services/decision/v4Selftest.ts",
+    "decision:v4x": "tsx src/services/decision/v4xSelftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

@@ -69,6 +69,10 @@ jobs:
       # 证据强化 ≠ 加仓；STRETCHED 不产生卖出；首屏是五问 + 不可判断区。
       - name: Decision V4 selftest (证据 → 资本向上迁移)
         run: npm -w backend run decision:v4
+      # 守 V4.x：不开发新功能。验证 R4 不是 PE 排名、前瞻强化不是兑现、
+      # 同一因果链不能算多个独立族、核心持有不能被读成可以继续加仓。
+      - name: Decision V4.x selftest (证据有效性压力测试)
+        run: npm -w backend run decision:v4x
       # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
       # 让 CI 变绿，把审计变成盖章。漂移只需在基线文件的 git diff 里显形即可。
       - name: Rule freeze check (打印指纹，漂移不失败)
