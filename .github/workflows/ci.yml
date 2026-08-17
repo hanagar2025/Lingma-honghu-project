@@ -65,6 +65,10 @@ jobs:
       # 三种减仓不混；R4 不填；质量不能推出 100%。
       - name: Decision V3 selftest (资本生命线)
         run: npm -w backend run decision:v3
+      # 守 V4：R4 不填 PE；前瞻无细项必须 UNKNOWN；向上迁移必须有新的独立证据族；
+      # 证据强化 ≠ 加仓；STRETCHED 不产生卖出；首屏是五问 + 不可判断区。
+      - name: Decision V4 selftest (证据 → 资本向上迁移)
+        run: npm -w backend run decision:v4
       # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
       # 让 CI 变绿，把审计变成盖章。漂移只需在基线文件的 git diff 里显形即可。
       - name: Rule freeze check (打印指纹，漂移不失败)

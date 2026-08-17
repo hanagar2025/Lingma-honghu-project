@@ -12,7 +12,7 @@ import type { Dashboard } from './dashboard'
 import type { Verdict } from './verdict'
 import type { DecisionCockpit } from '../decision/cockpitV2'
 import { HUNTER_TEXT } from '../decision/hunter'
-import { CAPITAL_ACTION_TEXT, OWNERSHIP_TEXT } from '../decision/triaxis'
+import { CAPITAL_ACTION_TEXT, EVIDENCE_TONE_TEXT, OWNERSHIP_TEXT } from '../decision/triaxis'
 import { LAYER_STATUS_TEXT } from '../decision/evidence'
 import {
   VERIFICATION_CHAIN, SOURCE_TIER_TEXT, CAUSAL_STATUS_TEXT,
@@ -216,52 +216,55 @@ export function renderDashboardHtml(input: HtmlInput): string {
     }
   }
 
-  // ── V3 资本生命线：第一层决策，下面才是依据 ──
+  // ── V4 资本配置操作系统：第一层决策，下面才是依据 ──
   if (decisionV2) {
     const v2 = decisionV2
     w(`</div><div class="card act"><h2>《${esc(v2.productName)}》${esc(v2.productModel)}</h2>`)
-    w(`<div class=sec>第一层看决策。第二层看理由。第三层看证据。</div>`)
+    w(`<div class=sec>第一层看决策。第二层看理由。第三层看证据。第四层机器看原始数据。</div>`)
+    w(`<div class=foot>${esc(v2.maxim)}</div>`)
 
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">① 战略</h3>`)
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">战略</h3>`)
+    w(`<div class=tw><table><thead><tr><th>主线</th><th>状态</th><th>原因</th></tr></thead><tbody>`)
     for (const s of v2.strategy) {
-      const board = s.board ?? s.headline
-      w(`<div style="margin-bottom:8px"><b>${esc(s.name)}</b>　${esc(board)}`)
-      if (!s.combat) w(` <span class=tag>只研究不进组合</span>`)
-      w(`<div class=foot>${esc(s.why.slice(0, 2).join('；'))}</div></div>`)
+      w(`<tr><td>${esc(s.name)}${s.combat ? '' : '（只研究）'}</td>`)
+      w(`<td>${esc(s.board)}</td>`)
+      w(`<td>${esc(s.why.slice(0, 2).join('；'))}</td></tr>`)
     }
+    w(`</tbody></table></div>`)
 
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">② 资本应该往哪里走</h3>`)
-    const moves = v2.capitalMoves ?? []
-    if (!moves.length) w(`<div class=sec>（无持仓）</div>`)
-    for (const m of moves) {
-      w(`<div style="margin-bottom:6px"><b>${esc(m.name)}</b>　${esc(CAPITAL_ACTION_TEXT[m.action] ?? m.action)}　${esc(m.oneReason)}</div>`)
-    }
-
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">③ 当前持仓生命线</h3>`)
-    w(`<div class=tw><table><thead><tr><th>标的</th><th>战略</th><th>生命线</th><th>当前动作</th><th>核心原因</th></tr></thead><tbody>`)
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">资本生命线</h3>`)
+    w(`<div class=tw><table><thead><tr><th>公司</th><th>Ownership</th><th>Evidence</th><th>Exposure</th><th>Action</th><th>生命线</th></tr></thead><tbody>`)
     for (const r of v2.lifeline ?? []) {
       w(`<tr><td>${esc(r.name)}${r.posPct === null ? '' : ` ${(r.posPct * 100).toFixed(1)}%`}</td>`)
       w(`<td>${r.ownYes ? '✓' : '✗'} ${esc(OWNERSHIP_TEXT[r.ownership] ?? r.ownership)}</td>`)
-      w(`<td>${esc(HUNTER_TEXT[r.hunter] ?? r.hunter)}</td>`)
+      w(`<td>${esc(EVIDENCE_TONE_TEXT[r.evidenceTone] ?? r.evidenceTone)}</td>`)
+      w(`<td>${esc(r.exposure)}</td>`)
       w(`<td>${esc(CAPITAL_ACTION_TEXT[r.action] ?? r.action)}</td>`)
-      w(`<td>${esc(r.oneReason)}</td></tr>`)
+      w(`<td>${esc(HUNTER_TEXT[r.hunter] ?? r.hunter)}</td></tr>`)
     }
     w(`</tbody></table></div>`)
 
     if (v2.riskBoard) {
-      w(`<h3 style="font-size:15px;margin:14px 0 8px">④ 风险</h3>`)
+      w(`<h3 style="font-size:15px;margin:14px 0 8px">风险</h3>`)
       w(`<div>战略风险　${esc(v2.riskBoard.strategy)}　│　公司风险　${esc(v2.riskBoard.company)}　│　预期风险　${esc(v2.riskBoard.expectation)}　│　组合风险　${esc(v2.riskBoard.portfolio)}</div>`)
       for (const g of v2.riskBoard.dataGaps) w(`<div class=foot>· ${esc(g)}</div>`)
     }
 
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">⑤ 今天真正需要投资人做的事</h3>`)
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">今天真正需要投资人做的事</h3>`)
     const tasks = v2.todayTasks ?? []
     if (!tasks.length) w(`<div class=sec>今日没有必须由投资人执行的事。</div>`)
     tasks.forEach((t, i) => w(`<div style="margin-bottom:6px"><b>${i + 1}.</b> ${esc(t)}</div>`))
 
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">六句话</h3>`)
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">当前无法判断</h3>`)
+    for (const u of v2.unjudgable ?? []) {
+      w(`<div style="margin-bottom:8px"><b>⚠ ${esc(u.topic)}</b>`)
+      w(`<div class=foot>${esc(u.why)}</div>`)
+      w(`<div class=foot>→ ${esc(u.forbidden)}</div></div>`)
+    }
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">鸿鹄五问</h3>`)
     for (const q of v2.sentences) {
-      const mark = ['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]
+      const mark = ['①', '②', '③', '④', '⑤'][q.no - 1]
       w(`<div style="margin-bottom:10px"><b>${mark} ${esc(q.question)}</b>`)
       w(`<div>${esc(q.answer)}</div></div>`)
     }

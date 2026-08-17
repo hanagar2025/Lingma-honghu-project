@@ -143,10 +143,12 @@ const techOnly: JudgeInput = {
   const j = judgeOne(zhongwei)
   ok('中微战略增强或成立', j.strategic === 'STRENGTHENED' || j.strategic === 'HOLDS', j.strategic)
   ok('中微被事实强化', j.factsStrengthening === true)
-  ok('中微出口是增加资本或维持（无 R1/R2）',
-    j.exit === 'ADD_CAPITAL' || j.exit === 'HOLD', j.exit)
-  ok('中微加仓理由写明来自事实强化、不是价格本身',
-    j.whyAct.includes('事实强化') && j.whyAct.includes('不是价格本身'))
+  ok('中微出口是维持（证据强化 ≠ 加仓资格）',
+    j.exit === 'HOLD', j.exit)
+  ok('中微猎人段是核心持有，不是因强化而加仓',
+    j.hunter === 'CORE', j.hunter)
+  ok('中微说明写明今日不动作',
+    j.whyAct.includes('今日不动作') || j.oneReason.includes('今日不动作'))
   ok('中微资本流向是增强', j.lane === 'ENHANCE')
 }
 
@@ -209,7 +211,7 @@ ok('R4 文案拒绝用 PE 或均线代替',
 // 八、源码不引入新指标、不出现评分
 // ══════════════════════════════════════════════════════════════
 {
-  const files = ['strategy.ts', 'judge.ts', 'cockpitV2.ts', 'hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts']
+  const files = ['strategy.ts', 'judge.ts', 'cockpitV2.ts', 'hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts', 'r4.ts', 'forward.ts', 'capitalGates.ts']
   for (const f of files) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf-8')
     const code = src.split('\n').filter(l => {
@@ -313,17 +315,16 @@ ok('R4 文案拒绝用 PE 或均线代替',
 
   const v2 = buildDecisionCockpit(dashLike)
   ok('产品名是鸿鹄理财', v2.productName === '鸿鹄理财')
-  ok('产品模型是资本生命线', v2.productModel === '资本生命线')
-  ok('版本是 V3', v2.version === 'V3')
-  ok('六问正好 6 条且编号 1–6',
-    v2.questions.length === 6 && v2.questions.every((q, i) => q.no === i + 1))
-  ok('六句话覆盖委员会钉死的原话',
-    v2.questions[0]!.question.includes('战略有没有变')
+  ok('产品模型是资本配置操作系统', v2.productModel === '资本配置操作系统')
+  ok('版本是 V4', v2.version === 'V4')
+  ok('五问正好 5 条且编号 1–5',
+    v2.questions.length === 5 && v2.questions.every((q, i) => q.no === i + 1))
+  ok('五问覆盖委员会钉死的原话',
+    v2.questions[0]!.question.includes('战略有没有变化')
     && v2.questions[1]!.question.includes('仍然值得拥有')
-    && v2.questions[2]!.question.includes('证据正在强化')
+    && v2.questions[2]!.question.includes('投资证据在强化')
     && v2.questions[3]!.question.includes('风险正在增加')
-    && v2.questions[4]!.question.includes('生命线哪一段')
-    && v2.questions[5]!.question.includes('唯一合法理由'))
+    && v2.questions[4]!.question.includes('资本应该往哪里移动'))
 
   const hg = v2.holdings.find(h => h.code === '688041')
   const zy = v2.holdings.find(h => h.code === '603986')
@@ -338,12 +339,12 @@ ok('R4 文案拒绝用 PE 或均线代替',
     v2.strategy.find(s => s.mainlineId === 'power')?.strategic === 'WATCH')
 
   const txt = renderDecisionCockpit(v2)
-  ok('渲染含五块首屏',
-    txt.includes('【① 战略】')
-    && txt.includes('【② 资本应该往哪里走】')
-    && txt.includes('【③ 当前持仓生命线】')
-    && txt.includes('【④ 风险】')
-    && txt.includes('【⑤ 今天真正需要投资人做的事】'))
+  ok('渲染含战略表与四轴生命线',
+    txt.includes('【战略】')
+    && txt.includes('【资本生命线】')
+    && txt.includes('Ownership')
+    && txt.includes('【当前无法判断】')
+    && txt.includes('【鸿鹄五问】'))
   ok('渲染声明第一层看决策', txt.includes('第一层看决策'))
   ok('渲染只在禁令里提到评分，不把它当成输出',
     txt.includes('不输出综合评分') && !/综合评分\s*\d|第\s*\d+\s*名/.test(txt))
