@@ -365,6 +365,7 @@ const CONTRACT = [
   'dashboard', 'changes', 'discovery', 'provisional', 'audit', 'auditMarkdown',
   'freeze', 'marketStage', 'missing', 'limits', 'lightText', 'actionText',
   'legalReasonText', 'evidenceTierText', 'valuationUsable', 'valuationLoaded',
+  'decisionV2',
 ]
 for (const f of CONTRACT) {
   ok(`快照提供接口同名字段 ${f}`, new RegExp(`\\b${f}\\s*[:,]`).test(webSnapSrc))
@@ -391,6 +392,8 @@ ok('前端在离线模式隐藏需要后端的复跑按钮',
   /!offline\.on\s*&&/.test(cockpitPageSrc))
 ok('前端显示外围现金口径待裁定',
   /externalCash/.test(cockpitPageSrc) && /未计入仓位上限分母/.test(cockpitPageSrc))
+ok('前端先渲染 V2 决策驾驶舱（决策在表之前）',
+  /DecisionCockpit/.test(cockpitPageSrc) && /data\.decisionV2/.test(cockpitPageSrc))
 
 // ───────────────────────────────────────────────────────────────
 // 资产层（委员会 2026-08-15 指定为第一层）

@@ -10,6 +10,8 @@
 
 import type { Dashboard } from './dashboard'
 import type { Verdict } from './verdict'
+import type { DecisionCockpit } from '../decision/cockpitV2'
+import { STRATEGIC_DOT, LANE_TEXT } from '../decision/strategy'
 import {
   VERIFICATION_CHAIN, SOURCE_TIER_TEXT, CAUSAL_STATUS_TEXT,
   fourLineVerdict, causalLayers, pendingVerification, paidGaps, wiringBacklog,
@@ -132,11 +134,13 @@ export interface HtmlInput {
   intraday?: boolean
   /** 今日结论。放在四张表之前 —— 结论先于依据 */
   verdict?: Verdict | null
+  /** V2 决策驾驶舱。放在法定动作摘要之前 */
+  decisionV2?: DecisionCockpit | null
 }
 
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
-    dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, hypotheses,
+    dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -146,11 +150,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
 
   w(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">`)
   w(`<meta name="viewport" content="width=device-width,initial-scale=1">`)
-  w(`<title>五层驾驶舱 ${esc(d.date)}</title><style>${CSS}</style></head><body><div class=wrap>`)
+  w(`<title>《鸿鹄理财》${esc(d.date)}</title><style>${CSS}</style></head><body><div class=wrap>`)
 
   // ── 头 ──
-  w(`<div class=card><h1>五层驾驶舱 · ${esc(d.date)}</h1>`)
-  w(`<div class=sec>组合 × 主线 × 产业链 × 新势能 × 执行　|　${esc(d.session === 'PRE_OPEN' ? '盘前' : '盘后')}</div>`)
+  w(`<div class=card><h1>《鸿鹄理财》战略—战术投资决策驾驶舱 · ${esc(d.date)}</h1>`)
+  w(`<div class=sec>本页回答决策。下面的表是依据。　|　${esc(d.session === 'PRE_OPEN' ? '盘前' : '盘后')}</div>`)
   if (intraday) {
     w(`<div class="banner warn" style="margin-top:12px"><b>⚠ 盘中快照（未定价）</b>`)
     w(`　最新K线 ${esc(d.date)} 尚未收盘，全表读数为临时值：仓位百分比、相对强度、成交比值都会随收盘变化。`)
@@ -210,8 +214,53 @@ export function renderDashboardHtml(input: HtmlInput): string {
     }
   }
 
+  // ── V2 决策驾驶舱：战略—战术—仓位 ──
+  if (decisionV2) {
+    const v2 = decisionV2
+    w(`</div><div class="card act"><h2>《${esc(v2.productName)}》${esc(v2.productModel)}</h2>`)
+    w(`<div class=sec>本页回答决策。下面的表是依据。</div>`)
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">第一块　战略</h3>`)
+    for (const s of v2.strategy) {
+      w(`<div style="margin-bottom:8px"><b>${STRATEGIC_DOT[s.strategic]} ${esc(s.name)}</b>　${esc(s.headline)}`)
+      if (!s.combat) w(` <span class=tag>只研究不进组合</span>`)
+      w(`<div class=foot>${esc(s.why.slice(0, 3).join('；'))}</div></div>`)
+    }
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">第二块　资本应该往哪里去？（不是排名）</h3>`)
+    for (const [lane, rows] of [
+      ['ENHANCE', v2.capital.enhance],
+      ['OBSERVE', v2.capital.observe],
+      ['FORBID', v2.capital.forbid],
+    ] as const) {
+      w(`<div style="margin:8px 0 4px"><span class="tag ${lane === 'FORBID' ? 'red' : lane === 'ENHANCE' ? 'green' : 'orange'}">${esc(LANE_TEXT[lane])}</span></div>`)
+      if (!rows.length) w(`<div class=sec>（无）</div>`)
+      for (const r of rows) {
+        w(`<div style="margin-bottom:6px"><b>${esc(r.name)}</b>　${esc(r.node)}　${esc(r.mainline)}`)
+        w(`<div class=foot>${esc(r.facts.slice(0, 3).join('；'))}</div></div>`)
+      }
+    }
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">第三块　每一只持仓一句投资状态</h3>`)
+    for (const h of v2.holdings) {
+      w(`<div style="margin-bottom:12px;padding:10px 12px;background:#f2f2f7;border-radius:10px">`)
+      w(`<b>${esc(h.name)}</b>${h.posPct === null ? '' : `　${(h.posPct * 100).toFixed(1)}%`}`)
+      w(`<div>${esc(h.ownLogic)}</div>`)
+      w(`<div>${esc(h.riskLine)}</div>`)
+      w(`<div>${esc(h.portfolioLine)}</div>`)
+      w(`<div><b>${esc(h.decision)}</b></div>`)
+      w(`<div class=foot>${esc(h.why)}</div></div>`)
+    }
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">每天只回答这 6 个问题</h3>`)
+    for (const q of v2.questions) {
+      const mark = ['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]
+      w(`<div style="margin-bottom:10px"><b>${mark} ${esc(q.question)}</b>`)
+      w(`<div>${esc(q.headline)}</div>`)
+      for (const line of q.lines.slice(0, 6)) w(`<div class=foot>· ${esc(line)}</div>`)
+      w(`</div>`)
+    }
+    w(`<div class=foot>${esc(v2.noCompositeScoreNote)}</div>`)
+  }
+
   // ── 今日结论 ──
-  // 放在最前：委员会明确不想再从四张表里自己提炼结论。
+  // 法定动作摘要。决策在上面，依据在下面。
   if (verdict) {
     w(`</div><div class="card act"><h2>今日结论</h2>`)
     w(`<div class="banner info"><b>${esc(verdict.oneLine)}</b></div>`)

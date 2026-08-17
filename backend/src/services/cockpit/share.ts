@@ -31,11 +31,13 @@
 
 import type { Dashboard, HoldingRow, MainlineRow, NextLayerRow } from './dashboard'
 import type { Verdict } from './verdict'
+import type { DecisionCockpit } from '../decision/cockpitV2'
 import { byGrade } from './intradayFields'
 
 export interface ShareInput {
   dashboard: Dashboard
   verdict: Verdict | null
+  decisionV2?: DecisionCockpit | null
   /** 是否包含绝对金额与总资产。默认 false（脱敏） */
   includeAmounts?: boolean
   /**
@@ -96,8 +98,9 @@ function preamble(date: string, session: string, intraday = false): string {
     '1. **不要给出买卖时点建议。** 本系统的价格窗口规则已被自己的回测证伪：',
     '   按 10 日涨幅分档后，"红灯"日的后续收益反而高于"绿灯"日（置信区间跨 0）。',
     '   系统没有任何被验证过的顶底识别能力，请不要替它补上一个。',
-    '2. **技术指标只能触发复核，不能构成减仓理由。** 合法的减仓理由只有三类：',
-    '   仓位超过上限、组合熔断、家庭安全垫不足。"跌破均线""相对强度转弱"都不是理由。',
+    '2. **技术指标只能触发复核，不能构成减仓理由。** 减仓必须先回答是哪一种：',
+    '   价值退出 / 战术减仓 / 组合强制调整。R4 预期—估值错配尚未可测，不得用 PE 或均线填。',
+    '   "跌破均线""相对强弱转弱"都不是理由。组合超限 ≠ 公司变坏。',
     '3. **不要输出综合评分、总分或排名。** 数据完整度不足时，合成分数会制造虚假精确感。',
     '   如需比较，请逐列陈述，并说明每一列的数据是否完整。',
     '4. **「不可判断」是合法且常常正确的结论。** 数据不足时请直接说不可判断，',
@@ -198,7 +201,7 @@ function nextLayerTable(rows: NextLayerRow[]): string {
 }
 
 export function buildBrief(input: ShareInput): string {
-  const { dashboard: d, verdict: v, includeAmounts = false, intraday = false } = input
+  const { dashboard: d, verdict: v, decisionV2: v2, includeAmounts = false, intraday = false } = input
   const L: string[] = []
   const w = (s = '') => L.push(s)
 
@@ -229,6 +232,34 @@ export function buildBrief(input: ShareInput): string {
   for (const b of banner) w(b)
 
   w(preamble(d.date, d.session === 'PRE_OPEN' ? '盘前' : '盘后', intraday))
+
+  if (v2) {
+    w('## 〇、战略—战术决策（先读这一节）')
+    w('')
+    w('投资人每天只需要这 6 个问题。后面的表是依据，不是另一套判断。')
+    w('')
+    for (const q of v2.questions) {
+      w(`**${['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]} ${q.question}**`)
+      w('')
+      w(q.headline)
+      w('')
+    }
+    w('### 持仓投资状态')
+    w('')
+    for (const h of v2.holdings) {
+      w(`- **${h.name}**${h.posPct === null ? '' : `（${(h.posPct * 100).toFixed(1)}%）`}`)
+      w(`  - ${h.ownLogic}`)
+      w(`  - ${h.decision}`)
+      w(`  - ${h.why}`)
+    }
+    w('')
+    w('### 资本流向（不是排名）')
+    w('')
+    w(`- 增强：${v2.capital.enhance.map(r => r.name).join('、') || '无'}`)
+    w(`- 观察：${v2.capital.observe.map(r => r.name).join('、') || '无'}`)
+    w(`- 禁止：${v2.capital.forbid.map(r => r.name).join('、') || '无'}`)
+    w('')
+  }
 
   if (!includeAmounts) {
     w('> **本摘要已脱敏**：不含绝对金额、股数与总资产，仅保留百分比与趋势。')
