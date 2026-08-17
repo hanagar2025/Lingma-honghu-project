@@ -28,16 +28,21 @@ import {
 } from './migrationJournal'
 import { CORE_MEANS_OWN_NOT_ADD } from './hunter'
 import {
-  ARCHITECTURE_CLOSED_AT_V4X, AUDITABLE_NOT_CORRECT, DAILY_AUDIT, DAILY_QUESTION,
-  DAILY_WORK, FIRST_QUESTION_ON_PROBLEM, FOUR_CANNOTS, FROZEN_RULE_FINGERPRINT,
+  APPARENT_ERROR_LAYERS, ARCHITECTURE_CLOSED_AT_V4X, AUDITABLE_NOT_CORRECT,
+  CHALLENGE_RULES_REQUIRES, DAILY_AUDIT, DAILY_QUESTION, DAILY_WORK,
+  EVIDENCE_OUTCOME_CANNOT_REVISE_QUALITY, EVIDENCE_OUTCOME_MAY_REVISE_RULE_BELIEF,
+  FIRST_QUESTION_ON_PROBLEM, FOUR_CANNOTS, FROZEN_RULE_FINGERPRINT,
   HOLD_AS_DECISION, HOLD_IS_AN_ACTIVE_DECISION, INDICATORS_FROZEN,
-  LEGAL_MOVE_QUESTION, LIFELINE_FROZEN, MATURITY, MISSION, OWN_BUT_CANNOT_RAISE,
-  PAGE_ARCHITECTURE_FROZEN, PHASE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME,
-  PRIMARY_ARTIFACT, PROBLEM_GAPS, RETURNS_CANNOT_JUDGE_SYSTEM, RULES_FROZEN,
-  SEVEN_QUESTIONS, V5_MUST_BE_FORCED_BY_DATA, admits, answerIsIllegal,
-  askAddIndicator, classifyProblem, laterLossCannotMarkViolation,
-  laterReturnCannotReviseQuality, laterRiseCannotDemandAdd, legalMoveOf,
-  priceCannotFillEvidenceOutcome,
+  LEGAL_MOVE_QUESTION, LIFELINE_FROZEN, MATURITY, MISSION, MOST_VALUABLE_NOW,
+  ONE_CASE_CANNOT_CHANGE_RULES, OWN_BUT_CANNOT_RAISE, PAGE_ARCHITECTURE_FROZEN,
+  PHASE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME, PRIMARY_ARTIFACT, PROBLEM_GAPS,
+  RETURNS_CANNOT_JUDGE_SYSTEM, RULES_FROZEN, SEVEN_QUESTIONS, THREE_LEDGERS,
+  V5_MUST_BE_FORCED_BY_DATA, admits, answerIsIllegal, askAddIndicator,
+  classifyProblem, discardFamilyBecauseOneLoss, evidenceOutcomeCannotReviseQuality,
+  laterLossCannotMarkViolation, laterReturnCannotReviseQuality,
+  laterRiseCannotDemandAdd, legalMoveOf, lowerAddThresholdBecauseMissedRally,
+  oneInterestingCaseCannotChangeRules, priceCannotFillEvidenceOutcome,
+  splitApparentError,
 } from './charter'
 import { RISK_CAN_PRODUCE } from './lifecycle'
 import { buildEvidence } from './evidence'
@@ -529,6 +534,61 @@ ok('加均线不能借验证期准入',
   ok('驾驶舱 maxim 以每天一问打头',
     src.includes('${DAILY_QUESTION} 没有 → 维持'))
 }
+
+// ══════════════════════════════════════════════════════════════
+// 九、不破坏它：单一样本不能改规则，看似系统错了必须三层拆
+// ══════════════════════════════════════════════════════════════
+ok('Evidence Outcome 可以改对规则的认识，但不能改当时合规',
+  EVIDENCE_OUTCOME_MAY_REVISE_RULE_BELIEF === true
+  && EVIDENCE_OUTCOME_CANNOT_REVISE_QUALITY === true)
+ok('后来证伪不能改写当时合规',
+  evidenceOutcomeCannotReviseQuality('COMPLIANT', 'FALSIFIED') === 'COMPLIANT')
+ok('后来兑现也不能把当时违规改成合规',
+  evidenceOutcomeCannotReviseQuality('VIOLATION', 'REALIZED') === 'VIOLATION')
+ok('看似系统错了必须拆成三层',
+  APPARENT_ERROR_LAYERS.map(x => x.id).join('|') === 'THEN_RULE|LATER_FACT|LONG_RUN')
+
+{
+  const holdThenSurge = splitApparentError({
+    violatedThen: false, evidenceOutcome: 'REALIZED',
+  })
+  ok('没加仓后暴涨：当时未违规 → Decision Quality 仍合规',
+    holdThenSurge.decisionQuality === 'COMPLIANT')
+  ok('没加仓后暴涨：Evidence Outcome 可以记兑现',
+    holdThenSurge.evidenceOutcome === 'REALIZED')
+  ok('没加仓后暴涨：单一样本不能挑战规则',
+    holdThenSurge.mayChallengeRule === false)
+  ok('不能立即得出鸿鹄太保守、要降低加仓门槛',
+    lowerAddThresholdBecauseMissedRally() === false
+    && oneInterestingCaseCannotChangeRules('HOLD_THEN_SURGE') === FROZEN_RULE_FINGERPRINT)
+}
+
+{
+  const addThenCrash = splitApparentError({
+    violatedThen: false, evidenceOutcome: 'FALSIFIED',
+  })
+  ok('加仓后暴跌：当时未违规 → Decision Quality 仍合规',
+    addThenCrash.decisionQuality === 'COMPLIANT')
+  ok('加仓后暴跌：Evidence Outcome 可以记证伪',
+    addThenCrash.evidenceOutcome === 'FALSIFIED')
+  ok('不能立即得出这个证据族没用',
+    discardFamilyBecauseOneLoss() === false
+    && oneInterestingCaseCannotChangeRules('ADD_THEN_CRASH') === FROZEN_RULE_FINGERPRINT)
+}
+
+ok('单一样本不能改规则', ONE_CASE_CANNOT_CHANGE_RULES === true)
+ok('挑战规则必须同类证据、同类迁移、后续兑现反复出现',
+  CHALLENGE_RULES_REQUIRES.includes('同类证据')
+  && CHALLENGE_RULES_REQUIRES.includes('同类资本迁移')
+  && CHALLENGE_RULES_REQUIRES.includes('后续基本面兑现')
+  && CHALLENGE_RULES_REQUIRES.includes('反复出现'))
+ok('未来一年要形成三张表：决策 / 证据兑现 / 规则审计',
+  THREE_LEDGERS.map(x => x.id).join('|') === 'DECISION|EVIDENCE|RULE'
+  && THREE_LEDGERS[0]!.asks.includes('当时为什么这么做')
+  && THREE_LEDGERS[1]!.asks.includes('后来有没有强化')
+  && THREE_LEDGERS[2]!.asks.includes('系统性偏差'))
+ok('现在最有价值的动作是让 V4.x 安静地运行',
+  MOST_VALUABLE_NOW.includes('安静地运行') && !('V5' in MATURITY))
 
 console.log(`\n═══ 结果：${pass} 通过 / ${fail} 失败 ═══\n`)
 if (fail > 0) process.exit(1)

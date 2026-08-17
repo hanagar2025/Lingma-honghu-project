@@ -206,6 +206,76 @@ export function laterLossCannotMarkViolation(
   return quality
 }
 
+/**
+ * Evidence Outcome 可以改变我们对「规则是否有效」的认识，
+ * 但不能改变当时的 Decision Quality。
+ */
+export const EVIDENCE_OUTCOME_MAY_REVISE_RULE_BELIEF = true
+export const EVIDENCE_OUTCOME_CANNOT_REVISE_QUALITY = true
+
+export function evidenceOutcomeCannotReviseQuality(
+  quality: DecisionQuality, later: EvidenceOutcome,
+): DecisionQuality {
+  void later
+  return quality
+}
+
+/**
+ * 看似「系统错了」时，先按三层拆。
+ * 不能用单个成功或失败案例污染系统。
+ */
+export const APPARENT_ERROR_LAYERS = [
+  { id: 'THEN_RULE', question: '当时有没有违反规则？', writes: 'Decision Quality' },
+  { id: 'LATER_FACT', question: '当时使用的证据后来有没有兑现？', writes: 'Evidence Outcome' },
+  { id: 'LONG_RUN', question: '这个规则长期来看是否值得保留？', writes: '规则审计账本' },
+] as const
+
+export function splitApparentError(input: {
+  violatedThen: boolean
+  evidenceOutcome: EvidenceOutcome
+}): {
+  decisionQuality: DecisionQuality
+  evidenceOutcome: EvidenceOutcome
+  mayChallengeRule: false
+} {
+  return {
+    decisionQuality: input.violatedThen ? 'VIOLATION' : 'COMPLIANT',
+    evidenceOutcome: input.evidenceOutcome,
+    mayChallengeRule: false,
+  }
+}
+
+/** 不要因为发现了一个很有意思的案例就修改规则。 */
+export const ONE_CASE_CANNOT_CHANGE_RULES = true
+
+export function oneInterestingCaseCannotChangeRules(
+  story: 'HOLD_THEN_SURGE' | 'ADD_THEN_CRASH' | string,
+): typeof FROZEN_RULE_FINGERPRINT {
+  void story
+  return FROZEN_RULE_FINGERPRINT
+}
+
+export function lowerAddThresholdBecauseMissedRally(): false {
+  return false
+}
+
+export function discardFamilyBecauseOneLoss(): false {
+  return false
+}
+
+export const CHALLENGE_RULES_REQUIRES =
+  '同类证据 → 同类资本迁移 → 后续基本面兑现，反复出现之后，才有资格挑战规则。'
+
+/** 未来一年真正该形成的三张表。现在只留痕，不汇合成 V5。 */
+export const THREE_LEDGERS = [
+  { id: 'DECISION', name: '决策账本', asks: '当时为什么这么做。' },
+  { id: 'EVIDENCE', name: '证据兑现账本', asks: '当时认为会强化的基本面，后来有没有强化。' },
+  { id: 'RULE', name: '规则审计账本', asks: '某类规则长期表现如何，是否出现系统性偏差。' },
+] as const
+
+export const MOST_VALUABLE_NOW =
+  '现在最有价值的动作就是：让 V4.x 安静地运行。'
+
 export const MATURITY = {
   V1: '风险监控器：哪里违规？',
   V2: '决策语义系统：为什么调整？',
