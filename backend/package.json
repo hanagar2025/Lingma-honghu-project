@@ -26,7 +26,8 @@
     "review": "tsx src/services/governance/reviewRun.ts",
     "segments:fetch": "tsx segmentsFetch.ts",
     "decision:selftest": "tsx src/services/decision/selftest.ts",
-    "decision:v2": "tsx src/services/decision/v2Selftest.ts"
+    "decision:v2": "tsx src/services/decision/v2Selftest.ts",
+    "decision:v3": "tsx src/services/decision/v3Selftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

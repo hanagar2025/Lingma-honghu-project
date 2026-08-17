@@ -11,7 +11,9 @@
 import type { Dashboard } from './dashboard'
 import type { Verdict } from './verdict'
 import type { DecisionCockpit } from '../decision/cockpitV2'
-import { STRATEGIC_DOT, LANE_TEXT } from '../decision/strategy'
+import { HUNTER_TEXT } from '../decision/hunter'
+import { CAPITAL_ACTION_TEXT, OWNERSHIP_TEXT } from '../decision/triaxis'
+import { LAYER_STATUS_TEXT } from '../decision/evidence'
 import {
   VERIFICATION_CHAIN, SOURCE_TIER_TEXT, CAUSAL_STATUS_TEXT,
   fourLineVerdict, causalLayers, pendingVerification, paidGaps, wiringBacklog,
@@ -153,7 +155,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(`<title>《鸿鹄理财》${esc(d.date)}</title><style>${CSS}</style></head><body><div class=wrap>`)
 
   // ── 头 ──
-  w(`<div class=card><h1>《鸿鹄理财》战略—战术投资决策驾驶舱 · ${esc(d.date)}</h1>`)
+  w(`<div class=card><h1>《鸿鹄理财》资本生命线 · ${esc(d.date)}</h1>`)
   w(`<div class=sec>本页回答决策。下面的表是依据。　|　${esc(d.session === 'PRE_OPEN' ? '盘前' : '盘后')}</div>`)
   if (intraday) {
     w(`<div class="banner warn" style="margin-top:12px"><b>⚠ 盘中快照（未定价）</b>`)
@@ -214,48 +216,68 @@ export function renderDashboardHtml(input: HtmlInput): string {
     }
   }
 
-  // ── V2 决策驾驶舱：战略—战术—仓位 ──
+  // ── V3 资本生命线：第一层决策，下面才是依据 ──
   if (decisionV2) {
     const v2 = decisionV2
     w(`</div><div class="card act"><h2>《${esc(v2.productName)}》${esc(v2.productModel)}</h2>`)
-    w(`<div class=sec>本页回答决策。下面的表是依据。</div>`)
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">第一块　战略</h3>`)
+    w(`<div class=sec>第一层看决策。第二层看理由。第三层看证据。</div>`)
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">① 战略</h3>`)
     for (const s of v2.strategy) {
-      w(`<div style="margin-bottom:8px"><b>${STRATEGIC_DOT[s.strategic]} ${esc(s.name)}</b>　${esc(s.headline)}`)
+      const board = s.board ?? s.headline
+      w(`<div style="margin-bottom:8px"><b>${esc(s.name)}</b>　${esc(board)}`)
       if (!s.combat) w(` <span class=tag>只研究不进组合</span>`)
-      w(`<div class=foot>${esc(s.why.slice(0, 3).join('；'))}</div></div>`)
+      w(`<div class=foot>${esc(s.why.slice(0, 2).join('；'))}</div></div>`)
     }
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">第二块　资本应该往哪里去？（不是排名）</h3>`)
-    for (const [lane, rows] of [
-      ['ENHANCE', v2.capital.enhance],
-      ['OBSERVE', v2.capital.observe],
-      ['FORBID', v2.capital.forbid],
-    ] as const) {
-      w(`<div style="margin:8px 0 4px"><span class="tag ${lane === 'FORBID' ? 'red' : lane === 'ENHANCE' ? 'green' : 'orange'}">${esc(LANE_TEXT[lane])}</span></div>`)
-      if (!rows.length) w(`<div class=sec>（无）</div>`)
-      for (const r of rows) {
-        w(`<div style="margin-bottom:6px"><b>${esc(r.name)}</b>　${esc(r.node)}　${esc(r.mainline)}`)
-        w(`<div class=foot>${esc(r.facts.slice(0, 3).join('；'))}</div></div>`)
-      }
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">② 资本应该往哪里走</h3>`)
+    const moves = v2.capitalMoves ?? []
+    if (!moves.length) w(`<div class=sec>（无持仓）</div>`)
+    for (const m of moves) {
+      w(`<div style="margin-bottom:6px"><b>${esc(m.name)}</b>　${esc(CAPITAL_ACTION_TEXT[m.action] ?? m.action)}　${esc(m.oneReason)}</div>`)
     }
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">第三块　每一只持仓一句投资状态</h3>`)
-    for (const h of v2.holdings) {
-      w(`<div style="margin-bottom:12px;padding:10px 12px;background:#f2f2f7;border-radius:10px">`)
-      w(`<b>${esc(h.name)}</b>${h.posPct === null ? '' : `　${(h.posPct * 100).toFixed(1)}%`}`)
-      w(`<div>${esc(h.ownLogic)}</div>`)
-      w(`<div>${esc(h.riskLine)}</div>`)
-      w(`<div>${esc(h.portfolioLine)}</div>`)
-      w(`<div><b>${esc(h.decision)}</b></div>`)
-      w(`<div class=foot>${esc(h.why)}</div></div>`)
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">③ 当前持仓生命线</h3>`)
+    w(`<div class=tw><table><thead><tr><th>标的</th><th>战略</th><th>生命线</th><th>当前动作</th><th>核心原因</th></tr></thead><tbody>`)
+    for (const r of v2.lifeline ?? []) {
+      w(`<tr><td>${esc(r.name)}${r.posPct === null ? '' : ` ${(r.posPct * 100).toFixed(1)}%`}</td>`)
+      w(`<td>${r.ownYes ? '✓' : '✗'} ${esc(OWNERSHIP_TEXT[r.ownership] ?? r.ownership)}</td>`)
+      w(`<td>${esc(HUNTER_TEXT[r.hunter] ?? r.hunter)}</td>`)
+      w(`<td>${esc(CAPITAL_ACTION_TEXT[r.action] ?? r.action)}</td>`)
+      w(`<td>${esc(r.oneReason)}</td></tr>`)
     }
-    w(`<h3 style="font-size:15px;margin:14px 0 8px">每天只回答这 6 个问题</h3>`)
-    for (const q of v2.questions) {
+    w(`</tbody></table></div>`)
+
+    if (v2.riskBoard) {
+      w(`<h3 style="font-size:15px;margin:14px 0 8px">④ 风险</h3>`)
+      w(`<div>战略风险　${esc(v2.riskBoard.strategy)}　│　公司风险　${esc(v2.riskBoard.company)}　│　预期风险　${esc(v2.riskBoard.expectation)}　│　组合风险　${esc(v2.riskBoard.portfolio)}</div>`)
+      for (const g of v2.riskBoard.dataGaps) w(`<div class=foot>· ${esc(g)}</div>`)
+    }
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">⑤ 今天真正需要投资人做的事</h3>`)
+    const tasks = v2.todayTasks ?? []
+    if (!tasks.length) w(`<div class=sec>今日没有必须由投资人执行的事。</div>`)
+    tasks.forEach((t, i) => w(`<div style="margin-bottom:6px"><b>${i + 1}.</b> ${esc(t)}</div>`))
+
+    w(`<h3 style="font-size:15px;margin:14px 0 8px">六句话</h3>`)
+    for (const q of v2.sentences) {
       const mark = ['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]
       w(`<div style="margin-bottom:10px"><b>${mark} ${esc(q.question)}</b>`)
-      w(`<div>${esc(q.headline)}</div>`)
-      for (const line of q.lines.slice(0, 6)) w(`<div class=foot>· ${esc(line)}</div>`)
+      w(`<div>${esc(q.answer)}</div></div>`)
+    }
+
+    w(`<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--sec)">理由与证据（折叠）</summary>`)
+    for (const h of v2.holdings) {
+      w(`<div style="margin:10px 0;padding:10px 12px;background:#f2f2f7;border-radius:10px">`)
+      w(`<b>${esc(h.name)}</b>　${esc(HUNTER_TEXT[h.judged.hunter] ?? '')}`)
+      w(`<div class=foot>理由　${esc(h.judged.oneReason)}</div>`)
+      w(`<div class=foot>迁移　${esc(h.judged.migration.why)}</div>`)
+      for (const layer of h.judged.evidence.layers) {
+        w(`<div class=foot>${esc(layer.name)}　${esc(LAYER_STATUS_TEXT[layer.status])}　${esc(layer.fact)}</div>`)
+      }
       w(`</div>`)
     }
+    w(`</details>`)
     w(`<div class=foot>${esc(v2.noCompositeScoreNote)}</div>`)
   }
 

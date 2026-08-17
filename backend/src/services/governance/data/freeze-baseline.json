@@ -1,10 +1,10 @@
 {
   "frozenAt": "2026-08-17",
   "tradingDays": 30,
-  "hash": "c9ad1931d30a",
-  "entryCount": 36,
+  "hash": "aa4bd8dfca46",
+  "entryCount": 43,
   "byDomain": {
-    "GUARD": "fec9675dc7cb",
+    "GUARD": "d771824c9e3a",
     "LEGAL_REASON": "0de3f52d932c",
     "POSITION_LIMIT": "b481dd150240",
     "PRICE_WINDOW": "7f8a35934192",
@@ -13,9 +13,9 @@
     "VALUATION": "5d9de12e91c1"
   },
   "tierCounts": {
-    "ACCOUNTING": 34,
+    "ACCOUNTING": 41,
     "VALIDATED": 1,
     "OBSERVATION": 1
   },
-  "note": "委员会 2026-08-17 授权《鸿鹄 V2 决策架构》：把已有数据组织成战略状态→战术阶段→仓位生命线→动作资格→动作原因。不新增技术指标、不填 R4、不把三种卖出压成一个减仓。GUARD +5 条是这套取值的指纹登记，不是新的买卖阈值。冻结期内仍不新增决策规则。"
+  "note": "委员会 2026-08-17 授权《鸿鹄 V3：资本生命线》：Ownership/Exposure/Action 三轴、猎人九段、九层证据链、证据变化→生命线迁移。不新增技术指标、不填 R4、不把组合超限写成公司变坏、质量不能推出 100%。GUARD +7 条是这套取值的指纹登记，不是新的买卖阈值。冻结期内仍不新增决策规则。"
 }

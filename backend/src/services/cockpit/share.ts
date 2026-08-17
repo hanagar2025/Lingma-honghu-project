@@ -32,6 +32,8 @@
 import type { Dashboard, HoldingRow, MainlineRow, NextLayerRow } from './dashboard'
 import type { Verdict } from './verdict'
 import type { DecisionCockpit } from '../decision/cockpitV2'
+import { HUNTER_TEXT } from '../decision/hunter'
+import { CAPITAL_ACTION_TEXT } from '../decision/triaxis'
 import { byGrade } from './intradayFields'
 
 export interface ShareInput {
@@ -234,31 +236,37 @@ export function buildBrief(input: ShareInput): string {
   w(preamble(d.date, d.session === 'PRE_OPEN' ? '盘前' : '盘后', intraday))
 
   if (v2) {
-    w('## 〇、战略—战术决策（先读这一节）')
+    w('## 〇、资本生命线（先读这一节）')
     w('')
-    w('投资人每天只需要这 6 个问题。后面的表是依据，不是另一套判断。')
+    w('机器每天只回答这六句话。后面的表是依据，不是另一套判断。')
     w('')
-    for (const q of v2.questions) {
+    for (const q of v2.sentences) {
       w(`**${['①', '②', '③', '④', '⑤', '⑥'][q.no - 1]} ${q.question}**`)
       w('')
-      w(q.headline)
+      w(q.answer)
       w('')
     }
-    w('### 持仓投资状态')
+    if (v2.todayTasks?.length) {
+      w('### 今天真正需要做的事（最多三件）')
+      w('')
+      v2.todayTasks.forEach((t, i) => w(`${i + 1}. ${t}`))
+      w('')
+    }
+    w('### 当前持仓生命线')
     w('')
-    for (const h of v2.holdings) {
-      w(`- **${h.name}**${h.posPct === null ? '' : `（${(h.posPct * 100).toFixed(1)}%）`}`)
-      w(`  - ${h.ownLogic}`)
-      w(`  - ${h.decision}`)
-      w(`  - ${h.why}`)
+    w('| 标的 | 战略 | 生命线 | 当前动作 | 核心原因 |')
+    w('|---|---|---|---|---|')
+    for (const r of v2.lifeline ?? []) {
+      const own = r.ownYes ? '✓' : '✗'
+      w(`| ${r.name} | ${own} | ${HUNTER_TEXT[r.hunter]} | ${CAPITAL_ACTION_TEXT[r.action]} | ${r.oneReason} |`)
     }
     w('')
-    w('### 资本流向（不是排名）')
-    w('')
-    w(`- 增强：${v2.capital.enhance.map(r => r.name).join('、') || '无'}`)
-    w(`- 观察：${v2.capital.observe.map(r => r.name).join('、') || '无'}`)
-    w(`- 禁止：${v2.capital.forbid.map(r => r.name).join('、') || '无'}`)
-    w('')
+    if (v2.riskBoard) {
+      w('### 风险')
+      w('')
+      w(`- 战略风险 ${v2.riskBoard.strategy}　公司风险 ${v2.riskBoard.company}　预期风险 ${v2.riskBoard.expectation}　组合风险 ${v2.riskBoard.portfolio}`)
+      w('')
+    }
   }
 
   if (!includeAmounts) {

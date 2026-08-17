@@ -32,6 +32,13 @@ import {
   type CapitalLane, type DecisionExit, type R4Status, type StrategicState,
   type TacticalStage, type TechnicalRole,
 } from './strategy'
+import { buildEvidence, type EvidenceChain, type EvidenceFacts } from './evidence'
+import { inferHunter, migrate, type Migration } from './migrate'
+import { type HunterStage } from './hunter'
+import {
+  buildExposure, judgeOwnership,
+  type CapitalAction, type Exposure, type Ownership,
+} from './triaxis'
 
 /** 账务层已经成立的法定触发。本文件不重算阈值。 */
 export type AccountingTrigger =
@@ -75,6 +82,9 @@ export interface JudgeInput {
   valuationGateUsable: boolean
   node: NodeFacts | null
   company: CompanyFacts | null
+  /** 昨日生命线。缺省则只落位、不迁移。 */
+  prevHunter?: HunterStage | null
+  prevEvidence?: EvidenceChain | null
 }
 
 export type WorthOwning = 'YES' | 'NO' | 'UNKNOWN'
@@ -112,6 +122,14 @@ export interface Judged {
   factsStrengthening: boolean
   technicalRole: TechnicalRole
   reviewTriggers: readonly string[]
+  /** V3：三轴 + 猎人生命线 + 九层证据 + 迁移 */
+  ownership: Ownership
+  exposure: Exposure
+  capitalAction: CapitalAction
+  hunter: HunterStage
+  evidence: EvidenceChain
+  migration: Migration
+  oneReason: string
 }
 
 const R1_TRIGGERS: readonly AccountingTrigger[] = [
@@ -146,6 +164,37 @@ export function judgeOne(input: JudgeInput): Judged {
     : input.accounting.some(t => R1_TRIGGERS.includes(t)) ? 'OVER' : 'WITHIN'
   const exit = pickExit(strategic, risks, factsStrengthening, acts)
   const technicalRole: TechnicalRole = input.reviewTriggers.length > 0 ? 'REVIEW' : 'NONE'
+  const ownership = judgeOwnership({
+    retiredC: !!member?.retiredC,
+    combat,
+    champion: !!member?.champion,
+    industryVerified: !!member?.industryVerified,
+    earningsVerified: !!member?.earningsVerified,
+    inUniverse: !!member,
+  })
+  const exposure = buildExposure(input.posPct, ownership)
+  const evidence = buildEvidence(toEvidenceFacts(member, combat, strategyAllows, input))
+  const inferred = inferHunter({
+    held: input.held, ownership, strategic, risks, evidence,
+    factsStrengthening, inUniverse: !!member,
+  })
+  const reviewOnly = input.reviewTriggers.length > 0
+    && !risks.includes('R2_COMPANY') && !risks.includes('R3_MAINLINE')
+    && !risks.includes('R1_PORTFOLIO')
+  const migration = migrate({
+    prev: input.prevHunter ?? null,
+    inferred,
+    ownership,
+    evidence,
+    prevEvidence: input.prevEvidence ?? null,
+    risks,
+    reviewOnly,
+  })
+  const hunter = migration.to
+  const capitalAction = pickCapitalAction({
+    ownership, exit, hunter, held: input.held, risks,
+  })
+  const oneReason = oneReasonOf(capitalAction, exit, input, strategic, risks, hunter, ownership)
 
   return {
     code: input.code, name: input.name, held: input.held, posPct: input.posPct,
@@ -159,6 +208,7 @@ export function judgeOne(input: JudgeInput): Judged {
     worthOwning, positionBudget,
     lane: laneOf(strategic, strategyAllows, factsStrengthening),
     factsStrengthening, technicalRole, reviewTriggers: input.reviewTriggers,
+    ownership, exposure, capitalAction, hunter, evidence, migration, oneReason,
   }
 }
 
@@ -406,4 +456,83 @@ function whyNotSellOf(
     return '战略未被证伪，盈利兑现未破坏，故不进入价值退出。'
   }
   return '无法定减仓理由，故不卖。'
+}
+
+function toEvidenceFacts(
+  member: UniverseMember | null,
+  combat: boolean,
+  strategyAllows: boolean,
+  input: JudgeInput,
+): EvidenceFacts {
+  return {
+    combat,
+    retiredC: !!member?.retiredC,
+    champion: !!member?.champion,
+    industryVerified: !!member?.industryVerified,
+    earningsVerified: !!member?.earningsVerified,
+    revenueFlag: member?.mainlineAttributionVerified === undefined
+      ? null
+      : member.mainlineAttributionVerified,
+    strategyAllows,
+    nodeName: input.node?.node ?? member?.node ?? null,
+    levelShare: input.node?.levelShare ?? null,
+    delta4Q: input.node?.delta4Q ?? null,
+    npAbsDeltaSum: input.node?.npAbsDeltaSum ?? null,
+    shareWithinNode: input.company?.shareWithinNode ?? null,
+    npAbsDelta: input.company?.npAbsDelta ?? null,
+  }
+}
+
+function pickCapitalAction(p: {
+  ownership: Ownership
+  exit: DecisionExit
+  hunter: HunterStage
+  held: boolean
+  risks: readonly RiskCategory[]
+}): CapitalAction {
+  if (p.ownership === 'RETIRED' || p.exit === 'VALUE_EXIT') return 'EXIT'
+  if (p.exit === 'PORTFOLIO_FORCE' || p.risks.includes('R1_PORTFOLIO')) return 'REDUCE_EXPOSURE'
+  if (p.exit === 'TACTICAL_REDUCE') return 'REDUCE_EXPOSURE'
+  if (p.exit === 'ADD_CAPITAL') return 'INCREASE_CAPITAL'
+  if (!p.held || p.hunter === 'OBSERVE' || p.hunter === 'DISCOVER' || p.hunter === 'REOBSERVE') {
+    return 'OBSERVE'
+  }
+  return 'HOLD_CAPITAL'
+}
+
+function oneReasonOf(
+  action: CapitalAction,
+  exit: DecisionExit,
+  input: JudgeInput,
+  strategic: StrategicState,
+  risks: readonly RiskCategory[],
+  hunter: HunterStage,
+  ownership: Ownership,
+): string {
+  if (action === 'REDUCE_EXPOSURE' && exit === 'PORTFOLIO_FORCE') {
+    return '组合超限，不是公司价值恶化。'
+  }
+  if (action === 'EXIT') {
+    return ownership === 'RETIRED'
+      ? '战略资格已经否决。不因短期波动动作。'
+      : '投资逻辑已被战略层关闭。'
+  }
+  if (action === 'REDUCE_EXPOSURE' && risks.includes('R2_COMPANY')) {
+    return '公司盈利证据恶化，进入战术减仓评估。'
+  }
+  if (action === 'REDUCE_EXPOSURE' && risks.includes('R3_MAINLINE')) {
+    return '主线利润蛋糕在缩小，进入战术减仓评估。'
+  }
+  if (action === 'INCREASE_CAPITAL') {
+    return '关键证据进一步确认，不是因为涨了。'
+  }
+  if (action === 'OBSERVE') {
+    return hunter === 'DISCOVER'
+      ? '产业变化仍在发现段，未达观察门槛。'
+      : '证据尚未同时达到战略资格与建仓门槛。'
+  }
+  if (strategic === 'HOLDS' || strategic === 'STRENGTHENED') {
+    return '战略证据仍成立。今日不动作。'
+  }
+  return '投资逻辑未关闭，亦无法定调整理由。'
 }
