@@ -211,7 +211,7 @@ ok('R4 文案拒绝用 PE 或均线代替',
 // 八、源码不引入新指标、不出现评分
 // ══════════════════════════════════════════════════════════════
 {
-  const files = ['strategy.ts', 'judge.ts', 'cockpitV2.ts', 'hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts', 'r4.ts', 'forward.ts', 'capitalGates.ts', 'independence.ts', 'permission.ts', 'migrationJournal.ts']
+  const files = ['strategy.ts', 'judge.ts', 'cockpitV2.ts', 'hunter.ts', 'evidence.ts', 'triaxis.ts', 'migrate.ts', 'r4.ts', 'forward.ts', 'capitalGates.ts', 'independence.ts', 'permission.ts', 'migrationJournal.ts', 'charter.ts']
   for (const f of files) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf-8')
     const code = src.split('\n').filter(l => {

@@ -27,6 +27,7 @@ import {
   type CapitalLane, type StrategicState,
 } from './strategy'
 import { CORE_MEANS_OWN_NOT_ADD, HUNTER_TEXT, PRICE_IS_NOT_A_MIGRATION_CAUSE, type HunterStage } from './hunter'
+import { MISSION } from './charter'
 import {
   CAPITAL_ACTION_TEXT, EVIDENCE_TONE_TEXT, OWNERSHIP_TEXT,
   type CapitalAction, type EvidenceTone, type Ownership,
@@ -213,7 +214,7 @@ export function buildDecisionCockpit(input: DecisionCockpitInput): DecisionCockp
       + PRICE_IS_NOT_A_MIGRATION_CAUSE,
     capitalMoves, lifeline, riskBoard, todayTasks, sentences,
     unjudgable: buildUnjudgable(strategy, holdings),
-    maxim: `${PRICE_IS_NOT_A_MIGRATION_CAUSE} ${CORE_MEANS_OWN_NOT_ADD}`,
+    maxim: `${PRICE_IS_NOT_A_MIGRATION_CAUSE} ${CORE_MEANS_OWN_NOT_ADD} ${MISSION}`,
   }
 }
 

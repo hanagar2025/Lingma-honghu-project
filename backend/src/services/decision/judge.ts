@@ -562,7 +562,7 @@ function oneReasonOf(
     return '关键证据进一步确认，不是因为涨了。'
   }
   if (action === 'HOLD_CAPITAL' && hunter === 'CORE') {
-    return '战略资格仍成立。证据强化本身不能推出加仓，不是因为涨了。'
+    return '拥有资格成立，但资本向上迁移依据不足。证据强化本身不能推出加仓，不是因为涨了。'
   }
   if (action === 'OBSERVE') {
     return hunter === 'DISCOVER'

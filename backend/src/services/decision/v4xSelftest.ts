@@ -24,6 +24,12 @@ import { collapseAtoms, revenueAndProfitAreIndependent } from './independence'
 import { canRaiseCapital, coreGrantsAddPermission } from './permission'
 import { formatRecord, NEVER_CLAIM_BACKTEST_PROVED_FAMILIES, persistJournal, recordOf } from './migrationJournal'
 import { CORE_MEANS_OWN_NOT_ADD } from './hunter'
+import {
+  FOUR_CANNOTS, LEGAL_MOVE_QUESTION, MATURITY, MISSION,
+  OWN_BUT_CANNOT_RAISE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME, RETURNS_CANNOT_JUDGE_SYSTEM,
+  SEVEN_QUESTIONS, admits, answerIsIllegal, laterReturnCannotReviseQuality,
+  legalMoveOf, priceCannotFillEvidenceOutcome,
+} from './charter'
 import { RISK_CAN_PRODUCE } from './lifecycle'
 import { buildEvidence } from './evidence'
 
@@ -285,6 +291,15 @@ ok('禁止声称回测证明了族数门槛', NEVER_CLAIM_BACKTEST_PROVED_FAMILI
     txt.includes('资本动作') && txt.includes(rec.why))
   ok('留痕文本拒绝收益归因和门槛有效性声称',
     txt.includes('不是收益归因') && txt.includes('不证明族数门槛有效'))
+  ok('Decision Quality 当时合规，Evidence Outcome 只能 PENDING',
+    rec.decisionQuality === 'COMPLIANT' && rec.evidenceOutcome === 'PENDING')
+  ok('Capital Outcome 不得用来判断系统',
+    rec.capitalOutcome === 'NOT_USED_TO_JUDGE_SYSTEM')
+  ok('后来大跌不能改写当时合规',
+    laterReturnCannotReviseQuality(rec.decisionQuality, -0.4) === 'COMPLIANT')
+  ok('价格不能填 Evidence Outcome',
+    priceCannotFillEvidenceOutcome() === 'PENDING'
+    && PRICE_CANNOT_FILL_EVIDENCE_OUTCOME === true)
 }
 
 {
@@ -304,7 +319,7 @@ ok('禁止声称回测证明了族数门槛', NEVER_CLAIM_BACKTEST_PROVED_FAMILI
 {
   const files = [
     'independence.ts', 'permission.ts', 'migrationJournal.ts',
-    'r4.ts', 'forward.ts', 'capitalGates.ts',
+    'r4.ts', 'forward.ts', 'capitalGates.ts', 'charter.ts',
   ]
   for (const f of files) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), 'utf-8')
@@ -317,6 +332,51 @@ ok('禁止声称回测证明了族数门槛', NEVER_CLAIM_BACKTEST_PROVED_FAMILI
       ok(`${f} 不出现「${banned}」`, !new RegExp(`\\b${banned}\\b`).test(code))
     }
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 六、四个不能 + 合法迁移问题 + 准入闸门
+// ══════════════════════════════════════════════════════════════
+ok('使命钉死：不是预测哪只股票会涨', MISSION.includes('不是告诉我们哪只股票会涨'))
+ok('核心语言：拥有资格成立，但资本向上迁移依据不足',
+  OWN_BUT_CANNOT_RAISE === '拥有资格成立，但资本向上迁移依据不足。')
+ok('机器先问七问，不是先问涨跌', SEVEN_QUESTIONS.length === 7
+  && !SEVEN_QUESTIONS.some(q => q.includes('涨') || q.includes('跌')))
+ok('四个不能齐备', FOUR_CANNOTS.map(c => c.id).join('|') === 'PRICE|COUNT|CORE|UNKNOWN')
+ok('收益率不能判断系统好坏', RETURNS_CANNOT_JUDGE_SYSTEM === true)
+ok('成熟度停在 V4.x 验证期，不预定义 V5',
+  MATURITY.V4X.includes('决策验证系统') && !('V5' in MATURITY))
+
+ok('观察→建仓必须问为什么第一次给资本',
+  LEGAL_MOVE_QUESTION.OBSERVE_TO_ENTRY.includes('第一次值得给它资本'))
+ok('建仓→加仓必须问今天多知道了什么',
+  LEGAL_MOVE_QUESTION.ENTRY_TO_ADD.includes('多知道了什么'))
+ok('加仓→追加必须问未来兑现确定性',
+  LEGAL_MOVE_QUESTION.ADD_TO_TOP_UP.includes('未来盈利兑现'))
+ok('核心→战术减仓必须问哪项证据恶化',
+  LEGAL_MOVE_QUESTION.CORE_TO_TACTICAL.includes('证据恶化'))
+ok('核心→价值退出必须问根本理由还在吗',
+  LEGAL_MOVE_QUESTION.CORE_TO_VALUE_EXIT.includes('根本理由'))
+
+ok('「涨得不错」不能作为建仓答案',
+  answerIsIllegal('OBSERVE_TO_ENTRY', '它涨得不错'))
+ok('「股价上涨」不能作为加仓答案',
+  answerIsIllegal('ENTRY_TO_ADD', '因为股价上涨'))
+ok('「跌了所以减」不能作为战术减仓答案',
+  answerIsIllegal('CORE_TO_TACTICAL', '跌了所以减'))
+ok('合法映射：观察→建仓', legalMoveOf('OBSERVE', 'ENTRY') === 'OBSERVE_TO_ENTRY')
+ok('核心维持不是一次向上迁移', legalMoveOf('CORE', 'CORE') === null)
+
+ok('新均线指标答不出改善哪个决策 → 不准入',
+  admits({ improves: null, why: '再加一条均线' }) === false)
+ok('RSI 页面没有决策槽位 → 不准入',
+  admits({ improves: null, why: '' }) === false)
+ok('独立族去重改善 Evidence → 可准入',
+  admits({ improves: 'EVIDENCE', why: '同一因果链不得数成四个族' }) === true)
+
+{
+  const j = judgeOne(zhongwei)
+  ok('中微一句话用上核心语言', j.oneReason.includes(OWN_BUT_CANNOT_RAISE))
 }
 
 console.log(`\n═══ 结果：${pass} 通过 / ${fail} 失败 ═══\n`)

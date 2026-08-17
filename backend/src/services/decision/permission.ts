@@ -12,6 +12,7 @@
  */
 
 import { CORE_IS_NOT_ADD_PERMISSION, type GateVerdict } from './capitalGates'
+import { OWN_BUT_CANNOT_RAISE } from './charter'
 import type { ExpectationVerdict } from './r4'
 import type { HunterStage } from './hunter'
 import { ownershipAllows, type Ownership } from './triaxis'
@@ -58,7 +59,7 @@ export function canRaiseCapital(p: RaiseInput): RaiseResult {
   if (p.r4 === 'UNKNOWN' && (p.add.gained.length + p.topUp.gained.length) === 0) {
     return {
       ok: false, verdict: 'UNJUDGABLE',
-      why: 'R4 未测，且没有新的独立证据族。不允许把核心持有读成可以继续加仓。',
+      why: `${OWN_BUT_CANNOT_RAISE} R4 与新的独立证据族都未到。未知不能写成偏多。`,
     }
   }
 
@@ -67,7 +68,7 @@ export function canRaiseCapital(p: RaiseInput): RaiseResult {
   if (p.hunter === 'CORE' && gained === 0) {
     return {
       ok: false, verdict: 'HOLD',
-      why: '核心 = 可以长期拥有。核心 ≠ 可以继续加仓。没有新的独立证据族，不得提高权重。',
+      why: `${OWN_BUT_CANNOT_RAISE} 核心 ≠ 可以继续加仓。没有新的独立证据族。`,
     }
   }
   if (p.add.ok || p.topUp.ok) {

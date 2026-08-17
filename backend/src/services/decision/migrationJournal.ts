@@ -23,6 +23,10 @@ import type { CapitalAction, EvidenceTone, Ownership } from './triaxis'
 import { FAMILY_TEXT } from './capitalGates'
 import { HUNTER_TEXT } from './hunter'
 import { CAPITAL_ACTION_TEXT, EVIDENCE_TONE_TEXT, OWNERSHIP_TEXT } from './triaxis'
+import {
+  LEGAL_MOVE_QUESTION, legalMoveOf,
+  type CapitalOutcome, type DecisionQuality, type EvidenceOutcome, type LegalMove,
+} from './charter'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const JOURNAL_DIR = join(HERE, '../governance/data/migrations')
@@ -43,6 +47,23 @@ export interface MigrationRecord {
   triggerFamilies: readonly EvidenceFamily[]
   blockers: readonly string[]
   why: string
+  r4: string
+  legalMove: LegalMove | null
+  legalQuestion: string | null
+  /**
+   * 当时的信息条件下，动作是否符合规则。
+   * 后来涨跌不得改写这一格。
+   */
+  decisionQuality: DecisionQuality
+  /**
+   * 后来事实有没有兑现。当日只能是 PENDING。
+   * 价格不能填这一格。
+   */
+  evidenceOutcome: EvidenceOutcome
+  /**
+   * 资本结果。存在，但不得用来判断系统好坏。
+   */
+  capitalOutcome: CapitalOutcome
   /** 恒为 true。本档案不是收益归因。 */
   notAReturnClaim: true
 }
@@ -53,6 +74,7 @@ export function recordOf(date: string, j: Judged): MigrationRecord {
   if (j.forward.tone === 'UNKNOWN') blockers.push('前瞻盈利 UNKNOWN')
   for (const name of j.evidence.unknown) blockers.push(`${name} UNKNOWN`)
 
+  const move = legalMoveOf(j.migration.from, j.hunter)
   return {
     date,
     code: j.code,
@@ -68,6 +90,12 @@ export function recordOf(date: string, j: Judged): MigrationRecord {
     triggerFamilies: j.migration.capitalReason.families,
     blockers,
     why: j.oneReason,
+    r4: j.expectation.verdict,
+    legalMove: move,
+    legalQuestion: move ? LEGAL_MOVE_QUESTION[move] : null,
+    decisionQuality: j.migration.legal ? 'COMPLIANT' : 'VIOLATION',
+    evidenceOutcome: 'PENDING',
+    capitalOutcome: 'NOT_USED_TO_JUDGE_SYSTEM',
     notAReturnClaim: true,
   }
 }
@@ -89,8 +117,12 @@ export function formatRecord(r: MigrationRecord): string {
     `阻止条件　${blocks}`,
     `资本动作　${CAPITAL_ACTION_TEXT[r.action]}`,
     `原因　${r.why}`,
-    '本条不是收益归因，也不证明族数门槛有效。',
-  ].join('\n')
+    r.legalQuestion ? `当时必须回答　${r.legalQuestion}` : '',
+    `Decision Quality　${r.decisionQuality}`,
+    `Evidence Outcome　${r.evidenceOutcome}`,
+    `Capital Outcome　${r.capitalOutcome}`,
+    '三类审计必须分开。后来涨跌不得改写当时是否合规。本条不是收益归因，也不证明族数门槛有效。',
+  ].filter(Boolean).join('\n')
 }
 
 export function persistJournal(

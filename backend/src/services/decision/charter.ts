@@ -1,0 +1,141 @@
+/**
+ * 鸿鹄最高层架构约束。
+ *
+ * V4.x 不是继续完善系统，而是投资决策系统验证期。
+ * 验证的不是「股票能不能赚钱」，而是：
+ * 资本有没有因为正确的证据变化，发生正确类型的迁移。
+ *
+ * 再往下加任何数据、指标、页面、规则，都必须先回答：
+ * 它改善了上面哪一个决策？答不出来，就不该进入鸿鹄。
+ *
+ * 本文件不生产动作，不进规则指纹。
+ */
+
+import type { HunterStage } from './hunter'
+
+/** 比「战略决定拥有什么」更接近终局的那一句。 */
+export const MISSION =
+  '鸿鹄不是告诉我们哪只股票会涨，而是持续判断：我们的战略假设是否仍然成立，以及在当前证据下，下一单位资本是否值得继续交给这家公司。'
+
+/** 未知不能偷偷变成偏多时的核心语言。 */
+export const OWN_BUT_CANNOT_RAISE =
+  '拥有资格成立，但资本向上迁移依据不足。'
+
+export const SEVEN_QUESTIONS = [
+  '战略上还应该拥有吗？',
+  '支持拥有它的证据是在强化还是削弱？',
+  '有没有新的、真正独立的证据？',
+  '这些证据是否足以获得更多资本？',
+  '组合是否允许给它更多资本？',
+  '如果不允许调整，阻止它的究竟是什么？',
+  '如果必须调整，是价值、战术还是组合原因？',
+] as const
+
+export const FOUR_CANNOTS = [
+  {
+    id: 'PRICE',
+    text: '不能因为价格变化而迁移生命线',
+    detail: '涨了不能加仓，跌了不能减仓。技术指标只能复核，不能变成迁移规则。',
+  },
+  {
+    id: 'COUNT',
+    text: '不能因为证据数量增加而自动迁移',
+    detail: '同一订单周期里的需求、订单、收入、利润是一个证据族，不是四个。',
+  },
+  {
+    id: 'CORE',
+    text: '不能因为核心而自动增加仓位',
+    detail: 'Ownership ≠ Exposure ≠ Action。核心 + 证据稳定 + 仓位合理 = 维持。',
+  },
+  {
+    id: 'UNKNOWN',
+    text: '不能把未知偷偷变成偏多',
+    detail: OWN_BUT_CANNOT_RAISE,
+  },
+] as const
+
+export type CannotId = typeof FOUR_CANNOTS[number]['id']
+
+export type LegalMove =
+  | 'OBSERVE_TO_ENTRY'
+  | 'ENTRY_TO_ADD'
+  | 'ADD_TO_TOP_UP'
+  | 'CORE_TO_TACTICAL'
+  | 'CORE_TO_VALUE_EXIT'
+
+/** 一次合法迁移必须回答的问题。答成「涨了/跌了」就不合法。 */
+export const LEGAL_MOVE_QUESTION: Record<LegalMove, string> = {
+  OBSERVE_TO_ENTRY: '为什么现在第一次值得给它资本？',
+  ENTRY_TO_ADD: '今天比第一次建仓时，多知道了什么？',
+  ADD_TO_TOP_UP: '未来盈利兑现的确定性有没有进一步提高？',
+  CORE_TO_TACTICAL: '哪一项关键证据恶化了？不是跌了。',
+  CORE_TO_VALUE_EXIT: '当初拥有它的根本理由还在吗？',
+}
+
+export const ILLEGAL_ANSWERS: Record<LegalMove, readonly string[]> = {
+  OBSERVE_TO_ENTRY: ['涨得不错', '突破均线', '技术走强'],
+  ENTRY_TO_ADD: ['股价上涨', '又涨了', '趋势延续'],
+  ADD_TO_TOP_UP: ['继续上涨', '创新高', '动量加强'],
+  CORE_TO_TACTICAL: ['跌了所以减', '破位', '均线向下'],
+  CORE_TO_VALUE_EXIT: ['股票不好看了', '跌多了', '估值太贵'],
+}
+
+export function legalMoveOf(from: HunterStage | null, to: HunterStage): LegalMove | null {
+  if (from === 'OBSERVE' && to === 'ENTRY') return 'OBSERVE_TO_ENTRY'
+  if (from === 'ENTRY' && to === 'ADD') return 'ENTRY_TO_ADD'
+  if (from === 'ADD' && to === 'TOP_UP') return 'ADD_TO_TOP_UP'
+  if (from === 'CORE' && to === 'TACTICAL_REDUCE') return 'CORE_TO_TACTICAL'
+  if (from === 'CORE' && to === 'VALUE_EXIT') return 'CORE_TO_VALUE_EXIT'
+  return null
+}
+
+export function answerIsIllegal(move: LegalMove, answer: string): boolean {
+  return ILLEGAL_ANSWERS[move].some(p => answer.includes(p))
+}
+
+/**
+ * 三类审计必须分开。
+ * 后来跌了，不能改写当时合规；后来涨了，也不能说系统错过机会。
+ */
+export type DecisionQuality = 'COMPLIANT' | 'VIOLATION' | 'UNJUDGABLE'
+export type EvidenceOutcome = 'PENDING' | 'REALIZED' | 'FALSIFIED' | 'INCONCLUSIVE'
+export type CapitalOutcome = 'NOT_USED_TO_JUDGE_SYSTEM'
+
+export const RETURNS_CANNOT_JUDGE_SYSTEM = true
+export const PRICE_CANNOT_FILL_EVIDENCE_OUTCOME = true
+
+export function laterReturnCannotReviseQuality(
+  quality: DecisionQuality, laterReturn: number,
+): DecisionQuality {
+  void laterReturn
+  return quality
+}
+
+export function priceCannotFillEvidenceOutcome(): EvidenceOutcome {
+  return 'PENDING'
+}
+
+export const MATURITY = {
+  V1: '风险监控器：哪里违规？',
+  V2: '决策语义系统：为什么调整？',
+  V3: '资本生命线：资本现在处在哪一段？',
+  V4: '证据驱动迁移系统：为什么资本应该向上或向下迁移？',
+  V4X: '决策验证系统：这些迁移规则有没有被真实证据证明有效？',
+} as const
+
+export type DecisionSlot =
+  | 'STRATEGY'
+  | 'OWNERSHIP'
+  | 'EVIDENCE'
+  | 'FORWARD'
+  | 'EXPECTATION'
+  | 'PERMISSION'
+  | 'EXPOSURE'
+  | 'ACTION'
+  | 'LIFELINE'
+  | 'AUDIT'
+
+/** 答不出改善了哪一个决策，就不该进入鸿鹄。 */
+export function admits(change: { improves: DecisionSlot | null; why: string }): boolean {
+  return change.improves !== null && change.why.trim().length > 0
+}
