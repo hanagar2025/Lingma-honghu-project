@@ -22,13 +22,18 @@ import {
 } from './capitalGates'
 import { collapseAtoms, revenueAndProfitAreIndependent } from './independence'
 import { canRaiseCapital, coreGrantsAddPermission } from './permission'
-import { formatRecord, NEVER_CLAIM_BACKTEST_PROVED_FAMILIES, persistJournal, recordOf } from './migrationJournal'
+import {
+  LEDGER_FIELDS, NEVER_CLAIM_BACKTEST_PROVED_FAMILIES,
+  afterTheFact, formatRecord, persistJournal, recordOf,
+} from './migrationJournal'
 import { CORE_MEANS_OWN_NOT_ADD } from './hunter'
 import {
-  FOUR_CANNOTS, LEGAL_MOVE_QUESTION, MATURITY, MISSION,
-  OWN_BUT_CANNOT_RAISE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME, RETURNS_CANNOT_JUDGE_SYSTEM,
-  SEVEN_QUESTIONS, admits, answerIsIllegal, laterReturnCannotReviseQuality,
-  legalMoveOf, priceCannotFillEvidenceOutcome,
+  ARCHITECTURE_CLOSED_AT_V4X, DAILY_QUESTION, FOUR_CANNOTS, HOLD_AS_DECISION,
+  HOLD_IS_AN_ACTIVE_DECISION, LEGAL_MOVE_QUESTION, MATURITY, MISSION,
+  OWN_BUT_CANNOT_RAISE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME, PRIMARY_ARTIFACT,
+  RETURNS_CANNOT_JUDGE_SYSTEM, SEVEN_QUESTIONS, V5_MUST_BE_FORCED_BY_DATA,
+  admits, answerIsIllegal, laterLossCannotMarkViolation, laterReturnCannotReviseQuality,
+  laterRiseCannotDemandAdd, legalMoveOf, priceCannotFillEvidenceOutcome,
 } from './charter'
 import { RISK_CAN_PRODUCE } from './lifecycle'
 import { buildEvidence } from './evidence'
@@ -377,6 +382,86 @@ ok('独立族去重改善 Evidence → 可准入',
 {
   const j = judgeOne(zhongwei)
   ok('中微一句话用上核心语言', j.oneReason.includes(OWN_BUT_CANNOT_RAISE))
+}
+
+// ══════════════════════════════════════════════════════════════
+// 七、停点：维持是主动决策；账本可事后审问；正确的不作为
+// ══════════════════════════════════════════════════════════════
+ok('最重要产物是可被审问的理由，不是今日动作',
+  PRIMARY_ARTIFACT.includes('一年后能不能审问这个动作'))
+ok('每天只盯有没有足以改变资本状态的新事实',
+  DAILY_QUESTION.includes('足以改变资本状态的新事实'))
+ok('维持是主动决策', HOLD_IS_AN_ACTIVE_DECISION === true
+  && HOLD_AS_DECISION.includes('系统有能力加仓'))
+ok('架构开发停在 V4.x，V5 由数据逼出',
+  ARCHITECTURE_CLOSED_AT_V4X === true && V5_MUST_BE_FORCED_BY_DATA === true)
+
+{
+  const j = judgeOne(zhongwei)
+  ok('中微理由写明维持是主动决策', j.oneReason.includes('维持是主动决策'))
+  ok('中微理由写明证据没到资本迁移标准',
+    j.oneReason.includes('证据没有达到资本迁移标准'))
+  const rec = recordOf('2026-08-17', j)
+  for (const field of LEDGER_FIELDS) {
+    ok(`账本有 ${field}`, field in rec)
+  }
+  ok('INIT/HOLD 的新证据族必须是空数组，站立族不算新增',
+    rec.newFamilies.length === 0 && rec.action === 'HOLD_CAPITAL')
+  ok('中微独立性依据写明维持是主动决策，不是系统无能',
+    rec.independenceWhy.includes('维持是主动决策')
+    && rec.independenceWhy.includes('不是系统无能'))
+  ok('中微 Exposure 正常，不是超限', rec.exposure === '正常')
+  ok('中微当日后续解释为空，Evidence Outcome 只能 PENDING',
+    rec.aftermath === '' && rec.evidenceOutcome === 'PENDING')
+
+  const rewritten = afterTheFact(rec, {
+    evidenceOutcome: 'REALIZED',
+    aftermath: '一年后收入继续兑现。未增加资本，因此没有捕获全部上涨。',
+    laterReturn: 0.5,
+    decisionQuality: 'VIOLATION',
+    action: 'INCREASE_CAPITAL',
+  })
+  ok('后来上涨 50% 不能把维持改写成应该加仓',
+    laterRiseCannotDemandAdd(rec.action, 0.5) === 'HOLD_CAPITAL'
+    && rewritten.action === 'HOLD_CAPITAL')
+  ok('回填不得改写 Decision Quality',
+    rewritten.decisionQuality === 'COMPLIANT'
+    && laterLossCannotMarkViolation('COMPLIANT', -0.4) === 'COMPLIANT')
+  ok('回填只改 Evidence Outcome 与后续解释',
+    rewritten.evidenceOutcome === 'REALIZED'
+    && rewritten.aftermath.includes('没有捕获全部上涨'))
+}
+
+{
+  const surged = judgeOne({
+    ...haiguang,
+    posPct: 0.14,
+    accounting: ['POSITION_LIMIT'],
+    reviewTriggers: ['放量上涨', '突破均线', '10日涨幅 20%'],
+  })
+  ok('海光仓位 14% 仍须降暴露，即使当天暴涨',
+    surged.capitalAction === 'REDUCE_EXPOSURE' && surged.exit === 'PORTFOLIO_FORCE')
+  ok('海光降暴露的原因是组合硬约束，不是涨跌',
+    surged.oneReason.includes('组合超限') && !surged.oneReason.includes('跌'))
+  const rec = recordOf('2026-08-17', surged)
+  ok('海光账本新证据族仍为空', rec.newFamilies.length === 0)
+  ok('海光独立性依据写明动作来自组合硬约束',
+    rec.independenceWhy.includes('组合硬约束'))
+}
+
+{
+  const dropped = judgeOne({
+    ...haiguang,
+    posPct: 0.11,
+    accounting: [],
+    reviewTriggers: ['放量下跌', '跌破均线', '10日跌 15%'],
+  })
+  ok('海光仓位 11% 时暴露回到硬顶内',
+    dropped.exposure.portfolioStatus === 'WITHIN')
+  ok('海光仅因暴跌不能自动减仓',
+    dropped.capitalAction === 'HOLD_CAPITAL'
+    && dropped.exit !== 'PORTFOLIO_FORCE'
+    && !dropped.risks.includes('R1_PORTFOLIO'))
 }
 
 console.log(`\n═══ 结果：${pass} 通过 / ${fail} 失败 ═══\n`)

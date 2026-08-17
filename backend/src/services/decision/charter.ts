@@ -21,6 +21,24 @@ export const MISSION =
 export const OWN_BUT_CANNOT_RAISE =
   '拥有资格成立，但资本向上迁移依据不足。'
 
+/** 从现在起，最重要的产物不是今日动作，而是可被一年后审问的理由。 */
+export const PRIMARY_ARTIFACT =
+  '鸿鹄最重要的产物不是今天给出什么动作，而是为什么给出这个动作，以及一年后能不能审问这个动作。'
+
+/** 每天只盯这一问。没有新事实，就维持。 */
+export const DAILY_QUESTION =
+  '今天有没有出现足以改变资本状态的新事实？'
+
+/** 维持是主动决策：有能力加仓，但证据没到迁移标准。 */
+export const HOLD_IS_AN_ACTIVE_DECISION = true
+
+export const HOLD_AS_DECISION =
+  '维持是主动决策。系统有能力加仓，但证据没有达到资本迁移标准。'
+
+/** V4.x 架构开发到此停止。进入运行—留痕—审计—验证。V5 由数据逼出。 */
+export const ARCHITECTURE_CLOSED_AT_V4X = true
+export const V5_MUST_BE_FORCED_BY_DATA = true
+
 export const SEVEN_QUESTIONS = [
   '战略上还应该拥有吗？',
   '支持拥有它的证据是在强化还是削弱？',
@@ -113,6 +131,22 @@ export function laterReturnCannotReviseQuality(
 
 export function priceCannotFillEvidenceOutcome(): EvidenceOutcome {
   return 'PENDING'
+}
+
+/** 后来上涨 50%，不能把当天的维持改写成应该加仓。 */
+export function laterRiseCannotDemandAdd(
+  action: 'HOLD_CAPITAL' | 'INCREASE_CAPITAL' | string, laterReturn: number,
+): 'HOLD_CAPITAL' | 'INCREASE_CAPITAL' | string {
+  void laterReturn
+  return action
+}
+
+/** 后来基本面失败、资本亏损，不能把当时合规改成违规。 */
+export function laterLossCannotMarkViolation(
+  quality: DecisionQuality, laterReturn: number,
+): DecisionQuality {
+  void laterReturn
+  return quality
 }
 
 export const MATURITY = {
