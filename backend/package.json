@@ -24,7 +24,8 @@
     "daily": "npm run freeze:check && HTML=1 npm run cockpit && tsx src/services/governance/reviewRun.ts",
     "daily:pre": "SESSION=pre HTML=1 npm run cockpit",
     "review": "tsx src/services/governance/reviewRun.ts",
-    "segments:fetch": "tsx segmentsFetch.ts"
+    "segments:fetch": "tsx segmentsFetch.ts",
+    "decision:selftest": "tsx src/services/decision/selftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

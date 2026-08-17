@@ -1,11 +1,11 @@
 {
-  "frozenAt": "2026-08-15",
+  "frozenAt": "2026-08-17",
   "tradingDays": 30,
-  "hash": "93733288c705",
-  "entryCount": 27,
+  "hash": "e59cdde33bed",
+  "entryCount": 31,
   "byDomain": {
-    "GUARD": "64343db4cb5a",
-    "LEGAL_REASON": "a39213fbd1e7",
+    "GUARD": "68434286ad76",
+    "LEGAL_REASON": "0de3f52d932c",
     "POSITION_LIMIT": "b481dd150240",
     "PRICE_WINDOW": "7f8a35934192",
     "PROMOTION": "dce15f91262f",
@@ -13,7 +13,7 @@
     "VALUATION": "5d9de12e91c1"
   },
   "tierCounts": {
-    "ACCOUNTING": 25,
+    "ACCOUNTING": 29,
     "VALIDATED": 1,
     "OBSERVATION": 1
   },

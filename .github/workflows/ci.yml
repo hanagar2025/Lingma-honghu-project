@@ -51,6 +51,12 @@ jobs:
       # 守：研究域与决策域永不相交；加研究标的不得改变规则指纹；利润数据不得插值。
       - name: Research selftest (研究域不得进入决策域)
         run: npm -w backend run research:selftest
+      # 守三条否定式约束：技术数据不得单独构成减仓理由；R4 预期风险只能停止追加、
+      # 不能减仓（否则被回测证伪的"技术信号→卖出"会换个名字回来）；
+      # 状态变化不等于自动卖出（风险状态只允许进入评估）。
+      # 否定式约束在重构时不会报错，只会静默消失 —— 故必须由 CI 每次确认。
+      - name: Decision layer selftest (技术信号不得单独减仓)
+        run: npm -w backend run decision:selftest
       # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
       # 让 CI 变绿，把审计变成盖章。漂移只需在基线文件的 git diff 里显形即可。
       - name: Rule freeze check (打印指纹，漂移不失败)

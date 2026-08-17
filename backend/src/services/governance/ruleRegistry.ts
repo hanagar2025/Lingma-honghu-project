@@ -14,6 +14,9 @@ import { createHash } from 'node:crypto'
 import { LEGAL_REASON_TEXT, FORBIDDEN_REASON_PHRASES } from '../cockpit/types'
 import { LIMITS, SAFETY_NET_POLICY } from '../cockpit/safety'
 import { PEAK_HISTORY } from './peakBasis'
+import {
+  RISK_CAN_PRODUCE, EVIDENCE_CAN_REDUCE, STATES,
+} from '../decision/lifecycle'
 import { NODE_TAXONOMY } from '../cockpit/nodes'
 import { RED_EXTREME_RET10_THRESHOLD } from '../msr/promotion'
 import { PE_SANITY_CEILING } from '../msr/valuation'
@@ -106,6 +109,35 @@ export function buildRuleRegistry(): RuleEntry[] {
     domain: 'GUARD', key: 'drawdownRequiresSamePeakBasis', value: true,
     tier: 'ACCOUNTING',
     definedIn: 'cockpit/safety.ts:peakComparable（口径不可比时回撤为 null，不得当作 0）',
+  })
+
+  // ── 决策语义层（委员会 2026-08-17 裁定）──
+  //
+  // 这一层决定"允许做什么"，属决策生效，故必须对指纹可见。
+  // 其中 R4 那一条尤其重要：它是技术/预期数据的天花板，
+  // 一旦有人把它从空数组改成含 TACTICAL_REDUCE，
+  // 被回测证伪的"技术信号 → 卖出"就回来了 —— 而指纹会立刻变。
+  out.push({
+    domain: 'LEGAL_REASON', key: 'sellKinds', value: 'VALUE_EXIT|TACTICAL_REDUCE|PORTFOLIO_REDUCE',
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/lifecycle.ts:SellKind（三种卖出严格区分，不得合并为"减仓"）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'r4CanProduceSell',
+    value: RISK_CAN_PRODUCE.R4_EXPECTATION.length,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/lifecycle.ts:RISK_CAN_PRODUCE.R4_EXPECTATION'
+      + '（必须为 0 —— 预期/价格风险只能停止追加，不能减仓）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'technicalCanReduce', value: EVIDENCE_CAN_REDUCE.TECHNICAL,
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/lifecycle.ts:EVIDENCE_CAN_REDUCE（技术类证据不得构成减仓理由）',
+  })
+  out.push({
+    domain: 'GUARD', key: 'lifecycleStates', value: STATES.map(x => x.state).join(','),
+    tier: 'ACCOUNTING',
+    definedIn: 'decision/lifecycle.ts:STATES（状态机取值；风险状态只允许评估，不允许终局动作）',
   })
 
   // ── 价格窗口（唯一具备决策效力的价格阈值） ──
