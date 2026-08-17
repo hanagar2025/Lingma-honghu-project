@@ -165,11 +165,45 @@ function stripQuotedHeredocs(src) {
 }
 
 for (const f of files) {
+  // 「不要对 shell 套用 C 风格块注释剥离」。
+  //
+  // 这里原本有一句 .replace(/\/\*[\s\S]*?\*\//g, '')。shell 没有块注释，
+  // 而 `/*` 在 shell 里是路径通配符（"$ROOT"/frontend/release/*.tar.gz），
+  // `*/` 也会出现在 sed 表达式里（s/.*<title>...<\/title>.*/\1/p）。
+  //
+  // 后果不是报错，而是**静默删码**：实测 deploy-ecs.sh 有 269 行
+  // （其中 168 行真代码）被当成一个巨大的块注释吃掉，
+  // 那些行因此完全不受任何检查覆盖 —— 未括号变量、未赋值变量、Markdown 星号全都查不到。
+  //
+  // 更隐蔽的是它是潜伏的：在文件里出现第一个 `*/` 之前，正则匹配不到，什么也不删。
+  // 是一次无关的编辑（给标题提取加了 sed）才让删除生效。
+  // 「一个会静默缩小自身覆盖范围的检查器，比没有检查器更糟」——
+  // 它给出的"通过"是关于一份被截断的文件的。
+  const raw = readFileSync(f, 'utf-8')
   const src = stripQuotedHeredocs(
-    readFileSync(f, 'utf-8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .split('\n').map(l => (/^\s*#/.test(l) ? '' : l)).join('\n')
+    raw.split('\n').map(l => (/^\s*#/.test(l) ? '' : l)).join('\n')
   )
+
+  // ── 检查器自检：预处理不得改变行数 ──
+  //
+  // 本文件的两步预处理（注释置空、带引号 heredoc 置空）都是**逐行置空**，
+  // 设计上保持行数不变。行数一旦变了，说明有某一步在整段删内容 ——
+  // 而整段删掉的部分会静默逃过后面所有检查，同时让报错行号全部错位。
+  //
+  // 这道自检是三次同类事故之后加的：
+  //   一次 lint 范围只覆盖两个目录，新目录的问题查不到
+  //   一次禁字检查扫整篇，把"说明"当成"违规"
+  //   一次对 shell 套用 C 风格块注释剥离，静默吃掉 269 行
+  // 三次的共同点是「检查器自身的覆盖范围出了问题，而它照样报告通过」。
+  if (src.split('\n').length !== raw.split('\n').length) {
+    problems++
+    console.error(
+      `${f.replace(join(HERE, '..'), '.')}  检查器预处理改变了行数\n`
+      + `    原文 ${raw.split('\n').length} 行 → 预处理后 ${src.split('\n').length} 行。\n`
+      + '    预处理必须逐行置空、保持行数：否则被删的整段会逃过全部检查，\n'
+      + '    而报错行号也会错位。请检查 lint-source.mjs 的预处理步骤。\n'
+    )
+  }
 
   const assigned = new Set(SHELL_ALLOW)
   for (const re of [

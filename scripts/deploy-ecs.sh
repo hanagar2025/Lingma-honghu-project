@@ -205,8 +205,14 @@ sudo rm -f /etc/nginx/sites-enabled/*
 # 一切看着都对，但服务的还是旧应用。
 # 所以要扫遍整个 /etc/nginx，把所有声明了本域名的其他配置一并停用。
 echo "   扫描其他位置的同域名配置……"
+# 排除已停用的文件。不排除的后果是每次部署都给同一个文件再加一层
+# .disabled-<时间戳> 后缀，实测已累积成
+#   honghu-web.backup.20251126_160218.disabled-20260814-212255.disabled-20260815-132721…
+# 这样的名字：既刷屏，又最终会撞上文件名长度上限。
+# 「已经停用的东西不需要再停用一次」——判据是名字里已含 .disabled-。
 OTHERS=\$(sudo grep -rl "server_name.*\$DOMAIN" /etc/nginx/ 2>/dev/null \\
-  | grep -v "^\$NGINX_SITE\$" | grep -v '/sites-enabled/' | sort -u || true)
+  | grep -v "^\$NGINX_SITE\$" | grep -v '/sites-enabled/' \\
+  | grep -v '\.disabled-' | sort -u || true)
 if [[ -n "\$OTHERS" ]]; then
   while IFS= read -r f; do
     [[ -z "\$f" ]] && continue
@@ -307,12 +313,18 @@ sleep 2
 FAILED=0
 BODY=$(curl -s --max-time 20 "https://$DOMAIN/" || true)
 
-if [[ "$BODY" == *'TIOS'* ]]; then
-  printf '  ✓ 首页是本项目（标题含 TIOS）\n'
+# 标题提取用 sed 而不是 grep -oP：**macOS/BSD 的 grep 没有 -P**。
+# 实测踩过：-P 直接报 "invalid option"，于是标题取不到、显示"（取不到）"，
+# 而校验因此判为失败 —— 一个纯粹由校验工具自身不兼容造成的假失败。
+# 而假失败比没有校验更糟：它会让人以为部署没生效，去反复重跑一个其实已经成功的操作。
+TITLE=$(printf '%s' "$BODY" \
+  | sed -n 's/.*<title>\([^<]*\)<\/title>.*/\1/p' | head -1 || true)
+# 产品名 2026-08-17 改为《鸿鹄理财》。同时接受旧名，避免改名当天误报。
+if [[ "$BODY" == *'鸿鹄理财'* || "$BODY" == *'TIOS'* ]]; then
+  printf '  ✓ 首页是本项目（%s）\n' "${TITLE:-标题取不到但内容匹配}"
 else
   FAILED=1
   printf '  \033[31m✗ 首页不是本项目\033[0m\n'
-  TITLE=$(printf '%s' "$BODY" | grep -oP '(?<=<title>).*?(?=</title>)' | head -1 || true)
   printf '     实际标题：%s\n' "${TITLE:-（取不到）}"
   printf '     多半是仍有同域名的 server 块在竞争，或浏览器/CDN 缓存。\n'
   printf '     查：sudo nginx -T | grep -n "server_name.*%s"\n' "$DOMAIN"
