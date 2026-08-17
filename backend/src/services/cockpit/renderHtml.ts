@@ -220,7 +220,7 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (decisionV2) {
     const v2 = decisionV2
     w(`</div><div class="card act"><h2>《${esc(v2.productName)}》${esc(v2.productModel)}</h2>`)
-    w(`<div class=sec>第一层看决策。第二层看理由。第三层看证据。第四层机器看原始数据。</div>`)
+    w(`<div class=sec>${esc(v2.dailyQuestion ?? '今天有没有出现足以改变资本状态的新事实？')} 没有 → 维持。有 → 进入证据审查。第一层看决策。第二层看理由。第三层看证据。第四层机器看原始数据。</div>`)
     w(`<div class=foot>${esc(v2.maxim)}</div>`)
 
     w(`<h3 style="font-size:15px;margin:14px 0 8px">战略</h3>`)

@@ -28,12 +28,16 @@ import {
 } from './migrationJournal'
 import { CORE_MEANS_OWN_NOT_ADD } from './hunter'
 import {
-  ARCHITECTURE_CLOSED_AT_V4X, DAILY_QUESTION, FOUR_CANNOTS, HOLD_AS_DECISION,
-  HOLD_IS_AN_ACTIVE_DECISION, LEGAL_MOVE_QUESTION, MATURITY, MISSION,
-  OWN_BUT_CANNOT_RAISE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME, PRIMARY_ARTIFACT,
-  RETURNS_CANNOT_JUDGE_SYSTEM, SEVEN_QUESTIONS, V5_MUST_BE_FORCED_BY_DATA,
-  admits, answerIsIllegal, laterLossCannotMarkViolation, laterReturnCannotReviseQuality,
-  laterRiseCannotDemandAdd, legalMoveOf, priceCannotFillEvidenceOutcome,
+  ARCHITECTURE_CLOSED_AT_V4X, AUDITABLE_NOT_CORRECT, DAILY_AUDIT, DAILY_QUESTION,
+  DAILY_WORK, FIRST_QUESTION_ON_PROBLEM, FOUR_CANNOTS, FROZEN_RULE_FINGERPRINT,
+  HOLD_AS_DECISION, HOLD_IS_AN_ACTIVE_DECISION, INDICATORS_FROZEN,
+  LEGAL_MOVE_QUESTION, LIFELINE_FROZEN, MATURITY, MISSION, OWN_BUT_CANNOT_RAISE,
+  PAGE_ARCHITECTURE_FROZEN, PHASE, PRICE_CANNOT_FILL_EVIDENCE_OUTCOME,
+  PRIMARY_ARTIFACT, PROBLEM_GAPS, RETURNS_CANNOT_JUDGE_SYSTEM, RULES_FROZEN,
+  SEVEN_QUESTIONS, V5_MUST_BE_FORCED_BY_DATA, admits, answerIsIllegal,
+  askAddIndicator, classifyProblem, laterLossCannotMarkViolation,
+  laterReturnCannotReviseQuality, laterRiseCannotDemandAdd, legalMoveOf,
+  priceCannotFillEvidenceOutcome,
 } from './charter'
 import { RISK_CAN_PRODUCE } from './lifecycle'
 import { buildEvidence } from './evidence'
@@ -376,8 +380,14 @@ ok('新均线指标答不出改善哪个决策 → 不准入',
   admits({ improves: null, why: '再加一条均线' }) === false)
 ok('RSI 页面没有决策槽位 → 不准入',
   admits({ improves: null, why: '' }) === false)
-ok('独立族去重改善 Evidence → 可准入',
-  admits({ improves: 'EVIDENCE', why: '同一因果链不得数成四个族' }) === true)
+ok('冻结期即使改善 Evidence 也不准入新规则',
+  admits({ improves: 'EVIDENCE', why: '同一因果链不得数成四个族' }) === false)
+ok('冻结期只允许回填 Evidence Outcome',
+  admits({
+    improves: 'AUDIT',
+    why: '回填 Evidence Outcome',
+    purpose: 'VALIDATE',
+  }) === true)
 
 {
   const j = judgeOne(zhongwei)
@@ -462,6 +472,62 @@ ok('架构开发停在 V4.x，V5 由数据逼出',
     dropped.capitalAction === 'HOLD_CAPITAL'
     && dropped.exit !== 'PORTFOLIO_FORCE'
     && !dropped.risks.includes('R1_PORTFOLIO'))
+}
+
+// ══════════════════════════════════════════════════════════════
+// 八、V4.x 冻结：自然运行与证据积累，不再设计规则
+// ══════════════════════════════════════════════════════════════
+ok('里程碑是 Decision Validation Phase',
+  PHASE === '鸿鹄 V4.x — Decision Validation Phase')
+ok('规则 / 指标 / 生命线 / 页面架构全部冻结',
+  RULES_FROZEN && INDICATORS_FROZEN && LIFELINE_FROZEN && PAGE_ARCHITECTURE_FROZEN)
+ok('冻结指纹仍是 a401aaf3271e', FROZEN_RULE_FINGERPRINT === 'a401aaf3271e')
+ok('不追求每天正确，追求每天可审计',
+  AUDITABLE_NOT_CORRECT.includes('可审计的动作')
+  && AUDITABLE_NOT_CORRECT.includes('不追求每天都做出正确动作'))
+ok('出现问题先不能问要不要加指标', askAddIndicator() === false)
+ok('出现问题必须先问现有规则为什么无法回答',
+  FIRST_QUESTION_ON_PROBLEM.includes('缺数据')
+  && FIRST_QUESTION_ON_PROBLEM.includes('缺证据')
+  && FIRST_QUESTION_ON_PROBLEM.includes('规则本身被历史样本证明有问题'))
+ok('三个缺口必须分开：只缺数据',
+  classifyProblem({ missingData: true, missingEvidence: false, ruleFalsifiedBySample: false })
+  === 'MISSING_DATA')
+ok('三个缺口必须分开：只缺证据',
+  classifyProblem({ missingData: false, missingEvidence: true, ruleFalsifiedBySample: false })
+  === 'MISSING_EVIDENCE')
+ok('三个缺口必须分开：只规则被样本证伪',
+  classifyProblem({ missingData: false, missingEvidence: false, ruleFalsifiedBySample: true })
+  === 'RULE_FALSIFIED_BY_SAMPLE')
+ok('同时勾选两种缺口 → 拒绝混答',
+  classifyProblem({ missingData: true, missingEvidence: true, ruleFalsifiedBySample: false })
+  === null)
+ok('缺口文案三种都在',
+  PROBLEM_GAPS.MISSING_DATA.includes('缺数据')
+  && PROBLEM_GAPS.MISSING_EVIDENCE.includes('缺证据')
+  && PROBLEM_GAPS.RULE_FALSIFIED_BY_SAMPLE.includes('Evidence Outcome'))
+ok('每天只做四件事：运行留痕审计验证',
+  DAILY_WORK.map(x => x.id).join('|') === 'RUN|LOG|AUDIT|VALIDATE')
+ok('当日审计六条齐备', DAILY_AUDIT.length === 6
+  && DAILY_AUDIT.some(x => x.includes('价格'))
+  && DAILY_AUDIT.some(x => x.includes('重复计算'))
+  && DAILY_AUDIT.some(x => x.includes('核心'))
+  && DAILY_AUDIT.some(x => x.includes('UNKNOWN'))
+  && DAILY_AUDIT.some(x => x.includes('组合风险'))
+  && DAILY_AUDIT.some(x => x.includes('倒灌')))
+ok('验证是回填 Evidence Outcome，不是改 Decision Quality',
+  DAILY_WORK[3]!.text.includes('Evidence Outcome')
+  && DAILY_WORK[3]!.text.includes('不修改过去的 Decision Quality'))
+ok('加均线不能借验证期准入',
+  admits({ improves: 'AUDIT', why: '再加一条均线', purpose: 'VALIDATE' }) === false)
+
+{
+  const src = readFileSync(new URL('./cockpitV2.ts', import.meta.url), 'utf-8')
+  ok('驾驶舱最重要的问题是每天一问',
+    src.includes('dailyQuestion: DAILY_QUESTION')
+    && src.includes('DAILY_QUESTION'))
+  ok('驾驶舱 maxim 以每天一问打头',
+    src.includes('${DAILY_QUESTION} 没有 → 维持'))
 }
 
 console.log(`\n═══ 结果：${pass} 通过 / ${fail} 失败 ═══\n`)

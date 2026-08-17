@@ -1,12 +1,8 @@
 /**
  * 鸿鹄最高层架构约束。
  *
- * V4.x 不是继续完善系统，而是投资决策系统验证期。
- * 验证的不是「股票能不能赚钱」，而是：
- * 资本有没有因为正确的证据变化，发生正确类型的迁移。
- *
- * 再往下加任何数据、指标、页面、规则，都必须先回答：
- * 它改善了上面哪一个决策？答不出来，就不该进入鸿鹄。
+ * 里程碑：鸿鹄 V4.x — Decision Validation Phase
+ * 从这一刻起进入自然运行与证据积累期，不再设计规则。
  *
  * 本文件不生产动作，不进规则指纹。
  */
@@ -38,6 +34,67 @@ export const HOLD_AS_DECISION =
 /** V4.x 架构开发到此停止。进入运行—留痕—审计—验证。V5 由数据逼出。 */
 export const ARCHITECTURE_CLOSED_AT_V4X = true
 export const V5_MUST_BE_FORCED_BY_DATA = true
+
+/** 今天作为一个明确的系统里程碑。 */
+export const PHASE = '鸿鹄 V4.x — Decision Validation Phase'
+
+export const RULES_FROZEN = true
+export const INDICATORS_FROZEN = true
+export const LIFELINE_FROZEN = true
+export const PAGE_ARCHITECTURE_FROZEN = true
+export const FROZEN_RULE_FINGERPRINT = 'a401aaf3271e'
+
+/**
+ * 鸿鹄不追求每天都做出正确动作，而追求每天都做出可审计的动作。
+ * 前者在当下无法证明。后者可以。
+ */
+export const AUDITABLE_NOT_CORRECT =
+  '鸿鹄不追求每天都做出正确动作，而追求每天都做出可审计的动作。'
+
+/** 以后出现问题，先不能问「要不要加一个指标」。 */
+export function askAddIndicator(): false {
+  return false
+}
+
+export const FIRST_QUESTION_ON_PROBLEM =
+  '现有规则为什么无法回答？是缺数据、缺证据，还是规则本身被历史样本证明有问题？'
+
+export type ProblemGap = 'MISSING_DATA' | 'MISSING_EVIDENCE' | 'RULE_FALSIFIED_BY_SAMPLE'
+
+export const PROBLEM_GAPS: Record<ProblemGap, string> = {
+  MISSING_DATA: '缺数据：规则能问，但当天没有可测输入。',
+  MISSING_EVIDENCE: '缺证据：输入在，但还没有新的独立证据族。',
+  RULE_FALSIFIED_BY_SAMPLE: '规则被历史样本证明有问题：当时合规，但 Evidence Outcome 反复证伪。',
+}
+
+/** 三个问题必须分开。不能同时算作两种缺口。 */
+export function classifyProblem(gap: {
+  missingData: boolean
+  missingEvidence: boolean
+  ruleFalsifiedBySample: boolean
+}): ProblemGap | null {
+  const n = Number(gap.missingData) + Number(gap.missingEvidence) + Number(gap.ruleFalsifiedBySample)
+  if (n !== 1) return null
+  if (gap.missingData) return 'MISSING_DATA'
+  if (gap.missingEvidence) return 'MISSING_EVIDENCE'
+  return 'RULE_FALSIFIED_BY_SAMPLE'
+}
+
+export const DAILY_WORK = [
+  { id: 'RUN', text: '运行：按既定规则处理当天数据。' },
+  { id: 'LOG', text: '留痕：为什么动、为什么不动、新增了什么证据族、哪些仍然 UNKNOWN。' },
+  { id: 'AUDIT', text: '审计：价格偷换、相关证据重复计算、核心偷换成加仓、UNKNOWN 写成偏多、组合风险写成公司风险、后来结果倒灌。' },
+  { id: 'VALIDATE', text: '验证：回填 Evidence Outcome，不修改过去的 Decision Quality。' },
+] as const
+
+export const DAILY_AUDIT = [
+  '把价格偷偷变成迁移理由',
+  '把相关证据重复计算',
+  '把核心偷换成加仓资格',
+  '把 UNKNOWN 写成偏多',
+  '把组合风险写成公司风险',
+  '把后来结果倒灌回当时决策',
+] as const
 
 export const SEVEN_QUESTIONS = [
   '战略上还应该拥有吗？',
@@ -169,7 +226,18 @@ export type DecisionSlot =
   | 'LIFELINE'
   | 'AUDIT'
 
-/** 答不出改善了哪一个决策，就不该进入鸿鹄。 */
-export function admits(change: { improves: DecisionSlot | null; why: string }): boolean {
-  return change.improves !== null && change.why.trim().length > 0
+/**
+ * 冻结期不准入新规则、新指标、新页面。
+ * 只允许验证：回填 Evidence Outcome。
+ */
+export function admits(change: {
+  improves: DecisionSlot | null
+  why: string
+  purpose?: 'ARCHITECTURE' | 'VALIDATE'
+}): boolean {
+  if (askAddIndicator() !== false) return false
+  if (/均线|RSI|MACD|布林|KDJ/.test(change.why)) return false
+  const purpose = change.purpose ?? 'ARCHITECTURE'
+  if (purpose === 'ARCHITECTURE') return false
+  return change.improves === 'AUDIT' && change.why.includes('Evidence Outcome')
 }

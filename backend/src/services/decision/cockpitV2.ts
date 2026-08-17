@@ -1,12 +1,15 @@
 /**
  * 《鸿鹄理财》V4 证据 → 资本迁移 —— 投资人首屏装配层。
  *
- * 机器每天只回答五问：
+ * 驾驶舱最重要的一问：今天有没有出现足以改变资本状态的新事实？
+ * 没有 → 维持。有 → 进入证据审查，再回答五问。
  *   ① 战略有没有变化？
  *   ② 谁仍然值得拥有？
  *   ③ 谁的投资证据在强化？
  *   ④ 谁的风险正在增加？
  *   ⑤ 今天资本应该往哪里移动？
+ *
+ * V4.x 已冻结。本文件不再增加页面块。
  *
  * 第一屏：战略表 / 四轴生命线 / 不可判断区 / 今日最多三件事。
  * 复杂数据全部折叠。本文件不生产动作、不新增指标、不打分。
@@ -27,7 +30,7 @@ import {
   type CapitalLane, type StrategicState,
 } from './strategy'
 import { CORE_MEANS_OWN_NOT_ADD, HUNTER_TEXT, PRICE_IS_NOT_A_MIGRATION_CAUSE, type HunterStage } from './hunter'
-import { MISSION } from './charter'
+import { AUDITABLE_NOT_CORRECT, DAILY_QUESTION, MISSION, PHASE } from './charter'
 import {
   CAPITAL_ACTION_TEXT, EVIDENCE_TONE_TEXT, OWNERSHIP_TEXT,
   type CapitalAction, type EvidenceTone, type Ownership,
@@ -141,6 +144,9 @@ export interface DecisionCockpit {
   sentences: Sentence[]
   unjudgable: readonly UnjudgableItem[]
   maxim: string
+  /** 驾驶舱最重要的一问。没有新事实，就维持。 */
+  dailyQuestion: typeof DAILY_QUESTION
+  phase: typeof PHASE
 }
 
 export interface DecisionCockpitInput {
@@ -214,7 +220,9 @@ export function buildDecisionCockpit(input: DecisionCockpitInput): DecisionCockp
       + PRICE_IS_NOT_A_MIGRATION_CAUSE,
     capitalMoves, lifeline, riskBoard, todayTasks, sentences,
     unjudgable: buildUnjudgable(strategy, holdings),
-    maxim: `${PRICE_IS_NOT_A_MIGRATION_CAUSE} ${CORE_MEANS_OWN_NOT_ADD} ${MISSION}`,
+    dailyQuestion: DAILY_QUESTION,
+    phase: PHASE,
+    maxim: `${DAILY_QUESTION} 没有 → 维持。有 → 进入证据审查。 ${AUDITABLE_NOT_CORRECT} ${PRICE_IS_NOT_A_MIGRATION_CAUSE} ${CORE_MEANS_OWN_NOT_ADD} ${MISSION}`,
   }
 }
 
@@ -621,9 +629,9 @@ export function renderDecisionCockpit(d: DecisionCockpit): string {
   const w = (s = '') => L.push(s)
   w()
   w('═'.repeat(W))
-  w(`  《${d.productName}》${d.productModel}  ${d.date}`)
+  w(`  《${d.productName}》${d.productModel}  ${d.date}  ${d.phase}`)
   w('  第一层看决策。第二层看理由。第三层看证据。第四层机器看原始数据。')
-  w('  战略决定拥有什么；证据决定是否继续值得拥有；生命线决定下一步资本往哪走。')
+  w(`  ${d.dailyQuestion} 没有 → 维持。有 → 进入证据审查。`)
   w(`  ${d.maxim}`)
   w('═'.repeat(W))
 
