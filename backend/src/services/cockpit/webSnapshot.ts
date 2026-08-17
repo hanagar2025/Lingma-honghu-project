@@ -25,6 +25,7 @@ import { stageAdvances, type DiscoveryLedger } from '../governance/changeLog'
 import type { DailyAudit } from '../governance/audit'
 import type { FreezeBaseline } from '../governance/ruleRegistry'
 import { fingerprint } from '../governance/ruleRegistry'
+import { execSync } from 'node:child_process'
 
 
 export interface WebSnapshotInput {
@@ -74,6 +75,29 @@ export interface WebSnapshotInput {
  * 前端 `/api/cockpit/today` 返回体的离线等价物。
  * 字段名必须与接口逐一对齐，否则同一个页面读两个源会出现"某些卡片只在某个模式下有"。
  */
+/**
+ * 从本地 git 读当前 HEAD。
+ *
+ * 只依赖环境变量是不够的：服务器的 update-snapshot.sh 会注入 TIOS_CODE_COMMIT，
+ * 但**从 Mac 用 deploy-ecs.sh 发布时没有任何东西注入它** ——
+ * 于是快照写出 codeCommit='unknown'，而"unknown"看起来像"服务器在跑旧脚本"，
+ * 实际上只是本机没设环境变量。一个会误报的版本标记比没有标记更糟：
+ * 它会让人去修一个不存在的问题，而真正的版本差异被这条噪声盖住。
+ */
+function gitHead(): { commit: string; at: string | null } {
+  try {
+    const commit = execSync('git rev-parse --short HEAD', {
+      encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    const at = execSync('git log -1 --format=%cI', {
+      encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    return { commit: commit || 'unknown', at: at || null }
+  } catch {
+    return { commit: 'unknown', at: null }
+  }
+}
+
 export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknown> {
   const {
     report, dashboard, changes, prevDate, discovery, audit, auditMarkdown,
@@ -84,8 +108,9 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     ...report,
     dashboard,
     // 版本与生成时刻置于顶层,便于 curl 一眼看到
-    codeCommit: input.codeCommit ?? process.env.TIOS_CODE_COMMIT ?? 'unknown',
-    codeCommittedAt: input.codeCommittedAt ?? process.env.TIOS_CODE_COMMITTED_AT ?? null,
+    codeCommit: input.codeCommit ?? process.env.TIOS_CODE_COMMIT ?? gitHead().commit,
+    codeCommittedAt: input.codeCommittedAt
+      ?? process.env.TIOS_CODE_COMMITTED_AT ?? gitHead().at,
     generatedAt: new Date().toISOString(),
     verdict: input.verdict ?? null,
     hypotheses: input.hypotheses ?? [],
