@@ -53,6 +53,15 @@ export const CORE_MIN: readonly EvidenceFamily[] = [
   'QUALIFICATION', 'MAINLINE', 'COMPANY', 'EARNINGS',
 ]
 
+/**
+ * 核心持有 ≠ 加仓许可。
+ * 前瞻与 R4 未知不挡 Ownership=核心，但挡继续提高资本权重。
+ */
+export const CORE_IS_NOT_ADD_PERMISSION = true
+
+/** 族数门槛是设计规则，不是经过样本外验证的统计规律。 */
+export const THRESHOLDS_ARE_DESIGN_RULES = true
+
 /** 追加必须是新的、与加仓不同类的证据。没有前瞻/质量，日常不能追加。 */
 export const TOP_UP_NEW: readonly EvidenceFamily[] = [
   'FORWARD', 'QUALITY', 'EXPECTATION',
@@ -212,7 +221,7 @@ export function canCore(p: GateFacts): GateVerdict {
   }
   return {
     ok: true,
-    why: '战略核心席位 + 主线、竞争地位、盈利兑现同时成立。前瞻与预期未测，不因此否定核心。',
+    why: '战略核心席位 + 主线、竞争地位、盈利兑现同时成立。前瞻与预期未测，不因此否定核心。核心 ≠ 可以继续加仓。',
     standing, missing: [], gained: [],
   }
 }

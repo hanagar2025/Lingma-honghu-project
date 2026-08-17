@@ -105,3 +105,6 @@ export function buildForward(facts: readonly ForwardFact[] = []): ForwardEvidenc
 export function priceCanFillForward(): boolean {
   return false
 }
+
+/** 当时判断「前瞻强化」≠ 未来几个季度已经兑现。 */
+export const FORWARD_STRENGTHENING_IS_NOT_REALIZATION = true

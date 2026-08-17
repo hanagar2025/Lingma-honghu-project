@@ -544,12 +544,13 @@ ok('新增变化台账后规则指纹仍为冻结基线值',
     'decision/judge.ts', 'decision/cockpitV2.ts',
     'decision/hunter.ts', 'decision/evidence.ts', 'decision/triaxis.ts', 'decision/migrate.ts',
     'decision/r4.ts', 'decision/forward.ts', 'decision/capitalGates.ts',
+    'decision/independence.ts', 'decision/permission.ts', 'decision/migrationJournal.ts',
   ])
   const research = readServiceSources(base, RESEARCH_MODULES)
 
   ok('决策层与研究层源码都能读到（读不到等于检查空转）',
-    decision.length === 13 && research.length === RESEARCH_MODULES.length,
-    `决策 ${decision.length}/13，研究 ${research.length}/${RESEARCH_MODULES.length}`)
+    decision.length === 16 && research.length === RESEARCH_MODULES.length,
+    `决策 ${decision.length}/16，研究 ${research.length}/${RESEARCH_MODULES.length}`)
 
   ok('六项受保护的决策输出已登记', PROTECTED_OUTPUTS.length === 6)
   for (const p of ['长期主线', '战略资格', '核心仓位结构', 'TPO', 'L1', 'L2']) {

@@ -29,6 +29,10 @@
 export const PRICE_IS_NOT_A_MIGRATION_CAUSE =
   '价格不是生命线迁移的原因，价格最多是结果或观察对象；资本迁移必须由证据变化和合法风险触发。'
 
+/** 核心持有是拥有资格，不是继续提高资本权重的许可。 */
+export const CORE_MEANS_OWN_NOT_ADD =
+  '核心 = 可以长期拥有。核心 ≠ 可以继续加仓。'
+
 export type HunterStage =
   | 'DISCOVER'
   | 'OBSERVE'
