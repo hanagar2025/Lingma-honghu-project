@@ -271,7 +271,7 @@ export function evaluateNodes(input: NodesInput): { answer: Answer; nodes: NodeM
   const top = covered[0]
   const headline = top
     ? `势能最高节点：${top.mainlineName}/${top.node} ${top.score}/10（${top.members.map(x => x.name).join('、')}）` +
-      `。分数是观察指标，**不构成买入依据**` +
+      `。分数是观察指标，「不构成买入依据」` +
       (gaps.length ? `；另有${gaps.length}个节点无覆盖标的` : '')
     : '无可计算节点'
 

@@ -67,16 +67,22 @@ export function checkBuyGate(input: BuyGateInput): BuyGateResult {
   if (input.card.banBuy) reasons.push('BAN_LIST')
   if (input.activeSellTriggers.length > 0) reasons.push('SELLING_IN_PROGRESS')
 
-  const stockPct = (input.position?.marketValue ?? 0) / snapshot.totalAssets
+  // 四个上限的分母一律是**组合总资产**（委员会 2026-08-15 裁定）。
+  // 用券商口径会得到一个不符合经济实质的风控：把钱转出券商账户，
+  // 股票占比凭空变大、闸门凭空变严；转回去又变松。而钱的用途没有变。
+  const denom = snapshot.portfolioTotal
+  const stockPct = (input.position?.marketValue ?? 0) / denom
   if (stockPct >= 0.12) reasons.push('STOCK_CAP_12')
 
   const sectorValue = allPositions.filter(p => p.sector === input.sector).reduce((s, p) => s + p.marketValue, 0)
-  if (sectorValue / snapshot.totalAssets >= 0.3) reasons.push('SECTOR_CAP_30')
+  if (sectorValue / denom >= 0.3) reasons.push('SECTOR_CAP_30')
 
   const themeValue = allPositions.filter(p => p.theme === input.theme).reduce((s, p) => s + p.marketValue, 0)
-  if (themeValue / snapshot.totalAssets >= 0.45) reasons.push('THEME_CAP_45')
+  if (themeValue / denom >= 0.45) reasons.push('THEME_CAP_45')
 
-  if (snapshot.cash / snapshot.totalAssets <= 0.1) reasons.push('CASH_FLOOR_10')
+  // 现金红线的分子同步改为"可投资现金" = 账内 + 账户外股票现金。
+  // 只算账内会得出 17.5%，把 200 万当成不存在。
+  if ((snapshot.cash + snapshot.externalCash) / denom <= 0.1) reasons.push('CASH_FLOOR_10')
 
   const stopFall = stopFallConfirmed(input.bars)
   if (!stopFall.ok) reasons.push('NO_STOP_FALL')

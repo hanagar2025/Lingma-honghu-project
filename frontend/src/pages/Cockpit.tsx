@@ -9,11 +9,14 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import {
-  Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover,
-  Space, Table, Tag, Typography,
+  Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover, Progress,
+  Segmented, Space, Statistic, Table, Tag, Typography,
 } from 'antd'
-import { ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons'
-import { cockpitAPI } from '../services/api'
+import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/icons'
+import { cockpitAPI, tiosAPI } from '../services/api'
+import FiveLayerDashboard from '../components/FiveLayerDashboard'
+import TodayVerdict from '../components/TodayVerdict'
+import ShareButton, { ShareHint } from '../components/ShareButton'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -91,20 +94,63 @@ const Light: React.FC<{ light: string }> = ({ light }) => {
   return <span title={s.label} style={{ fontSize: 16 }}>{s.dot}</span>
 }
 
+/** KPI 单格。缺样本时显示"—"而非 0 —— 0 会把"没统计过"读成"表现完美" */
+const KpiCell: React.FC<{
+  title: string; rate: number | null; detail: string; goodAbove?: number
+}> = ({ title, rate, detail, goodAbove = 0.9 }) => (
+  <Card size="small" style={{ flex: 1, minWidth: 220 }}>
+    <Statistic
+      title={title}
+      value={rate === null ? '—' : `${(rate * 100).toFixed(1)}%`}
+      valueStyle={{
+        color: rate === null ? '#8e8e93' : rate >= goodAbove ? '#34c759' : rate >= 0.6 ? '#ff9500' : '#ff3b30',
+      }}
+    />
+    {rate !== null && <Progress
+      percent={Math.round(rate * 100)}
+      showInfo={false}
+      strokeColor={rate >= goodAbove ? '#34c759' : rate >= 0.6 ? '#ff9500' : '#ff3b30'}
+      size="small"
+    />}
+    <div style={{ fontSize: 12, color: '#666', marginTop: 4, lineHeight: 1.6 }}>{detail}</div>
+  </Card>
+)
+
 const Cockpit: React.FC = () => {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [marking, setMarking] = useState<number | null>(null)
+  const [session, setSession] = useState<'pre' | 'post'>('post')
+  const [offline, setOffline] = useState<{ on: boolean; reason: string }>({ on: false, reason: '' })
 
-  const load = useCallback(async (live = false) => {
+  const load = useCallback(async (live = false, s: 'pre' | 'post' = session) => {
     setLoading(true)
     try {
-      setData(await cockpitAPI.getToday(live))
+      const r = await cockpitAPI.getTodayOrOffline(live, s)
+      setData(r.data)
+      setOffline({ on: r.offline, reason: r.reason })
+      setSession(s)
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || err.message || '驾驶舱加载失败')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [session])
+
+  // 标记执行 —— 清偿执行债务是当前第一优先级，因此这个按钮直接放在驾驶舱里，
+  // 不必跳到别的页面。执行时间由后端回填，用于 KPI E4。
+  const markExecuted = useCallback(async (id: number, code: string) => {
+    setMarking(id)
+    try {
+      await tiosAPI.updateExecution(id, { executed: true })
+      message.success(`${code} 已标记执行，执行时间已记入延迟统计`)
+      await load(false)
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message || err.message || '标记失败')
+    } finally {
+      setMarking(null)
+    }
+  }, [load])
 
   useEffect(() => { load(false) }, [load])
 
@@ -123,6 +169,59 @@ const Cockpit: React.FC = () => {
 
   return (
     <div>
+      {/* ── 离线快照模式：必须明说，否则会被当成实时接口数据 ── */}
+      {offline.on && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={<Text strong>离线快照模式（无数据库、无登录）</Text>}
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              <div>{offline.reason}</div>
+              <div style={{ marginTop: 4 }}>
+                快照生成于 {data.offline?.generatedAt ?? '未知时间'}，数据源：{data.offline?.source ?? '未知'}。
+                与命令行版、HTML 报告读的是同一份数据，结论不会互相矛盾。
+              </div>
+              {(data.offline?.unavailable ?? []).length > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  本模式下拿不到（宁可显式缺失，不伪造）：
+                  <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+                    {data.offline.unavailable.map((u: string, i: number) => <li key={i}>{u}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          }
+        />
+      )}
+
+      {/* ── 外围现金口径：需要战略层裁定，放在最上面 ── */}
+      {data.externalCash && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={
+            <Text strong>
+              外围现金 {(data.externalCash.amount / 10000).toFixed(0)} 万 —— 口径待战略层裁定，未计入仓位上限分母
+            </Text>
+          }
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              <div>{data.externalCash.note}</div>
+              <div style={{ marginTop: 4 }}>
+                本页所有仓位百分比的分母是证券账户总资产
+                {' '}{(data.externalCash.denominatorNow / 10000).toFixed(1)} 万；
+                若并入这 {(data.externalCash.amount / 10000).toFixed(0)} 万，分母变为
+                {' '}{((data.externalCash.denominatorNow + data.externalCash.amount) / 10000).toFixed(1)} 万，
+                超限结论会随之改变。并入分母等于用一个记账动作消掉真实集中度风险，故未裁定期间按从严口径。
+              </div>
+            </div>
+          }
+        />
+      )}
+
       {/* ── 能力披露：置顶且不可关闭 ── */}
       <Alert
         type="warning"
@@ -145,15 +244,54 @@ const Cockpit: React.FC = () => {
         }
       />
 
-      {/* ── 首页唯一的那张表 ── */}
+      {/* ── 会话切换：盘前只看必办，盘后看完整报告 ── */}
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <Segmented
+            value={session}
+            onChange={v => load(false, v as 'pre' | 'post')}
+            options={[
+              { label: '盘前 09:20–09:25', value: 'pre' },
+              { label: '盘后 15:10–15:30', value: 'post' },
+            ]}
+          />
+          <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
+          {/* 直连行情复跑要走后端。离线模式下给一个点了没反应的按钮，比不给更糟 */}
+          {!offline.on && <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>}
+          {offline.on && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              离线模式下切换盘前/盘后与复跑均需后端；要更新快照请在 backend 目录重跑
+              {' '}<Text code>WEB=1 npm run cockpit</Text>
+            </Text>
+          )}
+        </Space>
+      </Card>
+
+      {/* ── 一键外发：把数据交给别的软件再分析一遍 ── */}
+      {data.brief && (
+        <>
+          <ShareHint />
+          <Card size="small" style={{ marginBottom: 16 }}>
+            <ShareButton brief={data.brief} date={data.date} />
+          </Card>
+        </>
+      )}
+
+      {/* ── 今日结论：结论先于依据，放在四张表之前 ── */}
+      <TodayVerdict verdict={data.verdict} />
+
+      {/* ── 五层驾驶舱：四张研究表 + 隔离的动作区 ── */}
+      <FiveLayerDashboard
+        dashboard={data.dashboard}
+        changes={data.changes}
+        discovery={data.discovery}
+        hypotheses={data.hypotheses}
+        provisional={data.provisional}
+      />
+
+      {/* ── 首页单表（六问汇总） ── */}
       <Card
-        title={<Space><Title level={5} style={{ margin: 0 }}>今日驾驶舱</Title><Text type="secondary">{data.date}</Text></Space>}
-        extra={
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
-            <Button onClick={() => load(true)} loading={loading}>盘后复跑（直连行情）</Button>
-          </Space>
-        }
+        title={<Space><Title level={5} style={{ margin: 0 }}>六问汇总</Title><Text type="secondary">{data.date}</Text></Space>}
         style={{ marginBottom: 16 }}
       >
         <Table
@@ -318,27 +456,166 @@ const Cockpit: React.FC = () => {
         />
       </Card>
 
-      {/* ── 执行债务 ── */}
+      {/* ── 执行债务：离线拿不到明细，但条数不能不说 ── */}
+      {/* null = 拿不到明细（离线），[] = 确实已清零。两者必须区分：
+          把"不知道"显示成"已清零"，正好抹掉当前第一优先级的那件事。 */}
+      {data.pendingSells === null && (data.pendingSellCount ?? 0) > 0 && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={<Text strong style={{ fontSize: 16 }}>
+            执行债务：{data.pendingSellCount} 条未执行卖出指令（离线模式无明细）
+          </Text>}
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              这是硬闸门，未清零期间系统锁死全部新增建仓输出，不受任何评分或配置影响。
+              <div style={{ marginTop: 4 }}>
+                指令明细与"标记已执行"存在数据库里，需启动后端才能勾选清偿。
+              </div>
+            </div>
+          }
+        />
+      )}
+
+      {/* ── 执行债务：勾选清偿 ── */}
       {(data.pendingSells ?? []).length > 0 && (
-        <Card title={`执行债务：${data.pendingSells.length} 条未执行卖出指令`} style={{ marginBottom: 16 }}>
+        <Card
+          title={`执行债务：${data.pendingSells.length} 条未执行卖出指令`}
+          style={{ marginBottom: 16, borderColor: '#ff3b30' }}
+        >
           <Alert
             type="error"
             showIcon
             style={{ marginBottom: 12 }}
             message="执行债务未清零期间，系统锁死全部新增建仓输出"
-            description="这是硬闸门，不受任何评分或配置影响。清偿顺序优先于一切研究结论。"
+            description={
+              <span>
+                这是硬闸门，不受任何评分或配置影响。清偿顺序优先于一切研究结论。
+                过去最大的问题不是找不到好股票，而是旧仓位没处理完就不断增加新仓位。
+              </span>
+            }
           />
           <Table
             dataSource={data.pendingSells.map((p: any) => ({ ...p, key: p.id }))}
             pagination={false}
             size="small"
             columns={[
-              { title: '指令日期', dataIndex: 'reportDate', width: 120 },
-              { title: '标的', dataIndex: 'code', width: 100 },
+              { title: '指令日期', dataIndex: 'reportDate', width: 110 },
+              { title: '标的', dataIndex: 'code', width: 90 },
               { title: '触发条款', dataIndex: 'clause' },
-              { title: '应执行动作', dataIndex: 'requiredAction', width: 160 },
+              { title: '应执行动作', dataIndex: 'requiredAction', width: 150 },
+              {
+                title: '操作', width: 130,
+                render: (_: any, r: any) => (
+                  <Button
+                    size="small" type="primary" icon={<CheckOutlined />}
+                    loading={marking === r.id}
+                    onClick={() => markExecuted(r.id, r.code)}
+                  >
+                    标记已执行
+                  </Button>
+                ),
+              },
             ]}
           />
+        </Card>
+      )}
+
+      {/* ── KPI E1–E4 ── */}
+      {data.kpi && (
+        <Card title="KPI（30个交易日观察期）" style={{ marginBottom: 16 }}>
+          <Space style={{ width: '100%', flexWrap: 'wrap' }} align="start">
+            <KpiCell title="E1 执行率" rate={data.kpi.e1?.rate ?? null} detail={data.kpi.e1?.detail ?? ''} />
+            <KpiCell title="E2 数据完整度" rate={data.kpi.e2?.rate ?? null} detail={data.kpi.e2?.detail ?? ''} goodAbove={1} />
+            <KpiCell
+              title="E3 规则一致性"
+              rate={data.kpi.e3?.complianceRate ?? null}
+              detail={(data.kpi.e3?.checks ?? []).map((c: any) => `${c.passed ? '✓' : '✗'} ${c.name}`).join('；')}
+              goodAbove={1}
+            />
+            <Card size="small" style={{ flex: 1, minWidth: 220 }}>
+              <Statistic
+                title="E4 决策到执行延迟"
+                value={data.kpi.e4?.medianDays === null || data.kpi.e4?.medianDays === undefined
+                  ? '—' : `${data.kpi.e4.medianDays} 天`}
+                valueStyle={{ color: '#8e8e93' }}
+              />
+              <div style={{ fontSize: 12, color: '#666', marginTop: 4, lineHeight: 1.6 }}>
+                {data.kpi.e4?.detail}
+              </div>
+            </Card>
+          </Space>
+          <Alert
+            type="info"
+            style={{ marginTop: 12 }}
+            message={<Text style={{ fontSize: 13 }}>E3 方法论</Text>}
+            description={<Text type="secondary" style={{ fontSize: 12 }}>{data.kpi.e3?.methodology}</Text>}
+          />
+          {(data.kpi.e3?.unauthorizedBuys ?? []).length > 0 && (
+            <Alert
+              type="error" showIcon style={{ marginTop: 12 }}
+              message="检出未授权买入"
+              description={
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {data.kpi.e3.unauthorizedBuys.map((u: any, i: number) => (
+                    <li key={i}>{u.date} {u.name} 持仓成本 +{(u.costIncrease / 10000).toFixed(1)}万（当日处于禁止建仓状态）</li>
+                  ))}
+                </ul>
+              }
+            />
+          )}
+        </Card>
+      )}
+
+      {/* ── 规则冻结状态 ── */}
+      {data.freeze?.baseline && (
+        <Card title="规则冻结状态" style={{ marginBottom: 16 }}>
+          <Paragraph type="secondary" style={{ fontSize: 13 }}>
+            冻结期内不新增决策规则，只修 Bug、补数据、记录结果。
+            全部决策生效参数取指纹并随每日审计存档 —— 三个月后比对指纹即可回答
+            「当时的规则是不是今天这套」，不需要任何人回忆。
+          </Paragraph>
+          <Descriptions size="small" column={2} bordered>
+            <Descriptions.Item label="冻结起始">{data.freeze.baseline.frozenAt}</Descriptions.Item>
+            <Descriptions.Item label="冻结天数">{data.freeze.baseline.tradingDays} 个交易日</Descriptions.Item>
+            <Descriptions.Item label="基线指纹">
+              <Text code>{data.freeze.baseline.hash}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="当前指纹">
+              <Space>
+                <Text code>{data.freeze.current?.hash}</Text>
+                {data.freeze.current?.hash === data.freeze.baseline.hash
+                  ? <Tag color="green">未漂移</Tag>
+                  : <Tag color="red">已漂移</Tag>}
+              </Space>
+            </Descriptions.Item>
+            <Descriptions.Item label="规则条数" span={2}>
+              {data.freeze.current?.entryCount} 条｜
+              {Object.entries(data.freeze.current?.tierCounts ?? {}).map(([t, n]) => (
+                <Tag key={t} color={TIER_STYLE[t]?.color}>{t}={String(n)}</Tag>
+              ))}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
+
+      {/* ── 今日决策审计 ── */}
+      {data.auditMarkdown && (
+        <Card
+          title="今日决策审计（已归档）"
+          style={{ marginBottom: 16 }}
+          extra={<Text type="secondary" style={{ fontSize: 12 }}>
+            三个月后可回答「当时为什么没买、为什么没卖」，而不是凭记忆重新解释
+          </Text>}
+        >
+          <pre style={{
+            margin: 0, padding: 16, background: '#f2f2f7', borderRadius: 12,
+            fontSize: 12.5, lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          }}>
+            {data.auditMarkdown}
+          </pre>
         </Card>
       )}
 

@@ -115,12 +115,25 @@ export async function buildSnapshot(userId: string, date: string, positions: Pos
     await conn.execute('INSERT INTO account_state (user_id) VALUES (?)', [userId])
   }
   const positionsValue = positions.reduce((s, p) => s + p.marketValue, 0)
-  const totalAssets = cash + positionsValue
-  if (totalAssets > peak) {
-    peak = totalAssets
+  const brokerTotal = cash + positionsValue
+
+  // 数据库里还没有"账户外股票现金"这一列。缺失时按 0 处理，于是组合口径退化为
+  // 账户口径 —— 这会让单票上限重新用错分母，故必须显式报出来而不是静默取 0。
+  // 待 account_state 增加 external_cash 列后改为读库。
+  const externalCash = 0
+  const portfolioTotal = brokerTotal + externalCash
+
+  // 峰值口径同样尚未入库。标为 BROKER，回撤输出"不可比"而非 0 ——
+  // 后者会让熔断静默失效，而页面上一切正常。
+  const peakBasis = 'BROKER' as const
+  if (brokerTotal > peak) {
+    peak = brokerTotal
     await conn.execute('UPDATE account_state SET peak_assets = ? WHERE user_id = ?', [peak, userId])
   }
-  return { date, totalAssets, cash, positionsValue, peakAssets: peak }
+  return {
+    date, brokerTotal: brokerTotal, cash, positionsValue,
+    externalCash, portfolioTotal, peakAssets: peak, peakBasis,
+  }
 }
 
 /**

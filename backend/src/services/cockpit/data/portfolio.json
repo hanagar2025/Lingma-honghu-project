@@ -1,20 +1,92 @@
 {
-  "note": "账户快照。市值由 CLI 用最新收盘价 × 股数实时计算，此处只记录股数与成本价，避免市值成为一个会过期的手抄数字。",
-  "asOf": "2026-07-17",
-  "source": "券商App截图人工录入（委员会 2026-07-17 15:30 快照）",
-  "cash": 1407000,
-  "peakAssets": 4300000,
+  "note": "账户快照。市值由 CLI 用最新价 × 股数实时计算，此处只记录股数与成本价，避免市值成为一个会过期的手抄数字。",
+  "asOf": "2026-08-15",
+  "source": "中国银河证券App持仓页（委员会 2026-08-15 11:11 截图）。股数由 市值÷现价 精确求得，八只除法结果全部为整数，无需反推。",
+  "cash": 582899.55,
+  "cashNote": "可用现金，App 显示 582,899.55。账户总资产 3,315,687.15 = 总市值 2,732,787.60 + 可用 582,899.55，三者自洽。",
+  "externalCash": 2000000,
+  "externalCashNote": "专用于股票投资的账户外现金储备。委员会 2026-08-15 裁定：计入组合分母（单票/板块/主题上限与现金率），但不计入家庭安全垫 —— 委员会明确它不是家庭日常生活资产。",
+  "peakAssets": 6300000,
+  "peakBasis": "PORTFOLIO",
+  "peakNote": "组合口径峰值 630 万。委员会 2026-08-15 裁定采用情形 B：账户峰值 430 万发生时那 200 万已明确属于股票投资资金，故 430 + 200 = 630 万。当前 534.25 万 → 回撤 15.20% → 一级熔断成立，股票上限 50%。券商账户口径的 430 万仍保留于 governance/peakBasis.ts 的 legacy_account_basis，它是 7/17–8/14 期间全部判定的依据，永不删除。",
   "householdAnnualExpense": null,
-  "householdAnnualExpenseNote": "委员会尚未提供家庭年度刚性支出。保持 null → 安全垫判为数据缺失，不得用 0 代替。",
+  "householdAnnualExpenseNote": "委员会 2026-08-15 裁定：家庭年度刚性支出不作为本投资系统的风控输入。故此字段永久为 null，且**不得再显示为「数据缺失」** —— 裁定排除意味着系统完整、只是不用这一维；数据缺失意味着系统不完整。处置见 cockpit/safety.ts 的 SAFETY_NET_POLICY。",
   "positions": [
-    { "code": "300308", "name": "中际旭创", "quantity": 400, "cost": 967.50, "sector": "通信", "theme": "AI" },
-    { "code": "300502", "name": "新易盛", "quantity": 1260, "cost": 470.63, "sector": "通信", "theme": "AI" },
-    { "code": "688041", "name": "海光信息", "quantity": 2500, "cost": 310.00, "sector": "电子", "theme": "AI" },
-    { "code": "603986", "name": "兆易创新", "quantity": 200, "cost": 580.00, "sector": "电子", "theme": "半导体" },
-    { "code": "688008", "name": "澜起科技", "quantity": 1300, "cost": 260.77, "sector": "电子", "theme": "半导体" },
-    { "code": "688012", "name": "中微公司", "quantity": 400, "cost": 382.50, "sector": "电子", "theme": "半导体" },
-    { "code": "002371", "name": "北方华创", "quantity": 300, "cost": 806.67, "sector": "电子", "theme": "半导体" }
+    {
+      "code": "688041",
+      "name": "海光信息",
+      "quantity": 2500,
+      "cost": 310.278,
+      "sector": "电子",
+      "theme": "AI",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "300308",
+      "name": "中际旭创",
+      "quantity": 600,
+      "cost": 952.571,
+      "sector": "通信",
+      "theme": "AI",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "300502",
+      "name": "新易盛",
+      "quantity": 1260,
+      "cost": 470.435,
+      "sector": "通信",
+      "theme": "AI",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "688008",
+      "name": "澜起科技",
+      "quantity": 1300,
+      "cost": 261.057,
+      "sector": "电子",
+      "theme": "半导体",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "688012",
+      "name": "中微公司",
+      "quantity": 600,
+      "cost": 391.501,
+      "sector": "电子",
+      "theme": "半导体",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "002371",
+      "name": "北方华创",
+      "quantity": 300,
+      "cost": 808.736,
+      "sector": "电子",
+      "theme": "半导体",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "002463",
+      "name": "沪电股份",
+      "quantity": 1000,
+      "cost": 122.616,
+      "sector": "电子",
+      "theme": "AI",
+      "qtySource": "EXACT"
+    },
+    {
+      "code": "603986",
+      "name": "兆易创新",
+      "quantity": 200,
+      "cost": 586.334,
+      "sector": "电子",
+      "theme": "半导体",
+      "qtySource": "EXACT"
+    }
   ],
-  "pendingSells": 7,
-  "pendingSellsNote": "自 7/17 起累计的未执行卖出指令条数。清零后改为 0 以观察闸门解锁后的输出。"
+  "qtySourceNote": "EXACT = 由 App 的 市值÷现价 精确求得，八只除法结果均为整数（如 559,800÷933.000=600.0000）。成本价亦取 App 显示值，与此前记录不同是因为期间加仓摊低了成本（例：中际旭创 967.50 → 952.571）。此前 DERIVED 的 594 股是用收盘价而非 App 现价反推所致，现已作废。",
+  "observedInconsistency": "App 的两个板块小计（通信 1,117,413.00 + 电子 1,616,861.00 = 2,734,274.00）比总市值 2,732,787.60 多 1,486.40 元（0.05%）。各标的市值与板块小计逐一自洽，故差额出自 App 自身的汇总时点，不影响任何仓位结论。照实记录，不调平。",
+  "pendingSells": 5,
+  "pendingSellsNote": "按 8/15 组合口径重审后的条数（npm run reaudit）：7 条中 2 条因口径变更失效（中际旭创、新易盛，新分母下未超 12%）→ 不再计入；1 条熔断类已重算出须降敞口 8.84 万；4 条与分母无关（C级清退/硬止损/状态类/审计项）理由仍成立。**失效 ≠ 已撤单**：券商端挂单物理存在，须委员会逐笔确认撤销后才算真正清除。闸门本身不因 7→5 而放开 —— 只要还有一条未清，新增建仓即被封锁。"
 }

@@ -1,0 +1,80 @@
+{
+  "note": "7 条执行债务台账。由 战略组合2026-2030/账户快照与阶段判定日志.md 重建，每条附出处行号 —— 重审的前提是原始理由可查，凭记忆分类等于重新编一遍。",
+  "rebuiltAt": "2026-08-15",
+  "source": "账户快照与阶段判定日志.md 第 745-760 行「六、待执行清单（七项不变，E1分母）」与第 818-832 行同名清单",
+  "basisAtIssue": "BROKER",
+  "basisAtIssueNote": "全部 7 条均在券商账户口径下产生。8/15 裁定改为组合口径后，其中仅依赖该分母的条目失去前提。",
+  "debts": [
+    {
+      "id": "D1",
+      "target": "澜起科技",
+      "code": "688008",
+      "order": "卖出 400 股",
+      "legalReason": "C_TIER_RETIREMENT",
+      "legalReasonText": "C 级清退。战略层终审背书（日志 1079 行：「澜起、兆易不在冠军清单——C级清退获战略层终审背书，卖出指令此后免于逐日重辩」）",
+      "dependsOnPositionDenominator": false,
+      "sourceLine": 749
+    },
+    {
+      "id": "D2",
+      "target": "兆易创新",
+      "code": "603986",
+      "order": "清仓",
+      "legalReason": "HARD_STOP",
+      "legalReasonText": "硬止损 439.75 已击穿（7/28 收 390.63、7/29 收 364.03，−17%）。与仓位分母无关",
+      "dependsOnPositionDenominator": false,
+      "sourceLine": 750
+    },
+    {
+      "id": "D3",
+      "target": "新易盛",
+      "code": "300502",
+      "order": "卖出 400 股（原趋势指令）",
+      "legalReason": "STATUS_SELL",
+      "legalReasonText": "状态类卖出，获战略层背书（日志 1085 行：「三笔状态类卖出（澜起400股、兆易清200股、新易盛400股）获战略背书后继续有效」）。与仓位分母无关",
+      "dependsOnPositionDenominator": false,
+      "sourceLine": 751
+    },
+    {
+      "id": "D4",
+      "target": "组合整体",
+      "code": null,
+      "order": "熔断强制降仓缺口",
+      "legalReason": "CIRCUIT_BREAKER",
+      "legalReasonText": "7/31 触发组合熔断，强制降仓目标持仓 ≤132 万（日志 958 行）。依赖净值峰值",
+      "dependsOnPositionDenominator": false,
+      "dependsOnPeakBasis": true,
+      "sourceLine": 752
+    },
+    {
+      "id": "D5",
+      "target": "中际旭创",
+      "code": "300308",
+      "order": "卖出 200 股",
+      "legalReason": "POSITION_LIMIT",
+      "legalReasonText": "单股 12% 上限纠偏。唯一理由是仓位超限（日志 734 行：「是单股12%上限的仓位纪律，不是换股决策」；818 行给出最小合规股数 200 股）",
+      "dependsOnPositionDenominator": true,
+      "sourceLine": 753
+    },
+    {
+      "id": "D6",
+      "target": "新易盛",
+      "code": "300502",
+      "order": "卖出 400 股（12% 上限纠偏）",
+      "legalReason": "POSITION_LIMIT",
+      "legalReasonText": "单股 12% 上限纠偏，与 D3 分开计列（日志 754、827 行明确「与上条合并计算总股数」但为两笔独立指令）。唯一理由是仓位超限",
+      "dependsOnPositionDenominator": true,
+      "sourceLine": 754
+    },
+    {
+      "id": "D7",
+      "target": "Case-004/005/006",
+      "code": null,
+      "order": "三笔冻结期买入档案确认",
+      "legalReason": "AUDIT_ITEM",
+      "legalReasonText": "不是卖出指令，是档案确认事项。与仓位分母无关，不因本次校准消失",
+      "dependsOnPositionDenominator": false,
+      "sourceLine": 755
+    }
+  ]
+}

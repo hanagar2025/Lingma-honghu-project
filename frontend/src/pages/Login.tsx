@@ -135,7 +135,7 @@ const Login: React.FC = () => {
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <Title level={2} style={{ color: '#007aff', marginBottom: 8 }}>
-            TIOS 投资助理
+            鸿鹄理财
           </Title>
           <Text type="secondary">
             科技投资操作系统

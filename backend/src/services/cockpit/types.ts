@@ -55,7 +55,7 @@ export const LEGAL_REASON_TEXT: Record<LegalReason, string> = {
   SECTOR_LIMIT: '板块仓位超过30%上限',
   THEME_LIMIT: '主题仓位超过45%上限',
   CIRCUIT_BREAKER: '组合回撤触发熔断风险预算',
-  FAMILY_SAFETY_NET: '家庭刚性支出安全垫不足',
+  FAMILY_SAFETY_NET: '家庭刚性支出安全垫不足（2026-08-15 起不再产生动作，仅供解析历史档）',
   HARD_STOP: '个股自成本回撤触发硬止损风险预算',
   STRATEGY_FALSIFIED: '战略层证伪情形成立',
   S3_PASSED_ALL_GATES: '晋级S3且四道闸门全部放行',
@@ -96,13 +96,21 @@ export interface Metric {
   missingReason?: string
 }
 
-export type Light = 'GREEN' | 'YELLOW' | 'RED' | 'UNKNOWN'
+/**
+ * 三色灯 + 两种非评价状态。
+ *
+ * `UNKNOWN` 与 `EXCLUDED` 必须分开 —— 委员会 2026-08-15 明确：
+ * 「没有数据」意味着系统不完整；「这个变量被裁定不使用」意味着系统完整，只是不用这一维。
+ * 前者应当持续提示补数据，后者不应再出现在待办里。
+ */
+export type Light = 'GREEN' | 'YELLOW' | 'RED' | 'UNKNOWN' | 'EXCLUDED'
 
 export const LIGHT_TEXT: Record<Light, string> = {
   GREEN: '正常',
   YELLOW: '风险升高',
   RED: '必须处理',
   UNKNOWN: '数据缺失·按必须处理对待',
+  EXCLUDED: '战略层裁定不纳入模型',
 }
 
 export type ActionKind = 'BUY' | 'HOLD' | 'REDUCE' | 'NONE'
@@ -159,9 +167,14 @@ export function makeAction(a: Action): Action {
   if (a.kind === 'BUY' && a.reason !== 'S3_PASSED_ALL_GATES') {
     throw new IllegalActionError(`买入动作的法定理由只能是 S3_PASSED_ALL_GATES，实为 ${a.reason}`)
   }
+  // FAMILY_SAFETY_NET 已于 2026-08-15 退出白名单。
+  //
+  // 这是「安全垫不纳入 TIOS 风控模型」的直接推论：一个不纳入模型的维度
+  // 不能再产生减仓的法定理由。枚举值本身保留 —— 8/15 之前的审计档里有引用它的记录，
+  // 删掉枚举会让那些历史记录无法解析。
   const reduceLegal: LegalReason[] = [
     'POSITION_LIMIT', 'SECTOR_LIMIT', 'THEME_LIMIT',
-    'CIRCUIT_BREAKER', 'FAMILY_SAFETY_NET', 'HARD_STOP', 'STRATEGY_FALSIFIED',
+    'CIRCUIT_BREAKER', 'HARD_STOP', 'STRATEGY_FALSIFIED',
   ]
   if (a.kind === 'REDUCE' && !reduceLegal.includes(a.reason)) {
     throw new IllegalActionError(
@@ -223,4 +236,12 @@ export interface CockpitReport {
   }
   /** 数据缺口清单 —— 缺什么就明说缺什么，不用默认值糊过去 */
   dataGaps: string[]
+  /**
+   * 中间结果，供五层驾驶舱装配层（dashboard.ts）复用。
+   *
+   * 存在的理由是**防漂移**：驾驶舱四张表与六问必须来自同一次计算。
+   * 若装配层自己再算一遍相对强度或健康度，两处口径迟早不一致，
+   * 而读表的人无法察觉。类型为 unknown 是为避免 types.ts 反向依赖引擎模块。
+   */
+  internals?: { momentumRows: unknown[]; msr: unknown; nodes: unknown[] }
 }

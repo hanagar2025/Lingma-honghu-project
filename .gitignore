@@ -4,6 +4,13 @@ node_modules
 /frontend/dist
 /backend/dist
 
+# 驾驶舱 HTML 报告：每份约 40KB，且可由当日快照 + 代码完整重现。
+# 归档凭据是 changelog/*.json 与 audits/*.md，HTML 只是给人看的渲染结果。
+/backend/src/services/cockpit/data/reports
+
+# 离线网页快照：每个交易日重新生成，由 npm run web 自动产出，不入库。
+/frontend/public/data/today.json
+
 # 环境变量与日志
 .env
 .env.*
@@ -11,3 +18,13 @@ node_modules
 /backend/logs
 
 .DS_Store
+
+# 盘中临时审计档（收盘后重跑会生成正式档 YYYY-MM-DD.md）
+/backend/src/services/cockpit/data/audits/*-盘中.md
+
+# 待上传的发布包。内含当日密文快照，且完全可由代码重现，无需入库。
+/frontend/release
+
+# 外发摘要与 CSV：每个交易日重新生成，且可由代码完整重现。
+# 含金额版本更不该入库。
+/backend/src/services/cockpit/data/share

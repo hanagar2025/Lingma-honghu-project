@@ -1,0 +1,21 @@
+{
+  "frozenAt": "2026-08-17",
+  "tradingDays": 30,
+  "hash": "e59cdde33bed",
+  "entryCount": 31,
+  "byDomain": {
+    "GUARD": "68434286ad76",
+    "LEGAL_REASON": "0de3f52d932c",
+    "POSITION_LIMIT": "b481dd150240",
+    "PRICE_WINDOW": "7f8a35934192",
+    "PROMOTION": "dce15f91262f",
+    "UNIVERSE": "aa28f11714c3",
+    "VALUATION": "5d9de12e91c1"
+  },
+  "tierCounts": {
+    "ACCOUNTING": 29,
+    "VALIDATED": 1,
+    "OBSERVATION": 1
+  },
+  "note": "委员会 2026-08-13 决议：冻结 30 个交易日，期间不新增决策规则，只修 Bug、补数据、记录结果。本文件即该承诺的可验证凭据。重新生成基线须在提交信息中写明授权来源。"
+}

@@ -346,8 +346,10 @@ const Portfolio: React.FC = () => {
             label="股票名称"
             rules={[{ required: true, message: '请输入股票名称' }]}
           >
-            <Input 
-              placeholder="如：兆易创新" 
+            {/* 占位示例不用真实持仓名：这段字符串会进公开的 JS 产物，
+                拿自己的持仓当例子等于白送一条信息。发布体检会拦下这类写法。 */}
+            <Input
+              placeholder="请输入股票名称"
               onChange={handleStockNameChange}
               onBlur={handleStockNameChange}
             />

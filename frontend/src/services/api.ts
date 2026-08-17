@@ -127,7 +127,8 @@ export const tiosAPI = {
 
   getExecutions: () => apiClient.get<any[]>('/tios/executions'),
 
-  updateExecution: (id: number, data: { executed: boolean; note?: string }) =>
+  /** executedAt 可回填历史执行时间（补记旧账）；不传则取当前时间 */
+  updateExecution: (id: number, data: { executed: boolean; note?: string; executedAt?: string }) =>
     apiClient.put(`/tios/executions/${id}`, data),
 
   getExecutionStats: () => apiClient.get<any>('/tios/executions/stats'),
@@ -136,13 +137,86 @@ export const tiosAPI = {
     apiClient.post<any>('/tios/risk-reward', { current, targetPrice, defensePrice }),
 }
 
+/**
+ * 离线快照模式。
+ *
+ * 网页端原本的链路是 浏览器 → 登录 → Express → MySQL，三个环节任意一个没起来就看不到分析。
+ * 而"今天没看"重复三次，系统等于不存在 —— 30 天观察期考的是是否真的每天在用。
+ *
+ * 离线模式下前端直接读 CLI 盘后落下的 `/data/today.json`（与 CLI、HTML 报告同一份数据）。
+ * 有两种进入方式：显式 `VITE_OFFLINE=1`，或接口不可用时自动降级。
+ * 自动降级是必要的：让人在后端挂掉时还能看到当天数据，比弹一个报错更有用。
+ */
+export const OFFLINE_FORCED = import.meta.env.VITE_OFFLINE === '1'
+const base = (import.meta.env.BASE_URL ?? '/')
+export const OFFLINE_SNAPSHOT_URL = `${base}data/today.json`.replace(/([^:])\/{2,}/g, '$1/')
+
+/** 取离线快照。委员会 2026-08-15 决议去掉口令解锁，故只有明文一条路径 */
+export async function loadOfflineSnapshot(): Promise<any> {
+  const plain = await fetchJson(OFFLINE_SNAPSHOT_URL)
+  if (plain) return plain
+  throw new Error(
+    `未找到离线快照（${OFFLINE_SNAPSHOT_URL}）。`
+    + ` 先在项目根目录跑一次 npm run web:snapshot 生成它。`
+  )
+}
+
+/**
+ * 取 JSON，取不到就返回 null 而不抛。
+ *
+ * 必须判 content-type：静态托管的 SPA 回退会把**不存在的文件**当成路由，
+ * 返回 200 + index.html。直接 res.json() 得到的是 "Unexpected token <"，
+ * 而真正的问题是"文件没生成"或"部署时漏传了" —— 错误信息指向完全错误的方向。
+ */
+async function fetchJson(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return null
+    if (!(res.headers.get('content-type') ?? '').includes('json')) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 // 每日驾驶舱（六问）
 export const cockpitAPI = {
   /** live=true 直连行情源复跑（盘后用），否则优先读库 */
-  getToday: (live = false) => apiClient.get<any>('/cockpit/today', live ? { live: 1 } : undefined),
+  getToday: (live = false, session?: 'pre' | 'post') => apiClient.get<any>('/cockpit/today', {
+    ...(live ? { live: 1 } : {}),
+    ...(session === 'pre' ? { session: 'pre' } : {}),
+  }),
+
+  /**
+   * 取当日驾驶舱，接口不可用时自动降级到离线快照。
+   * 返回 `offline` 标记，让页面能明说"你现在看的是快照，不是实时接口"。
+   */
+  getTodayOrOffline: async (live = false, session?: 'pre' | 'post'): Promise<{
+    data: any; offline: boolean; reason: string
+  }> => {
+    if (OFFLINE_FORCED) {
+      return { data: await loadOfflineSnapshot(), offline: true, reason: 'VITE_OFFLINE=1 显式指定离线模式' }
+    }
+    try {
+      return { data: await cockpitAPI.getToday(live, session), offline: false, reason: '' }
+    } catch (e: any) {
+      const snap = await loadOfflineSnapshot()
+      return {
+        data: snap,
+        offline: true,
+        reason: `接口不可用（${e?.message ?? '未知错误'}），已降级读取盘后快照`,
+      }
+    }
+  },
 
   /** 阈值与口径说明，用于核对规则 */
   getSpec: () => apiClient.get<any>('/cockpit/spec'),
+
+  /** 某日决策审计（Markdown），供三个月后回看 */
+  getAudit: (date: string) => apiClient.get<any>(`/cockpit/audit/${date}`),
+
+  /** 审计序列，用于观察 30 个交易日的连续性 */
+  getAudits: (limit = 60) => apiClient.get<any[]>('/cockpit/audits', { limit }),
 }
 
 // MSR 主线内部轮动雷达

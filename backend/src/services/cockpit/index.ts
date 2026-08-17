@@ -18,7 +18,10 @@ import { STAGE_TEXT, WINDOW_COLOR_TEXT } from '../msr/promotion'
 import type { ValuationInjection } from '../msr/valuation'
 import { MAINLINES } from '../msr/universe'
 import type { MainlineHealth } from '../msr/health'
-import { evaluateSafety, findLimitBreaches, worstLight, LIMITS, type SafetyInput } from './safety'
+import {
+  evaluateSafety, findLimitBreaches, worstLight, computeCircuit,
+  LIMITS, SAFETY_NET_POLICY, type SafetyInput,
+} from './safety'
 import { evaluateMomentum, type MomentumRow } from './momentum'
 import { evaluateNodes, nodeOf } from './nodes'
 import {
@@ -143,7 +146,9 @@ function evaluateActions(
   input: CockpitInput, momentumRows: MomentumRow[], msr: MsrReport, asOf: string
 ): { answer: Answer; actions: Action[] } {
   const actions: Action[] = []
-  const total = input.snapshot.totalAssets
+  // 动作层的分母必须与显示层一致 —— 一度不一致过：
+  // 显示层算出回撤 15.2%/上限 50%，动作层用券商口径算出 46.9%/30%/需减 175.7 万。
+  const total = input.snapshot.portfolioTotal
   const breaches = findLimitBreaches({ snapshot: input.snapshot, positions: input.positions, asOf })
   const triggerByCode = new Map(momentumRows.map(r => [r.code, r.reviewTriggers]))
 
@@ -178,8 +183,14 @@ function evaluateActions(
   }
 
   // ── 熔断强制降仓 ──
-  const dd = input.snapshot.peakAssets > 0 ? 1 - total / input.snapshot.peakAssets : null
-  const capByDd = dd === null ? null : dd >= LIMITS.circuitLevel2 ? 0.30 : dd >= LIMITS.circuitLevel1 ? 0.50 : null
+  //
+  // 峰值口径守卫：只有当峰值与当前值同口径时才允许相减。
+  // 不加这道守卫的后果不是报错，而是**静默失效**——
+  // 用券商口径峰值 430 万减组合口径 534 万会得出负回撤，
+  // capByDd 变 null，熔断一句话都不说就消失了。
+  const circuit = computeCircuit(input.snapshot)
+  const dd = circuit.drawdown
+  const capByDd = circuit.equityCap
   const posPct = total > 0 ? input.snapshot.positionsValue / total : null
   if (capByDd !== null && posPct !== null && posPct > capByDd) {
     const need = (posPct - capByDd) * total
@@ -187,9 +198,15 @@ function evaluateActions(
       code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER',
       reasonDetail:
         `自峰值回撤${pctStr(dd)}（≥${pctStr(capByDd === 0.30 ? LIMITS.circuitLevel2 : LIMITS.circuitLevel1)}），` +
-        `仓位上限${pctStr(capByDd)}，当前${pctStr(posPct)}，需卖出约${wanStr(need)}` +
-        (capByDd === 0.30 ? '，且进入只卖不买状态' : ''),
-      notReason: ['不是对后市方向的判断', '不是因为主线被证伪'],
+        `组合股票上限${pctStr(capByDd)}，当前${pctStr(posPct)}，` +
+        `须降低组合股票敞口约${wanStr(need)}` +
+        (capByDd === 0.30 ? '，且进入只卖不买状态' : '') +
+        '。具体由哪一持仓承担这笔降仓，不由技术指标自动决定 —— 须委员会指派',
+      notReason: [
+        '不是对后市方向的判断',
+        '不是因为主线被证伪',
+        '不指定卖哪一只 —— 组合层降仓与单票超限是两套独立的法定理由，不得合并计算',
+      ],
       reviewTriggers: [],
       size: { display: wanStr(need), value: need, note: `(${pctStr(posPct)} − ${pctStr(capByDd)}) × 总资产${wanStr(total)}` },
       metrics: [{
@@ -297,9 +314,16 @@ function evaluateNoNewEntry(
   if (input.marketAllows !== true) {
     reasons.push('市场阶段不允许建仓（下跌期/熔断期，或阶段判定未确认）')
   }
-  const dd = input.snapshot.peakAssets > 0 ? 1 - input.snapshot.totalAssets / input.snapshot.peakAssets : null
-  if (dd !== null && dd >= LIMITS.circuitLevel2) {
-    reasons.push(`组合回撤${pctStr(dd)} ≥ ${pctStr(LIMITS.circuitLevel2)} → 只卖不买`)
+  // 曾在此处用 brokerTotal 做分母 → 算出 46.9% → 误判"只卖不买"，封死全部买入。
+  // 现在与显示层、动作层共用 computeCircuit 这一个入口。
+  const circ = computeCircuit(input.snapshot)
+  if (circ.sellOnly) {
+    reasons.push(`组合回撤${pctStr(circ.drawdown)} ≥ ${pctStr(LIMITS.circuitLevel2)} → 只卖不买`)
+  } else if (circ.level === 'LEVEL1') {
+    reasons.push(`组合回撤${pctStr(circ.drawdown)} ≥ ${pctStr(LIMITS.circuitLevel1)}`
+      + ` → 一级熔断，股票上限${pctStr(circ.equityCap)}，暂停左侧买入`)
+  } else if (circ.level === 'INCOMPARABLE') {
+    reasons.push('净值峰值与组合口径不可比 → 回撤无法计算，按从严处理暂不新增建仓')
   }
 
   const buyCount = actions.filter(a => a.kind === 'BUY').length
@@ -330,7 +354,13 @@ export function runCockpit(input: CockpitInput): CockpitReport {
   }
   const safety = evaluateSafety(safetyInput)
   const breaches = findLimitBreaches(safetyInput)
-  if (input.householdAnnualExpense === undefined) dataGaps.push('家庭年度刚性支出未提供 → 安全垫无法判定')
+  // 家庭年度刚性支出不再计入数据缺口 —— 委员会 2026-08-15 裁定不纳入 TIOS 风控模型。
+  // 「裁定排除」放进数据缺口等于把它变成一条永久待办：每天提示补一个永远不会补的数，
+  // 而 E2 数据完整度也会被永久压在 100% 以下。
+  // 只有 SAFETY_NET_POLICY.mode 回到 REQUIRED 时才重新计入。
+  if (SAFETY_NET_POLICY.mode === 'REQUIRED' && input.householdAnnualExpense === undefined) {
+    dataGaps.push('家庭年度刚性支出未提供 → 安全垫无法判定')
+  }
   if (input.snapshot.peakAssets <= 0) dataGaps.push('account_state.peak_assets 缺失 → 回撤与熔断线无法判定')
 
   // 第②问
@@ -381,7 +411,7 @@ export function runCockpit(input: CockpitInput): CockpitReport {
   const buyCount = acts.actions.filter(a => a.kind === 'BUY').length
   const reviewCount = momentum.rows.filter(r => r.reviewTriggers.length > 0).length
   const s3Count = msr.potentialCores.filter(c => c.promotion.stage === 'STAGE_3_PRICE_WINDOW').length
-  const cashPct = input.snapshot.totalAssets > 0 ? input.snapshot.cash / input.snapshot.totalAssets : null
+  const cashPct = input.snapshot.brokerTotal > 0 ? input.snapshot.cash / input.snapshot.brokerTotal : null
 
   const table: CockpitRow[] = [
     {
@@ -475,6 +505,8 @@ export function runCockpit(input: CockpitInput): CockpitReport {
       ],
     },
     dataGaps,
+    // 供五层驾驶舱装配层复用。刻意不重算 —— 两处各算一遍必然漂移。
+    internals: { momentumRows: momentum.rows, msr, nodes: nodes.nodes },
   }
 }
 

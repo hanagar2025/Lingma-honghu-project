@@ -94,7 +94,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {sidebarCollapsed ? (
             <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>📈</div>
           ) : (
-            <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>TIOS 交易操作系统</div>
+            <div style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>鸿鹄理财</div>
           )}
         </div>
         <Menu
