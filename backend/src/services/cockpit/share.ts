@@ -35,10 +35,16 @@ import type { Verdict } from './verdict'
 export interface ShareInput {
   dashboard: Dashboard
   verdict: Verdict | null
-  /** 外围现金与分母口径。脱敏时只保留"口径未裁定"这个事实，不给金额 */
-  externalCash?: { amount: number; denominatorNow: number } | null
   /** 是否包含绝对金额与总资产。默认 false（脱敏） */
   includeAmounts?: boolean
+  /**
+   * 最新K线尚未定价（盘中运行）。
+   *
+   * 「这份简报是最需要这个标记的产物」—— 它会被贴进外部大模型，
+   * 而那些模型看不到运行时刻，只会照字面把「盘后」当成收盘数据用。
+   * HTML 与前端早已有盘中横幅，简报此前漏了。
+   */
+  intraday?: boolean
 }
 
 const pct = (v: number | null | undefined, digits = 1): string =>
@@ -74,9 +80,12 @@ function redactText(s: string): string {
  * 放在最前面且不可省略。没有它，外部模型读完数据的第一反应就是给买卖建议 ——
  * 那正是这套系统花了几个月去抵抗的东西。把边界一起交付，是这份摘要能否安全外发的前提。
  */
-function preamble(date: string, session: string): string {
+function preamble(date: string, session: string, intraday = false): string {
   return [
-    `# 投资驾驶舱数据摘要　${date}　${session}`,
+    // 标题里必须带上"盘中运行"。只在正文里放横幅是不够的 ——
+    // 标题写「盘后」而数据是盘中的，标题自己就在误导，
+    // 而标题恰恰是被引用、被截图、被摘录时唯一一定会带上的那一行。
+    `# 投资驾驶舱数据摘要　${date}　${session}${intraday ? '口径·⚠ 盘中运行（数据未定价）' : ''}`,
     '',
     '## 读这份数据前请先读这一段（对人与对大模型同样适用）',
     '',
@@ -188,11 +197,23 @@ function nextLayerTable(rows: NextLayerRow[]): string {
 }
 
 export function buildBrief(input: ShareInput): string {
-  const { dashboard: d, verdict: v, externalCash, includeAmounts = false } = input
+  const { dashboard: d, verdict: v, includeAmounts = false, intraday = false } = input
   const L: string[] = []
   const w = (s = '') => L.push(s)
 
-  w(preamble(d.date, d.session === 'PRE_OPEN' ? '盘前' : '盘后'))
+  // 盘中横幅置于最前 —— 放在后面等于没放：贴进外部模型时经常只取前半段。
+  const banner = intraday
+    ? [
+      '> ⚠ **本摘要为盘中生成，不是收盘数据。**',
+      '> 最新K线尚未定价，表中「今日」「5日」「20日」等读数为当日临时值，',
+      '> 收盘后会变。**请勿据此判断当日涨跌幅或做任何跨日比较。**',
+      '> 本次运行未归档，不进入 30 天观察期记录。',
+      '',
+    ]
+    : []
+  for (const b of banner) w(b)
+
+  w(preamble(d.date, d.session === 'PRE_OPEN' ? '盘前' : '盘后', intraday))
 
   if (!includeAmounts) {
     w('> **本摘要已脱敏**：不含绝对金额、股数与总资产，仅保留百分比与趋势。')
@@ -237,22 +258,27 @@ export function buildBrief(input: ShareInput): string {
     w('')
   }
 
-  if (externalCash) {
-    w('### 仓位分母口径（未裁定）')
+  // ── 分母口径（已裁定）──
+  //
+  // 这一段原本写的是「口径未裁定，本表以券商账户总资产为分母」。
+  // 委员会 2026-08-15 已裁定改为组合口径，我当时从 HTML 渲染器里删掉了旧段落，
+  // **漏了这份简报**。于是同一份文件里出现互相矛盾的两句：
+  //   一边说"分母未裁定、用券商口径"
+  //   一边报"组合回撤 15.6% → 一级熔断"（后者只有用组合口径峰值才算得出来）
+  // 一份自相矛盾的简报比一份缺信息的简报更糟：外部模型会各取一句往下推。
+  {
+    const a = d.assets
+    w('### 仓位分母口径（已裁定）')
     w('')
-    if (includeAmounts) {
-      const now = externalCash.denominatorNow
-      const wide = now + externalCash.amount
-      const big = d.holdings.reduce((a, b) => ((b.posPct ?? 0) > (a.posPct ?? 0) ? b : a), d.holdings[0])
-      w(`- 券商账户总资产 ${wan(now)}；账户外现金储备 ${wan(externalCash.amount)}，**未计入分母**。`)
-      w(`- 若计入：分母变 ${wan(wide)}，${big.name} 由 ${pct(big.posPct)} 变为 `
-        + `${pct((big.posPct ?? 0) * now / wide)}，超限结论随之改变。`)
-    } else {
-      w('- 存在一笔账户外现金储备，**是否计入仓位上限的分母尚未裁定**。')
-      w('- 本表所有仓位百分比以券商账户总资产为分母（从严口径）。')
-      w('- 若计入，各标的仓位占比会等比下降，部分超限结论会消失。')
+    w('- 一切仓位上限的分母是「组合总资产」= 股票 + 账内现金 + 账户外股票现金储备。')
+    w(`- 当前股票占组合 ${pct(a?.equityPct ?? null)}，现金占 ${pct(a?.cashPct ?? null)}。`)
+    w(`- 券商账户口径的「账户内仓位」为 ${pct(a?.brokerPositionPct ?? null)} ——`
+      + '它只回答"还有多少钱能直接下单"，**不参与任何上限判定**。')
+    w('- 两个口径会得出不同的超限结论。本表一律用组合口径；')
+    w('  读到别处的券商口径百分比时不要与本表混用。')
+    if (includeAmounts && a) {
+      w(`- 组合总资产 ${wan(a.portfolioTotal)}；其中账户外现金储备 ${wan(a.externalCash)}。`)
     }
-    w('- 这是战略层裁定事项，不是可由数据推出的结论。请勿代为裁定。')
     w('')
   }
 

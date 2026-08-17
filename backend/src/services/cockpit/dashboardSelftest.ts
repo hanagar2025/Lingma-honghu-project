@@ -734,5 +734,56 @@ console.log('\n【外发摘要脱敏】')
     offenders.length === 0, offenders.join(' ｜ '))
 }
 
+// ══════════════════════════════════════════════════════════════
+// 外发简报：口径已裁定 + 盘中必须自报
+// ══════════════════════════════════════════════════════════════
+//
+// 两个真实故障，都是 2026-08-17 盘中那份摘要暴露出来的：
+//
+// ① 简报里还留着「仓位分母口径（未裁定）」与「以券商账户总资产为分母」。
+//    8/15 裁定后我从 HTML 渲染器删了这段，**漏了简报**。
+//    于是同一份文件里自相矛盾：一边说"分母未裁定、用券商口径"，
+//    一边报"组合回撤 15.6% → 一级熔断"（后者只有用组合口径峰值才算得出来）。
+//    「一份自相矛盾的简报比一份缺信息的简报更糟」—— 外部模型会各取一句往下推。
+//
+// ② 简报没有盘中标记。它偏偏是最需要这个标记的产物：
+//    会被贴进外部大模型，而那些模型看不到运行时刻，
+//    只会照字面把「盘后」当成收盘数据用。
+{
+  const { buildBrief } = await import('./share')
+
+  const closed = buildBrief({ dashboard: dash, verdict: null })
+  const live = buildBrief({ dashboard: dash, verdict: null, intraday: true })
+
+  // ── ① 口径已裁定 ──
+  for (const banned of ['未裁定', '以券商账户总资产为分母', '从严口径', '请勿代为裁定']) {
+    ok(`简报不再出现旧口径文案「${banned}」`, !closed.includes(banned))
+  }
+  ok('简报写明分母是组合总资产', closed.includes('分母是「组合总资产」'))
+  ok('简报写明券商口径不参与上限判定',
+    closed.includes('不参与任何上限判定'))
+  ok('简报提醒两个口径不要混用', closed.includes('不要与本表混用'))
+
+  // 自相矛盾检测：不得同时出现"分母未裁定"与"一级熔断"
+  const contradiction = (t: string) =>
+    (t.includes('未裁定') || t.includes('券商账户总资产为分母'))
+    && (t.includes('一级熔断') || t.includes('二级熔断'))
+  ok('简报中不存在「分母未裁定」与「熔断成立」并存的矛盾', !contradiction(closed))
+
+  // ── ② 盘中必须自报，且必须在最前 ──
+  ok('盘后运行不出现盘中横幅', !closed.includes('盘中生成'))
+  ok('盘中运行出现横幅', live.includes('盘中生成'))
+  ok('横幅在标题之前（贴进模型时常只取前半段，放后面等于没放）',
+    live.indexOf('盘中生成') < live.indexOf('# 投资驾驶舱数据摘要'))
+  ok('横幅说明读数为临时值且收盘后会变',
+    live.includes('临时值') && live.includes('收盘后会变'))
+  ok('横幅说明本次未归档', live.includes('未归档'))
+  ok('标题本身带盘中标记（标题是被摘录时唯一一定会带上的那一行）',
+    live.split('\n').find(l => l.startsWith('# '))?.includes('盘中运行') === true,
+    live.split('\n').find(l => l.startsWith('# ')))
+  ok('盘后标题不带盘中标记',
+    closed.split('\n').find(l => l.startsWith('# '))?.includes('盘中运行') === false)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

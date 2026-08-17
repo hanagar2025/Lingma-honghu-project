@@ -533,10 +533,8 @@ async function main(): Promise<void> {
     briefForWeb = buildBrief({
       dashboard: dashForHtml,
       verdict: verdictForHtml,
-      externalCash: externalCash > 0
-        ? { amount: externalCash, denominatorNow: portfolioTotal }
-        : null,
       includeAmounts: withAmounts,
+      intraday: isIntraday(dashForHtml.date),
     })
   }
 
