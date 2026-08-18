@@ -42,10 +42,26 @@ printf '  当前代码 %s\n' "$(git -C "${REPO_DIR}" log --oneline -1)"
 
 step "二、拉看台分支"
 cd "${REPO_DIR}"
-git fetch origin "${BRANCH}" || die "git fetch 失败。检查：curl -I https://github.com"
-git checkout -B "${BRANCH}" "origin/${BRANCH}" 2>/dev/null \
-  || git reset --hard "origin/${BRANCH}" \
-  || git reset --hard FETCH_HEAD
+# 无输出的 git fetch 在这台机器上会一直挂。必须带超时、带进度、只取尖端。
+# 全历史对部署没有意义；--depth 1 失败也比挂死强。
+if timeout 8 curl -fsS -o /dev/null --connect-timeout 5 --max-time 8 https://github.com; then
+  printf '  GitHub HTTPS 可达\n'
+else
+  printf '  GitHub HTTPS 8 秒不通，改走 gitclone 镜像\n'
+  git remote set-url origin https://gitclone.com/github.com/hanagar2025/Lingma-honghu-project.git
+fi
+# remote 若是 ssh:// 或 git@，握手会在 22 端口无限等。部署只需要 HTTPS。
+case "$(git remote get-url origin)" in
+  git@*|ssh://*)
+    git remote set-url origin https://github.com/hanagar2025/Lingma-honghu-project.git
+    printf '  已把 origin 从 SSH 改成 HTTPS\n'
+    ;;
+esac
+if ! GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/true \
+    timeout 45 git fetch --progress --depth 1 origin "${BRANCH}"; then
+  die "git fetch 45 秒内没有结束。不要重跑同一条。先：timeout 8 curl -I https://github.com"
+fi
+git checkout -B "${BRANCH}" FETCH_HEAD
 printf '  已落到 %s\n' "$(git log --oneline -1)"
 
 step "三、安装构建依赖（前端构建需要 vite，不能 --omit=dev）"
