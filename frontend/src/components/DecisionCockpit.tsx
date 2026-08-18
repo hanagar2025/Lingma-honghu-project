@@ -4,7 +4,7 @@
 // 本组件不做任何判断：状态、出口、理由全部由后端给出。
 
 import React from 'react'
-import { Alert, Card, Space, Table, Tag, Typography } from 'antd'
+import { Alert, Card, Collapse, Space, Table, Tag, Typography } from 'antd'
 
 const { Title, Text } = Typography
 
@@ -48,9 +48,17 @@ const pct = (v: number | null | undefined) =>
 
 export interface DecisionCockpitProps {
   cockpit: any
+  hideIntro?: boolean
+  hideTasks?: boolean
+  hideQuestions?: boolean
 }
 
-const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
+const DecisionCockpit: React.FC<DecisionCockpitProps> = ({
+  cockpit: d,
+  hideIntro = false,
+  hideTasks = false,
+  hideQuestions = false,
+}) => {
   if (!d) return null
 
   const sentences = d.sentences ?? d.questions ?? []
@@ -72,6 +80,7 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
           </Space>
         }
       >
+        {!hideIntro && (
         <Alert
           type="info"
           showIcon
@@ -79,6 +88,7 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
           message={d.dailyQuestion ?? '今天有没有出现足以改变资本状态的新事实？'}
           description={d.maxim ?? d.noCompositeScoreNote}
         />
+        )}
 
         <Title level={5}>战略</Title>
         <Table
@@ -97,11 +107,15 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
           ]}
         />
 
-        <Title level={5}>资本生命线</Title>
+        <Collapse
+          style={{ marginBottom: 16 }}
+          items={[{
+            key: 'lifeline',
+            label: `全持仓四轴生命线（${lifeline.length} 只，默认收起）`,
+            children: (
         <Table
           size="small"
           pagination={false}
-          style={{ marginBottom: 16 }}
           rowKey="code"
           dataSource={lifeline}
           columns={[
@@ -130,6 +144,9 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
             { title: '为什么', dataIndex: 'oneReason' },
           ]}
         />
+            ),
+          }]}
+        />
 
         <Title level={5}>风险</Title>
         {board ? (
@@ -143,13 +160,17 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
           <Text type="secondary">风险板尚未生成</Text>
         )}
 
-        <Title level={5}>今天真正需要投资人做的事</Title>
-        {tasks.length === 0 && <Text type="secondary">今日没有必须由投资人执行的事。</Text>}
-        <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 16 }}>
-          {tasks.map((t, i) => (
-            <div key={i}><Text strong>{i + 1}.</Text> {t}</div>
-          ))}
-        </Space>
+        {!hideTasks && (
+          <>
+            <Title level={5}>今天真正需要投资人做的事</Title>
+            {tasks.length === 0 && <Text type="secondary">今日没有必须由投资人执行的事。</Text>}
+            <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 16 }}>
+              {tasks.map((t, i) => (
+                <div key={i}><Text strong>{i + 1}.</Text> {t}</div>
+              ))}
+            </Space>
+          </>
+        )}
       </Card>
 
       <Card
@@ -175,7 +196,7 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
         </Space>
       </Card>
 
-      <Card
+      {!hideQuestions && <Card
         style={SECTION}
         title={<Title level={5} style={{ margin: 0 }}>鸿鹄五问</Title>}
       >
@@ -191,7 +212,7 @@ const DecisionCockpit: React.FC<DecisionCockpitProps> = ({ cockpit: d }) => {
             </div>
           ))}
         </Space>
-      </Card>
+      </Card>}
 
       {(d.missingForDecision ?? []).length > 0 && (
         <Alert

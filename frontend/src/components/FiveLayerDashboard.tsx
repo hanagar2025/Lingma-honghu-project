@@ -287,10 +287,12 @@ export interface FiveLayerDashboardProps {
   hypotheses?: HypothesisView[]
   /** 后端下发的盘中标记。未定价读数必须显式标注，否则会被当成收盘读数用 */
   provisional?: any
+  /** 看台已展示变化时，这里不再重复铺一整区 */
+  hideChanges?: boolean
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
-  dashboard: d, changes, discovery, hypotheses, provisional,
+  dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false,
 }) => {
   if (!d) {
     return (
@@ -437,8 +439,8 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Text>
       </Card>
 
-      {/* ══ 今日变化：核心输出，放在四张表之前 ══ */}
-      <TodayChanges changes={changes} discovery={discovery} />
+      {/* ══ 今日变化：看台已前置时不再重复 ══ */}
+      {!hideChanges && <TodayChanges changes={changes} discovery={discovery} />}
 
       {/* ══ 市场结构：切主线 还是 打深一层 ══ */}
       <Alert
@@ -1060,4 +1062,5 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   )
 }
 
+export { TodayChanges }
 export default FiveLayerDashboard

@@ -392,8 +392,20 @@ ok('前端在离线模式隐藏需要后端的复跑按钮',
   /!offline\.on\s*&&/.test(cockpitPageSrc))
 ok('前端显示外围现金口径待裁定',
   /externalCash/.test(cockpitPageSrc) && /未计入仓位上限分母/.test(cockpitPageSrc))
-ok('前端先渲染 V2 决策驾驶舱（决策在表之前）',
-  /DecisionCockpit/.test(cockpitPageSrc) && /data\.decisionV2/.test(cockpitPageSrc))
+ok('前端先渲染看台，决策大表收在详细数据里',
+  /LookoutBoard/.test(cockpitPageSrc)
+  && /DecisionCockpit/.test(cockpitPageSrc)
+  && /data\.decisionV2/.test(cockpitPageSrc)
+  && cockpitPageSrc.indexOf('<LookoutBoard') >= 0
+  && cockpitPageSrc.indexOf('<DecisionCockpit') >= 0
+  && cockpitPageSrc.indexOf('<LookoutBoard') < cockpitPageSrc.indexOf('<DecisionCockpit'))
+
+const lookoutSrc = readFileSync(
+  new URL('../../../../frontend/src/components/LookoutBoard.tsx', import.meta.url), 'utf-8',
+)
+ok('看台不含 score/rank/weight', !/\bscore\b|\brank\b|\bweight\b/i.test(lookoutSrc))
+ok('看台价格复核不构成动作', lookoutSrc.includes('不构成动作'))
+ok('看台允许零动作日写成维持', lookoutSrc.includes('今日维持是经过验证的决策'))
 
 // ───────────────────────────────────────────────────────────────
 // 资产层（委员会 2026-08-15 指定为第一层）
