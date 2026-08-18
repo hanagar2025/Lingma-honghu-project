@@ -32,7 +32,7 @@ USER_="${DEPLOY_USER:-root}"
 KEY="${DEPLOY_KEY:-$HOME/.ssh/tios_ecs}"
 WEBROOT="${DEPLOY_PATH:-/var/www/tios}"
 REPO="${TIOS_REPO:-https://github.com/hanagar2025/Lingma-honghu-project.git}"
-BRANCH="${TIOS_BRANCH:-cursor/decision-audit-c819}"
+BRANCH="${TIOS_BRANCH:-cursor/cockpit-lookout-c819}"
 REMOTE_DIR="/opt/tios"
 LINE="$(printf '─%.0s' {1..70})"
 
@@ -73,7 +73,7 @@ SESSION="${1:-post}"
 FORCE="${FORCE:-0}"
 # NOPULL=1 跳过拉代码（排障时用）。默认拉 —— 见下方理由。
 NOPULL="${NOPULL:-0}"
-BRANCH_REF="${TIOS_BRANCH:-cursor/decision-audit-c819}"
+BRANCH_REF="${TIOS_BRANCH:-cursor/cockpit-lookout-c819}"
 LOG=/var/log/tios-update.log
 exec >> "$LOG" 2>&1
 echo "=== $(date '+%F %T %Z') session=$SESSION force=$FORCE ==="

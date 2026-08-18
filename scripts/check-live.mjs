@@ -79,6 +79,8 @@ if (liveJs) {
     ['焦点：今天真正需要', '焦点名单'],
     ['分享给其他', '一键外发'],
     ['把数据交给别的软件', '外发说明'],
+    ['看台', '看台'],
+    ['今日维持是经过验证的决策', '零动作日文案'],
   ]
   for (const [needle, label] of feats) {
     if (b.includes(needle)) console.log(`  ${F.ok} ${label}已上线`)
