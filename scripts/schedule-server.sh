@@ -88,13 +88,15 @@ echo "=== $(date '+%F %T %Z') session=$SESSION force=$FORCE ==="
 # 旧代码照样生成一份完整报告，只是用的是旧口径与旧持仓。
 # 一份看起来正常、数字全错的报告，比一份生成失败的报告危险得多。
 if [[ "$NOPULL" != "1" ]]; then
-  if git -C /opt/tios fetch --quiet origin "$BRANCH_REF" 2>/dev/null \
+  # 呼和浩特 ECS 访问 GitHub 会 GnuTLS -54 或一直挂。
+  # 无超时的 fetch 会卡住 09:20/15:10，报告看起来像没跑。
+  if timeout 20 git -C /opt/tios fetch --quiet origin "$BRANCH_REF" 2>/dev/null \
     && git -C /opt/tios reset --hard --quiet "origin/$BRANCH_REF" 2>/dev/null; then
     echo "已拉取 origin/$BRANCH_REF → $(git -C /opt/tios rev-parse --short HEAD)"
     # 依赖可能随代码变化。--omit=dev 保持轻量；失败不阻断（多数改动不涉及新依赖）
     npm ci --omit=dev --silent 2>/dev/null || echo "  npm ci 跳过（不影响 tsx 直跑）"
   else
-    echo "⚠ 拉取失败，继续用本地代码 $(git -C /opt/tios rev-parse --short HEAD 2>/dev/null || echo '未知')"
+    echo "⚠ 拉取失败或超时，继续用本地代码 $(git -C /opt/tios rev-parse --short HEAD 2>/dev/null || echo '未知')"
   fi
 fi
 
@@ -244,8 +246,9 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_ASKPASS=/bin/true
 cd "$REMOTE_DIR"
 echo "  拉取 origin/$BRANCH ……"
-sudo -n GIT_TERMINAL_PROMPT=0 git fetch --quiet origin "$BRANCH" || {
-  echo "  ✗ git fetch 失败。检查服务器能否访问 GitHub：curl -I https://github.com"
+sudo -n GIT_TERMINAL_PROMPT=0 timeout 20 git fetch --quiet origin "$BRANCH" || {
+  echo "  ✗ git fetch 失败或超时。这台 ECS 经常到不了 GitHub。"
+  echo "  改从 Mac 跑：DEPLOY_KEY=~/.ssh/tios_ecs ./scripts/ship-from-mac.sh"
   exit 1
 }
 sudo -n git reset --hard --quiet "origin/$BRANCH"
