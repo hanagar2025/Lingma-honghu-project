@@ -40,6 +40,7 @@ import {
 } from '../research/alternatives'
 import { groupPeriod, type SegmentFile } from '../research/segmentFetch'
 import { buildLink2, renderLink2, type Link2Result } from '../research/link2Revenue'
+import { renderPowerChain, buildPowerChainView } from '../research/powerChain'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
@@ -362,6 +363,7 @@ async function main(): Promise<void> {
       wiringBacklog: wiringBacklog(h).map(i => i.text),
     }))
     process.stdout.write(`${renderHypotheses(hypothesesForHtml)}\n`)
+    process.stdout.write(`${renderPowerChain()}\n`)
 
     // ── 主线收入归因 ──
     // 委员会 2026-08-16 定为存储的唯一下一步。放在台账之后单列，
@@ -532,6 +534,7 @@ async function main(): Promise<void> {
       verdict: verdictForHtml,
       decisionV2: v2ForHtml,
       hypotheses: hypothesesForHtml,
+      powerChain: buildPowerChainView(),
     })
     const reportDir = join(HERE, 'data', 'reports')
     mkdirSync(reportDir, { recursive: true })
@@ -593,6 +596,7 @@ async function main(): Promise<void> {
       verdict: verdictForHtml,
       decisionV2: v2ForHtml,
       hypotheses: hypothesesForWeb,
+      powerChain: buildPowerChainView(),
       attribution: attributionForWeb,
       alternatives: { gate: altGateForWeb, items: ALTERNATIVES },
       brief: briefForWeb,

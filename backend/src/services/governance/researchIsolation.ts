@@ -46,6 +46,7 @@ export const RESEARCH_MODULES = [
   'research/segmentFetch.ts',
   'research/gmAnomalyRegression.ts',
   'research/nodeCandidates.ts',
+  'research/powerChain.ts',
 ] as const
 
 /**
@@ -60,6 +61,7 @@ export const RESEARCH_FIELD_NAMES = [
   'attribution', 'alternatives', 'altGate', 'link2', 'link2Result',
   'fourLine', 'verificationChain', 'paidGaps', 'wiringBacklog',
   'pendingVerification', 'growthContribution', 'stockShare',
+  'powerChain', 'penetrate', 'POWER_LAYERS', 'POWER_QUESTIONS',
 ] as const
 
 export interface IsolationFinding {
@@ -166,6 +168,7 @@ export const RESEARCH_TEXT_MARKERS = [
   '命题 A', '命题 B', '验证链', '因果强度', '替代解释',
   'PENDING_VERIFICATION', 'CURRENT_IS_OUTLIER', 'BASE_IS_OUTLIER',
   '超级周期', '主线收入归因', '增长贡献', '待核验异常',
+  '价值传导图', 'E-01', '战略观察池',
 ] as const
 
 /**

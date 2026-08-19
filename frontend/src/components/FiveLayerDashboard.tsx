@@ -289,10 +289,12 @@ export interface FiveLayerDashboardProps {
   provisional?: any
   /** 看台已展示变化时，这里不再重复铺一整区 */
   hideChanges?: boolean
+  /** 电力价值传导图。只渲染，不产生任何操作入口 */
+  powerChain?: any
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
-  dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false,
+  dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
 }) => {
   if (!d) {
     return (
@@ -811,6 +813,100 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           展开任意一行可见逐条阻断项。
         </Text>
       </Card>
+
+      {powerChain && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>电力主线价值传导图</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。研究的不是电力行业，是 AI 时代中国电力资本开支周期。
+          </div>
+          <Alert
+            type="info"
+            message={<Text strong>{powerChain.id}｜{powerChain.pool}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>主张：{powerChain.claim}</div>
+                <div style={{ color: '#8e8e93' }}>来源：{powerChain.source}　登记于 {powerChain.loggedOn}</div>
+              </div>
+            }
+          />
+          {powerChain.verdict && (
+            <Alert
+              type="warning"
+              style={{ marginTop: 12 }}
+              message={<Text strong style={{ fontSize: 13 }}>机器结论</Text>}
+              description={
+                <ol style={{ margin: '6px 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                  <li>{powerChain.verdict.object}</li>
+                  <li>{powerChain.verdict.demand}</li>
+                  <li>{powerChain.verdict.shortage}</li>
+                  <li>{powerChain.verdict.candidacy}</li>
+                </ol>
+              }
+            />
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            六层传导
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　上一层成立不推出下一层。断在哪一层就停在哪一层。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={powerChain.layers ?? []}
+            columns={[
+              {
+                title: '层', width: 140,
+                render: (_: unknown, r: any) => `${r.no}. ${r.name}${r.focus ? '（重点）' : ''}`,
+              },
+              { title: '问什么', dataIndex: 'asks' },
+              { title: '能证明', dataIndex: 'proves' },
+              { title: '推不出', dataIndex: 'doesNotProve' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            观察穿透顺序
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　先看 / 接着看 / 后看 / 暂不看。不是买卖名单。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="order"
+            dataSource={powerChain.penetrate ?? []}
+            columns={[
+              { title: '顺序', dataIndex: 'order', width: 56 },
+              { title: '观察带', dataIndex: 'band', width: 80 },
+              { title: '看什么', dataIndex: 'name' },
+              { title: '为什么是这个顺序', dataIndex: 'why' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            八问（停在第 {powerChain.stage} 问）
+          </div>
+          <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
+            {(powerChain.questions ?? []).map((q: any) => (
+              <div key={q.no} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text strong>{q.no === powerChain.stage ? '▶' : ''} {q.no}. {q.asks}</Text>
+                <div style={{ color: '#8e8e93' }}>{q.status}　{q.sourceNote}</div>
+              </div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '8px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(powerChain.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(powerChain.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
+      )}
 
       {/* ══ 外部叙事台账：与四张研究表并列，不进动作区 ══ */}
       {hypotheses && hypotheses.length > 0 && (

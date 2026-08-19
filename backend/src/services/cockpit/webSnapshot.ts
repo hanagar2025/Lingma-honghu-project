@@ -42,6 +42,8 @@ export interface WebSnapshotInput {
   codeCommittedAt?: string
   /** 外部叙事台账。OBSERVATION 级，前端只渲染、不据此产生任何操作入口 */
   hypotheses?: unknown[]
+  /** 电力价值传导图。战略观察，不产生动作 */
+  powerChain?: unknown
   /** 主线收入归因。当前全是缺口 —— 摆在明处才会被补 */
   attribution?: unknown
   /** 替代解释闸门。五项全排除才允许讨论 AI 因果 */
@@ -117,6 +119,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     verdict: input.verdict ?? null,
     decisionV2: input.decisionV2 ?? null,
     hypotheses: input.hypotheses ?? [],
+    powerChain: input.powerChain ?? null,
     attribution: input.attribution ?? null,
     alternatives: input.alternatives ?? null,
     brief: input.brief ?? null,

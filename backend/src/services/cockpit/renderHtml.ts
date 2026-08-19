@@ -20,6 +20,7 @@ import {
   type Hypothesis,
 } from '../research/hypotheses'
 import type { Change } from '../governance/changeLog'
+import { renderPowerChain } from '../research/powerChain'
 
 function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -104,6 +105,7 @@ ul{margin:4px 0;padding-left:20px}
 .chg .who{min-width:230px;color:var(--sec)}
 .foot{font-size:12px;color:var(--sec);margin-top:8px}
 .note{font-size:12px;color:var(--sec);margin-top:10px}
+pre.plain{white-space:pre-wrap;font-size:12.5px;line-height:1.7;background:#f7f7fa;padding:12px;border-radius:10px;overflow:auto}
 
 /* 手机：这份报告的主要用途之一是隔夜在手机上翻，所以窄屏必须能读。
    只调间距与字号，不隐藏任何一列 —— 手机上看不到的那列，正好可能是法定减仓理由。 */
@@ -138,11 +140,14 @@ export interface HtmlInput {
   verdict?: Verdict | null
   /** V2 决策驾驶舱。放在法定动作摘要之前 */
   decisionV2?: DecisionCockpit | null
+  /** 电力价值传导图。只研究，不产生动作 */
+  powerChain?: unknown
 }
 
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
+    powerChain,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -640,6 +645,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
       for (const bl of hy.blockers) w(`<li>${esc(bl)}</li>`)
       w(`</ul>`)
     }
+  }
+
+  if (powerChain) {
+    w(`</div><div class=card><h2>电力主线价值传导图 —— 研究资本开支周期，不是买电力股</h2>`)
+    w(`<pre class=plain>${esc(renderPowerChain())}</pre>`)
   }
 
   // ── 数据缺口 ──
