@@ -1127,5 +1127,90 @@ try {
     mixed.warnings.some(w => w.includes('口径不同')))
 }
 
+// ══════════════════════════════════════════════════════════════
+// 电力价值传导图：第二主线只观察，不买电力股
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    E01, POWER_LAYERS, PENETRATE_ORDER, POWER_QUESTIONS, powerVerdict,
+    renderPowerChain, buildPowerChainView,
+    demandGrowthIsBuySignal, aiLoadCanGrantMigration,
+    usShortageTemplateAppliesToChina, chinaNationalShortageEstablished,
+    generationProfitFollowsDemand, generationIsFirstPenetration,
+    openPowerCoreNow, chainBreakStopsHere,
+  } = await import('./powerChain')
+  const { fingerprint } = await import('../governance/ruleRegistry')
+  const { loadBaseline } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./powerChain.ts', import.meta.url), 'utf-8')
+
+  ok('E-01 证据等级是 OBSERVATION', E01.tier === 'OBSERVATION')
+  ok('模块不 import makeAction', !/^import .*/m.test(src) || !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('需求增长不是买入信号', demandGrowthIsBuySignal() === false)
+  ok('AI 负荷不能授予资本迁移', aiLoadCanGrantMigration() === false)
+  ok('美国缺电模板不能套中国', usShortageTemplateAppliesToChina() === false)
+  ok('不得写出中国全面缺电', chinaNationalShortageEstablished() === false)
+  ok('用电增长推不出发电利润', generationProfitFollowsDemand() === false)
+  ok('穿透不得从发电开始', generationIsFirstPenetration() === false)
+  ok('现在不得开电力核心持仓', openPowerCoreNow() === false)
+  ok('链条在哪断就停在哪', chainBreakStopsHere() === true)
+
+  ok('正好六层', POWER_LAYERS.length === 6)
+  ok('电网是第 3 层且标为重点',
+    POWER_LAYERS[2]!.id === 'GRID' && POWER_LAYERS[2]!.focus === true)
+  ok('电网设备也是重点', POWER_LAYERS.some(l => l.id === 'GRID_EQUIPMENT' && l.focus))
+  ok('电源层明确推不出发电赚钱',
+    POWER_LAYERS.find(l => l.id === 'GENERATION')!.doesNotProve.includes('发电公司赚钱'))
+  ok('需求层明确推不出买电',
+    POWER_LAYERS[0]!.doesNotProve.includes('不证明可以买电')
+    || POWER_LAYERS[0]!.doesNotProve.includes('不证明任何电力公司'))
+
+  ok('穿透顺序第一条是电网不是发电',
+    PENETRATE_ORDER[0]!.layerId === 'GRID' && PENETRATE_ORDER[0]!.name.includes('电网'))
+  ok('普通新能源发电与纯需求故事在暂不看',
+    PENETRATE_ORDER.filter(p => p.band === '暂不看').length >= 2
+    && PENETRATE_ORDER.some(p => p.name.includes('新能源发电') && p.band === '暂不看'))
+  ok('穿透顺序不是评分：文案禁止买卖名单',
+    PENETRATE_ORDER.every(p => p.why.length > 0)
+    && src.includes('不是买卖名单'))
+
+  ok('八问全是未验证', POWER_QUESTIONS.every(q => q.status === 'UNVERIFIED'))
+  ok('停在第 1 问', E01.stage === 1 && POWER_QUESTIONS[0]!.no === 1)
+  ok('第 8 问钉死 R4 不能用 PE 或美国故事填',
+    POWER_QUESTIONS[7]!.sourceNote.includes('R4')
+    && POWER_QUESTIONS[7]!.sourceNote.includes('PE')
+    && POWER_QUESTIONS[7]!.sourceNote.includes('美国'))
+  ok('第 6 问用目标主线核验，不用研究台账禁词当决策输出',
+    POWER_QUESTIONS[5]!.sourceNote.includes('目标主线核验'))
+
+  const v = powerVerdict()
+  ok('结论写出资本开支周期，不是电力行业', v.object.includes('资本开支周期') && v.object.includes('不是电力行业'))
+  ok('结论禁止全面缺电', v.shortage.includes('不得写出'))
+  ok('结论禁止建仓加仓核心',
+    v.candidacy.includes('不得建仓') && v.candidacy.includes('不得加仓') && v.candidacy.includes('核心持仓'))
+
+  ok('不意味着清单含：不能买电力股',
+    E01.doesNotImply.some(d => d.includes('买任何电力股')))
+  ok('不意味着清单含：海外项目不能套 A 股',
+    E01.doesNotImply.some(d => d.includes('A 股')))
+  ok('不意味着清单含：在册标的没有建仓资格',
+    E01.doesNotImply.some(d => d.includes('许继') && d.includes('建仓')))
+  ok('阻塞项含八问未验证与总体平衡',
+    E01.blockers.some(b => b.includes('八问')) && E01.blockers.some(b => b.includes('总体平衡')))
+
+  const txt = renderPowerChain()
+  ok('渲染含价值传导图标题', txt.includes('电力主线价值传导图'))
+  ok('渲染声明不打分不排序不产生动作',
+    txt.includes('不打分') && txt.includes('不排序') && txt.includes('不产生动作'))
+  ok('渲染不含预测措辞',
+    !/将涨|见顶|综合分|目标价|建议买入/.test(txt))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(buildPowerChainView())))
+
+  const base = loadBaseline()
+  const fp = fingerprint()
+  ok('加入传导图后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

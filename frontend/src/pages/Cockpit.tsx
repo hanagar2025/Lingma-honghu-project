@@ -445,6 +445,7 @@ const Cockpit: React.FC = () => {
                 hypotheses={data.hypotheses}
                 provisional={data.provisional}
                 hideChanges
+                powerChain={data.powerChain}
               />
             ),
           },
