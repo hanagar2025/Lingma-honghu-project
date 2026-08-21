@@ -291,10 +291,13 @@ export interface FiveLayerDashboardProps {
   hideChanges?: boolean
   /** 电力价值传导图。只渲染，不产生任何操作入口 */
   powerChain?: any
+  /** 组合防守层。只渲染，不产生任何操作入口 */
+  portfolioDefense?: any
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
+  portfolioDefense,
 }) => {
   if (!d) {
     return (
@@ -904,6 +907,166 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
           <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
             {(powerChain.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
+      )}
+
+      {portfolioDefense && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>组合防守层 —— 资产配置审计</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。方三文的方法补的是第三层，不是新的选股系统。不得把鸿鹄退化成红利低波加定投。
+          </div>
+          <Alert
+            type="info"
+            message={<Text strong>{portfolioDefense.id}｜{portfolioDefense.pool}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>主张：{portfolioDefense.claim}</div>
+                <div style={{ color: '#8e8e93' }}>来源：{portfolioDefense.source}　登记于 {portfolioDefense.loggedOn}</div>
+              </div>
+            }
+          />
+          {portfolioDefense.verdict && (
+            <Alert
+              type="warning"
+              style={{ marginTop: 12 }}
+              message={<Text strong style={{ fontSize: 13 }}>机器结论</Text>}
+              description={
+                <ol style={{ margin: '6px 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                  <li>{portfolioDefense.verdict.object}</li>
+                  <li>{portfolioDefense.verdict.layers}</li>
+                  <li>{portfolioDefense.verdict.factor}</li>
+                  <li>{portfolioDefense.verdict.hai}</li>
+                  <li>{portfolioDefense.verdict.stance}</li>
+                </ol>
+              }
+            />
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            三层体系
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　方三文补的是第三层。不是买卖顺序。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={portfolioDefense.layers ?? []}
+            columns={[
+              { title: '层', width: 140, render: (_: unknown, r: any) => `${r.no}. ${r.name}` },
+              { title: '问什么', dataIndex: 'asks' },
+              { title: '回答', dataIndex: 'answers' },
+              { title: '不回答', dataIndex: 'doesNotAnswer' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            若研究红利：鸿鹄语言
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是股息率筛子，不是买卖名单。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={portfolioDefense.checklist ?? []}
+            columns={[
+              { title: '项', width: 140, render: (_: unknown, r: any) => `${r.no}. ${r.name}` },
+              { title: '问什么', dataIndex: 'asks' },
+              { title: '状态', dataIndex: 'status', width: 110 },
+              { title: '说明', dataIndex: 'sourceNote' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            雪球三分法
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　组合笔记，不是交易规则。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={portfolioDefense.snowball ?? []}
+            columns={[
+              { title: '轴', width: 100, dataIndex: 'axis' },
+              { title: '例子', dataIndex: 'examples' },
+              { title: '目的', dataIndex: 'purpose' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            因子集中审计
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　{portfolioDefense.sharedFactor?.name ?? '同一宏观因子'}。截图留痕，不是今日实时仓位。
+            </Text>
+          </div>
+          {portfolioDefense.sharedFactor?.note && (
+            <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 8, lineHeight: 1.8 }}>
+              {portfolioDefense.sharedFactor.note}
+            </div>
+          )}
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={portfolioDefense.factorTraces ?? []}
+            columns={[
+              {
+                title: '种类', width: 70,
+                render: (_: unknown, r: any) => (r.kind === 'SECTOR' ? '板块' : '个股'),
+              },
+              { title: '名称', dataIndex: 'name', width: 100 },
+              { title: '截图留痕', dataIndex: 'committeeTrace', width: 100 },
+              { title: '状态', dataIndex: 'status', width: 110 },
+              { title: '说明', dataIndex: 'sourceNote' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            宏观转述（尚未接入管道）
+          </div>
+          <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 12 }}>
+            {[...(portfolioDefense.rateTraces ?? []), ...(portfolioDefense.indexTraces ?? [])].map((r: any) => (
+              <div key={r.id} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text>{r.statement}</Text>
+                <div style={{ color: '#8e8e93' }}>{r.status}　{r.sourceNote}</div>
+              </div>
+            ))}
+          </Space>
+          {portfolioDefense.hai && (
+            <Alert
+              type="info"
+              style={{ marginBottom: 12 }}
+              message={<Text strong style={{ fontSize: 13 }}>{portfolioDefense.hai.title}　只观察，不进证据链</Text>}
+              description={
+                <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                  <div>{portfolioDefense.hai.claim}</div>
+                  <div style={{ color: '#8e8e93', marginTop: 4 }}>{portfolioDefense.hai.whyNot}</div>
+                </div>
+              }
+            />
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            六问（停在第 {portfolioDefense.stage} 问）
+          </div>
+          <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
+            {(portfolioDefense.questions ?? []).map((q: any) => (
+              <div key={q.no} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text strong>{q.no === portfolioDefense.stage ? '▶' : ''} {q.no}. {q.asks}</Text>
+                <div style={{ color: '#8e8e93' }}>{q.status}　{q.sourceNote}</div>
+              </div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '8px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(portfolioDefense.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(portfolioDefense.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
           </ul>
         </Card>
       )}

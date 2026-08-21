@@ -21,6 +21,7 @@ import {
 } from '../research/hypotheses'
 import type { Change } from '../governance/changeLog'
 import { renderPowerChain } from '../research/powerChain'
+import { renderPortfolioDefense } from '../research/portfolioDefense'
 
 function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -142,12 +143,14 @@ export interface HtmlInput {
   decisionV2?: DecisionCockpit | null
   /** 电力价值传导图。只研究，不产生动作 */
   powerChain?: unknown
+  /** 组合防守层。只审计暴露，不产生动作 */
+  portfolioDefense?: unknown
 }
 
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
-    powerChain,
+    powerChain, portfolioDefense,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -650,6 +653,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (powerChain) {
     w(`</div><div class=card><h2>电力主线价值传导图 —— 研究资本开支周期，不是买电力股</h2>`)
     w(`<pre class=plain>${esc(renderPowerChain())}</pre>`)
+  }
+
+  if (portfolioDefense) {
+    w(`</div><div class=card><h2>组合防守层 —— 资产配置审计，不是新的选股系统</h2>`)
+    w(`<pre class=plain>${esc(renderPortfolioDefense())}</pre>`)
   }
 
   // ── 数据缺口 ──

@@ -407,6 +407,17 @@ ok('看台不含 score/rank/weight', !/\bscore\b|\brank\b|\bweight\b/i.test(look
 ok('看台价格复核不构成动作', lookoutSrc.includes('不构成动作'))
 ok('看台允许零动作日写成维持', lookoutSrc.includes('今日维持是经过验证的决策'))
 
+const fiveLayerSrc = readFileSync(
+  new URL('../../../../frontend/src/components/FiveLayerDashboard.tsx', import.meta.url), 'utf-8',
+)
+ok('研究区渲染组合防守层且不产生操作入口',
+  /portfolioDefense/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('组合防守层')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('驾驶舱把组合防守层传入研究区',
+  /portfolioDefense=\{data\.portfolioDefense\}/.test(cockpitPageSrc))
+ok('快照搬运组合防守层', /portfolioDefense/.test(webSnapSrc))
+
 // ───────────────────────────────────────────────────────────────
 // 资产层（委员会 2026-08-15 指定为第一层）
 //
