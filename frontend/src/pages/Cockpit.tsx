@@ -446,6 +446,7 @@ const Cockpit: React.FC = () => {
                 provisional={data.provisional}
                 hideChanges
                 powerChain={data.powerChain}
+                portfolioDefense={data.portfolioDefense}
               />
             ),
           },

@@ -1212,5 +1212,122 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// 组合防守层：方三文补第三层，不改 V4.x，不切红利
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    D01, SYSTEM_LAYERS, DIVIDEND_QUALITY_CHECKLIST, SNOWBALL_NOTES,
+    FACTOR_TRACES, SHARED_FACTOR, RATE_TRACES, INDEX_TRACES, HAI,
+    DEFENSE_QUESTIONS, defenseVerdict, renderPortfolioDefense, buildPortfolioDefenseView,
+    highDividendMeansGoodCompany, dividendYieldAboveXIsBuySignal,
+    dividendLowVolIsCrashProof, fangSanwenReplacesHonghu, fangSanwenCompetesWithHonghu,
+    honghuMayDegenerateToDividendDca, evidenceIndependenceMeansPriceIndependence,
+    sellAiBuyDividend, industryLogicUnfalsifiedMeansValuationSafe,
+    haiMayEnterEvidenceChain, modifyV4xForDefenseLayer, defenseLayerCanIssueAction,
+  } = await import('./portfolioDefense')
+  const { fingerprint: fp2 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase2 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./portfolioDefense.ts', import.meta.url), 'utf-8')
+
+  ok('D-01 证据等级是 OBSERVATION', D01.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('高股息不是好公司', highDividendMeansGoodCompany() === false)
+  ok('股息率大于 X 不是买入信号', dividendYieldAboveXIsBuySignal() === false)
+  ok('红利低波不是不会跌', dividendLowVolIsCrashProof() === false)
+  ok('方三文不替代鸿鹄', fangSanwenReplacesHonghu() === false)
+  ok('方三文与鸿鹄不是竞争', fangSanwenCompetesWithHonghu() === false)
+  ok('鸿鹄不得退化成红利加定投', honghuMayDegenerateToDividendDca() === false)
+  ok('证据独立推不出股价独立', evidenceIndependenceMeansPriceIndependence() === false)
+  ok('不得卖 AI 买红利', sellAiBuyDividend() === false)
+  ok('产业未证伪推不出估值安全', industryLogicUnfalsifiedMeansValuationSafe() === false)
+  ok('H-AI 不得进入证据链', haiMayEnterEvidenceChain() === false)
+  ok('不改 V4.x', modifyV4xForDefenseLayer() === false)
+  ok('本层不发令', defenseLayerCanIssueAction() === false)
+
+  ok('正好三层且不用风控 L 编号',
+    SYSTEM_LAYERS.length === 3
+    && SYSTEM_LAYERS[0]!.id === 'HONGHU_OWNERSHIP'
+    && SYSTEM_LAYERS[1]!.id === 'CAPITAL_MIGRATION'
+    && SYSTEM_LAYERS[2]!.id === 'ALLOCATION_AUDIT'
+    && SYSTEM_LAYERS.every(l => !/^L[0-9]/.test(l.id)))
+  ok('第三层问的是宏观因子暴露，不是选股',
+    SYSTEM_LAYERS[2]!.asks.includes('宏观因子')
+    && SYSTEM_LAYERS[2]!.doesNotAnswer.includes('不产生新的选股系统'))
+
+  ok('红利清单五项全是未验证',
+    DIVIDEND_QUALITY_CHECKLIST.length === 5
+    && DIVIDEND_QUALITY_CHECKLIST.every(c => c.status === 'UNVERIFIED'))
+  ok('红利清单含可持续性、现金流、稳定性、资产负债表、估值',
+    ['股息可持续性', '自由现金流覆盖', '盈利稳定性', '资产负债表', '估值']
+      .every(n => DIVIDEND_QUALITY_CHECKLIST.some(c => c.name === n)))
+  ok('红利清单写明不是股息率筛子',
+    src.includes('不是买卖名单') && src.includes('不得用股息率大于某值当作买入'))
+
+  ok('雪球三分法是笔记不是规则',
+    SNOWBALL_NOTES.length === 3
+    && src.includes('不是交易规则')
+    && SNOWBALL_NOTES.some(s => s.axis === '市场分散')
+    && SNOWBALL_NOTES.some(s => s.axis === '资产分散')
+    && SNOWBALL_NOTES.some(s => s.axis === '时间分散'))
+
+  ok('因子留痕含通信电子与六只同向公司',
+    FACTOR_TRACES.some(t => t.name === '通信' && t.committeeTrace.includes('34.8'))
+    && FACTOR_TRACES.some(t => t.name === '电子' && t.committeeTrace.includes('50.1'))
+    && ['海光', '新易盛', '中际旭创', '澜起科技', '中微公司', '北方华创']
+      .every(n => FACTOR_TRACES.some(t => t.name === n)))
+  ok('因子留痕全部未验证且标明不是今日仓位',
+    FACTOR_TRACES.every(t => t.status === 'UNVERIFIED' && t.asOf === '2026-08-19')
+    && FACTOR_TRACES.filter(t => t.kind === 'SECTOR').every(t => t.sourceNote.includes('不是今日实时仓位')))
+  ok('共享因子是 AI 资本周期',
+    SHARED_FACTOR.id === 'AI_CAPEX_SEMI_CYCLE'
+    && SHARED_FACTOR.note.includes('同一个宏观因子'))
+
+  ok('利率与指数转述都未验证且标明未接入',
+    RATE_TRACES.every(r => r.status === 'UNVERIFIED' && r.sourceNote.includes('PUBLIC_NOT_YET_WIRED'))
+    && INDEX_TRACES.every(r => r.status === 'UNVERIFIED')
+    && INDEX_TRACES.some(r => r.sourceNote.includes('无脑避风港')))
+
+  ok('H-AI 只观察且明确不得进证据链',
+    HAI.id === 'H-AI' && HAI.status === 'OBSERVATION' && HAI.mayEnterEvidenceChain === false
+    && HAI.whyNot.includes('不能进入鸿鹄证据链'))
+  ok('六问全是未验证且停在第 1 问',
+    DEFENSE_QUESTIONS.length === 6
+    && DEFENSE_QUESTIONS.every(q => q.status === 'UNVERIFIED')
+    && D01.stage === 1)
+
+  const v = defenseVerdict()
+  ok('结论写出第二风险源而不是卖 AI 买红利',
+    v.object.includes('第二风险源') && v.object.includes('不是要不要卖 AI、买红利'))
+  ok('结论写出核心加超限加降暴露',
+    v.stance.includes('核心 + 超限 + 降暴露') && v.stance.includes('不是看空'))
+  ok('结论钉死 H-AI 不进证据链', v.hai.includes('不得进入鸿鹄证据链'))
+  ok('不意味着清单含：不卖 AI 买红利、不高股息即好公司、不改 V4.x',
+    D01.doesNotImply.some(d => d.includes('卖 AI、买红利'))
+    && D01.doesNotImply.some(d => d.includes('高股息就是好公司'))
+    && D01.doesNotImply.some(d => d.includes('修改 V4.x')))
+  ok('阻塞项含 H-AI 与本层不发令',
+    D01.blockers.some(b => b.includes('H-AI')) && D01.blockers.some(b => b.includes('不产生动作')))
+
+  const txt = renderPortfolioDefense()
+  ok('渲染含组合防守层标题', txt.includes('组合防守层'))
+  ok('渲染声明不打分不排序不产生动作',
+    txt.includes('不打分') && txt.includes('不排序') && txt.includes('不产生动作'))
+  ok('渲染不含预测或买卖措辞',
+    !/将涨|见顶|综合分|目标价|建议买入/.test(txt))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(buildPortfolioDefenseView())))
+  ok('视图 flags 全部钉死否定式', (() => {
+    const flags = buildPortfolioDefenseView().flags
+    return Object.values(flags).every(x => x === false)
+  })())
+
+  const base = loadBase2()
+  const fp = fp2()
+  ok('加入组合防守层后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

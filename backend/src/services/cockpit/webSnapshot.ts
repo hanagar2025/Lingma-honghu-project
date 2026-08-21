@@ -44,6 +44,8 @@ export interface WebSnapshotInput {
   hypotheses?: unknown[]
   /** 电力价值传导图。战略观察，不产生动作 */
   powerChain?: unknown
+  /** 组合防守层。配置审计观察，不产生动作 */
+  portfolioDefense?: unknown
   /** 主线收入归因。当前全是缺口 —— 摆在明处才会被补 */
   attribution?: unknown
   /** 替代解释闸门。五项全排除才允许讨论 AI 因果 */
@@ -120,6 +122,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     decisionV2: input.decisionV2 ?? null,
     hypotheses: input.hypotheses ?? [],
     powerChain: input.powerChain ?? null,
+    portfolioDefense: input.portfolioDefense ?? null,
     attribution: input.attribution ?? null,
     alternatives: input.alternatives ?? null,
     brief: input.brief ?? null,
