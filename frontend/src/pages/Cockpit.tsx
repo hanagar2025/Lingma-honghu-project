@@ -264,12 +264,7 @@ const Cockpit: React.FC = () => {
 
       <LookoutBoard
         date={data.date}
-        dailyQuestion={data.decisionV2?.dailyQuestion}
-        lifeline={data.decisionV2?.lifeline}
-        changes={data.changes}
-        pendingSellCount={data.pendingSellCount}
-        pendingSells={data.pendingSells}
-        unjudgable={data.decisionV2?.unjudgable}
+        lookout={data.lookout}
         onOpen={openDetail}
       />
 
@@ -447,6 +442,7 @@ const Cockpit: React.FC = () => {
                 hideChanges
                 powerChain={data.powerChain}
                 portfolioDefense={data.portfolioDefense}
+                ownershipPhilosophy={data.ownershipPhilosophy}
               />
             ),
           },

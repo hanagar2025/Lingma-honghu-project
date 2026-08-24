@@ -46,6 +46,10 @@ export interface WebSnapshotInput {
   powerChain?: unknown
   /** 组合防守层。配置审计观察，不产生动作 */
   portfolioDefense?: unknown
+  /** 投资哲学参考。不产生动作，不增加规则 */
+  ownershipPhilosophy?: unknown
+  /** 极简看台。只装配已有输出，不产生动作 */
+  lookout?: unknown
   /** 主线收入归因。当前全是缺口 —— 摆在明处才会被补 */
   attribution?: unknown
   /** 替代解释闸门。五项全排除才允许讨论 AI 因果 */
@@ -123,6 +127,8 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     hypotheses: input.hypotheses ?? [],
     powerChain: input.powerChain ?? null,
     portfolioDefense: input.portfolioDefense ?? null,
+    ownershipPhilosophy: input.ownershipPhilosophy ?? null,
+    lookout: input.lookout ?? null,
     attribution: input.attribution ?? null,
     alternatives: input.alternatives ?? null,
     brief: input.brief ?? null,

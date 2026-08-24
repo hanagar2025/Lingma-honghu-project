@@ -22,6 +22,8 @@ import {
 import type { Change } from '../governance/changeLog'
 import { renderPowerChain } from '../research/powerChain'
 import { renderPortfolioDefense } from '../research/portfolioDefense'
+import { renderOwnershipPhilosophy } from '../research/ownershipPhilosophy'
+import { renderLookout, type LookoutView } from './lookout'
 
 function esc(s: unknown): string {
   return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -145,12 +147,16 @@ export interface HtmlInput {
   powerChain?: unknown
   /** 组合防守层。只审计暴露，不产生动作 */
   portfolioDefense?: unknown
+  /** 投资哲学参考。不产生动作 */
+  ownershipPhilosophy?: unknown
+  /** 极简看台。放在最前面 */
+  lookout?: LookoutView | null
 }
 
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
-    powerChain, portfolioDefense,
+    powerChain, portfolioDefense, ownershipPhilosophy, lookout,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -174,6 +180,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   w(`规则指纹 <b>${esc(freeze.currentHash)}</b>`)
   w(freeze.baselineHash ? `　基线 ${esc(freeze.baselineHash)}　${freeze.drifted ? '⚠ 已漂移' : '✓ 未漂移'}` : '　⚠ 无冻结基线')
   w(`<div class=foot>${esc(freeze.detail)}</div></div>`)
+
+  if (lookout) {
+    w(`</div><div class="card act"><h2>看台 —— 投资人前台只看这一问</h2>`)
+    w(`<pre class=plain>${esc(renderLookout(lookout))}</pre>`)
+  }
 
   // ── 资产层（第一层）──
   {
@@ -658,6 +669,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (portfolioDefense) {
     w(`</div><div class=card><h2>组合防守层 —— 资产配置审计，不是新的选股系统</h2>`)
     w(`<pre class=plain>${esc(renderPortfolioDefense())}</pre>`)
+  }
+
+  if (ownershipPhilosophy) {
+    w(`</div><div class=card><h2>投资哲学参考 —— 长期验证 Ownership，不增加规则</h2>`)
+    w(`<pre class=plain>${esc(renderOwnershipPhilosophy())}</pre>`)
   }
 
   // ── 数据缺口 ──

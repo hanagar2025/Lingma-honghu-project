@@ -42,6 +42,8 @@ import { groupPeriod, type SegmentFile } from '../research/segmentFetch'
 import { buildLink2, renderLink2, type Link2Result } from '../research/link2Revenue'
 import { renderPowerChain, buildPowerChainView } from '../research/powerChain'
 import { renderPortfolioDefense, buildPortfolioDefenseView } from '../research/portfolioDefense'
+import { renderOwnershipPhilosophy, buildOwnershipPhilosophyView } from '../research/ownershipPhilosophy'
+import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
@@ -246,6 +248,7 @@ async function main(): Promise<void> {
   let hypothesesForWeb: unknown[] = []
   let attributionForWeb: Attribution | null = null
   let altGateForWeb: AltGate | null = null
+  let lookoutForHtml: LookoutView | null = null
 
   if (process.env.DASHBOARD === '0' || !internals) {
     printReport(rep)
@@ -280,6 +283,21 @@ async function main(): Promise<void> {
     })
     v2ForHtml = v2
     persistJournal(date, v2.cards)
+    {
+      const snap = snapshotOf(dash)
+      const prev = loadPrevSnapshot(snap.date)
+      const changes = prev ? diffSnapshots(prev, snap) : []
+      changesForHtml = changes
+      prevDateForHtml = prev?.date ?? null
+      lookoutForHtml = buildLookoutView({
+        date,
+        cockpit: v2,
+        changes: { items: changes, prevDate: prev?.date ?? null },
+        pendingSellCount,
+        pendingSells: null,
+      })
+      process.stdout.write(`${renderLookout(lookoutForHtml)}\n`)
+    }
     process.stdout.write(`${renderDecisionCockpit(v2)}\n`)
 
     // 结论先于依据：委员会明确不想再从四张表里自己提炼。
@@ -366,6 +384,7 @@ async function main(): Promise<void> {
     process.stdout.write(`${renderHypotheses(hypothesesForHtml)}\n`)
     process.stdout.write(`${renderPowerChain()}\n`)
     process.stdout.write(`${renderPortfolioDefense()}\n`)
+    process.stdout.write(`${renderOwnershipPhilosophy()}\n`)
 
     // ── 主线收入归因 ──
     // 委员会 2026-08-16 定为存储的唯一下一步。放在台账之后单列，
@@ -538,6 +557,8 @@ async function main(): Promise<void> {
       hypotheses: hypothesesForHtml,
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
+      ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      lookout: lookoutForHtml,
     })
     const reportDir = join(HERE, 'data', 'reports')
     mkdirSync(reportDir, { recursive: true })
@@ -601,6 +622,8 @@ async function main(): Promise<void> {
       hypotheses: hypothesesForWeb,
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
+      ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      lookout: lookoutForHtml,
       attribution: attributionForWeb,
       alternatives: { gate: altGateForWeb, items: ALTERNATIVES },
       brief: briefForWeb,
