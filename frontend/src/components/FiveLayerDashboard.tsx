@@ -293,11 +293,13 @@ export interface FiveLayerDashboardProps {
   powerChain?: any
   /** 组合防守层。只渲染，不产生任何操作入口 */
   portfolioDefense?: any
+  /** 投资哲学参考。只渲染，不产生任何操作入口 */
+  ownershipPhilosophy?: any
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense,
+  portfolioDefense, ownershipPhilosophy,
 }) => {
   if (!d) {
     return (
@@ -1067,6 +1069,112 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
           <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
             {(portfolioDefense.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
+      )}
+
+      {ownershipPhilosophy && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>投资哲学参考 —— 长期验证 Ownership</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。不能增加任何新规则。不得削弱战术减仓和价值退出。
+          </div>
+          <Alert
+            type="info"
+            message={<Text strong>{ownershipPhilosophy.id}｜{ownershipPhilosophy.pool}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{ownershipPhilosophy.object}</div>
+                <div>{ownershipPhilosophy.claim}</div>
+                <div style={{ color: '#8e8e93' }}>来源：{ownershipPhilosophy.source}　登记于 {ownershipPhilosophy.loggedOn}</div>
+              </div>
+            }
+          />
+          {ownershipPhilosophy.verdict && (
+            <Alert
+              type="warning"
+              style={{ marginTop: 12 }}
+              message={<Text strong style={{ fontSize: 13 }}>机器结论</Text>}
+              description={
+                <ol style={{ margin: '6px 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                  <li>{ownershipPhilosophy.verdict.object}</li>
+                  <li>{ownershipPhilosophy.verdict.translation}</li>
+                  <li>{ownershipPhilosophy.verdict.risk}</li>
+                  <li>{ownershipPhilosophy.verdict.lookout}</li>
+                  <li>{ownershipPhilosophy.verdict.stance}</li>
+                </ol>
+              }
+            />
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            翻译
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　原材料变成鸿鹄语言。不是新规则。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={ownershipPhilosophy.translations ?? []}
+            columns={[
+              { title: '原料', dataIndex: 'raw' },
+              { title: '鸿鹄', dataIndex: 'honghu' },
+              { title: '不是', dataIndex: 'not' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            已冻结生命线的读法
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是新生命线。战术减仓与价值退出仍然有效。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="stage"
+            dataSource={ownershipPhilosophy.lifelineReading ?? []}
+            columns={[
+              { title: '段', dataIndex: 'name', width: 140 },
+              { title: '读法', dataIndex: 'means' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>海光读法（已有规范案例）</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="when"
+            dataSource={ownershipPhilosophy.haiguang ?? []}
+            columns={[
+              { title: '当', dataIndex: 'when', width: 180 },
+              { title: '则', dataIndex: 'then' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            价格大跌时要问的七问
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是新闸门。便宜仍不是 Capital Permission。
+            </Text>
+          </div>
+          <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 12 }}>
+            {(ownershipPhilosophy.priceDropAsks ?? []).map((q: any) => (
+              <div key={q.no} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text>{q.no}. {q.asks}</Text>
+              </div>
+            ))}
+            {(ownershipPhilosophy.priceDropStill ?? []).map((x: string, i: number) => (
+              <div key={i} style={{ fontSize: 12, color: '#8e8e93' }}>· {x}</div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '8px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(ownershipPhilosophy.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(ownershipPhilosophy.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
           </ul>
         </Card>
       )}

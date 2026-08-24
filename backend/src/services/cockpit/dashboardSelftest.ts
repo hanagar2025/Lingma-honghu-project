@@ -403,13 +403,34 @@ ok('前端先渲染看台，决策大表收在详细数据里',
 const lookoutSrc = readFileSync(
   new URL('../../../../frontend/src/components/LookoutBoard.tsx', import.meta.url), 'utf-8',
 )
-ok('看台不含 score/rank/weight', !/\bscore\b|\brank\b|\bweight\b/i.test(lookoutSrc))
+const lookoutAsmSrc = readFileSync(
+  new URL('./lookout.ts', import.meta.url), 'utf-8',
+)
+ok('看台不含 score/rank/weight',
+  !/\bscore\b|\brank\b|\bweight\b/i.test(lookoutSrc)
+  && !/"(score|rank|weight)"/i.test(lookoutAsmSrc))
 ok('看台价格复核不构成动作', lookoutSrc.includes('不构成动作'))
-ok('看台允许零动作日写成维持', lookoutSrc.includes('今日维持是经过验证的决策'))
+ok('看台允许零动作日写成维持', lookoutAsmSrc.includes('今日维持是经过验证的决策'))
+ok('看台按四轴呈现，不只显示动作',
+  lookoutSrc.includes('Ownership') && lookoutSrc.includes('Evidence')
+  && lookoutSrc.includes('Exposure') && lookoutSrc.includes('oneReason'))
+ok('看台维持用各自行的理由，不统一写成有能力加仓',
+  lookoutAsmSrc.includes('oneReason')
+  && !lookoutSrc.includes('有能力加仓，证据未到迁移标准，维持'))
+ok('看台生命线读法标明不是新规则',
+  lookoutAsmSrc.includes('不是新规则') && lookoutAsmSrc.includes('战术减仓与价值退出仍然有效'))
+ok('看台装配层不调用 makeAction', !/\bmakeAction\s*\(/.test(lookoutAsmSrc))
+ok('驾驶舱把看台视图传入第一屏', /lookout=\{data\.lookout\}/.test(cockpitPageSrc))
+ok('快照搬运看台与哲学参考',
+  /lookout/.test(webSnapSrc) && /ownershipPhilosophy/.test(webSnapSrc))
 
 const fiveLayerSrc = readFileSync(
   new URL('../../../../frontend/src/components/FiveLayerDashboard.tsx', import.meta.url), 'utf-8',
 )
+ok('研究区渲染哲学参考且不产生操作入口',
+  /ownershipPhilosophy/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('长期验证 Ownership')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
 ok('研究区渲染组合防守层且不产生操作入口',
   /portfolioDefense/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('组合防守层')

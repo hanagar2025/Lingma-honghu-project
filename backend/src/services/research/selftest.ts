@@ -1329,5 +1329,88 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// 投资哲学参考：长期验证 Ownership，不增规则，不削弱退出
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    P01, TRANSLATIONS, LIFELINE_READING, HAIGUANG_READING, PRICE_DROP_ASKS,
+    philosophyVerdict, renderOwnershipPhilosophy, buildOwnershipPhilosophyView,
+    longHoldIsStrategy, dontSellQualityIsRule, noLossIsExecutableRule,
+    priceChangeOverturnsLogic, priceDropIsSellSignal, priceDropIsBuySignal,
+    cheapIsCapitalPermission, goodCompanyNeverSell,
+    buffettLongHoldWeakensTacticalReduce, buffettLongHoldWeakensValueExit,
+    philosophyMayAddRules, marketHeatEntersCapitalPool, bookLossIsWhatWePrevent,
+  } = await import('./ownershipPhilosophy')
+  const { fingerprint: fp3 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase3 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./ownershipPhilosophy.ts', import.meta.url), 'utf-8')
+
+  ok('P-01 证据等级是 OBSERVATION', P01.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('长期持有不是战略', longHoldIsStrategy() === false)
+  ok('不卖优质资产不是规则', dontSellQualityIsRule() === false)
+  ok('不要亏钱不是可执行规则', noLossIsExecutableRule() === false)
+  ok('价格变化不能推翻逻辑', priceChangeOverturnsLogic() === false)
+  ok('跌了不是卖出信号', priceDropIsSellSignal() === false)
+  ok('跌了不是抄底信号', priceDropIsBuySignal() === false)
+  ok('便宜不是 Capital Permission', cheapIsCapitalPermission() === false)
+  ok('好公司不是永远不卖', goodCompanyNeverSell() === false)
+  ok('不得削弱战术减仓', buffettLongHoldWeakensTacticalReduce() === false)
+  ok('不得削弱价值退出', buffettLongHoldWeakensValueExit() === false)
+  ok('本层不得加规则', philosophyMayAddRules() === false)
+  ok('市场热度不进资本池', marketHeatEntersCapitalPool() === false)
+  ok('防的不是账面亏损', bookLossIsWhatWePrevent() === false)
+
+  ok('翻译含长期验证 Ownership',
+    TRANSLATIONS.some(t => t.honghu.includes('长期验证 Ownership')))
+  ok('翻译含永久性资本损失',
+    TRANSLATIONS.some(t => t.honghu.includes('永久性资本损失')))
+  ok('翻译含提出问题再找事实',
+    TRANSLATIONS.some(t => t.honghu.includes('提出问题')))
+  ok('翻译拒绝市场热点传导',
+    TRANSLATIONS.some(t => t.not.includes('市场热点')))
+  ok('生命线读法覆盖已冻结九段', LIFELINE_READING.length === 9)
+  ok('核心读法是拥有资格长期成立',
+    LIFELINE_READING.find(s => s.stage === 'CORE')!.means.includes('拥有资格长期成立'))
+  ok('战术减仓读法保留恶化但未死',
+    LIFELINE_READING.find(s => s.stage === 'TACTICAL_REDUCE')!.means.includes('尚未完全死亡'))
+  ok('价值退出读法是根本理由消失',
+    LIFELINE_READING.find(s => s.stage === 'VALUE_EXIT')!.means.includes('根本理由已经消失'))
+  ok('海光读法五条：涨不卖、跌不卖、超限降暴露、证据恶化、理由消失',
+    HAIGUANG_READING.length === 5
+    && HAIGUANG_READING[0]!.then.includes('涨了就卖')
+    && HAIGUANG_READING[1]!.then.includes('跌了就卖')
+    && HAIGUANG_READING[2]!.then.includes('降暴露')
+    && HAIGUANG_READING[3]!.then.includes('战术减仓')
+    && HAIGUANG_READING[4]!.then.includes('价值退出'))
+  ok('价格大跌七问且第一问是战略假设',
+    PRICE_DROP_ASKS.length === 7 && PRICE_DROP_ASKS[0]!.asks.includes('战略假设'))
+  ok('不意味着清单含不削弱减仓退出、不加规则',
+    P01.doesNotImply.some(d => d.includes('削弱战术减仓'))
+    && P01.doesNotImply.some(d => d.includes('削弱价值退出'))
+    && P01.doesNotImply.some(d => d.includes('增加任何新规则')))
+
+  const v = philosophyVerdict()
+  ok('结论写出证据持续成立', v.object.includes('证据持续成立'))
+  ok('结论写出判断错了也会卖', v.translation.includes('判断错了也会卖'))
+  ok('结论禁止削弱', v.stance.includes('不得削弱'))
+
+  const txt = renderOwnershipPhilosophy()
+  ok('渲染含哲学参考标题', txt.includes('投资哲学参考'))
+  ok('渲染声明不打分不产生动作不加规则',
+    txt.includes('不打分') && txt.includes('不产生动作') && txt.includes('不能增加任何新规则'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(buildOwnershipPhilosophyView())))
+  ok('视图 flags 全部钉死否定式',
+    Object.values(buildOwnershipPhilosophyView().flags).every(x => x === false))
+
+  const base = loadBase3()
+  const fp = fp3()
+  ok('加入哲学参考后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
