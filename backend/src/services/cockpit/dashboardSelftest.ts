@@ -431,6 +431,27 @@ ok('研究区渲染哲学参考且不产生操作入口',
   /ownershipPhilosophy/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('长期验证 Ownership')
   && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('研究区渲染 AI 第二阶段且不产生操作入口',
+  /aiPhaseTwo/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('去弱留强')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('驾驶舱把第二阶段传入研究区',
+  /aiPhaseTwo=\{data\.aiPhaseTwo\}/.test(cockpitPageSrc))
+ok('快照搬运第二阶段观察', /aiPhaseTwo/.test(webSnapSrc))
+const htmlRenderSrc = readFileSync(
+  new URL('./renderHtml.ts', import.meta.url), 'utf-8',
+)
+const runSrc = readFileSync(
+  new URL('./run.ts', import.meta.url), 'utf-8',
+)
+ok('HTML 看台仍在仪表盘和 AI 第二阶段之前',
+  htmlRenderSrc.indexOf('看台 —— 投资人前台只看这一问')
+    < htmlRenderSrc.indexOf('<h2>仪表盘</h2>')
+  && htmlRenderSrc.indexOf('看台 —— 投资人前台只看这一问')
+    < htmlRenderSrc.indexOf('AI 第二阶段观察 —— 去弱留强，等证据'))
+ok('CLI 仍先打看台再打决策驾驶舱',
+  /renderLookout\(lookoutForHtml\)/.test(runSrc)
+  && runSrc.indexOf('renderLookout(lookoutForHtml)') < runSrc.indexOf('renderDecisionCockpit(v2)'))
 ok('研究区渲染组合防守层且不产生操作入口',
   /portfolioDefense/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('组合防守层')

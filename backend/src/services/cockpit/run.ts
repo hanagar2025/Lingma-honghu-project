@@ -43,6 +43,7 @@ import { buildLink2, renderLink2, type Link2Result } from '../research/link2Reve
 import { renderPowerChain, buildPowerChainView } from '../research/powerChain'
 import { renderPortfolioDefense, buildPortfolioDefenseView } from '../research/portfolioDefense'
 import { renderOwnershipPhilosophy, buildOwnershipPhilosophyView } from '../research/ownershipPhilosophy'
+import { renderAiPhaseTwo, buildAiPhaseTwoView } from '../research/aiPhaseTwo'
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
@@ -385,6 +386,7 @@ async function main(): Promise<void> {
     process.stdout.write(`${renderPowerChain()}\n`)
     process.stdout.write(`${renderPortfolioDefense()}\n`)
     process.stdout.write(`${renderOwnershipPhilosophy()}\n`)
+    process.stdout.write(`${renderAiPhaseTwo()}\n`)
 
     // ── 主线收入归因 ──
     // 委员会 2026-08-16 定为存储的唯一下一步。放在台账之后单列，
@@ -558,6 +560,7 @@ async function main(): Promise<void> {
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      aiPhaseTwo: buildAiPhaseTwoView(),
       lookout: lookoutForHtml,
     })
     const reportDir = join(HERE, 'data', 'reports')
@@ -623,6 +626,7 @@ async function main(): Promise<void> {
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      aiPhaseTwo: buildAiPhaseTwoView(),
       lookout: lookoutForHtml,
       attribution: attributionForWeb,
       alternatives: { gate: altGateForWeb, items: ALTERNATIVES },

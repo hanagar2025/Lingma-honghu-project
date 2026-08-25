@@ -295,11 +295,13 @@ export interface FiveLayerDashboardProps {
   portfolioDefense?: any
   /** 投资哲学参考。只渲染，不产生任何操作入口 */
   ownershipPhilosophy?: any
+  /** AI 第二阶段观察。只渲染，不产生任何操作入口 */
+  aiPhaseTwo?: any
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy,
+  portfolioDefense, ownershipPhilosophy, aiPhaseTwo,
 }) => {
   if (!d) {
     return (
@@ -1175,6 +1177,173 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
           <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
             {(ownershipPhilosophy.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
+      )}
+
+      {aiPhaseTwo && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>AI 第二阶段观察 —— 去弱留强，等证据</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。不是 AI 结束，是硬件第一阶段估值被强制重估。
+          </div>
+          <Alert
+            type="info"
+            message={<Text strong>{aiPhaseTwo.id}｜{aiPhaseTwo.pool}　{aiPhaseTwo.stance}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{aiPhaseTwo.object}</div>
+                <div>{aiPhaseTwo.claim}</div>
+                <div style={{ color: '#8e8e93' }}>来源：{aiPhaseTwo.source}　登记于 {aiPhaseTwo.loggedOn}</div>
+              </div>
+            }
+          />
+          {aiPhaseTwo.verdict && (
+            <Alert
+              type="warning"
+              style={{ marginTop: 12 }}
+              message={<Text strong style={{ fontSize: 13 }}>机器结论</Text>}
+              description={
+                <ol style={{ margin: '6px 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.9 }}>
+                  <li>{aiPhaseTwo.verdict.object}</li>
+                  <li>{aiPhaseTwo.verdict.stance}</li>
+                  <li>{aiPhaseTwo.verdict.cash}</li>
+                  <li>{aiPhaseTwo.verdict.split}</li>
+                  <li>{aiPhaseTwo.verdict.after}</li>
+                </ol>
+              }
+            />
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            五层拆解
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是买卖名单。身体层对接电力观察。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiPhaseTwo.layers ?? []}
+            columns={[
+              {
+                title: '层', width: 160,
+                render: (_: unknown, r: any) => `${r.no}. ${r.name}${r.focus ? '（重点）' : ''}`,
+              },
+              { title: '问什么', dataIndex: 'asks' },
+              { title: '能证明', dataIndex: 'proves' },
+              { title: '推不出', dataIndex: 'doesNotProve' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            具身智能重拆
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是下一只中际旭创。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={aiPhaseTwo.robotParts ?? []}
+            columns={[
+              { title: '部分', width: 80, dataIndex: 'name' },
+              { title: '覆盖', dataIndex: 'covers' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            现有持仓核验带
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是评分。砍真正坏掉的，不是砍跌得最多的。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={aiPhaseTwo.rechecks ?? []}
+            columns={[
+              { title: '公司', dataIndex: 'name', width: 100 },
+              { title: '核验带', dataIndex: 'band', width: 140 },
+              { title: '问什么', dataIndex: 'asks' },
+              { title: '说明', dataIndex: 'sourceNote' },
+            ]}
+          />
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            三问核验（取代所谓九维评分）
+          </div>
+          <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 12 }}>
+            {(aiPhaseTwo.threeChecks ?? []).map((c: any) => (
+              <div key={c.no} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text>{c.no}. {c.name}　{c.asks}</Text>
+              </div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            截图留痕与事件（尚未接入管道）
+          </div>
+          <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 12 }}>
+            {[...(aiPhaseTwo.portfolioTraces ?? []), ...(aiPhaseTwo.eventTraces ?? [])].map((r: any) => (
+              <div key={r.id} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text>{r.statement}</Text>
+                <div style={{ color: '#8e8e93' }}>{r.status}　{r.sourceNote}</div>
+              </div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            财报之后的三个情景
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　没有一个会自动买卖。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiPhaseTwo.scenarios ?? []}
+            columns={[
+              { title: '情景', dataIndex: 'name', width: 180 },
+              { title: '意味着', dataIndex: 'means' },
+              { title: '不是', dataIndex: 'not' },
+            ]}
+          />
+          {aiPhaseTwo.hai && (
+            <Alert
+              type="info"
+              style={{ margin: '12px 0' }}
+              message={<Text strong style={{ fontSize: 13 }}>{aiPhaseTwo.hai.title}　只观察，不进证据链</Text>}
+              description={
+                <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                  <div>{aiPhaseTwo.hai.claim}</div>
+                  <div style={{ color: '#8e8e93', marginTop: 4 }}>{aiPhaseTwo.hai.whyNot}</div>
+                </div>
+              }
+            />
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            六问（停在第 {aiPhaseTwo.stage} 问）
+          </div>
+          <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
+            {(aiPhaseTwo.questions ?? []).map((q: any) => (
+              <div key={q.no} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text strong>{q.no === aiPhaseTwo.stage ? '▶' : ''} {q.no}. {q.asks}</Text>
+                <div style={{ color: '#8e8e93' }}>{q.status}　{q.sourceNote}</div>
+              </div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '8px 0 6px' }}>下一步只观察，不发令</div>
+          <ol style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiPhaseTwo.nextWatch ?? []).map((x: any) => <li key={x.no}>{x.text}</li>)}
+          </ol>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiPhaseTwo.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiPhaseTwo.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
           </ul>
         </Card>
       )}

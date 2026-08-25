@@ -1412,5 +1412,116 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// AI 第二阶段：去弱留强，等证据。不抄底，不打分，不动现金
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    P2, HP2, AI_LAYERS, ROBOT_PARTS, HOLDING_RECHECKS, THREE_CHECKS,
+    NVIDIA_SCENARIOS, PHASE_TWO_QUESTIONS, PORTFOLIO_TRACES, EVENT_TRACES,
+    NEXT_WATCH, phaseTwoVerdict,
+    renderAiPhaseTwo, buildAiPhaseTwoView,
+    emotionIsBottomConfirmation, indexLevelIsBottom, dropMeansRebound,
+    panicExitAll, crowdFearIsBuySignal, nvidiaDropMakesOpticsEqualsConcept,
+    nineDimensionScoreIsHonghu, priceWeakerThanSectorIsSell, cutTheBiggestLoser,
+    cashMayDeployBeforeNvidiaEvidence, robotIsNextZhongji,
+    phaseTwoHeatEntersCapitalPool, hp2MayEnterEvidenceChain, phaseTwoMayIssueAction,
+  } = await import('./aiPhaseTwo')
+  const { fingerprint: fp4 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase4 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./aiPhaseTwo.ts', import.meta.url), 'utf-8')
+
+  ok('P2-01 证据等级是 OBSERVATION', P2.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('情绪不是底部确认', emotionIsBottomConfirmation() === false)
+  ok('3800 点不是底', indexLevelIsBottom() === false)
+  ok('跌了不是该反弹', dropMeansRebound() === false)
+  ok('不恐慌清仓', panicExitAll() === false)
+  ok('大家骂不是买入', crowdFearIsBuySignal() === false)
+  ok('英伟达跌了光模块不等于概念', nvidiaDropMakesOpticsEqualsConcept() === false)
+  ok('九维评分不是鸿鹄', nineDimensionScoreIsHonghu() === false)
+  ok('弱于板块不是卖出', priceWeakerThanSectorIsSell() === false)
+  ok('不砍跌得最多的', cutTheBiggestLoser() === false)
+  ok('财报前现金不得部署', cashMayDeployBeforeNvidiaEvidence() === false)
+  ok('机器人不是下一只中际', robotIsNextZhongji() === false)
+  ok('第二阶段热度不进资本池', phaseTwoHeatEntersCapitalPool() === false)
+  ok('H-P2 不得进证据链', hp2MayEnterEvidenceChain() === false)
+  ok('本层不发令', phaseTwoMayIssueAction() === false)
+
+  ok('正好五层且身体层是重点',
+    AI_LAYERS.length === 5
+    && AI_LAYERS[2]!.id === 'BODY' && AI_LAYERS[2]!.focus === true
+    && AI_LAYERS.some(l => l.id === 'NERVE' && l.focus))
+  ok('大脑层推不出加仓',
+    AI_LAYERS[0]!.doesNotProve.includes('不证明') && AI_LAYERS[0]!.doesNotProve.includes('加仓'))
+  ok('电力层对接 E-01 不得建仓',
+    AI_LAYERS.find(l => l.id === 'BODY')!.doesNotProve.includes('不得建仓'))
+  ok('具身智能六段且不是买卖名单',
+    ROBOT_PARTS.length === 6 && src.includes('不是买卖名单'))
+  ok('核验带不是评分：兑现 / 待验证 / 证据恶化才审查',
+    HOLDING_RECHECKS.some(r => r.name === '中际旭创' && r.band === '兑现观察')
+    && HOLDING_RECHECKS.some(r => r.name === '新易盛' && r.band === '兑现观察')
+    && HOLDING_RECHECKS.some(r => r.name === '海光信息' && r.band === '待验证')
+    && HOLDING_RECHECKS.some(r => r.name === '澜起科技' && r.band === '待验证')
+    && HOLDING_RECHECKS.filter(r => r.band === '证据恶化才审查').length >= 2)
+  ok('核验带不用 A/B/C 作为 band',
+    HOLDING_RECHECKS.every(r =>
+      r.band === '兑现观察' || r.band === '待验证' || r.band === '证据恶化才审查'))
+  ok('导出字段名不含 score/rank/weight/grade',
+    !/\b(score|rank|weight|grade)\s*[:=]/i.test(src))
+  ok('海光问的是利润能否消化估值，不是国产替代大方向',
+    HOLDING_RECHECKS.find(r => r.name === '海光信息')!.asks.includes('消化现在的估值')
+    && HOLDING_RECHECKS.find(r => r.name === '海光信息')!.asks.includes('不是国产替代'))
+  ok('三问核验取代九维评分',
+    THREE_CHECKS.length === 3
+    && THREE_CHECKS[2]!.asks.includes('不能单独产生卖出')
+    && src.includes('不是九维评分'))
+  ok('三个情景都写明不是自动买卖',
+    NVIDIA_SCENARIOS.length === 3
+    && NVIDIA_SCENARIOS.every(s => s.not.includes('买') || s.not.includes('抄底') || s.not.includes('幻想')))
+  ok('六问未验证且停在第 1 问',
+    PHASE_TWO_QUESTIONS.every(q => q.status === 'UNVERIFIED') && P2.stage === 1)
+  ok('H-P2 只观察',
+    HP2.id === 'H-P2' && HP2.mayEnterEvidenceChain === false)
+
+  const v = phaseTwoVerdict()
+  ok('结论写出第二阶段切换而不是 AI 结束',
+    v.object.includes('第二阶段') && v.object.includes('不是 AI 结束'))
+  ok('结论钉死现金等待信息优势', v.cash.includes('等待信息优势'))
+  ok('不意味着含：3800 不是底、不动现金、不打分',
+    P2.doesNotImply.some(d => d.includes('3800'))
+    && P2.doesNotImply.some(d => d.includes('46.5'))
+    && P2.doesNotImply.some(d => d.includes('九维评分')))
+  ok('阻塞项含财报未落地与不发令',
+    P2.blockers.some(b => b.includes('英伟达')) && P2.blockers.some(b => b.includes('不产生动作')))
+  ok('仓位与事件留痕全部 UNVERIFIED',
+    [...PORTFOLIO_TRACES, ...EVENT_TRACES].every(t => t.status === 'UNVERIFIED'))
+  ok('数字标明未接入管道',
+    src.includes('PUBLIC_NOT_YET_WIRED')
+    && HOLDING_RECHECKS.some(r => r.sourceNote.includes('PUBLIC_NOT_YET_WIRED') || r.sourceNote.includes('未接入管道'))
+    && EVENT_TRACES.some(t => t.sourceNote.includes('PUBLIC_NOT_YET_WIRED')))
+  ok('下一步五条且第一条是保住现金',
+    NEXT_WATCH.length === 5 && NEXT_WATCH[0]!.text.includes('现金'))
+  ok('与防守层、电力层是不同模块',
+    P2.id === 'P2-01' && HP2.id === 'H-P2'
+    && src.includes('E-01') && src.includes('不得建仓'))
+
+  const txt = renderAiPhaseTwo()
+  ok('渲染含第二阶段标题与去弱留强',
+    txt.includes('AI 第二阶段') && txt.includes('去弱留强'))
+  ok('渲染声明不打分不产生动作',
+    txt.includes('不打分') && txt.includes('不产生动作'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(buildAiPhaseTwoView())))
+  ok('视图 flags 全部钉死否定式',
+    Object.values(buildAiPhaseTwoView().flags).every(x => x === false))
+
+  const base = loadBase4()
+  const fp = fp4()
+  ok('加入第二阶段观察后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
