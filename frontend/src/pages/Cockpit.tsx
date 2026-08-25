@@ -443,6 +443,7 @@ const Cockpit: React.FC = () => {
                 powerChain={data.powerChain}
                 portfolioDefense={data.portfolioDefense}
                 ownershipPhilosophy={data.ownershipPhilosophy}
+                aiPhaseTwo={data.aiPhaseTwo}
               />
             ),
           },

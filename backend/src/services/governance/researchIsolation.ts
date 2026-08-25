@@ -49,6 +49,7 @@ export const RESEARCH_MODULES = [
   'research/powerChain.ts',
   'research/portfolioDefense.ts',
   'research/ownershipPhilosophy.ts',
+  'research/aiPhaseTwo.ts',
 ] as const
 
 /**
@@ -67,6 +68,7 @@ export const RESEARCH_FIELD_NAMES = [
   'portfolioDefense', 'haiHypothesis', 'allocationAudit',
   'factorConcentration', 'dividendQualityChecklist', 'snowballNotes',
   'ownershipPhilosophy', 'lifelineReading', 'priceDropAsks', 'lookout',
+  'aiPhaseTwo', 'holdingRechecks', 'nvidiaScenarios', 'hp2Hypothesis',
 ] as const
 
 export interface IsolationFinding {
@@ -176,6 +178,7 @@ export const RESEARCH_TEXT_MARKERS = [
   '价值传导图', 'E-01', '战略观察池',
   'H-AI', '组合防守层', '方三文', '雪球三分法', 'D-01',
   'P-01', '哲学参考', '长期验证 Ownership',
+  'P2-01', 'AI第二阶段', '去弱留强', 'H-P2',
 ] as const
 
 /**
