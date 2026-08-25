@@ -446,9 +446,9 @@ const runSrc = readFileSync(
 )
 ok('HTML 看台仍在仪表盘和 AI 第二阶段之前',
   htmlRenderSrc.indexOf('看台 —— 投资人前台只看这一问')
-    < htmlRenderSrc.indexOf('仪表盘')
+    < htmlRenderSrc.indexOf('<h2>仪表盘</h2>')
   && htmlRenderSrc.indexOf('看台 —— 投资人前台只看这一问')
-    < htmlRenderSrc.indexOf('AI 第二阶段观察'))
+    < htmlRenderSrc.indexOf('AI 第二阶段观察 —— 去弱留强，等证据'))
 ok('CLI 仍先打看台再打决策驾驶舱',
   /renderLookout\(lookoutForHtml\)/.test(runSrc)
   && runSrc.indexOf('renderLookout(lookoutForHtml)') < runSrc.indexOf('renderDecisionCockpit(v2)'))
