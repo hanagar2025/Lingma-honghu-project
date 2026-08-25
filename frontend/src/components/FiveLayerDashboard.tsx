@@ -297,11 +297,13 @@ export interface FiveLayerDashboardProps {
   ownershipPhilosophy?: any
   /** AI 第二阶段观察。只渲染，不产生任何操作入口 */
   aiPhaseTwo?: any
+  /** 三层页把研究拆成当前焦点 / 上一轮观察 / 结构表 */
+  researchPane?: 'all' | 'focus' | 'older' | 'tables'
 }
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiPhaseTwo,
+  portfolioDefense, ownershipPhilosophy, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -319,9 +321,14 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   const ms = d.marketStructure ?? {}
   const az = d.actionZone ?? {}
   const isPre = d.session === 'PRE_OPEN'
+  const showFocus = researchPane === 'all' || researchPane === 'focus'
+  const showOlder = researchPane === 'all' || researchPane === 'older'
+  const showTables = researchPane === 'all' || researchPane === 'tables'
 
   return (
     <div>
+      {showTables && (
+      <>
       {/* 盘中未定价：放在最顶部。这一条不提醒，整页数字都会被误当作收盘值 */}
       {provisional?.intraday && (
         <Alert
@@ -820,7 +827,11 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           展开任意一行可见逐条阻断项。
         </Text>
       </Card>
+      </>
+      )}
 
+      {showOlder && (
+      <>
       {powerChain && (
         <Card
           style={SECTION}
@@ -1180,8 +1191,10 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           </ul>
         </Card>
       )}
+      </>
+      )}
 
-      {aiPhaseTwo && (
+      {showFocus && aiPhaseTwo && (
         <Card
           style={SECTION}
           title={<Title level={5} style={{ margin: 0 }}>AI 第二阶段观察 —— 去弱留强，等证据</Title>}
@@ -1348,6 +1361,8 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
 
+      {showTables && (
+      <>
       {/* ══ 外部叙事台账：与四张研究表并列，不进动作区 ══ */}
       {hypotheses && hypotheses.length > 0 && (
         <Card
@@ -1594,6 +1609,8 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
           {d.noCompositeScoreNote}
         </Text>
       </Card>
+      </>
+      )}
     </div>
   )
 }

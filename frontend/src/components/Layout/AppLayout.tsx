@@ -71,16 +71,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // 安全的用户信息获取
   const username = user?.username || '用户'
   const userInitial = username.charAt(0).toUpperCase()
+  const isCockpit = location.pathname === '/'
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className={isCockpit ? 'hh-shell' : undefined} style={{ minHeight: '100vh' }}>
       <Sider
         trigger={null}
         collapsible
         collapsed={sidebarCollapsed}
         style={{
-          background: '#fff',
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+          background: isCockpit ? '#f7f1e8' : '#fff',
+          boxShadow: isCockpit ? 'none' : '2px 0 8px rgba(0,0,0,0.1)',
         }}
       >
         <div style={{ 
@@ -88,8 +89,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          borderBottom: '1px solid #f0f0f0',
-          background: '#007aff'
+          borderBottom: isCockpit ? '1px solid #e4ddd2' : '1px solid #f0f0f0',
+          background: isCockpit ? '#1c1917' : '#007aff'
         }}>
           {sidebarCollapsed ? (
             <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>📈</div>
@@ -108,11 +109,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Layout>
         <Header style={{ 
           padding: '0 24px', 
-          background: '#fff', 
+          background: isCockpit ? 'transparent' : '#fff', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          boxShadow: isCockpit ? 'none' : '0 2px 8px rgba(0,0,0,0.1)'
         }}>
           <Button
             type="text"
@@ -127,17 +128,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               placement="bottomRight"
               arrow
             >
-              <Avatar style={{ backgroundColor: '#007aff', cursor: 'pointer' }}>
+              <Avatar style={{ backgroundColor: isCockpit ? '#c45c26' : '#007aff', cursor: 'pointer' }}>
                 {userInitial}
               </Avatar>
             </Dropdown>
           </Space>
         </Header>
         <Content style={{ 
-          margin: '24px', 
-          padding: '24px', 
-          background: '#fff', 
-          borderRadius: '8px',
+          margin: isCockpit ? '8px 16px 24px' : '24px', 
+          padding: isCockpit ? '4px 4px 64px' : '24px', 
+          background: isCockpit ? 'transparent' : '#fff', 
+          borderRadius: isCockpit ? 0 : '8px',
           minHeight: 'calc(100vh - 112px)'
         }}>
           {children}
