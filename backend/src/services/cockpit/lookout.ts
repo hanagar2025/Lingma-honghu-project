@@ -14,6 +14,7 @@ import type { Change } from '../governance/changeLog'
 import {
   PHILOSOPHY_CLAIM, PHILOSOPHY_OBJECT, LIFELINE_READING,
 } from '../research/ownershipPhilosophy'
+import { P2 } from '../research/aiPhaseTwo'
 import { DAILY_QUESTION, HOLD_AS_DECISION } from '../decision/charter'
 import { HUNTER_TEXT } from '../decision/hunter'
 import {
@@ -56,6 +57,14 @@ export interface LookoutChange {
   to: string
 }
 
+export interface LookoutPortfolio {
+  eyebrow: string
+  stance: string
+  structure: string
+  cash: string
+  note: string
+}
+
 export interface LookoutView {
   date: string
   dailyQuestion: typeof DAILY_QUESTION
@@ -67,6 +76,9 @@ export interface LookoutView {
   answer: string
   spine: readonly { name: string; means: string }[]
   spineNote: string
+  layer: string
+  portfolio: LookoutPortfolio
+  wontDo: readonly string[]
   must: LookoutName[]
   observes: LookoutName[]
   holds: LookoutName[]
@@ -151,6 +163,22 @@ export function buildLookoutView(input: LookoutInput): LookoutView {
     spineNote:
       '这是已冻结生命线的读法，不是新规则。'
       + '核心 = 拥有资格长期成立。战术减仓与价值退出仍然有效。好公司判断错了也会卖。',
+    layer: '第一层只回答今天的资本状态。依据和研究点开再看。',
+    portfolio: {
+      eyebrow: '今日组合读法',
+      stance: P2.stance,
+      structure: '这不是分散组合，是 AI 算力硬件大组合。',
+      cash:
+        '约 46.5 万现金等待信息优势。事件落地前不得部署。'
+        + '数字是截图留痕，不是今日 MET。',
+      note: '观察，不构成动作。不得改写已冻结规则，也不产生买卖令。',
+    },
+    wontDo: [
+      '不因情绪或 3800 点抄底',
+      '不因浮亏恐慌清仓',
+      '不把中际、新易盛和纯概念 AI 放进同一个篮子',
+      '不把现金提前打出去',
+    ],
     must,
     observes,
     holds,
@@ -175,6 +203,15 @@ export function renderLookout(view: LookoutView): string {
   L.push(`  ${view.object}`)
   L.push(`  ${view.priceIsNotLoss}`)
   L.push(`  ${view.holdIsDecision}`)
+  L.push(`  ${view.layer}`)
+  L.push('')
+  L.push(`  ── ${view.portfolio.eyebrow}（${view.portfolio.note}）──`)
+  L.push(`  ${view.portfolio.stance}`)
+  L.push(`  ${view.portfolio.structure}`)
+  L.push(`  ${view.portfolio.cash}`)
+  L.push('')
+  L.push('  ── 今日明确不做什么 ──')
+  for (const w of view.wontDo) L.push(`  · ${w}`)
   L.push('')
   L.push('  ── 生命线读法（已冻结，不是新规则）──')
   L.push(`  ${view.spine.map(s => s.name).join(' → ')}`)

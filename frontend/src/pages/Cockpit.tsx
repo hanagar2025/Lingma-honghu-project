@@ -1,7 +1,7 @@
 // 每日投资驾驶舱
 //
-// 第一屏是看台：今天有没有新事实、谁必须动、谁在变、谁明确维持。
-// 其余大表收在「详细数据」里，点看台再展开。
+// 三层：看台（第一层，默认打开）→ 依据（第二层）→ 研究（第三层）。
+// 看台回答今天的资本状态。依据和研究点开再看。
 // 一屏能看完的东西才会每天真的被看。
 //
 // 页面本身不做任何判断 —— 灯色、阈值、法定理由全部由后端给出。
@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import {
-  Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover, Progress,
+  Alert, Button, Card, Collapse, ConfigProvider, Descriptions, Empty, message, Popover, Progress,
   Segmented, Space, Statistic, Table, Tag, Typography,
 } from 'antd'
 import { ReloadOutlined, InfoCircleOutlined, CheckOutlined } from '@ant-design/icons'
@@ -124,10 +124,13 @@ const Cockpit: React.FC = () => {
   const [marking, setMarking] = useState<number | null>(null)
   const [session, setSession] = useState<'pre' | 'post'>('post')
   const [offline, setOffline] = useState<{ on: boolean; reason: string }>({ on: false, reason: '' })
-  const [detailKeys, setDetailKeys] = useState<string[]>([])
+  const [layerKeys, setLayerKeys] = useState<string[]>([])
+  const [evidenceKeys, setEvidenceKeys] = useState<string[]>([])
+  const [researchKeys, setResearchKeys] = useState<string[]>(['focus'])
 
   const openDetail = useCallback((section: LookoutSection) => {
-    setDetailKeys([section === 'unknown' ? 'holds' : section])
+    setLayerKeys(['evidence'])
+    setEvidenceKeys([section === 'unknown' ? 'holds' : section])
   }, [])
 
   const load = useCallback(async (live = false, s: 'pre' | 'post' = session) => {
@@ -174,8 +177,59 @@ const Cockpit: React.FC = () => {
   const answers: any[] = data.answers ?? []
   const actions: any[] = data.actions ?? []
 
+  const researchDash = (
+    hideChanges: boolean,
+    pane: 'focus' | 'older' | 'tables',
+  ) => (
+    <FiveLayerDashboard
+      dashboard={data.dashboard}
+      changes={data.changes}
+      discovery={data.discovery}
+      hypotheses={data.hypotheses}
+      provisional={data.provisional}
+      hideChanges={hideChanges}
+      powerChain={data.powerChain}
+      portfolioDefense={data.portfolioDefense}
+      ownershipPhilosophy={data.ownershipPhilosophy}
+      aiPhaseTwo={data.aiPhaseTwo}
+      researchPane={pane}
+    />
+  )
+
   return (
-    <div>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#c45c26',
+          colorText: '#1c1917',
+          colorTextSecondary: '#78716c',
+          borderRadius: 14,
+          fontFamily: '"PingFang SC", "Hiragino Sans GB", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif',
+        },
+      }}
+    >
+    <div className="hh-page">
+      <LookoutBoard
+        date={data.date}
+        lookout={data.lookout}
+        onOpen={openDetail}
+      />
+
+      <div className="hh-tools">
+        <Segmented
+          value={session}
+          onChange={v => load(false, v as 'pre' | 'post')}
+          options={[
+            { label: '盘前', value: 'pre' },
+            { label: '盘后', value: 'post' },
+          ]}
+        />
+        <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
+        {!offline.on && <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>}
+        {data.brief && <ShareButton brief={data.brief} date={data.date} />}
+      </div>
+      {data.brief && <ShareHint />}
+
       {/* ── 离线快照模式：必须明说，否则会被当成实时接口数据 ── */}
       {offline.on && (
         <Alert
@@ -229,49 +283,26 @@ const Cockpit: React.FC = () => {
         />
       )}
 
-      {/* ── 会话切换：盘前只看必办，盘后看完整报告 ── */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Segmented
-            value={session}
-            onChange={v => load(false, v as 'pre' | 'post')}
-            options={[
-              { label: '盘前 09:20–09:25', value: 'pre' },
-              { label: '盘后 15:10–15:30', value: 'post' },
-            ]}
-          />
-          <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
-          {/* 直连行情复跑要走后端。离线模式下给一个点了没反应的按钮，比不给更糟 */}
-          {!offline.on && <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>}
-          {offline.on && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              离线模式下切换盘前/盘后与复跑均需后端；要更新快照请在 backend 目录重跑
-              {' '}<Text code>WEB=1 npm run cockpit</Text>
-            </Text>
-          )}
-        </Space>
-      </Card>
-
-      {/* ── 一键外发：把数据交给别的软件再分析一遍 ── */}
-      {data.brief && (
-        <>
-          <ShareHint />
-          <Card size="small" style={{ marginBottom: 16 }}>
-            <ShareButton brief={data.brief} date={data.date} />
-          </Card>
-        </>
+      {offline.on && (
+        <div className="hh-note" style={{ margin: '0 4px 16px' }}>
+          离线模式下切换盘前/盘后与复跑均需后端；要更新快照请在 backend 目录重跑
+          {' '}<Text code>WEB=1 npm run cockpit</Text>
+        </div>
       )}
 
-      <LookoutBoard
-        date={data.date}
-        lookout={data.lookout}
-        onOpen={openDetail}
-      />
-
+      <div className="hh-layer-label">第二层 · 第三层 · 档案</div>
       <Collapse
-        activeKey={detailKeys}
-        onChange={keys => setDetailKeys((Array.isArray(keys) ? keys : [keys]).map(String))}
+        activeKey={layerKeys}
+        onChange={keys => setLayerKeys((Array.isArray(keys) ? keys : [keys]).map(String))}
         items={[
+          {
+            key: 'evidence',
+            label: '第二层 · 依据',
+            children: (
+              <Collapse
+                activeKey={evidenceKeys}
+                onChange={keys => setEvidenceKeys((Array.isArray(keys) ? keys : [keys]).map(String))}
+                items={[
           {
             key: 'must',
             label: '资本动作依据',
@@ -429,27 +460,40 @@ const Cockpit: React.FC = () => {
             label: '维持、生命线与不可判断',
             children: <DecisionCockpit cockpit={data.decisionV2} hideIntro hideTasks hideQuestions />,
           },
+                ]}
+              />
+            ),
+          },
           {
             key: 'research',
-            label: '研究与结构表',
+            label: '第三层 · 研究',
             children: (
-              <FiveLayerDashboard
-                dashboard={data.dashboard}
-                changes={data.changes}
-                discovery={data.discovery}
-                hypotheses={data.hypotheses}
-                provisional={data.provisional}
-                hideChanges
-                powerChain={data.powerChain}
-                portfolioDefense={data.portfolioDefense}
-                ownershipPhilosophy={data.ownershipPhilosophy}
-                aiPhaseTwo={data.aiPhaseTwo}
+              <Collapse
+                activeKey={researchKeys}
+                onChange={keys => setResearchKeys((Array.isArray(keys) ? keys : [keys]).map(String))}
+                items={[
+                  {
+                    key: 'focus',
+                    label: '当前焦点 · 去弱留强，等证据',
+                    children: researchDash(true, 'focus'),
+                  },
+                  {
+                    key: 'older',
+                    label: '上一轮观察 · 电力 / 防守 / 哲学',
+                    children: researchDash(true, 'older'),
+                  },
+                  {
+                    key: 'tables',
+                    label: '结构表 · 持仓、主线、节点',
+                    children: researchDash(true, 'tables'),
+                  },
+                ]}
               />
             ),
           },
           {
             key: 'more',
-            label: '详细数据 —— 六问、KPI、冻结、审计、缺口',
+            label: '档案 · 六问、KPI、冻结、审计、缺口',
             children: (
               <>
                 <Alert
@@ -669,6 +713,7 @@ const Cockpit: React.FC = () => {
         ]}
       />
     </div>
+    </ConfigProvider>
   )
 }
 

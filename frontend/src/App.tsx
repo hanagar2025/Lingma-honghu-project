@@ -7,6 +7,7 @@ import Portfolio from './pages/Portfolio'
 import { useAppSelector } from './hooks/redux'
 import { OFFLINE_FORCED } from './services/api'
 import './styles/global.css'
+import './styles/cockpit.css'
 
 function App() {
   const { isAuthenticated } = useAppSelector(state => state.auth)

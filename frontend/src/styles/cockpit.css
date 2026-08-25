@@ -1,0 +1,361 @@
+/* 鸿鹄驾驶舱三层页。只作用在 .hh-shell / .hh-page 内，不改其它页。 */
+
+.hh-shell {
+  background: #efe8dc !important;
+}
+
+.hh-shell .ant-layout {
+  background: transparent;
+}
+
+.hh-shell .ant-layout-sider {
+  background: #f7f1e8 !important;
+  box-shadow: none !important;
+  border-right: 1px solid #e4ddd2;
+}
+
+.hh-shell .ant-layout-header {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid #e4ddd2;
+}
+
+.hh-shell .ant-layout-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 8px 8px 72px !important;
+  margin: 12px 16px 24px !important;
+}
+
+.hh-shell .ant-menu-item-selected {
+  background: #c45c26 !important;
+  color: #fff !important;
+}
+
+.hh-shell .ant-menu-item-selected .ant-menu-item-icon {
+  color: #fff !important;
+}
+
+.hh-page {
+  --paper: #efe8dc;
+  --card: #fffaf3;
+  --ink: #1c1917;
+  --mute: #78716c;
+  --line: #e4ddd2;
+  --accent: #c45c26;
+  --soft: #f4e6d8;
+  --must: #b45309;
+  --exit: #9f1239;
+  --hold: #44403c;
+  max-width: 880px;
+  margin: 0 auto;
+  color: var(--ink);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.hh-page .ant-card,
+.hh-page .ant-card:hover,
+.hh-look:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.hh-page .ant-card {
+  background: var(--card);
+  border: 1px solid var(--line) !important;
+  border-radius: 22px !important;
+}
+
+.hh-page .ant-collapse {
+  background: transparent;
+  border: none;
+}
+
+.hh-page .ant-collapse-item {
+  background: var(--card);
+  border: 1px solid var(--line) !important;
+  border-radius: 20px !important;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.hh-page .ant-collapse-header {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--ink) !important;
+  padding: 18px 20px !important;
+}
+
+.hh-page .ant-collapse-content {
+  background: transparent !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+.hh-page .ant-alert {
+  border-radius: 16px;
+}
+
+.hh-kicker {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+  font-weight: 600;
+}
+
+.hh-look {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 36px 40px 40px;
+  margin-bottom: 22px;
+}
+
+.hh-look-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.hh-look-date {
+  font-size: 12px;
+  color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.hh-q {
+  margin: 0 0 14px;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", Georgia, serif;
+  font-size: 30px;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.hh-answer {
+  display: inline-block;
+  margin: 0 0 22px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #ece7dc;
+  color: var(--hold);
+}
+
+.hh-answer.is-yes {
+  background: #f6e1c8;
+  color: var(--must);
+}
+
+.hh-principles {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.hh-read {
+  background: var(--soft);
+  border-radius: 20px;
+  padding: 22px 22px 20px;
+  margin-bottom: 28px;
+}
+
+.hh-stance {
+  margin: 8px 0 10px;
+  font-size: 26px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.hh-read p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.hh-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.hh-sec {
+  margin-bottom: 26px;
+}
+
+.hh-sec-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.hh-sec-h strong {
+  font-size: 16px;
+}
+
+.hh-empty {
+  font-size: 13px;
+  color: var(--mute);
+}
+
+.hh-name {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.hh-name:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.hh-name-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.hh-name-h strong {
+  font-size: 17px;
+}
+
+.hh-action {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.hh-action.is-exit {
+  color: var(--exit);
+}
+
+.hh-action.is-must {
+  color: var(--must);
+}
+
+.hh-axis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hh-axis-cell {
+  background: #f6f1e8;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.hh-axis-k {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--mute);
+  margin-bottom: 2px;
+}
+
+.hh-axis-v {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.hh-axis-cell.is-hot {
+  background: #f6e1c8;
+}
+
+.hh-reason {
+  margin: 10px 0 6px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.hh-link {
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.hh-wont {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.hh-wont ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.hh-change {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--mute);
+}
+
+.hh-change b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.hh-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 4px 18px;
+}
+
+.hh-layer-label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--mute);
+  margin: 8px 4px 10px;
+  font-weight: 650;
+}
+
+.hh-unknown {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f6e1c8;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .hh-look {
+    padding: 24px 20px 28px;
+    border-radius: 22px;
+  }
+
+  .hh-q {
+    font-size: 22px;
+  }
+
+  .hh-stance {
+    font-size: 22px;
+  }
+
+  .hh-axis {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -71,16 +71,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // 安全的用户信息获取
   const username = user?.username || '用户'
   const userInitial = username.charAt(0).toUpperCase()
+  const isCockpit = location.pathname === '/'
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className={isCockpit ? 'hh-shell' : undefined} style={{ minHeight: '100vh' }}>
       <Sider
         trigger={null}
         collapsible
         collapsed={sidebarCollapsed}
         style={{
-          background: '#fff',
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+          background: isCockpit ? '#f7f1e8' : '#fff',
+          boxShadow: isCockpit ? 'none' : '2px 0 8px rgba(0,0,0,0.1)',
         }}
       >
         <div style={{ 
@@ -88,8 +89,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          borderBottom: '1px solid #f0f0f0',
-          background: '#007aff'
+          borderBottom: isCockpit ? '1px solid #e4ddd2' : '1px solid #f0f0f0',
+          background: isCockpit ? '#1c1917' : '#007aff'
         }}>
           {sidebarCollapsed ? (
             <div style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>📈</div>

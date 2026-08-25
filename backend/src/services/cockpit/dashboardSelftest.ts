@@ -21,6 +21,7 @@ import { renderDashboard } from './renderDashboard'
 import { buildVerdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
 import { ACTION_TEXT, FORBIDDEN_REASON_PHRASES } from './types'
+import { buildLookoutView, renderLookout } from './lookout'
 
 let failed = 0
 let passed = 0
@@ -421,6 +422,36 @@ ok('看台生命线读法标明不是新规则',
   lookoutAsmSrc.includes('不是新规则') && lookoutAsmSrc.includes('战术减仓与价值退出仍然有效'))
 ok('看台装配层不调用 makeAction', !/\bmakeAction\s*\(/.test(lookoutAsmSrc))
 ok('驾驶舱把看台视图传入第一屏', /lookout=\{data\.lookout\}/.test(cockpitPageSrc))
+ok('看台装配组合读法与今日不做什么',
+  lookoutAsmSrc.includes('今日组合读法')
+  && lookoutAsmSrc.includes('今日明确不做什么')
+  && lookoutSrc.includes('今日组合读法')
+  && lookoutSrc.includes('今日明确不做什么'))
+ok('组合读法标明观察且不构成动作',
+  lookoutAsmSrc.includes('观察，不构成动作')
+  && lookoutSrc.includes('不构成动作'))
+ok('驾驶舱三层：看台、依据、研究',
+  lookoutSrc.includes('第一层 · 看台')
+  && cockpitPageSrc.includes('第二层 · 依据')
+  && cockpitPageSrc.includes('第三层 · 研究'))
+ok('研究区拆成当前焦点 / 上一轮观察 / 结构表',
+  cockpitPageSrc.includes("researchPane={pane}")
+  && cockpitPageSrc.includes("'focus'")
+  && cockpitPageSrc.includes("'older'")
+  && cockpitPageSrc.includes("'tables'")
+  && cockpitPageSrc.includes("useState<string[]>(['focus'])"))
+{
+  const lookV = buildLookoutView({ date: '2026-08-25', cockpit: null })
+  ok('组合读法来自第二阶段观察，不发令',
+    lookV.portfolio.stance.includes('去弱留强') && lookV.wontDo.length === 4)
+  ok('看台 JSON 不含 score/rank/weight',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(lookV)))
+  ok('渲染含组合读法与今日不做什么',
+    renderLookout(lookV).includes('今日组合读法')
+    && renderLookout(lookV).includes('今日明确不做什么'))
+  ok('组合读法不改写已冻结规则',
+    lookV.portfolio.note.includes('不得改写已冻结规则'))
+}
 ok('快照搬运看台与哲学参考',
   /lookout/.test(webSnapSrc) && /ownershipPhilosophy/.test(webSnapSrc))
 
