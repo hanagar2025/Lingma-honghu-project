@@ -95,6 +95,16 @@
   border-radius: 16px;
 }
 
+.hh-page .ant-alert-info {
+  background: #f4e6d8;
+  border: 1px solid #e4ddd2;
+}
+
+.hh-page .ant-alert-info .ant-alert-message,
+.hh-page .ant-alert-info .ant-alert-description {
+  color: var(--ink);
+}
+
 .hh-kicker {
   font-size: 11px;
   letter-spacing: 0.14em;

@@ -109,11 +109,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Layout>
         <Header style={{ 
           padding: '0 24px', 
-          background: '#fff', 
+          background: isCockpit ? 'transparent' : '#fff', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          boxShadow: isCockpit ? 'none' : '0 2px 8px rgba(0,0,0,0.1)'
         }}>
           <Button
             type="text"
@@ -128,17 +128,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               placement="bottomRight"
               arrow
             >
-              <Avatar style={{ backgroundColor: '#007aff', cursor: 'pointer' }}>
+              <Avatar style={{ backgroundColor: isCockpit ? '#c45c26' : '#007aff', cursor: 'pointer' }}>
                 {userInitial}
               </Avatar>
             </Dropdown>
           </Space>
         </Header>
         <Content style={{ 
-          margin: '24px', 
-          padding: '24px', 
-          background: '#fff', 
-          borderRadius: '8px',
+          margin: isCockpit ? '8px 16px 24px' : '24px', 
+          padding: isCockpit ? '4px 4px 64px' : '24px', 
+          background: isCockpit ? 'transparent' : '#fff', 
+          borderRadius: isCockpit ? 0 : '8px',
           minHeight: 'calc(100vh - 112px)'
         }}>
           {children}
