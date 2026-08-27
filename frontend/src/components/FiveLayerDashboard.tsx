@@ -295,6 +295,8 @@ export interface FiveLayerDashboardProps {
   portfolioDefense?: any
   /** 投资哲学参考。只渲染，不产生任何操作入口 */
   ownershipPhilosophy?: any
+  /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
+  dalioPressureTest?: any
   /** AI 融资质量观察。只渲染，不产生任何操作入口 */
   aiFinancingQuality?: any
   /** AI 第二阶段观察。只渲染，不产生任何操作入口 */
@@ -305,7 +307,7 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1194,6 +1196,180 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && dalioPressureTest && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>达利欧反向压力测试 —— 宏观判断不能直接指挥资本</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。不设计 V5。不加分散投资模块。不改 V4.x。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{dalioPressureTest.id}｜{dalioPressureTest.hdlHypothesis?.id}　{dalioPressureTest.hdlHypothesis?.claim}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{dalioPressureTest.oneQuestion}</div>
+                <div>{dalioPressureTest.trueLesson}</div>
+                <div style={{ color: '#8e8e93' }}>{dalioPressureTest.hdlHypothesis?.place}</div>
+              </div>
+            }
+          />
+          <Alert
+            type="info"
+            style={{ marginTop: 12 }}
+            message={<Text strong>这场压力测试</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{dalioPressureTest.aiPeakTest?.judgment}</div>
+                <div>鸿鹄必须拦住：仅凭这个宏观判断把优质核心资产直接卖掉。</div>
+                <div>{dalioPressureTest.aiPeakTest?.ifSomeoneWritesSell}</div>
+                <div>{dalioPressureTest.aiPeakTest?.meaning}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {dalioPressureTest.isolation?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            {(dalioPressureTest.isolation?.dalioChain ?? []).join(' → ')}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            至少跳了：{(dalioPressureTest.isolation?.jumped ?? []).join(' → ')}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>{dalioPressureTest.isolation?.danger}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>{dalioPressureTest.isolation?.honghuMap}</div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {dalioPressureTest.pressureQuestion?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{dalioPressureTest.pressureQuestion?.asks}</div>
+            <div>{dalioPressureTest.pressureQuestion?.answer}</div>
+            <div>{dalioPressureTest.pressureQuestion?.example?.trueMaybe}</div>
+            <div>{dalioPressureTest.pressureQuestion?.example?.notEqual}</div>
+            <div>中间还有：{(dalioPressureTest.pressureQuestion?.example?.middle ?? []).join(' → ')}</div>
+            <div>{dalioPressureTest.pressureQuestion?.example?.ifFrontHolds}</div>
+            <div style={{ marginBottom: 12 }}>{dalioPressureTest.pressureQuestion?.boundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {dalioPressureTest.fourAxes?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　宏观判断不能直接跳到 Action。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="axis"
+            dataSource={dalioPressureTest.fourAxes?.axes ?? []}
+            columns={[
+              { title: '轴', dataIndex: 'axis', width: 120 },
+              { title: '回答', dataIndex: 'answers' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {dalioPressureTest.independence?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{dalioPressureTest.independence?.notStockCount}</div>
+            <div>{(dalioPressureTest.independence?.exampleNames ?? []).join(' / ')}</div>
+            <div>{dalioPressureTest.independence?.oneFactor}</div>
+            <div>{dalioPressureTest.independence?.shouldAsk}</div>
+            <div style={{ marginBottom: 12 }}>{dalioPressureTest.independence?.sameThought}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {dalioPressureTest.threeBooks?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            已有三本账：{(dalioPressureTest.threeBooks?.alreadyExist ?? []).join(' / ')}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>{dalioPressureTest.threeBooks?.institutionalized}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>{dalioPressureTest.threeBooks?.illusion}</div>
+          <Space direction="vertical" size={4} style={{ width: '100%', margin: '8px 0 12px' }}>
+            {(dalioPressureTest.threeBooks?.cases ?? []).map((c: any, i: number) => (
+              <div key={i} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text>{c.when}</Text>
+                <span style={{ color: '#8e8e93' }}>　{c.meaning}</span>
+              </div>
+            ))}
+          </Space>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            允许记录：Decision Quality {dalioPressureTest.threeBooks?.allowedRecord?.decisionQuality}；
+            Evidence Outcome {dalioPressureTest.threeBooks?.allowedRecord?.evidenceOutcome}；
+            Capital Outcome {dalioPressureTest.threeBooks?.allowedRecord?.capitalOutcome}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            {dalioPressureTest.threeBooks?.allowedRecord?.not}
+            {' '}{dalioPressureTest.threeBooks?.reverseRecord?.not}
+            {' '}{dalioPressureTest.threeBooks?.mustAccumulate}
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            宏观判断是假设，不是交易信号
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={dalioPressureTest.macroHypotheses ?? []}
+            columns={[
+              { title: '编号', dataIndex: 'id', width: 80 },
+              { title: '假设', dataIndex: 'claim' },
+              { title: '状态', dataIndex: 'status', width: 80 },
+              { title: '位置', dataIndex: 'place' },
+              { title: '不是', dataIndex: 'not' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {dalioPressureTest.axisFirewall?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是新规则。这五条是防火墙。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 8 }}>
+            {dalioPressureTest.axisFirewall?.onlyAsk}
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={dalioPressureTest.axisFirewall?.items ?? []}
+            columns={[
+              { title: '', dataIndex: 'id', width: 40 },
+              { title: '如果发生', dataIndex: 'trigger', width: 140 },
+              { title: '首先改变', dataIndex: 'firstAxis' },
+              { title: '不能改变', dataIndex: 'cannotChange' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            压缩成一句
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.8, marginBottom: 8 }}>
+            {dalioPressureTest.compressed}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            {(dalioPressureTest.chain ?? []).join(' → ')}
+            {'　'}{dalioPressureTest.comeBackInAYear}
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>现在禁止写成</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(dalioPressureTest.forbiddenNow ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>下一步只观察</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(dalioPressureTest.nextWatch ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && aiFinancingQuality && (
