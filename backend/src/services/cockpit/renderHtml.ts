@@ -24,6 +24,7 @@ import { renderPowerChain } from '../research/powerChain'
 import { renderPortfolioDefense } from '../research/portfolioDefense'
 import { renderOwnershipPhilosophy } from '../research/ownershipPhilosophy'
 import { renderAiPhaseTwo } from '../research/aiPhaseTwo'
+import { renderAiFinancingQuality } from '../research/aiFinancingQuality'
 import { renderLookout, type LookoutView } from './lookout'
 
 function esc(s: unknown): string {
@@ -150,6 +151,8 @@ export interface HtmlInput {
   portfolioDefense?: unknown
   /** 投资哲学参考。不产生动作 */
   ownershipPhilosophy?: unknown
+  /** AI 融资质量观察。不产生动作 */
+  aiFinancingQuality?: unknown
   /** AI 第二阶段观察。不产生动作 */
   aiPhaseTwo?: unknown
   /** 极简看台。放在最前面 */
@@ -159,7 +162,7 @@ export interface HtmlInput {
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
-    powerChain, portfolioDefense, ownershipPhilosophy, aiPhaseTwo, lookout,
+    powerChain, portfolioDefense, ownershipPhilosophy, aiFinancingQuality, aiPhaseTwo, lookout,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -677,6 +680,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (ownershipPhilosophy) {
     w(`</div><div class=card><h2>投资哲学参考 —— 长期验证 Ownership，不增加规则</h2>`)
     w(`<pre class=plain>${esc(renderOwnershipPhilosophy())}</pre>`)
+  }
+
+  if (aiFinancingQuality) {
+    w(`</div><div class=card><h2>AI 融资质量观察 —— 信用周期待验证，发债不是泡沫</h2>`)
+    w(`<pre class=plain>${esc(renderAiFinancingQuality())}</pre>`)
   }
 
   if (aiPhaseTwo) {

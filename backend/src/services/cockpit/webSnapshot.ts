@@ -48,6 +48,8 @@ export interface WebSnapshotInput {
   portfolioDefense?: unknown
   /** 投资哲学参考。不产生动作，不增加规则 */
   ownershipPhilosophy?: unknown
+  /** AI 融资质量观察。不产生动作 */
+  aiFinancingQuality?: unknown
   /** AI 第二阶段观察。不产生动作 */
   aiPhaseTwo?: unknown
   /** 极简看台。只装配已有输出，不产生动作 */
@@ -130,6 +132,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     powerChain: input.powerChain ?? null,
     portfolioDefense: input.portfolioDefense ?? null,
     ownershipPhilosophy: input.ownershipPhilosophy ?? null,
+    aiFinancingQuality: input.aiFinancingQuality ?? null,
     aiPhaseTwo: input.aiPhaseTwo ?? null,
     lookout: input.lookout ?? null,
     attribution: input.attribution ?? null,

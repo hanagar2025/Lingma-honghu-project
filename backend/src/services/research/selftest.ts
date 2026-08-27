@@ -1523,5 +1523,106 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// AI 融资质量：信用周期待验证。发债不是泡沫。不发令。
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    buildAiFinancingQualityView, renderAiFinancingQuality,
+  } = await import('./aiFinancingQuality')
+  const { fingerprint: fp5 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase5 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./aiFinancingQuality.ts', import.meta.url), 'utf-8')
+  const F = buildAiFinancingQualityView()
+
+  ok('F-01 证据等级是 OBSERVATION', F.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('冻结且 V5 未定义', F.frozen === true && F.v5Undefined === true)
+  ok('只问融资质量是否恶化，不加新指标',
+    F.oneQuestion.includes('融资质量') && F.auditChain.notANewMetric === true)
+  ok('真正警惕的是金融体系共同下注，不是发债很多',
+    F.trueAlert.includes('整个金融体系') && F.trueAlert.includes('现金押注未来'))
+  ok('发债是事实，发债等于危险不成立',
+    F.firstJudgment.bondIssuance.verdict.includes('事实')
+    && F.firstJudgment.debtIsNotDanger.verdict.includes('不成立'))
+  ok('委员会数字全部标成未接入管道',
+    F.firstJudgment.bondIssuance.sourceStatus === 'PUBLIC_NOT_YET_WIRED'
+    && F.firstJudgment.bondIssuance.committeeNotes.some(n => n.includes('2200'))
+    && F.firstJudgment.bondIssuance.committeeNotes.every(n => n.includes('委员会转述')))
+  ok('真正该问的是债务增速有没有超过现金流',
+    F.firstJudgment.debtIsNotDanger.realQuestion.includes('债务增长')
+    && F.firstJudgment.debtIsNotDanger.realQuestion.includes('现金流'))
+  ok('折旧滞后不等于会计造假',
+    F.firstJudgment.depreciationLag.qualifier.includes('不等于会计造假'))
+  ok('审计链是现有数据重串，不是新指标',
+    F.auditChain.steps.join('→').includes('CapEx')
+    && F.auditChain.steps.includes('ROIC')
+    && F.auditChain.ifBreaks.includes('未来承诺'))
+  ok('资产寿命比折旧滞后更深',
+    F.assetLife.deeperThanLag.includes('深一层')
+    && F.assetLife.danger.includes('经济折旧'))
+  ok('折旧时钟四个时间且不是新指标',
+    F.depreciationClock.notANewIndicator === true
+    && F.depreciationClock.times.length === 4
+    && F.depreciationClock.sourceStatus === 'UNVERIFIED')
+  ok('五层是研究顺序不是买卖名单',
+    F.fiveLayers.notABuyList === true
+    && F.fiveLayers.layers.length === 5
+    && F.fiveLayers.stopSimple.includes('不能再简单看'))
+  ok('AI泡沫不是统一风险：光模块、海光、中芯、寒武纪各问各的',
+    F.holdingRechecks.some(h => h.name.includes('中际') && h.inMainlines && h.coreRiskIsNot.includes('不是'))
+    && F.holdingRechecks.some(h => h.name.includes('海光') && h.inMainlines)
+    && F.holdingRechecks.some(h => h.name.includes('中芯') && !h.inMainlines)
+    && F.holdingRechecks.some(h => h.name.includes('寒武纪') && !h.inMainlines
+      && h.r4Note.includes('R4') && h.r4Note.includes('不能产生卖出')))
+  ok('中芯、寒武纪不进 MAINLINES',
+    !MAINLINES.some(m => m.members.some(x => x.name.includes('中芯') || x.name.includes('寒武纪')))
+    && F.holdingRechecks.filter(h => !h.inMainlines).every(h =>
+      h.name.includes('中芯') || h.name.includes('寒武纪')))
+  ok('观察表全部 UNVERIFIED，经济寿命与 ROI 仍是 UNKNOWN',
+    F.observationTable.every(r => r.sourceStatus === 'UNVERIFIED')
+    && F.observationTable.some(r => r.item.includes('经济寿命') && r.state === 'UNKNOWN')
+    && F.observationTable.some(r => r.item.includes('ROI') && r.state === 'UNKNOWN'))
+  ok('H-FQ 只观察，不能写成泡沫破裂',
+    F.hfqHypothesis.id === 'H-FQ'
+    && F.hfqHypothesis.status === 'OPEN'
+    && F.hfqHypothesis.cannotConclude.includes('不能得出')
+    && F.hfqHypothesis.canConclude.includes('必须接受审查'))
+  ok('两条未来证据链都写明不是自动买卖',
+    F.futureChains.neitherIsAnOrder === true
+    && F.futureChains.riskChain.meaning.includes('才有资格')
+    && F.futureChains.productiveChain.meaning.includes('投资结论完全相反'))
+  ok('禁止写成卖出、R4、战略证伪、V5 指标',
+    F.forbiddenNow.some(x => x.includes('R4 卖出'))
+    && F.forbiddenNow.some(x => x.includes('战略证伪'))
+    && F.forbiddenNow.some(x => x.includes('V5'))
+    && F.forbiddenNow.some(x => x.includes('本层不发令')))
+  ok('导出字段名不含 score/rank/weight',
+    !/\b(score|rank|weight)\s*[:=]/i.test(src))
+  ok('源码钉死否定式：发债不是泡沫，本层不发令',
+    src.includes('debtIsBubble: false')
+    && src.includes('thisLayerIssuesOrders: false')
+    && src.includes('addV5DebtMetric: false')
+    && src.includes('unifiedAiBubble: false'))
+
+  const txt = renderAiFinancingQuality()
+  ok('渲染含融资质量标题与发债不是泡沫',
+    txt.includes('AI融资质量') && txt.includes('发债等于危险') && txt.includes('不成立'))
+  ok('渲染声明不打分不产生动作且不加 V5 指标',
+    txt.includes('不打分') && txt.includes('不产生动作') && txt.includes('不增加 V5'))
+  ok('渲染含折旧时钟与两条证据链',
+    txt.includes('折旧时钟') && txt.includes('边际回报下降链') && txt.includes('真实基础设施投资链'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(F)))
+  ok('视图 flags 全部钉死否定式',
+    Object.values(F.flags).every(x => x === false))
+
+  const base = loadBase5()
+  const fp = fp5()
+  ok('加入融资质量观察后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
