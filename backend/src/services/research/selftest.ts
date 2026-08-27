@@ -1560,7 +1560,7 @@ try {
     && F.auditChain.steps.includes('ROIC')
     && F.auditChain.ifBreaks.includes('未来承诺'))
   ok('资产寿命比折旧滞后更深',
-    F.assetLife.deeperThanLag.includes('更深')
+    F.assetLife.deeperThanLag.includes('深一层')
     && F.assetLife.danger.includes('经济折旧'))
   ok('折旧时钟四个时间且不是新指标',
     F.depreciationClock.notANewIndicator === true
