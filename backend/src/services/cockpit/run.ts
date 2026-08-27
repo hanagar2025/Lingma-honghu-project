@@ -44,6 +44,7 @@ import { renderPowerChain, buildPowerChainView } from '../research/powerChain'
 import { renderPortfolioDefense, buildPortfolioDefenseView } from '../research/portfolioDefense'
 import { renderOwnershipPhilosophy, buildOwnershipPhilosophyView } from '../research/ownershipPhilosophy'
 import { renderAiPhaseTwo, buildAiPhaseTwoView } from '../research/aiPhaseTwo'
+import { renderAiFinancingQuality, buildAiFinancingQualityView } from '../research/aiFinancingQuality'
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
@@ -386,6 +387,7 @@ async function main(): Promise<void> {
     process.stdout.write(`${renderPowerChain()}\n`)
     process.stdout.write(`${renderPortfolioDefense()}\n`)
     process.stdout.write(`${renderOwnershipPhilosophy()}\n`)
+    process.stdout.write(`${renderAiFinancingQuality()}\n`)
     process.stdout.write(`${renderAiPhaseTwo()}\n`)
 
     // ── 主线收入归因 ──
@@ -560,6 +562,7 @@ async function main(): Promise<void> {
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      aiFinancingQuality: buildAiFinancingQualityView(),
       aiPhaseTwo: buildAiPhaseTwoView(),
       lookout: lookoutForHtml,
     })
@@ -626,6 +629,7 @@ async function main(): Promise<void> {
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      aiFinancingQuality: buildAiFinancingQualityView(),
       aiPhaseTwo: buildAiPhaseTwoView(),
       lookout: lookoutForHtml,
       attribution: attributionForWeb,

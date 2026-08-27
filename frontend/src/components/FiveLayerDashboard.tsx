@@ -295,6 +295,8 @@ export interface FiveLayerDashboardProps {
   portfolioDefense?: any
   /** 投资哲学参考。只渲染，不产生任何操作入口 */
   ownershipPhilosophy?: any
+  /** AI 融资质量观察。只渲染，不产生任何操作入口 */
+  aiFinancingQuality?: any
   /** AI 第二阶段观察。只渲染，不产生任何操作入口 */
   aiPhaseTwo?: any
   /** 三层页把研究拆成当前焦点 / 上一轮观察 / 结构表 */
@@ -303,7 +305,7 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1192,6 +1194,224 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && aiFinancingQuality && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>AI 融资质量观察 —— 信用周期待验证，发债不是泡沫</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。冻结期不能偷偷加功能。不增加 V5 AI 债务指标。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{aiFinancingQuality.id}｜{aiFinancingQuality.hfqHypothesis?.id}　{aiFinancingQuality.hfqHypothesis?.claim}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{aiFinancingQuality.oneQuestion}</div>
+                <div>{aiFinancingQuality.trueAlert}</div>
+                <div style={{ color: '#8e8e93' }}>{aiFinancingQuality.hfqHypothesis?.place}</div>
+              </div>
+            }
+          />
+          <Alert
+            type="info"
+            style={{ marginTop: 12 }}
+            message={<Text strong>现在能下的判断，和不能下的判断</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{aiFinancingQuality.hfqHypothesis?.cannotConclude}</div>
+                <div>{aiFinancingQuality.hfqHypothesis?.canConclude}</div>
+                <div>{aiFinancingQuality.hfqHypothesis?.oldAsk}</div>
+                <div>{aiFinancingQuality.hfqHypothesis?.nowAsk}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFinancingQuality.firstJudgment?.heading}
+          </div>
+          <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
+            <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+              <Text strong>① {aiFinancingQuality.firstJudgment?.bondIssuance?.claim}</Text>
+              <div>{aiFinancingQuality.firstJudgment?.bondIssuance?.verdict}</div>
+              {(aiFinancingQuality.firstJudgment?.bondIssuance?.committeeNotes ?? []).map((n: string, i: number) => (
+                <div key={i} style={{ color: '#8e8e93' }}>{n}</div>
+              ))}
+              <div style={{ color: '#8e8e93' }}>来源状态：{aiFinancingQuality.firstJudgment?.bondIssuance?.sourceStatus}</div>
+              <div>{aiFinancingQuality.firstJudgment?.bondIssuance?.conclusion}</div>
+            </div>
+            <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+              <Text strong>② {aiFinancingQuality.firstJudgment?.debtIsNotDanger?.claim}</Text>
+              <div>{aiFinancingQuality.firstJudgment?.debtIsNotDanger?.verdict}</div>
+              {(aiFinancingQuality.firstJudgment?.debtIsNotDanger?.whyWrong ?? []).map((n: string, i: number) => (
+                <div key={i}>{n}</div>
+              ))}
+              <div>{aiFinancingQuality.firstJudgment?.debtIsNotDanger?.realQuestion}</div>
+            </div>
+            <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+              <Text strong>③ {aiFinancingQuality.firstJudgment?.depreciationLag?.claim}</Text>
+              <div>{aiFinancingQuality.firstJudgment?.depreciationLag?.verdict}</div>
+              <div>{aiFinancingQuality.firstJudgment?.depreciationLag?.chanosPoint}</div>
+              <div>{aiFinancingQuality.firstJudgment?.depreciationLag?.qualifier}</div>
+              {(aiFinancingQuality.firstJudgment?.depreciationLag?.realDangers ?? []).map((n: string, i: number) => (
+                <div key={i}>{n}</div>
+              ))}
+            </div>
+          </Space>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFinancingQuality.auditChain?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是新指标。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            {(aiFinancingQuality.auditChain?.steps ?? []).join(' → ')}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>{aiFinancingQuality.auditChain?.ifRunsThrough}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>{aiFinancingQuality.auditChain?.ifBreaks}</div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFinancingQuality.assetLife?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{aiFinancingQuality.assetLife?.deeperThanLag}</div>
+            <div>{aiFinancingQuality.assetLife?.accountingPath}</div>
+            <div>{aiFinancingQuality.assetLife?.economicPath}</div>
+            <div>{aiFinancingQuality.assetLife?.danger}</div>
+            <div style={{ marginBottom: 12 }}>{aiFinancingQuality.assetLife?.whyHardware}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFinancingQuality.depreciationClock?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是新指标，是现有财务数据的组合观察。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiFinancingQuality.depreciationClock?.times ?? []}
+            columns={[
+              { title: '时间', dataIndex: 'id', width: 60 },
+              { title: '观察什么', dataIndex: 'label' },
+            ]}
+          />
+          <Space direction="vertical" size={4} style={{ width: '100%', margin: '8px 0 12px' }}>
+            {(aiFinancingQuality.depreciationClock?.readings ?? []).map((r: any, i: number) => (
+              <div key={i} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text>{r.when}</Text>
+                <span style={{ color: '#8e8e93' }}>　{r.meaning}</span>
+              </div>
+            ))}
+          </Space>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFinancingQuality.fiveLayers?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　研究顺序，不是买卖名单。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 8 }}>
+            {aiFinancingQuality.fiveLayers?.stopSimple}
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiFinancingQuality.fiveLayers?.layers ?? []}
+            columns={[
+              { title: '层', width: 90, render: (_: unknown, r: any) => `${r.id}　${r.title}` },
+              { title: '问什么', dataIndex: 'question' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            对现有持仓影响完全不同
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　AI泡沫不是统一风险。中芯、寒武纪只作观察对照，不进 MAINLINES。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={aiFinancingQuality.holdingRechecks ?? []}
+            columns={[
+              { title: '公司', dataIndex: 'name', width: 140 },
+              {
+                title: '位置',
+                width: 90,
+                render: (_: unknown, r: any) => r.inMainlines ? '主线持仓' : '观察对照',
+              },
+              { title: '核心风险不是', dataIndex: 'coreRiskIsNot' },
+              {
+                title: '该问什么',
+                render: (_: unknown, r: any) => (r.shouldAsk ?? []).join('；'),
+              },
+            ]}
+          />
+          <Space direction="vertical" size={6} style={{ width: '100%', margin: '8px 0 12px' }}>
+            {(aiFinancingQuality.holdingRechecks ?? []).map((h: any) => (
+              <div key={h.name} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text strong>{h.name}</Text>
+                <div>{h.ifStrengthens}</div>
+                <div>{h.ifWeakens}</div>
+                <div style={{ color: '#8e8e93' }}>{h.r4Note}</div>
+              </div>
+            ))}
+          </Space>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            只用已有数据回答
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={aiFinancingQuality.observationTable ?? []}
+            columns={[
+              { title: '观察', dataIndex: 'item', width: 160 },
+              { title: '状态', dataIndex: 'state' },
+              { title: '来源', dataIndex: 'sourceStatus', width: 120 },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            为什么拒绝 PE + RSI + 均线
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiFinancingQuality.whyNotPeRsiMa ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFinancingQuality.futureChains?.heading}
+          </div>
+          <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
+            <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+              <Text strong>{aiFinancingQuality.futureChains?.riskChain?.title}</Text>
+              <div>{(aiFinancingQuality.futureChains?.riskChain?.steps ?? []).join(' → ')}</div>
+              <div>{aiFinancingQuality.futureChains?.riskChain?.meaning}</div>
+            </div>
+            <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+              <Text strong>{aiFinancingQuality.futureChains?.productiveChain?.title}</Text>
+              <div>{(aiFinancingQuality.futureChains?.productiveChain?.steps ?? []).join(' → ')}</div>
+              <div>{aiFinancingQuality.futureChains?.productiveChain?.meaning}</div>
+            </div>
+          </Space>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>现在禁止写成</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiFinancingQuality.forbiddenNow ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>下一步只观察</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiFinancingQuality.nextWatch ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && aiPhaseTwo && (

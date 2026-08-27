@@ -466,9 +466,28 @@ ok('研究区渲染 AI 第二阶段且不产生操作入口',
   /aiPhaseTwo/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('去弱留强')
   && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('研究区渲染融资质量观察且不产生操作入口',
+  /aiFinancingQuality/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('融资质量')
+  && fiveLayerSrc.includes('发债不是泡沫')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('融资质量在当前焦点里排在第二阶段前面',
+  fiveLayerSrc.indexOf('showFocus && aiFinancingQuality')
+    < fiveLayerSrc.indexOf('showFocus && aiPhaseTwo')
+  && fiveLayerSrc.indexOf('showFocus && aiFinancingQuality') > 0)
 ok('驾驶舱把第二阶段传入研究区',
   /aiPhaseTwo=\{data\.aiPhaseTwo\}/.test(cockpitPageSrc))
+ok('驾驶舱把融资质量传入研究区',
+  /aiFinancingQuality=\{data\.aiFinancingQuality\}/.test(cockpitPageSrc))
+ok('当前焦点改成融资质量必须接受审查，第二阶段仍留在焦点层',
+  cockpitPageSrc.includes('当前焦点 · 融资质量必须接受审查')
+  && cockpitPageSrc.includes('aiPhaseTwo={data.aiPhaseTwo}'))
 ok('快照搬运第二阶段观察', /aiPhaseTwo/.test(webSnapSrc))
+ok('快照搬运融资质量观察', /aiFinancingQuality/.test(webSnapSrc))
+ok('看台第一屏不把融资质量写成必须处理',
+  !lookoutAsmSrc.includes('F-01')
+  && !lookoutAsmSrc.includes('融资质量恶化')
+  && !lookoutSrc.includes('F-01'))
 const htmlRenderSrc = readFileSync(
   new URL('./renderHtml.ts', import.meta.url), 'utf-8',
 )
@@ -480,9 +499,17 @@ ok('HTML 看台仍在仪表盘和 AI 第二阶段之前',
     < htmlRenderSrc.indexOf('<h2>仪表盘</h2>')
   && htmlRenderSrc.indexOf('看台 —— 投资人前台只看这一问')
     < htmlRenderSrc.indexOf('AI 第二阶段观察 —— 去弱留强，等证据'))
+ok('HTML 融资质量观察在第二阶段之前',
+  htmlRenderSrc.indexOf('AI 融资质量观察 —— 信用周期待验证，发债不是泡沫')
+    < htmlRenderSrc.indexOf('AI 第二阶段观察 —— 去弱留强，等证据')
+  && htmlRenderSrc.indexOf('AI 融资质量观察 —— 信用周期待验证，发债不是泡沫') > 0)
 ok('CLI 仍先打看台再打决策驾驶舱',
   /renderLookout\(lookoutForHtml\)/.test(runSrc)
   && runSrc.indexOf('renderLookout(lookoutForHtml)') < runSrc.indexOf('renderDecisionCockpit(v2)'))
+ok('CLI 先打融资质量再打第二阶段',
+  runSrc.indexOf('renderAiFinancingQuality()')
+    < runSrc.indexOf('renderAiPhaseTwo()')
+  && runSrc.indexOf('renderAiFinancingQuality()') > 0)
 ok('研究区渲染组合防守层且不产生操作入口',
   /portfolioDefense/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('组合防守层')
