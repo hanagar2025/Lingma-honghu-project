@@ -191,6 +191,7 @@ const Cockpit: React.FC = () => {
       powerChain={data.powerChain}
       portfolioDefense={data.portfolioDefense}
       ownershipPhilosophy={data.ownershipPhilosophy}
+      dalioPressureTest={data.dalioPressureTest}
       aiFinancingQuality={data.aiFinancingQuality}
       aiPhaseTwo={data.aiPhaseTwo}
       researchPane={pane}
@@ -475,7 +476,7 @@ const Cockpit: React.FC = () => {
                 items={[
                   {
                     key: 'focus',
-                    label: '当前焦点 · 融资质量必须接受审查',
+                    label: '当前焦点 · 宏观判断不能直接指挥资本',
                     children: researchDash(true, 'focus'),
                   },
                   {

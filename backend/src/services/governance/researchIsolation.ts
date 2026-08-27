@@ -51,6 +51,7 @@ export const RESEARCH_MODULES = [
   'research/ownershipPhilosophy.ts',
   'research/aiPhaseTwo.ts',
   'research/aiFinancingQuality.ts',
+  'research/dalioPressureTest.ts',
 ] as const
 
 /**
@@ -71,6 +72,7 @@ export const RESEARCH_FIELD_NAMES = [
   'ownershipPhilosophy', 'lifelineReading', 'priceDropAsks', 'lookout',
   'aiPhaseTwo', 'holdingRechecks', 'nvidiaScenarios', 'hp2Hypothesis',
   'aiFinancingQuality', 'depreciationClock', 'hfqHypothesis',
+  'dalioPressureTest', 'axisFirewall', 'hdlHypothesis',
 ] as const
 
 export interface IsolationFinding {
@@ -182,6 +184,7 @@ export const RESEARCH_TEXT_MARKERS = [
   'P-01', '哲学参考', '长期验证 Ownership',
   'P2-01', 'AI第二阶段', '去弱留强', 'H-P2',
   'F-01', 'H-FQ', '融资质量', '折旧时钟',
+  'T-01', 'H-DL', '达利欧', '反向压力测试',
 ] as const
 
 /**

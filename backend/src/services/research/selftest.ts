@@ -1624,5 +1624,115 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// 达利欧反向压力测试：宏观判断不能直接指挥资本。不改 V4.x。
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    buildDalioPressureTestView, renderDalioPressureTest,
+  } = await import('./dalioPressureTest')
+  const { fingerprint: fp6 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase6 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./dalioPressureTest.ts', import.meta.url), 'utf-8')
+  const T = buildDalioPressureTestView()
+
+  ok('T-01 证据等级是 OBSERVATION', T.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('冻结且 V5 未定义', T.frozen === true && T.v5Undefined === true)
+  ok('只问首先改变哪一根轴，不加新规则',
+    T.oneQuestion.includes('哪一根轴') && T.axisFirewall.notANewRule === true)
+  ok('真正启示不是要分散，而是宏观判断不能摧毁组合',
+    T.trueLesson.includes('不是要分散')
+    && T.trueLesson.includes('未经验证的宏观判断'))
+  ok('达利欧链条跳了事实到解释到市场结果',
+    T.isolation.dalioChain.includes('应该做空')
+    && T.isolation.jumped.join('').includes('事实')
+    && T.isolation.jumped.join('').includes('市场结果')
+    && T.isolation.honghuMap.includes('价格不能迁生命线'))
+  ok('即使宏观判断正确，资本动作仍可能错',
+    T.pressureQuestion.asks.includes('仍然可能是错的')
+    && T.pressureQuestion.answer.includes('完全可能')
+    && T.pressureQuestion.example.notEqual.includes('中际'))
+  ok('前面五项仍强化时不得把 Ownership 从核心改成退出',
+    T.pressureQuestion.example.ifFrontHolds.includes('核心')
+    && T.pressureQuestion.example.ifFrontHolds.includes('退出'))
+  ok('四轴齐备且宏观不能直接跳到 Action',
+    T.fourAxes.axes.map(a => a.axis).join(',') === 'Ownership,Evidence,Exposure,Action'
+    && T.fourAxes.why.includes('不能直接跳到 Action'))
+  ok('分散问的是独立因果链，不是股票只数',
+    T.independence.notAModule === true
+    && T.independence.exampleNames.length === 6
+    && T.independence.oneFactor.includes('一个巨大风险因子')
+    && T.independence.sameThought.includes('不新增任何标的'))
+  ok('本层不新增 MAINLINES 成员',
+    T.independence.sameThought.includes('不新增任何标的进 MAINLINES'))
+  ok('三本账已经存在，不新开第四本',
+    T.threeBooks.alreadyExist.join(',') === 'Decision Quality,Evidence Outcome,Capital Outcome'
+    && T.threeBooks.institutionalized.includes('不新开第四本账')
+    && T.threeBooks.illusion.includes('我赚了'))
+  ok('允许合规+失败+亏损，不标成系统错误',
+    T.threeBooks.allowedRecord.decisionQuality === '合规'
+    && T.threeBooks.allowedRecord.evidenceOutcome === '失败'
+    && T.threeBooks.allowedRecord.not.includes('系统错误')
+    && T.threeBooks.reverseRecord.not.includes('已经被验证'))
+  ok('宏观假设全部 OPEN，政策担忧不是 Sell AI',
+    T.macroHypotheses.length === 6
+    && T.macroHypotheses.every(h => h.status === 'OPEN' && h.sourceStatus === 'UNVERIFIED')
+    && T.macroHypotheses.some(h => h.id === 'MH-05' && h.not.includes('Sell AI'))
+    && T.macroHypotheses.some(h => h.id === 'MH-06' && h.claim.includes('阶段性见顶')))
+  ok('防火墙五条：宏观先改 Exposure，价格什么都不自动改变',
+    T.axisFirewall.items.length === 5
+    && T.axisFirewall.items[0]!.firstAxis.includes('Exposure')
+    && T.axisFirewall.items[3]!.cannotChange.includes('不能改变 Ownership')
+    && T.axisFirewall.items[4]!.trigger.includes('股价暴涨')
+    && T.axisFirewall.items[4]!.firstAxis.includes('什么都不自动改变'))
+  ok('H-DL 只观察，不能让大判断直接指挥资本',
+    T.hdlHypothesis.id === 'H-DL'
+    && T.hdlHypothesis.status === 'OPEN'
+    && T.hdlHypothesis.cannotConclude.includes('直接指挥资本'))
+  ok('AI见顶压力测试必须拦住卖核心',
+    T.aiPeakTest.blocked === true
+    && T.aiPeakTest.whyBlocked.some(x => x.includes('R4'))
+    && T.aiPeakTest.ifSomeoneWritesSell.includes('绕过 V4.x')
+    && T.aiPeakTest.meaning.includes('不需要为此设计 V5'))
+  ok('压缩句与完整链齐备',
+    T.compressed.includes('直接指挥资本')
+    && T.chain.join('→').includes('宏观假设')
+    && T.chain.includes('Action')
+    && T.comeBackInAYear.includes('一年后'))
+  ok('禁止写成卖出、V5、分散模块、改 V4.x',
+    T.forbiddenNow.some(x => x.includes('卖中际'))
+    && T.forbiddenNow.some(x => x.includes('V5'))
+    && T.forbiddenNow.some(x => x.includes('分散投资模块'))
+    && T.forbiddenNow.some(x => x.includes('不得改 V4.x'))
+    && T.forbiddenNow.some(x => x.includes('本层不发令')))
+  ok('导出字段名不含 score/rank/weight',
+    !/\b(score|rank|weight)\s*[:=]/i.test(src))
+  ok('源码钉死否定式：达利欧不是要分散，本层不改 V4.x',
+    src.includes('dalioMeansDiversify: false')
+    && src.includes('thisChangesV4x: false')
+    && src.includes('thisAddsDiversifyModule: false')
+    && src.includes('aiPeakSellsCore: false'))
+
+  const txt = renderDalioPressureTest()
+  ok('渲染含反向压力测试与宏观不能指挥资本',
+    txt.includes('达利欧反向压力测试') && txt.includes('直接指挥资本'))
+  ok('渲染声明不打分不产生动作且不改 V4.x',
+    txt.includes('不打分') && txt.includes('不产生动作') && txt.includes('不改 V4.x'))
+  ok('渲染含四轴、三本账、防火墙与一年后审问',
+    txt.includes('Ownership') && txt.includes('Decision Quality')
+    && txt.includes('防火墙') && txt.includes('一年后回来审问'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(T)))
+  ok('视图 flags 全部钉死否定式',
+    Object.values(T.flags).every(x => x === false))
+
+  const base = loadBase6()
+  const fp = fp6()
+  ok('加入达利欧压力测试后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
