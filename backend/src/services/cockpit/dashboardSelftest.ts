@@ -627,6 +627,12 @@ const obsidianExportSrc = readFileSync(
 const obsidianPullSrc = readFileSync(
   new URL('./obsidianPull.ts', import.meta.url), 'utf-8',
 )
+const macClockInstallSrc = readFileSync(
+  new URL('../../../../scripts/install-mac-clock.sh', import.meta.url), 'utf-8',
+)
+const macClockRunnerSrc = readFileSync(
+  new URL('../../../../scripts/obsidian-from-mac.sh', import.meta.url), 'utf-8',
+)
 const backendPkg = JSON.parse(readFileSync(
   new URL('../../../package.json', import.meta.url), 'utf-8',
 )) as { scripts?: Record<string, string> }
@@ -662,6 +668,20 @@ ok('pull 只搬运已发布快照，默认地址是线上 today.json',
   obsidianPullSrc.includes('https://hhwealth.cc/data/today.json')
   && obsidianPullSrc.includes('它不重新判断')
   && obsidianPullSrc.includes('webSnapshotFile'))
+ok('本机时钟装一次：交易日 09:20 / 15:10，不连 GitHub，不写档案',
+  macClockInstallSrc.includes('09:20')
+  && macClockInstallSrc.includes('15:10')
+  && macClockInstallSrc.includes('ARCHIVE')
+  && macClockInstallSrc.includes('不连 GitHub')
+  && macClockInstallSrc.includes('StartCalendarInterval')
+  && !macClockInstallSrc.includes('git fetch')
+  && !macClockInstallSrc.includes('git pull'))
+ok('本机时钟入口能按北京时间自动选盘前或盘后，且不连 GitHub',
+  macClockRunnerSrc.includes('auto)')
+  && macClockRunnerSrc.includes('Asia/Shanghai')
+  && macClockRunnerSrc.includes('不连 GitHub')
+  && !macClockRunnerSrc.includes('git fetch')
+  && !macClockRunnerSrc.includes('git pull'))
 {
   const vault = buildObsidianVault({ source: 'research-only', date: '2026-08-28' })
   const home = vault.notes.find(n => n.title === '首页')!.body
@@ -744,6 +764,18 @@ ok('pull 只搬运已发布快照，默认地址是线上 today.json',
     && look.includes('今日变化')
     && look.includes('[[结论]]')
     && look.includes('[[变化]]'))
+  const howto = live.notes.find(n => n.title === '打开这里')!.body
+  const archive = live.notes.find(n => n.title === '档案')!.body
+  ok('打开这里说明本机装一次时钟，不连 GitHub，睡着会错过',
+    howto.includes('install-mac-clock.sh install')
+    && howto.includes('不连 GitHub')
+    && howto.includes('睡着会错过')
+    && howto.includes('run-now'))
+  ok('档案说明日常拿数走本机，不经过服务器，也不连 GitHub',
+    archive.includes('install-mac-clock.sh install')
+    && archive.includes('不连 GitHub')
+    && archive.includes('不经过呼和浩特服务器')
+    && archive.includes('睡着会错过'))
 }
 {
   const input = inputFromSnapshot({
