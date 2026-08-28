@@ -46,6 +46,7 @@ import { renderOwnershipPhilosophy, buildOwnershipPhilosophyView } from '../rese
 import { renderAiPhaseTwo, buildAiPhaseTwoView } from '../research/aiPhaseTwo'
 import { renderAiFinancingQuality, buildAiFinancingQualityView } from '../research/aiFinancingQuality'
 import { renderDalioPressureTest, buildDalioPressureTestView } from '../research/dalioPressureTest'
+import { renderAiFourActs, buildAiFourActsView } from '../research/aiFourActs'
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
@@ -388,6 +389,7 @@ async function main(): Promise<void> {
     process.stdout.write(`${renderPowerChain()}\n`)
     process.stdout.write(`${renderPortfolioDefense()}\n`)
     process.stdout.write(`${renderOwnershipPhilosophy()}\n`)
+    process.stdout.write(`${renderAiFourActs()}\n`)
     process.stdout.write(`${renderDalioPressureTest()}\n`)
     process.stdout.write(`${renderAiFinancingQuality()}\n`)
     process.stdout.write(`${renderAiPhaseTwo()}\n`)
@@ -564,6 +566,7 @@ async function main(): Promise<void> {
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      aiFourActs: buildAiFourActsView(),
       dalioPressureTest: buildDalioPressureTestView(),
       aiFinancingQuality: buildAiFinancingQualityView(),
       aiPhaseTwo: buildAiPhaseTwoView(),
@@ -632,6 +635,7 @@ async function main(): Promise<void> {
       powerChain: buildPowerChainView(),
       portfolioDefense: buildPortfolioDefenseView(),
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
+      aiFourActs: buildAiFourActsView(),
       dalioPressureTest: buildDalioPressureTestView(),
       aiFinancingQuality: buildAiFinancingQualityView(),
       aiPhaseTwo: buildAiPhaseTwoView(),
