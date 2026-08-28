@@ -53,6 +53,7 @@ export const RESEARCH_MODULES = [
   'research/aiFinancingQuality.ts',
   'research/dalioPressureTest.ts',
   'research/aiFourActs.ts',
+  'research/aiActTwoPool.ts',
 ] as const
 
 /**
@@ -75,6 +76,7 @@ export const RESEARCH_FIELD_NAMES = [
   'aiFinancingQuality', 'depreciationClock', 'hfqHypothesis',
   'dalioPressureTest', 'axisFirewall', 'hdlHypothesis',
   'aiFourActs', 'profitCenter', 'hpcHypothesis',
+  'aiActTwoPool', 'evidenceMatrix', 'hs2Hypothesis',
 ] as const
 
 export interface IsolationFinding {
@@ -188,6 +190,7 @@ export const RESEARCH_TEXT_MARKERS = [
   'F-01', 'H-FQ', '融资质量', '折旧时钟',
   'T-01', 'H-DL', '达利欧', '反向压力测试',
   'A-01', 'H-PC', '四幕', '利润中心迁移',
+  'S-01', 'H-S2', '第二幕候选', '证据矩阵',
 ] as const
 
 /**

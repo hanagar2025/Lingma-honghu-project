@@ -295,6 +295,8 @@ export interface FiveLayerDashboardProps {
   portfolioDefense?: any
   /** 投资哲学参考。只渲染，不产生任何操作入口 */
   ownershipPhilosophy?: any
+  /** AI 第二幕候选池。只渲染，不产生任何操作入口 */
+  aiActTwoPool?: any
   /** AI 四幕与利润中心迁移。只渲染，不产生任何操作入口 */
   aiFourActs?: any
   /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
@@ -309,7 +311,7 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, aiActTwoPool, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1198,6 +1200,227 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && aiActTwoPool && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>AI 第二幕候选池 —— 证据观察，不是买入</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选动作、不产生买卖。证据等级恒为 OBSERVATION。候选池不是买入池。层级不是买入评分。不改 V4.x。不加 V5。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{aiActTwoPool.id}｜{aiActTwoPool.hs2Hypothesis?.id}　{aiActTwoPool.hs2Hypothesis?.claim}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{aiActTwoPool.oneQuestion}</div>
+                <div>{aiActTwoPool.conclusion}</div>
+                <div style={{ color: '#8e8e93' }}>{aiActTwoPool.hs2Hypothesis?.place}</div>
+              </div>
+            }
+          />
+          <Alert
+            type="info"
+            style={{ marginTop: 12 }}
+            message={<Text strong>这是证据观察池，不是买入池</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                {(aiActTwoPool.whatThisIs ?? []).map((x: string, i: number) => (
+                  <div key={`is-${i}`}>{x}</div>
+                ))}
+                {(aiActTwoPool.whatThisIsNot ?? []).map((x: string, i: number) => (
+                  <div key={`not-${i}`}>{x}</div>
+                ))}
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.notSoftwareSector?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            <div>{aiActTwoPool.notSoftwareSector?.firstFilter}</div>
+            <div>{aiActTwoPool.notSoftwareSector?.noMeaning}</div>
+            <div>{aiActTwoPool.notSoftwareSector?.realMeaning}</div>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="kind"
+            dataSource={aiActTwoPool.notSoftwareSector?.types ?? []}
+            columns={[
+              { title: '类型', dataIndex: 'kind', width: 140 },
+              { title: '代表', dataIndex: 'names', width: 160 },
+              { title: '我们关注什么', dataIndex: 'watch' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>四条研究主线</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiActTwoPool.lines ?? []}
+            columns={[
+              { title: '主线', width: 180, render: (_: unknown, r: any) => `${r.id}　${r.name}` },
+              { title: '候选', render: (_: unknown, r: any) => (r.names ?? []).join(' / ') },
+              { title: '为什么先研究这条', dataIndex: 'why' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.kingdee?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            <div>{aiActTwoPool.kingdee?.notABuy}</div>
+            <div>{aiActTwoPool.kingdee?.ifMigration}</div>
+            {(aiActTwoPool.kingdee?.committeeNotes ?? []).map((n: string, i: number) => (
+              <div key={i}>{n}</div>
+            ))}
+            <div style={{ color: '#8e8e93' }}>来源状态：{aiActTwoPool.kingdee?.sourceStatus}</div>
+            {(aiActTwoPool.kingdee?.layers ?? []).map((layer: any) => (
+              <div key={layer.id}>{layer.id}. {layer.title}　{layer.note}</div>
+            ))}
+            <div>{aiActTwoPool.kingdee?.chainStarted}</div>
+            <div>{aiActTwoPool.kingdee?.gap}</div>
+            <div>{aiActTwoPool.kingdee?.verdict}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.kingsoft?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            <div>{aiActTwoPool.kingsoft?.why}</div>
+            {(aiActTwoPool.kingsoft?.committeeNotes ?? []).map((n: string, i: number) => (
+              <div key={i}>{n}</div>
+            ))}
+            <div style={{ color: '#8e8e93' }}>来源状态：{aiActTwoPool.kingsoft?.sourceStatus}</div>
+            <div>{aiActTwoPool.kingsoft?.mustDeduct}</div>
+            <div>必须追踪：{(aiActTwoPool.kingsoft?.mustTrack ?? []).join(' → ')}</div>
+            <div>{aiActTwoPool.kingsoft?.ifClears}</div>
+            <div>{aiActTwoPool.kingsoft?.now}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            观察池。不是买入池。全部不进 MAINLINES
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　层级是研究优先顺序，不是买入评分。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={aiActTwoPool.pool ?? []}
+            columns={[
+              { title: '研究优先', dataIndex: 'priority', width: 110 },
+              { title: '公司', dataIndex: 'name', width: 120 },
+              { title: '市场', dataIndex: 'market', width: 60 },
+              { title: '主线', dataIndex: 'line', width: 140 },
+              { title: '为什么先盯', dataIndex: 'why' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.reverseList?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            <div>{aiActTwoPool.reverseList?.why}</div>
+            <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
+              {(aiActTwoPool.reverseList?.items ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div>{aiActTwoPool.reverseList?.danger}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.confirmSignals?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　观察协议，不是修改鸿鹄规则。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 8 }}>
+            {aiActTwoPool.confirmSignals?.allNeeded}
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiActTwoPool.confirmSignals?.signals ?? []}
+            columns={[
+              { title: '信号', width: 140, render: (_: unknown, r: any) => `${r.id}　${r.name}` },
+              { title: '不是', dataIndex: 'isNot', width: 180 },
+              { title: '要看到什么', dataIndex: 'is' },
+            ]}
+          />
+          <div style={{ fontSize: 12, lineHeight: 1.8, margin: '8px 0 12px' }}>
+            {aiActTwoPool.confirmSignals?.whenConfirmed}
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.todayTape?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            {(aiActTwoPool.todayTape?.committeeNotes ?? []).map((n: string, i: number) => (
+              <div key={i}>{n}</div>
+            ))}
+            <div style={{ color: '#8e8e93' }}>来源状态：{aiActTwoPool.todayTape?.sourceStatus}</div>
+            <div>
+              {(aiActTwoPool.todayTape?.labels ?? []).map((x: any) => `${x.tag}：${x.state}`).join('　')}
+            </div>
+            <div>{aiActTwoPool.todayTape?.oneDay}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>每天只问</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={aiActTwoPool.dailyAsks ?? []}
+            columns={[
+              { title: '对象', dataIndex: 'name', width: 140 },
+              { title: '今天只问这一句', dataIndex: 'asks' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiActTwoPool.evidenceMatrix?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　不是评分。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 8 }}>
+            {(aiActTwoPool.evidenceMatrix?.layers ?? []).map((x: any) => x.name).join(' → ')}
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey={(r: any) => `${r.name}-${r.layer}`}
+            dataSource={aiActTwoPool.evidenceMatrix?.cells ?? []}
+            columns={[
+              { title: '公司', dataIndex: 'name', width: 110 },
+              { title: '层', dataIndex: 'layer', width: 120 },
+              { title: '状态', dataIndex: 'state', width: 110 },
+              { title: '缺口或证据', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 12, lineHeight: 1.8, margin: '12px 0' }}>
+            <div>最想深挖：{(aiActTwoPool.hs2Hypothesis?.topThree ?? []).join('、')}。第四个：{aiActTwoPool.hs2Hypothesis?.fourth}。</div>
+            <div>{aiActTwoPool.hs2Hypothesis?.cannotConclude}</div>
+            <div>{aiActTwoPool.hs2Hypothesis?.canConclude}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>现在禁止写成</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiActTwoPool.forbiddenNow ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>下一步只观察</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiActTwoPool.nextWatch ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && aiFourActs && (

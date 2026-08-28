@@ -1848,5 +1848,122 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// AI 第二幕候选池：证据观察，不是买入。不改规则，不进 MAINLINES
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    buildAiActTwoPoolView, renderAiActTwoPool,
+  } = await import('./aiActTwoPool')
+  const { fingerprint: fp8 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase8 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./aiActTwoPool.ts', import.meta.url), 'utf-8')
+  const S = buildAiActTwoPoolView()
+
+  ok('S-01 证据等级是 OBSERVATION', S.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('冻结且 V5 未定义', S.frozen === true && S.v5Undefined === true)
+  ok('只问谁有资格承接资本，不预测软件要涨',
+    S.oneQuestion.includes('谁最有资格承接这笔资本')
+    && S.conclusion.includes('不要提前押软件一定是下一条主线'))
+  ok('候选池不是买入池，层级不是买入评分',
+    S.whatThisIsNot.some(x => x.includes('不是买入池'))
+    && S.whatThisIs.some(x => x.includes('不是买入评分'))
+    && S.flags.poolIsBuyList === false
+    && S.flags.starsAreBuyScore === false
+    && S.flags.candidateEqualsPermission === false)
+  ok('软件板块不是一个行业',
+    S.notSoftwareSector.noMeaning.includes('没有投资意义')
+    && S.notSoftwareSector.realMeaning.includes('盈利兑现')
+    && S.flags.softwareSectorIsOneIndustry === false)
+  ok('四条研究主线先企业AI再办公再金融IT再工业',
+    S.lines.length === 4
+    && S.lines[0]!.name.includes('企业AI')
+    && S.lines[1]!.name.includes('AI办公')
+    && S.lines[2]!.name.includes('金融IT')
+    && S.lines[3]!.name.includes('工业软件'))
+  ok('金蝶不是现在买，AI收入量级仍是缺口',
+    S.kingdee.notABuy.includes('不是现在告诉你买金蝶')
+    && S.kingdee.gap.includes('2.96')
+    && S.kingdee.gap.includes('36.25')
+    && S.kingdee.verdict.includes('Ownership候选')
+    && S.kingdee.sourceStatus === 'PUBLIC_NOT_YET_WIRED'
+    && S.flags.kingdeeMayBuyNow === false)
+  ok('金山办公必须扣掉投资收益，还不是确认冠军',
+    S.kingsoft.mustDeduct.includes('投资收益')
+    && S.kingsoft.now.includes('不是已经确认的新主线冠军')
+    && S.kingsoft.sourceStatus === 'PUBLIC_NOT_YET_WIRED'
+    && S.flags.kingsoftIsConfirmedChampion === false)
+  ok('观察池十二只全部不进 MAINLINES',
+    S.pool.length === 12
+    && S.pool.every(p => p.inMainlines === false)
+    && S.pool.every(p => !MAINLINES.some(m => m.members.some(x => x.name === p.name)))
+    && S.flags.addPoolToMainlines === false)
+  ok('最想深挖金山、金蝶、同花顺，第四个是宝信',
+    S.hs2Hypothesis.topThree[0] === '金山办公'
+    && S.hs2Hypothesis.topThree[1] === '金蝶国际'
+    && S.hs2Hypothesis.topThree[2] === '同花顺'
+    && S.hs2Hypothesis.fourth === '宝信软件')
+  ok('一天港股上涨不能写成资本迁移',
+    S.todayTape.labels.some(x => x.tag === '资本迁移' && x.state === '尚未确认')
+    && S.todayTape.oneDay.includes('一天不能证明趋势')
+    && S.todayTape.sourceStatus === 'UNVERIFIED'
+    && S.flags.oneDayTapeConfirmsMigration === false)
+  ok('四个确认信号必须同时出现，且不是改规则',
+    S.confirmSignals.notARule === true
+    && S.confirmSignals.signals.length === 4
+    && S.confirmSignals.signals[0]!.isNot.includes('一天软件涨')
+    && S.confirmSignals.whenConfirmed.includes('现在一条都还不能当成已经成立'))
+  ok('反向名单挡住第二幕故事配第一幕估值',
+    S.reverseList.danger.includes('第二幕的故事，第一幕的估值')
+    && S.reverseList.items.some(x => x.includes('投资收益'))
+    && S.reverseList.items.some(x => x.includes('纯概念大模型')))
+  ok('九层矩阵不是评分，金蝶资本迁移资格是缺口',
+    S.evidenceMatrix.notAScore === true
+    && S.evidenceMatrix.layers.length === 9
+    && S.evidenceMatrix.cells.some(c =>
+      c.name === '金蝶国际' && c.layer === '资本迁移资格' && c.state === '缺口')
+    && S.evidenceMatrix.cells.every(c =>
+      ['初步证据', '缺口', '尚未可测', '未验证', '战略层未裁定'].includes(c.state)))
+  ok('H-S2 只观察，不能提前押软件是下一条主线',
+    S.hs2Hypothesis.id === 'H-S2'
+    && S.hs2Hypothesis.status === 'OPEN'
+    && S.hs2Hypothesis.cannotConclude.includes('不能提前押软件一定是下一条主线')
+    && S.hs2Hypothesis.place.includes('不新增进 MAINLINES'))
+  ok('禁止写成买入、V5、进 MAINLINES',
+    S.forbiddenNow.some(x => x.includes('买入池'))
+    && S.forbiddenNow.some(x => x.includes('V5'))
+    && S.forbiddenNow.some(x => x.includes('MAINLINES'))
+    && S.forbiddenNow.some(x => x.includes('本层不发令')))
+  ok('导出字段名不含 score/rank/weight',
+    !/\b(score|rank|weight)\s*[:=]/i.test(src))
+  ok('源码钉死否定式：池不是买入，一天不能确认迁移，不进 MAINLINES',
+    src.includes('poolIsBuyList: false')
+    && src.includes('kingdeeMayBuyNow: false')
+    && src.includes('oneDayTapeConfirmsMigration: false')
+    && src.includes('addPoolToMainlines: false')
+    && src.includes('thisChangesV4x: false'))
+
+  const txt = renderAiActTwoPool()
+  ok('渲染含第二幕候选池与证据观察',
+    txt.includes('AI第二幕候选池') && txt.includes('证据观察池'))
+  ok('渲染声明不打分不产生买卖且不改 V4.x',
+    txt.includes('不打分') && txt.includes('不产生买卖') && txt.includes('不改 V4.x'))
+  ok('渲染含不是现在买金蝶、一天不能证明趋势、不进 MAINLINES',
+    txt.includes('不是现在告诉你买金蝶')
+    && txt.includes('一天不能证明趋势')
+    && txt.includes('全部不进 MAINLINES'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(S)))
+  ok('视图 flags 全部钉死否定式',
+    Object.values(S.flags).every(x => x === false))
+
+  const base = loadBase8()
+  const fp = fp8()
+  ok('加入第二幕候选池后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)
