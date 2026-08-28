@@ -48,6 +48,8 @@ export interface WebSnapshotInput {
   portfolioDefense?: unknown
   /** 投资哲学参考。不产生动作，不增加规则 */
   ownershipPhilosophy?: unknown
+  /** AI 第二幕候选池。证据观察，不是买入。不产生动作 */
+  aiActTwoPool?: unknown
   /** AI 四幕与利润中心迁移。不产生动作 */
   aiFourActs?: unknown
   /** 达利欧反向压力测试。不产生动作 */
@@ -136,6 +138,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     powerChain: input.powerChain ?? null,
     portfolioDefense: input.portfolioDefense ?? null,
     ownershipPhilosophy: input.ownershipPhilosophy ?? null,
+    aiActTwoPool: input.aiActTwoPool ?? null,
     aiFourActs: input.aiFourActs ?? null,
     dalioPressureTest: input.dalioPressureTest ?? null,
     aiFinancingQuality: input.aiFinancingQuality ?? null,

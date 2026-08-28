@@ -475,10 +475,18 @@ ok('研究区渲染达利欧压力测试且不产生操作入口',
   /dalioPressureTest/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('宏观判断不能直接指挥资本')
   && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('研究区渲染第二幕候选池且不产生操作入口',
+  /aiActTwoPool/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('证据观察，不是买入')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
 ok('研究区渲染四幕观察且不产生操作入口',
   /aiFourActs/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('从卖算力转向卖智能')
   && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('第二幕候选池在当前焦点里排在四幕前面',
+  fiveLayerSrc.indexOf('showFocus && aiActTwoPool')
+    < fiveLayerSrc.indexOf('showFocus && aiFourActs')
+  && fiveLayerSrc.indexOf('showFocus && aiActTwoPool') > 0)
 ok('四幕观察在当前焦点里排在达利欧前面',
   fiveLayerSrc.indexOf('showFocus && aiFourActs')
     < fiveLayerSrc.indexOf('showFocus && dalioPressureTest')
@@ -497,17 +505,27 @@ ok('驾驶舱把融资质量传入研究区',
   /aiFinancingQuality=\{data\.aiFinancingQuality\}/.test(cockpitPageSrc))
 ok('驾驶舱把达利欧压力测试传入研究区',
   /dalioPressureTest=\{data\.dalioPressureTest\}/.test(cockpitPageSrc))
+ok('驾驶舱把第二幕候选池传入研究区',
+  /aiActTwoPool=\{data\.aiActTwoPool\}/.test(cockpitPageSrc))
 ok('驾驶舱把四幕观察传入研究区',
   /aiFourActs=\{data\.aiFourActs\}/.test(cockpitPageSrc))
-ok('当前焦点改成从卖算力转向卖智能，达利欧、融资质量与第二阶段仍留在焦点层',
-  cockpitPageSrc.includes('当前焦点 · 从卖算力转向卖智能')
+ok('当前焦点改成第二幕候选池不是买入池，四幕、达利欧、融资质量与第二阶段仍留在焦点层',
+  cockpitPageSrc.includes('当前焦点 · 第二幕候选池，不是买入池')
+  && cockpitPageSrc.includes('aiFourActs={data.aiFourActs}')
   && cockpitPageSrc.includes('dalioPressureTest={data.dalioPressureTest}')
   && cockpitPageSrc.includes('aiFinancingQuality={data.aiFinancingQuality}')
   && cockpitPageSrc.includes('aiPhaseTwo={data.aiPhaseTwo}'))
 ok('快照搬运第二阶段观察', /aiPhaseTwo/.test(webSnapSrc))
 ok('快照搬运融资质量观察', /aiFinancingQuality/.test(webSnapSrc))
 ok('快照搬运达利欧压力测试', /dalioPressureTest/.test(webSnapSrc))
+ok('快照搬运第二幕候选池', /aiActTwoPool/.test(webSnapSrc))
 ok('快照搬运四幕观察', /aiFourActs/.test(webSnapSrc))
+ok('看台第一屏不把第二幕候选池写成必须处理',
+  !lookoutAsmSrc.includes('S-01')
+  && !lookoutAsmSrc.includes('第二幕候选')
+  && !lookoutAsmSrc.includes('H-S2')
+  && !lookoutSrc.includes('S-01')
+  && !lookoutSrc.includes('第二幕候选'))
 ok('看台第一屏不把四幕观察写成必须处理',
   !lookoutAsmSrc.includes('A-01')
   && !lookoutAsmSrc.includes('利润中心迁移')
@@ -540,6 +558,10 @@ ok('HTML 达利欧压力测试在融资质量之前',
   htmlRenderSrc.indexOf('达利欧反向压力测试 —— 宏观判断不能直接指挥资本')
     < htmlRenderSrc.indexOf('AI 融资质量观察 —— 信用周期待验证，发债不是泡沫')
   && htmlRenderSrc.indexOf('达利欧反向压力测试 —— 宏观判断不能直接指挥资本') > 0)
+ok('HTML 第二幕候选池在四幕之前',
+  htmlRenderSrc.indexOf('AI 第二幕候选池 —— 证据观察，不是买入')
+    < htmlRenderSrc.indexOf('AI 四幕与利润中心迁移 —— 从卖算力转向卖智能')
+  && htmlRenderSrc.indexOf('AI 第二幕候选池 —— 证据观察，不是买入') > 0)
 ok('HTML 四幕观察在达利欧之前',
   htmlRenderSrc.indexOf('AI 四幕与利润中心迁移 —— 从卖算力转向卖智能')
     < htmlRenderSrc.indexOf('达利欧反向压力测试 —— 宏观判断不能直接指挥资本')
@@ -555,6 +577,10 @@ ok('CLI 先打达利欧压力测试再打融资质量',
   runSrc.indexOf('renderDalioPressureTest()')
     < runSrc.indexOf('renderAiFinancingQuality()')
   && runSrc.indexOf('renderDalioPressureTest()') > 0)
+ok('CLI 先打第二幕候选池再打四幕观察',
+  runSrc.indexOf('renderAiActTwoPool()')
+    < runSrc.indexOf('renderAiFourActs()')
+  && runSrc.indexOf('renderAiActTwoPool()') > 0)
 ok('CLI 先打四幕观察再打达利欧压力测试',
   runSrc.indexOf('renderAiFourActs()')
     < runSrc.indexOf('renderDalioPressureTest()')
