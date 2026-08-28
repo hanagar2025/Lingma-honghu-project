@@ -8,7 +8,9 @@
 //
 // 运行：npx tsx backend/src/services/cockpit/dashboardSelftest.ts
 
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { DailyBar, Position } from '../tios/types'
 import { runMsr } from '../msr'
 import { MAINLINES } from '../msr/universe'
@@ -22,6 +24,7 @@ import { buildVerdict } from './verdict'
 import { renderVerdict } from './renderVerdict'
 import { ACTION_TEXT, FORBIDDEN_REASON_PHRASES } from './types'
 import { buildLookoutView, renderLookout } from './lookout'
+import { buildObsidianVault, writeObsidianVault } from './renderObsidian'
 
 let failed = 0
 let passed = 0
@@ -592,6 +595,65 @@ ok('研究区渲染组合防守层且不产生操作入口',
 ok('驾驶舱把组合防守层传入研究区',
   /portfolioDefense=\{data\.portfolioDefense\}/.test(cockpitPageSrc))
 ok('快照搬运组合防守层', /portfolioDefense/.test(webSnapSrc))
+
+const obsidianSrc = readFileSync(
+  new URL('./renderObsidian.ts', import.meta.url), 'utf-8',
+)
+const obsidianExportSrc = readFileSync(
+  new URL('./obsidianExport.ts', import.meta.url), 'utf-8',
+)
+ok('Obsidian 导出是同一份数据的另一个渲染器',
+  obsidianSrc.includes('同一份数据的另一个渲染器')
+  && obsidianSrc.includes('不是新的页面架构'))
+ok('Obsidian 导出不 import makeAction',
+  !obsidianSrc.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n').includes('makeAction')
+  && !obsidianExportSrc.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n').includes('makeAction'))
+ok('Obsidian 导出不含 score/rank/weight 字段名',
+  !/\b(score|rank|weight)\s*[:=]/i.test(obsidianSrc)
+  && !/\b(score|rank|weight)\s*[:=]/i.test(obsidianExportSrc))
+ok('Obsidian 导出不改看台装配层，也不改驾驶舱三层页',
+  !obsidianSrc.includes('LookoutBoard')
+  && !obsidianSrc.includes('Cockpit.tsx')
+  && lookoutSrc.includes('第一层 · 看台')
+  && cockpitPageSrc.includes('第二层 · 依据')
+  && cockpitPageSrc.includes('第三层 · 研究'))
+ok('CLI 在 OBSIDIAN=1 时写本地库',
+  runSrc.includes("process.env.OBSIDIAN === '1'")
+  && runSrc.includes('buildObsidianVault')
+  && runSrc.includes('writeObsidianVault'))
+{
+  const vault = buildObsidianVault({ source: 'research-only', date: '2026-08-28' })
+  const home = vault.notes.find(n => n.title === '首页')!.body
+  const look = vault.notes.find(n => n.title === '看台')!.body
+  const s01 = vault.notes.find(n => n.title === 'S-01 第二幕候选池')!.body
+  const a01 = vault.notes.find(n => n.title === 'A-01 四幕与利润中心')!.body
+  ok('无快照时仍写出研究笔记',
+    vault.source === 'research-only'
+    && vault.notes.some(n => n.title === 'S-01 第二幕候选池')
+    && vault.notes.some(n => n.title === 'A-01 四幕与利润中心')
+    && s01.includes('证据观察池')
+    && a01.includes('利润中心迁移'))
+  ok('首页仍按看台、依据、研究三层排列',
+    home.indexOf('[[看台]]') < home.indexOf('[[依据]]')
+    && home.indexOf('[[依据]]') < home.indexOf('[[S-01 第二幕候选池]]')
+    && home.indexOf('[[S-01 第二幕候选池]]') < home.indexOf('[[A-01 四幕与利润中心]]'))
+  ok('无快照时看台明说尚未生成，并指向研究笔记',
+    look.includes('看台还没有生成')
+    && look.includes('[[S-01 第二幕候选池]]'))
+  ok('Obsidian 笔记 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(vault.notes)))
+  const dir = mkdtempSync(join(tmpdir(), 'honghu-obsidian-'))
+  try {
+    const written = writeObsidianVault(dir, vault.notes)
+    ok('Obsidian 库落到 鸿鹄 文件夹，不覆盖库根目录手写笔记',
+      written.files.every(f => f.includes('/鸿鹄/'))
+      && existsSync(join(dir, '鸿鹄', '首页.md'))
+      && existsSync(join(dir, '鸿鹄', '研究', 'S-01 第二幕候选池.md'))
+      && !existsSync(join(dir, '欢迎.md')))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
 
 // ───────────────────────────────────────────────────────────────
 // 资产层（委员会 2026-08-15 指定为第一层）

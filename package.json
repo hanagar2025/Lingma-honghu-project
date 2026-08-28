@@ -15,6 +15,7 @@
     "web:build": "npm run web:snapshot && npm run build:offline --workspace frontend",
     "web:serve": "npm run serve:offline --workspace frontend",
     "web:lan": "npm run web:snapshot && node scripts/lan-url.mjs && npm run dev:lan --workspace frontend",
+    "obsidian": "npm run obsidian --workspace backend",
     "report": "npm run web:snapshot && node scripts/open-report.mjs",
     "web:preflight": "node scripts/preflight-deploy.mjs",
     "web:package": "node scripts/package-deploy.mjs",
