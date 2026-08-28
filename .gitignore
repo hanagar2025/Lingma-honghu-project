@@ -31,3 +31,5 @@ node_modules
 
 # Obsidian 本地库：由代码重写，不入库。手写笔记不要放进这个目录。
 /backend/src/services/cockpit/data/obsidian
+# 若把库根目录指到本仓库，生成的「鸿鹄」文件夹也不入库。
+/鸿鹄
