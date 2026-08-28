@@ -25,6 +25,7 @@ import { renderVerdict } from './renderVerdict'
 import { ACTION_TEXT, FORBIDDEN_REASON_PHRASES } from './types'
 import { buildLookoutView, renderLookout } from './lookout'
 import { buildObsidianVault, writeObsidianVault } from './renderObsidian'
+import { inputFromSnapshot } from './obsidianExport'
 
 let failed = 0
 let passed = 0
@@ -602,25 +603,44 @@ const obsidianSrc = readFileSync(
 const obsidianExportSrc = readFileSync(
   new URL('./obsidianExport.ts', import.meta.url), 'utf-8',
 )
+const obsidianPullSrc = readFileSync(
+  new URL('./obsidianPull.ts', import.meta.url), 'utf-8',
+)
+const backendPkg = JSON.parse(readFileSync(
+  new URL('../../../package.json', import.meta.url), 'utf-8',
+)) as { scripts?: Record<string, string> }
 ok('Obsidian 导出是同一份数据的另一个渲染器',
   obsidianSrc.includes('同一份数据的另一个渲染器')
   && obsidianSrc.includes('不是新的页面架构'))
 ok('Obsidian 导出不 import makeAction',
   !obsidianSrc.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n').includes('makeAction')
-  && !obsidianExportSrc.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n').includes('makeAction'))
+  && !obsidianExportSrc.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n').includes('makeAction')
+  && !obsidianPullSrc.split('\n').filter(l => l.trimStart().startsWith('import')).join('\n').includes('makeAction'))
 ok('Obsidian 导出不含 score/rank/weight 字段名',
   !/\b(score|rank|weight)\s*[:=]/i.test(obsidianSrc)
-  && !/\b(score|rank|weight)\s*[:=]/i.test(obsidianExportSrc))
+  && !/\b(score|rank|weight)\s*[:=]/i.test(obsidianExportSrc)
+  && !/\b(score|rank|weight)\s*[:=]/i.test(obsidianPullSrc))
 ok('Obsidian 导出不改看台装配层，也不改驾驶舱三层页',
   !obsidianSrc.includes('LookoutBoard')
   && !obsidianSrc.includes('Cockpit.tsx')
   && lookoutSrc.includes('第一层 · 看台')
   && cockpitPageSrc.includes('第二层 · 依据')
   && cockpitPageSrc.includes('第三层 · 研究'))
-ok('CLI 在 OBSIDIAN=1 时写本地库',
+ok('CLI 在 OBSIDIAN=1 时写本地库，并带上结论和变化',
   runSrc.includes("process.env.OBSIDIAN === '1'")
   && runSrc.includes('buildObsidianVault')
-  && runSrc.includes('writeObsidianVault'))
+  && runSrc.includes('writeObsidianVault')
+  && runSrc.includes('changesText')
+  && runSrc.includes('oneLine'))
+ok('本机有 refresh / pre / pull 三条更新入口',
+  (backendPkg.scripts?.['obsidian:refresh'] ?? '').includes('WEB=1')
+  && (backendPkg.scripts?.['obsidian:refresh'] ?? '').includes('OBSIDIAN=1')
+  && (backendPkg.scripts?.['obsidian:pre'] ?? '').includes('SESSION=pre')
+  && (backendPkg.scripts?.['obsidian:pull'] ?? '').includes('obsidianPull'))
+ok('pull 只搬运已发布快照，默认地址是线上 today.json',
+  obsidianPullSrc.includes('https://hhwealth.cc/data/today.json')
+  && obsidianPullSrc.includes('它不重新判断')
+  && obsidianPullSrc.includes('webSnapshotFile'))
 {
   const vault = buildObsidianVault({ source: 'research-only', date: '2026-08-28' })
   const home = vault.notes.find(n => n.title === '首页')!.body
@@ -637,9 +657,16 @@ ok('CLI 在 OBSIDIAN=1 时写本地库',
     home.indexOf('[[看台]]') < home.indexOf('[[依据]]')
     && home.indexOf('[[依据]]') < home.indexOf('[[S-01 第二幕候选池]]')
     && home.indexOf('[[S-01 第二幕候选池]]') < home.indexOf('[[A-01 四幕与利润中心]]'))
+  ok('首页在看台下列出结论和变化',
+    home.indexOf('[[看台]]') < home.indexOf('[[结论]]')
+    && home.indexOf('[[结论]]') < home.indexOf('[[变化]]')
+    && home.indexOf('[[变化]]') < home.indexOf('[[依据]]'))
   ok('无快照时看台明说尚未生成，并指向研究笔记',
     look.includes('看台还没有生成')
     && look.includes('[[S-01 第二幕候选池]]'))
+  ok('无快照时结论和变化明说尚未生成',
+    (vault.notes.find(n => n.title === '结论')?.body ?? '').includes('结论还没有生成')
+    && (vault.notes.find(n => n.title === '变化')?.body ?? '').includes('变化台账还没有生成'))
   ok('Obsidian 笔记 JSON 不含 score/rank/weight 字段名',
     !/"(score|rank|weight)"/i.test(JSON.stringify(vault.notes)))
   const dir = mkdtempSync(join(tmpdir(), 'honghu-obsidian-'))
@@ -649,10 +676,72 @@ ok('CLI 在 OBSIDIAN=1 时写本地库',
       written.files.every(f => f.includes('/鸿鹄/'))
       && existsSync(join(dir, '鸿鹄', '首页.md'))
       && existsSync(join(dir, '鸿鹄', '研究', 'S-01 第二幕候选池.md'))
+      && existsSync(join(dir, '鸿鹄', '结论.md'))
+      && existsSync(join(dir, '鸿鹄', '变化.md'))
       && !existsSync(join(dir, '欢迎.md')))
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+}
+{
+  const stale = buildObsidianVault({
+    source: 'snapshot',
+    date: '2026-08-17',
+    oneLine: '今天必须做 1 件事（全部是仓位纪律，与涨跌判断无关）；新增建仓 0。',
+    verdictText: '今日结论  2026-08-17\n  今天必须做 1 件事',
+    changesText: '【今日变化】2026-08-14 → 2026-08-17\n  ── 持仓 ──',
+    freshness: { beijingToday: '2026-08-28', staleDays: 11, isToday: false },
+  })
+  const look = stale.notes.find(n => n.title === '看台')!.body
+  const home = stale.notes.find(n => n.title === '首页')!.body
+  ok('旧快照没有看台字段时，看台仍写出结论和变化',
+    look.includes('没有看台字段')
+    && look.includes('今天必须做 1 件事')
+    && look.includes('今日变化')
+    && look.includes('【今日变化】2026-08-14 → 2026-08-17')
+    && !look.includes('看台还没有生成'))
+  ok('旧快照看台标明落后天数，并禁止把过期结论当成今日动作令',
+    look.includes('落后 11 天')
+    && look.includes('过期结论不能当成今天的动作令'))
+  ok('旧快照首页用当日一句话回答每天一问',
+    home.includes('今天必须做 1 件事（全部是仓位纪律，与涨跌判断无关）；新增建仓 0。'))
+}
+{
+  const live = buildObsidianVault({
+    source: 'live',
+    date: '2026-08-28',
+    lookoutText: '看台\n  没有。今日维持是经过验证的决策，不是系统没看见。',
+    oneLine: '今天必须做 0 件事；新增建仓 0。',
+    changesText: '【今日变化】2026-08-27 → 2026-08-28\n  无变化。',
+    freshness: { beijingToday: '2026-08-28', staleDays: 0, isToday: true },
+  })
+  const look = live.notes.find(n => n.title === '看台')!.body
+  ok('有看台字段时，看台同时给出变化和总结',
+    look.includes('今日维持是经过验证的决策')
+    && look.includes('当日总结')
+    && look.includes('今天必须做 0 件事')
+    && look.includes('今日变化')
+    && look.includes('[[结论]]')
+    && look.includes('[[变化]]'))
+}
+{
+  const input = inputFromSnapshot({
+    date: '2026-08-17',
+    coreDecision: '优先清偿执行债务',
+    verdict: { oneLine: '今天必须做 1 件事（全部是仓位纪律，与涨跌判断无关）；新增建仓 0。' },
+    changes: {
+      prevDate: '2026-08-14',
+      items: [{
+        scope: 'HOLDING', key: '示例持仓', field: '仓位',
+        from: '1.0%', to: '2.0%', delta: 0.01, kind: 'VALUE',
+      }],
+    },
+  })
+  ok('快照输入抽出当日一句话和变化台账，不依赖看台字段',
+    input.oneLine?.includes('今天必须做 1 件事') === true
+    && (input.changesText ?? '').includes('示例持仓')
+    && input.source === 'snapshot'
+    && !input.lookoutText)
 }
 
 // ───────────────────────────────────────────────────────────────
