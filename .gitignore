@@ -28,3 +28,8 @@ node_modules
 # 外发摘要与 CSV：每个交易日重新生成，且可由代码完整重现。
 # 含金额版本更不该入库。
 /backend/src/services/cockpit/data/share
+
+# Obsidian 本地库：由代码重写，不入库。手写笔记不要放进这个目录。
+/backend/src/services/cockpit/data/obsidian
+# 若把库根目录指到本仓库，生成的「鸿鹄」文件夹也不入库。
+/鸿鹄

@@ -6,6 +6,10 @@
 //   MARKET_ALLOWS=1 npm run cockpit      模拟市场阶段允许建仓
 //   PORTFOLIO=/path/to/x.json npm run cockpit
 //   HTML=1 npm run cockpit               另存自包含 HTML 到 data/reports/（不依赖数据库与登录）
+//   OBSIDIAN=1 npm run cockpit           另写 Obsidian 笔记到 data/obsidian/鸿鹄/（本地阅读口，不是新页面）
+//   npm run obsidian:refresh             真实行情分析后写库（盘后）
+//   npm run obsidian:pre                 盘前简报后写库
+//   npm run obsidian:pull                拉线上 today.json 再写库
 //
 // 市值由最新收盘价 × 股数实时算出，portfolio.json 只存股数与成本价 ——
 // 手抄的市值会过期，而过期的市值会让仓位上限判定失真。
@@ -50,6 +54,7 @@ import { renderAiFourActs, buildAiFourActsView } from '../research/aiFourActs'
 import { renderAiActTwoPool, buildAiActTwoPoolView } from '../research/aiActTwoPool'
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
+import { buildObsidianVault, formatObsidianResult, resolveFreshness, resolveObsidianRoot, writeObsidianVault } from './renderObsidian'
 import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
@@ -685,6 +690,51 @@ async function main(): Promise<void> {
       `\n【网页快照】${webFile}\n`
       + `  浏览器直接读取，无需数据库、无需登录、无需口令。\n`
     )
+  }
+
+  // ── Obsidian 本地库 ──
+  // 同一份数据的另一个渲染器。不新增判据，不改页面架构。
+  // 网页打不开时，用本地笔记读看台、依据和研究。
+  if (process.env.OBSIDIAN === '1') {
+    const vaultDate = dashForHtml?.date ?? lookoutForHtml?.date ?? null
+    const oneLine = verdictForHtml?.oneLine ?? rep.coreDecision ?? null
+    const vault = buildObsidianVault({
+      date: vaultDate,
+      lookout: lookoutForHtml,
+      lookoutText: lookoutForHtml ? renderLookout(lookoutForHtml) : null,
+      decisionText: v2ForHtml ? renderDecisionCockpit(v2ForHtml) : null,
+      verdictText: verdictForHtml ? renderVerdict(verdictForHtml) : null,
+      dashboardText: dashForHtml ? renderDashboard(dashForHtml) : null,
+      oneLine,
+      changesText: vaultDate
+        ? renderChanges(changesForHtml, prevDateForHtml, vaultDate)
+        : null,
+      briefText: briefForWeb,
+      freeze: {
+        currentHash: audit.rules.fingerprint.hash,
+        drifted: audit.rules.drift?.drifted ?? false,
+        detail: audit.rules.drift?.detail,
+      },
+      dataGaps: dashForHtml?.dataGaps ?? rep.dataGaps,
+      source: lookoutForHtml ? 'live' : 'research-only',
+    })
+    const root = resolveObsidianRoot()
+    const written = writeObsidianVault(root, vault.notes)
+    process.stdout.write(
+      `\n【Obsidian 库】${written.root}\n`
+      + `  ${vault.date}　${vault.source}　${written.files.length} 个笔记\n`
+      + `  在 Obsidian 里「打开文件夹作为库」，或把「鸿鹄」文件夹放进已有库。\n`
+      + `  指定现有库：OBSIDIAN_VAULT=路径\n`
+    )
+    process.stdout.write(formatObsidianResult({
+      date: vault.date,
+      source: vault.source,
+      oneLine,
+      hasLookout: Boolean(lookoutForHtml),
+      freshness: resolveFreshness(vault.date),
+      root: written.root,
+      files: written.files.length,
+    }))
   }
 }
 
