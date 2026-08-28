@@ -131,6 +131,13 @@ if [[ -n "$SNAP_DATE" && "$SNAP_DATE" != "$TODAY" ]]; then
 fi
 
 install -o www-data -g www-data -m 644 "$SRC" /var/www/tios/data/today.json
+AGENT=/opt/tios/frontend/public/data/today.agent.md
+if [[ -s "$AGENT" ]]; then
+  install -o www-data -g www-data -m 644 "$AGENT" /var/www/tios/data/today.agent.md
+  echo "已发布 Agent 分享 today.agent.md"
+else
+  echo "⚠ 没有 today.agent.md（旧代码）。其他 Agent 还拿不到稳定链接。"
+fi
 echo "已发布，交易日 $SNAP_DATE"
 INNER
 sudo chmod +x "$REMOTE_DIR/update-snapshot.sh"

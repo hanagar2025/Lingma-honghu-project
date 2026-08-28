@@ -147,6 +147,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     attribution: input.attribution ?? null,
     alternatives: input.alternatives ?? null,
     brief: input.brief ?? null,
+    agentShare: 'data/today.agent.md',
     dashboardText: null,
     changes: { prevDate, items: changes },
     discovery: {
@@ -207,4 +208,15 @@ export function saveWebSnapshot(
 /** 前端静态资源目录。Vite 会把 public/ 原样拷进 dist/ */
 export function webSnapshotFile(repoRoot: string): string {
   return join(repoRoot, 'frontend', 'public', 'data', 'today.json')
+}
+
+/** 给其他 Agent 拉的同一份结果。人看驾驶舱，模型读这个文件。 */
+export function agentShareFile(repoRoot: string): string {
+  return join(repoRoot, 'frontend', 'public', 'data', 'today.agent.md')
+}
+
+export function saveAgentShare(text: string, file: string): string {
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, text.endsWith('\n') ? text : `${text}\n`, 'utf-8')
+  return file
 }

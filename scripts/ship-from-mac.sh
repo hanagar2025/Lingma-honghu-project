@@ -81,6 +81,12 @@ fi
 echo "  服务器代码 $(git log --oneline -1)"
 # 不要再 git fetch GitHub。出一版带新代码的快照。
 FORCE=1 NOPULL=1 ./update-snapshot.sh post
+if [[ -s /opt/tios/frontend/public/data/today.agent.md ]]; then
+  install -o www-data -g www-data -m 644 \
+    /opt/tios/frontend/public/data/today.agent.md \
+    /var/www/tios/data/today.agent.md
+  echo "  已发布 Agent 分享 today.agent.md"
+fi
 tail -n 15 /var/log/tios-update.log | sed 's/^/    /'
 REMOTE
 

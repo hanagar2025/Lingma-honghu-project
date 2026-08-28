@@ -395,6 +395,24 @@ ok('前端区分"拿不到明细"与"确实已清零"',
   /pendingSells\s*===\s*null/.test(cockpitPageSrc))
 ok('前端在离线模式隐藏需要后端的复跑按钮',
   /!offline\.on\s*&&/.test(cockpitPageSrc))
+ok('驾驶舱先报过期快照，再渲染看台',
+  cockpitPageSrc.includes('ClockBanner')
+  && cockpitPageSrc.indexOf('<ClockBanner') < cockpitPageSrc.indexOf('<LookoutBoard'))
+ok('驾驶舱不再要求人在代码目录敲 WEB=1',
+  !cockpitPageSrc.includes('WEB=1 npm run cockpit'))
+const shareBtnSrc = readFileSync(
+  new URL('../../../../frontend/src/components/ShareButton.tsx', import.meta.url), 'utf-8',
+)
+const clockBannerSrc = readFileSync(
+  new URL('../../../../frontend/src/components/ClockBanner.tsx', import.meta.url), 'utf-8',
+)
+ok('过期快照警告写明不是今天的开盘或收盘',
+  clockBannerSrc.includes('这不是今天的开盘或收盘数据')
+  && clockBannerSrc.includes('你不用在代码目录敲命令'))
+ok('分享按钮先给 Agent 链接',
+  shareBtnSrc.includes('复制 Agent 链接')
+  && shareBtnSrc.includes('today.agent.md')
+  && shareBtnSrc.includes('人看驾驶舱'))
 ok('前端显示外围现金口径待裁定',
   /externalCash/.test(cockpitPageSrc) && /未计入仓位上限分母/.test(cockpitPageSrc))
 ok('前端先渲染看台，决策大表收在详细数据里',
@@ -456,6 +474,7 @@ ok('研究区拆成当前焦点 / 上一轮观察 / 结构表',
   ok('组合读法不改写已冻结规则',
     lookV.portfolio.note.includes('不得改写已冻结规则'))
 }
+ok('快照搬运 Agent 分享路径', /agentShare/.test(webSnapSrc))
 ok('快照搬运看台与哲学参考',
   /lookout/.test(webSnapSrc) && /ownershipPhilosophy/.test(webSnapSrc))
 
@@ -549,6 +568,8 @@ const htmlRenderSrc = readFileSync(
 const runSrc = readFileSync(
   new URL('./run.ts', import.meta.url), 'utf-8',
 )
+ok('CLI 在 WEB=1 时写出 Agent 文件',
+  runSrc.includes('saveAgentShare') && runSrc.includes('buildAgentShare'))
 ok('HTML 看台仍在仪表盘和 AI 第二阶段之前',
   htmlRenderSrc.indexOf('看台 —— 投资人前台只看这一问')
     < htmlRenderSrc.indexOf('<h2>仪表盘</h2>')
@@ -1257,6 +1278,28 @@ console.log('\n【外发摘要脱敏】')
   // 产品名
   ok('简报标题使用《鸿鹄理财》', live.includes('《鸿鹄理财》数据摘要'))
   ok('简报落款使用《鸿鹄理财》', live.includes('本摘要由《鸿鹄理财》驾驶舱导出'))
+}
+
+{
+  const { buildAgentShare } = await import('./share')
+  const agent = buildAgentShare({
+    dashboard: dash,
+    verdict,
+    includeAmounts: false,
+    changes: {
+      prevDate: '2026-08-14',
+      items: [{ scope: 'HOLDING', key: '示例', field: '仓位', from: '1%', to: '2%' }],
+    },
+    codeCommit: 'test',
+  })
+  ok('Agent 分享是机器可读，不含给人看的提问模板',
+    agent.includes('kind: agent-share')
+    && agent.includes('audience: machine')
+    && !agent.includes('把这份数据交给外部模型时，请这样问'))
+  ok('Agent 分享带约束且不含 score/rank/weight 字段名',
+    agent.includes('# 约束')
+    && !/"(score|rank|weight)"/i.test(agent))
+  ok('Agent 分享带上变化台账', agent.includes('示例') && agent.includes('1%') && agent.includes('2%'))
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
