@@ -1751,7 +1751,7 @@ try {
     !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
   ok('冻结且 V5 未定义', A.frozen === true && A.v5Undefined === true)
   ok('只问利润中心是否迁移，不加新指标',
-    A.oneQuestion.includes('利润') && A.fourActs.notABuyList === true)
+    A.oneQuestion.includes('资本回报') && A.fourActs.notABuyList === true)
   ok('保留一半：从建设算力进入验证经济回报',
     A.keepHalf.includes('建设算力') && A.keepHalf.includes('经济回报'))
   ok('修正一半：第一幕没结束，融资不是客户没钱，软件不能买',
