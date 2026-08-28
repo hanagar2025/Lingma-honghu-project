@@ -19,6 +19,7 @@ import FiveLayerDashboard, { TodayChanges } from '../components/FiveLayerDashboa
 import LookoutBoard, { type LookoutSection } from '../components/LookoutBoard'
 import TodayVerdict from '../components/TodayVerdict'
 import ShareButton, { ShareHint } from '../components/ShareButton'
+import ClockBanner from '../components/ClockBanner'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -213,6 +214,12 @@ const Cockpit: React.FC = () => {
       }}
     >
     <div className="hh-page">
+      <ClockBanner
+        tradeDate={data.date}
+        generatedAt={data.generatedAt ?? data.offline?.generatedAt}
+        codeCommit={data.codeCommit}
+        session={data.dashboard?.session ?? session}
+      />
       <LookoutBoard
         date={data.date}
         lookout={data.lookout}
@@ -230,9 +237,9 @@ const Cockpit: React.FC = () => {
         />
         <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
         {!offline.on && <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>}
-        {data.brief && <ShareButton brief={data.brief} date={data.date} />}
+        <ShareButton brief={data.brief} date={data.date} />
       </div>
-      {data.brief && <ShareHint />}
+      <ShareHint />
 
       {/* ── 离线快照模式：必须明说，否则会被当成实时接口数据 ── */}
       {offline.on && (
@@ -289,8 +296,8 @@ const Cockpit: React.FC = () => {
 
       {offline.on && (
         <div className="hh-note" style={{ margin: '0 4px 16px' }}>
-          离线模式下切换盘前/盘后与复跑均需后端；要更新快照请在 backend 目录重跑
-          {' '}<Text code>WEB=1 npm run cockpit</Text>
+          人看这一页。数据应由服务器在交易日 09:20 / 15:10 自动写入。
+          若上面的时钟显示落后，说明自动更新没有发布新快照，不是你要在本机敲命令。
         </div>
       )}
 

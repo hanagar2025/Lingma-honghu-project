@@ -30,7 +30,7 @@ import { buildVerdict, type Verdict } from './verdict'
 import { buildDecisionCockpit, renderDecisionCockpit, type DecisionCockpit } from '../decision/cockpitV2'
 import { persistJournal } from '../decision/migrationJournal'
 import { renderVerdict } from './renderVerdict'
-import { buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
+import { buildAgentShare, buildBrief, buildHoldingsCsv, buildNodesCsv } from './share'
 import {
   HYPOTHESES, withLiveData, renderHypotheses, fourLineVerdict, causalLayers,
   pendingVerification, paidGaps, wiringBacklog,
@@ -55,7 +55,7 @@ import { renderAiActTwoPool, buildAiActTwoPoolView } from '../research/aiActTwoP
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildObsidianVault, formatObsidianResult, resolveFreshness, resolveObsidianRoot, writeObsidianVault } from './renderObsidian'
-import { buildWebSnapshot, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
+import { agentShareFile, buildWebSnapshot, saveAgentShare, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
   loadDiscovery, updateDiscovery, saveDiscovery, renderChanges, renderDiscovery,
@@ -686,9 +686,21 @@ async function main(): Promise<void> {
       process.stdout.write(`\n  已删除旧的加密快照（口令模式已废弃）。\n`)
     }
     const webFile = saveWebSnapshot(payload, plainPath)
+    const agentText = buildAgentShare({
+      dashboard: dashForHtml,
+      verdict: verdictForHtml,
+      decisionV2: v2ForHtml,
+      includeAmounts: false,
+      intraday: isIntraday(dashForHtml.date),
+      changes: { prevDate: prevDateForHtml, items: changesForHtml },
+      codeCommit: typeof payload.codeCommit === 'string' ? payload.codeCommit : null,
+    })
+    const agentFile = saveAgentShare(agentText, agentShareFile(repoRoot))
     process.stdout.write(
       `\n【网页快照】${webFile}\n`
       + `  浏览器直接读取，无需数据库、无需登录、无需口令。\n`
+      + `【Agent 链接】${agentFile}\n`
+      + `  其他 Agent 读这个文件。人看驾驶舱，不要把看台截图发给模型。\n`
     )
   }
 

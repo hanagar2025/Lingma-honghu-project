@@ -10,6 +10,7 @@ node_modules
 
 # 离线网页快照：每个交易日重新生成，由 npm run web 自动产出，不入库。
 /frontend/public/data/today.json
+/frontend/public/data/today.agent.md
 
 # 环境变量与日志
 .env

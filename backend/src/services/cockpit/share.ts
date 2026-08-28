@@ -472,6 +472,98 @@ export function buildBrief(input: ShareInput): string {
   return L.join('\n')
 }
 
+export interface AgentShareInput extends ShareInput {
+  changes?: {
+    prevDate?: string | null
+    items?: readonly { scope?: string; key?: string; field?: string; from?: string; to?: string }[]
+  }
+  codeCommit?: string | null
+}
+
+/**
+ * 给其他 Agent 读的同一份结果。没有给人看的装饰。
+ *
+ * 人留在驾驶舱。模型只拿约束、结论、变化、缺口。
+ * 「怎么问」那种提示词不写在这里 —— 那是给人读的。
+ */
+export function buildAgentShare(input: AgentShareInput): string {
+  const { dashboard: d, verdict: v, decisionV2: v2, includeAmounts = false, intraday = false } = input
+  void includeAmounts
+  const items = input.changes?.items ?? []
+  const L: string[] = []
+  const w = (s = '') => L.push(s)
+  const oneLine = v?.oneLine ?? ''
+  w('---')
+  w('product: 鸿鹄理财')
+  w('kind: agent-share')
+  w('audience: machine')
+  w(`date: ${d.date}`)
+  w(`session: ${d.session === 'PRE_OPEN' ? 'pre' : 'post'}`)
+  w(`intraday: ${intraday ? 'true' : 'false'}`)
+  w(`commit: ${input.codeCommit || 'unknown'}`)
+  w(`one_line: ${JSON.stringify(oneLine)}`)
+  w('---')
+  w('')
+  w('# 约束')
+  w('- 不要给出买卖时点建议。价格窗口规则已被回测证伪。')
+  w('- 技术指标只能触发复核，不能构成减仓理由。')
+  w('- 不要输出综合评分、总分或排名。')
+  w('- 「不可判断」是合法结论。数据不足时不要补一个答案。')
+  w('- 现在能不能买由闸门决定，不由估值高低决定。闸门全过只是允许，不等于应该。')
+  w('- 人看驾驶舱。你只审这份已经算好的结果：找矛盾、验算术、指出证据不足。')
+  w('')
+  w('# 结果')
+  w(oneLine || '（无当日一句话）')
+  w('')
+  if (v) {
+    w('# 必须执行')
+    if (!v.mustDo.length) w('无')
+    for (const h of v.mustDo) {
+      w(`- ${h.name} ${h.code} ${redactText(h.action)} ${h.legalReason ?? '无'}`)
+    }
+    w('')
+    w('# 复核不动作')
+    if (!v.reviewNoAction.length) w('无')
+    for (const h of v.reviewNoAction) {
+      w(`- ${h.name} ${h.code} 无法定理由 复核${h.saysWhat.length}项`)
+    }
+    w('')
+    w('# 焦点')
+    if (!v.focus.length) w('无')
+    for (const f of v.focus) w(`- ${f.name} ${f.code} ${redactText(f.todo)}`)
+    w('')
+    w('# 答不了')
+    for (const c of v.cannotAnswer) w(`- ${c.question} :: ${c.why}`)
+    w('')
+  }
+  if (v2) {
+    w('# 生命线')
+    w('| name | ownership | evidence | exposure | action | hunter | why |')
+    w('|---|---|---|---|---|---|---|')
+    for (const r of v2.lifeline ?? []) {
+      w(`| ${r.name} | ${r.ownYes ? 'yes' : 'no'} ${OWNERSHIP_TEXT[r.ownership]} | ${EVIDENCE_TONE_TEXT[r.evidenceTone]} | ${r.exposure} | ${CAPITAL_ACTION_TEXT[r.action]} | ${HUNTER_TEXT[r.hunter]} | ${r.oneReason} |`)
+    }
+    w('')
+  }
+  w('# 持仓')
+  w(holdingsTable(d.holdings))
+  w('')
+  w('# 变化')
+  w(`${input.changes?.prevDate ?? '无对照'} -> ${d.date}`)
+  if (!items.length) w('无')
+  for (const c of items) w(`- ${c.scope} ${c.key} ${c.field} : ${c.from} -> ${c.to}`)
+  w('')
+  w('# 缺口')
+  for (const g of d.dataGaps) w(`- ${g}`)
+  w('')
+  w(`new_entry: ${d.actionZone.newEntryCount}`)
+  if (v?.noEntryReasons.length) {
+    for (const r of v.noEntryReasons) w(`- ${r}`)
+  }
+  w('')
+  return L.join('\n')
+}
+
 /** 持仓 CSV。给 Excel / pandas 算的，故只出数值，不出箭头与状态词 */
 export function buildHoldingsCsv(d: Dashboard, includeAmounts = false): string {
   const head = [

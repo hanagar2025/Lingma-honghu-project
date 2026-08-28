@@ -77,8 +77,9 @@ if (liveJs) {
   const feats = [
     ['今日结论', '结论页'],
     ['焦点：今天真正需要', '焦点名单'],
-    ['分享给其他', '一键外发'],
+    ['复制 Agent 链接', 'Agent 链接'],
     ['把数据交给别的软件', '外发说明'],
+    ['这不是今天的开盘或收盘数据', '过期快照警告'],
     ['看台', '看台'],
     ['今日维持是经过验证的决策', '零动作日文案'],
   ]
@@ -102,6 +103,9 @@ if (snap.status === 200 && snap.type.includes('json')) {
     console.log(`  ${F.ok} 快照可取：交易日 ${snapDate}，${kb}KB`)
     if (!d.dashboard?.holdings?.length) bad('快照里没有持仓数据')
     if (typeof d.brief !== 'string') bad('快照里没有外发摘要（brief）')
+    if (d.agentShare !== 'data/today.agent.md') {
+      bad('快照没有 Agent 分享路径 agentShare　→ 需要重新部署带时钟的代码')
+    }
 
     // ── 代码版本核对 ──
     //
@@ -141,6 +145,13 @@ if (snap.status === 200 && snap.type.includes('json')) {
   }
 } else {
   bad(`快照不可取（HTTP ${snap.status}）　→ 未部署明文快照`)
+}
+
+const agent = await get('data/today.agent.md')
+if (agent.status === 200 && (agent.body ?? '').includes('kind: agent-share')) {
+  console.log(`  ${F.ok} Agent 分享可取：data/today.agent.md`)
+} else {
+  bad(`Agent 分享不可取（HTTP ${agent.status}）　→ 其他 Agent 还没有稳定链接`)
 }
 
 // 旧密文残留会让人以为还在加密模式
