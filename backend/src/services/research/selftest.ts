@@ -1734,5 +1734,119 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// AI 四幕：利润中心迁移待验证。不切仓，不买软件，不改规则
+// ══════════════════════════════════════════════════════════════
+{
+  const {
+    buildAiFourActsView, renderAiFourActs,
+  } = await import('./aiFourActs')
+  const { fingerprint: fp7 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase7 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./aiFourActs.ts', import.meta.url), 'utf-8')
+  const A = buildAiFourActsView()
+
+  ok('A-01 证据等级是 OBSERVATION', A.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('冻结且 V5 未定义', A.frozen === true && A.v5Undefined === true)
+  ok('只问利润中心是否迁移，不加新指标',
+    A.oneQuestion.includes('资本回报') && A.fourActs.notABuyList === true)
+  ok('保留一半：从建设算力进入验证经济回报',
+    A.keepHalf.includes('建设算力') && A.keepHalf.includes('经济回报'))
+  ok('修正一半：第一幕没结束，融资不是客户没钱，软件不能买',
+    A.correctHalf.includes('第一幕没有结束')
+    && A.correctHalf.includes('客户没钱')
+    && A.correctHalf.includes('软件反弹'))
+  ok('英伟达财报数字全部标成未接入管道',
+    A.facts.nvidiaEarnings.sourceStatus === 'PUBLIC_NOT_YET_WIRED'
+    && A.facts.nvidiaEarnings.committeeNotes.some(n => n.includes('962'))
+    && A.facts.nvidiaEarnings.verdict.includes('基本面坏了'))
+  ok('融资平台比财报更重要，不等于客户没钱',
+    A.facts.financingPlatform.committeeNotes.some(n => n.includes('5000'))
+    && A.financingIsNotPoverty.wrongRead.includes('客户没钱')
+    && A.financingIsNotPoverty.accurate.includes('基础设施资产融资'))
+  ok('正好四幕且不是买卖名单',
+    A.fourActs.acts.length === 4
+    && A.fourActs.acts[0]!.asks.includes('有没有算力')
+    && A.fourActs.acts[3]!.asks.includes('超过AI成本'))
+  ok('不能只看GPU销量，必须看真实收入和FCF',
+    A.financingIsNotPoverty.mustWatch.includes('自由现金流')
+    && A.financingIsNotPoverty.connectsTo.includes('F-01'))
+  ok('AI很好不等于买所有硬件',
+    A.profitCenter.dangerousThought.includes('买所有AI硬件')
+    && A.profitCenter.whyWrong.includes('资本回报率'))
+  ok('中际继续验证，不因软件涨而卖',
+    A.holdingRechecks.some(h => h.name.includes('中际') && h.inMainlines && h.band === '继续验证'
+      && h.ifStrengthens.includes('该卖了')))
+  ok('软件没有资本迁移资格，浪潮不进 MAINLINES',
+    A.holdingRechecks.some(h => h.name.includes('软件') && !h.inMainlines && h.band.includes('没有资本迁移资格'))
+    && A.holdingRechecks.some(h => h.name.includes('浪潮') && !h.inMainlines)
+    && !MAINLINES.some(m => m.members.some(x => x.name.includes('浪潮') || x.name.includes('Salesforce'))))
+  ok('兆易对照是重新审查，不是软件轮动',
+    A.holdingRechecks.some(h => h.name.includes('兆易') && h.band === '重新审查'))
+  ok('STRETCHED 只停新资本，R4 不能卖',
+    A.holdingRechecks.some(h => h.ifStretched.includes('STRETCHED') && h.r4Note.includes('不能产生卖出')))
+  ok('软件必须问 ARR 到 FCF，板块轮动不能建仓',
+    A.softwareBrake.mustAsk.includes('AI产品ARR')
+    && A.softwareBrake.mustAsk.includes('FCF')
+    && A.softwareBrake.forbidden.includes('价格不能迁生命线'))
+  ok('第五层从卖算力转向卖智能，最后一层是真实利润',
+    A.fifthLayer.rewrite.includes('卖智能')
+    && A.fifthLayer.chain[0] === '电力'
+    && A.fifthLayer.chain[A.fifthLayer.chain.length - 1] === '真实利润')
+  ok('H-PC 只观察，不能证明第一幕见顶或第二幕新冠军',
+    A.hpcHypothesis.id === 'H-PC'
+    && A.hpcHypothesis.status === 'OPEN'
+    && A.migrationHypothesis.cannotProve.some(x => x.includes('第一幕已经见顶'))
+    && A.migrationHypothesis.cannotProve.some(x => x.includes('新冠军')))
+  ok('英伟达财报是第一幕结束的反证',
+    A.migrationHypothesis.nvidiaCounter.reasonable.includes('硬件仍然强')
+    && A.migrationHypothesis.nvidiaCounter.market.includes('6.8'))
+  ok('四个待验证假设全部 OPEN，H4 对接融资杠杆',
+    A.openHypotheses.length === 4
+    && A.openHypotheses.every(h => h.status === 'OPEN' && h.sourceStatus === 'UNVERIFIED')
+    && A.openHypotheses[3]!.id === 'H4'
+    && A.openHypotheses[3]!.watch.includes('债务'))
+  ok('决策结论钉死：不减中际、不买软件、不改规则',
+    A.decisionNow.doNot.some(x => x.includes('减仓中际'))
+    && A.decisionNow.doNot.some(x => x.includes('买软件'))
+    && A.decisionNow.doNot.some(x => x.includes('改变鸿鹄规则'))
+    && A.decisionNow.switchTo.includes('不是从硬件切到软件')
+    && A.decisionNow.frozenState.includes('不追逐叙事迁移'))
+  ok('对照三句：兆易审查、中际验证、软件无资格',
+    A.decisionNow.contrast.some(c => c.name.includes('兆易') && c.meaning.includes('重新审查'))
+    && A.decisionNow.contrast.some(c => c.name.includes('中际') && c.meaning.includes('继续验证'))
+    && A.decisionNow.contrast.some(c => c.name.includes('软件') && c.meaning.includes('没有资本迁移资格')))
+  ok('禁止写成卖出、V5、轮动建仓',
+    A.forbiddenNow.some(x => x.includes('减仓中际'))
+    && A.forbiddenNow.some(x => x.includes('V5'))
+    && A.forbiddenNow.some(x => x.includes('本层不发令')))
+  ok('导出字段名不含 score/rank/weight',
+    !/\b(score|rank|weight)\s*[:=]/i.test(src))
+  ok('源码钉死否定式：不卖中际，不买软件，不改 V4.x',
+    src.includes('sellZhongjiBecauseSoftwareRose: false')
+    && src.includes('buySoftwareBecauseActTwo: false')
+    && src.includes('thisChangesV4x: false')
+    && src.includes('actOneEnded: false'))
+
+  const txt = renderAiFourActs()
+  ok('渲染含四幕标题与利润中心迁移',
+    txt.includes('AI四幕') && txt.includes('利润中心迁移'))
+  ok('渲染声明不打分不产生动作且不改 V4.x',
+    txt.includes('不打分') && txt.includes('不产生动作') && txt.includes('不改 V4.x'))
+  ok('渲染含不减中际、不买软件、只等待证据迁移',
+    txt.includes('减仓中际旭创') && txt.includes('买软件') && txt.includes('只等待证据迁移'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(A)))
+  ok('视图 flags 全部钉死否定式',
+    Object.values(A.flags).every(x => x === false))
+
+  const base = loadBase7()
+  const fp = fp7()
+  ok('加入四幕观察后规则指纹未变',
+    !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

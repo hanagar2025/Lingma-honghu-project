@@ -591,7 +591,7 @@ ok('新增变化台账后规则指纹仍为冻结基线值',
   // 只在动作区多写一行研究结论。
   ok('特征文本表已登记且覆盖关键词',
     RESEARCH_TEXT_MARKERS.length >= 10
-    && ['命题 A', '因果强度', '替代解释', '超级周期', 'H-AI', '组合防守层', 'P-01', 'P2-01', 'F-01', 'H-FQ', 'T-01', 'H-DL']
+    && ['命题 A', '因果强度', '替代解释', '超级周期', 'H-AI', '组合防守层', 'P-01', 'P2-01', 'F-01', 'H-FQ', 'T-01', 'H-DL', 'A-01', 'H-PC']
       .every(m => (RESEARCH_TEXT_MARKERS as readonly string[]).includes(m)))
   const dashJson = JSON.stringify(s1)
   ok('决策层快照 JSON 中不出现研究台账特征文本',
@@ -602,7 +602,7 @@ ok('新增变化台账后规则指纹仍为冻结基线值',
 
   // 字段名表必须随研究模块一起扩 —— 漏登记的字段不受保护
   ok('字段名表覆盖当前研究模块导出的关键字段',
-    ['hypotheses', 'attribution', 'alternatives', 'link2', 'causal', 'portfolioDefense', 'ownershipPhilosophy', 'aiPhaseTwo', 'aiFinancingQuality', 'dalioPressureTest']
+    ['hypotheses', 'attribution', 'alternatives', 'link2', 'causal', 'portfolioDefense', 'ownershipPhilosophy', 'aiPhaseTwo', 'aiFinancingQuality', 'dalioPressureTest', 'aiFourActs']
       .every(f => (RESEARCH_FIELD_NAMES as readonly string[]).includes(f)))
 }
 

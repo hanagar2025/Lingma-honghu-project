@@ -26,6 +26,7 @@ import { renderOwnershipPhilosophy } from '../research/ownershipPhilosophy'
 import { renderAiPhaseTwo } from '../research/aiPhaseTwo'
 import { renderAiFinancingQuality } from '../research/aiFinancingQuality'
 import { renderDalioPressureTest } from '../research/dalioPressureTest'
+import { renderAiFourActs } from '../research/aiFourActs'
 import { renderLookout, type LookoutView } from './lookout'
 
 function esc(s: unknown): string {
@@ -152,6 +153,8 @@ export interface HtmlInput {
   portfolioDefense?: unknown
   /** 投资哲学参考。不产生动作 */
   ownershipPhilosophy?: unknown
+  /** AI 四幕与利润中心迁移。不产生动作 */
+  aiFourActs?: unknown
   /** 达利欧反向压力测试。不产生动作 */
   dalioPressureTest?: unknown
   /** AI 融资质量观察。不产生动作 */
@@ -165,7 +168,7 @@ export interface HtmlInput {
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
-    powerChain, portfolioDefense, ownershipPhilosophy, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, lookout,
+    powerChain, portfolioDefense, ownershipPhilosophy, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, lookout,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -683,6 +686,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (ownershipPhilosophy) {
     w(`</div><div class=card><h2>投资哲学参考 —— 长期验证 Ownership，不增加规则</h2>`)
     w(`<pre class=plain>${esc(renderOwnershipPhilosophy())}</pre>`)
+  }
+
+  if (aiFourActs) {
+    w(`</div><div class=card><h2>AI 四幕与利润中心迁移 —— 从卖算力转向卖智能</h2>`)
+    w(`<pre class=plain>${esc(renderAiFourActs())}</pre>`)
   }
 
   if (dalioPressureTest) {

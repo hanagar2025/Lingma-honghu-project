@@ -295,6 +295,8 @@ export interface FiveLayerDashboardProps {
   portfolioDefense?: any
   /** 投资哲学参考。只渲染，不产生任何操作入口 */
   ownershipPhilosophy?: any
+  /** AI 四幕与利润中心迁移。只渲染，不产生任何操作入口 */
+  aiFourActs?: any
   /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
   dalioPressureTest?: any
   /** AI 融资质量观察。只渲染，不产生任何操作入口 */
@@ -307,7 +309,7 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1196,6 +1198,200 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && aiFourActs && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>AI 四幕与利润中心迁移 —— 从卖算力转向卖智能</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。不改 V4.x。不加 V5。不追逐叙事迁移，只等待证据迁移。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{aiFourActs.id}｜{aiFourActs.hpcHypothesis?.id}　{aiFourActs.hpcHypothesis?.claim}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{aiFourActs.oneQuestion}</div>
+                <div>{aiFourActs.keepHalf}</div>
+                <div>{aiFourActs.correctHalf}</div>
+                <div style={{ color: '#8e8e93' }}>{aiFourActs.hpcHypothesis?.place}</div>
+              </div>
+            }
+          />
+          <Alert
+            type="info"
+            style={{ marginTop: 12 }}
+            message={<Text strong>{aiFourActs.decisionNow?.heading}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                {(aiFourActs.decisionNow?.doNot ?? []).map((x: string, i: number) => (
+                  <div key={i}>{x}</div>
+                ))}
+                <div>{aiFourActs.decisionNow?.should}</div>
+                <div>{aiFourActs.decisionNow?.switchTo}</div>
+                <div>{aiFourActs.decisionNow?.frozenState}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFourActs.facts?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <Text strong>{aiFourActs.facts?.nvidiaEarnings?.claim}</Text>
+            <div>{aiFourActs.facts?.nvidiaEarnings?.verdict}</div>
+            {(aiFourActs.facts?.nvidiaEarnings?.committeeNotes ?? []).map((n: string, i: number) => (
+              <div key={i} style={{ color: '#8e8e93' }}>{n}</div>
+            ))}
+            <div style={{ color: '#8e8e93', marginBottom: 8 }}>来源状态：{aiFourActs.facts?.nvidiaEarnings?.sourceStatus}</div>
+            <Text strong>{aiFourActs.facts?.financingPlatform?.claim}</Text>
+            <div>{aiFourActs.facts?.financingPlatform?.verdict}</div>
+            {(aiFourActs.facts?.financingPlatform?.committeeNotes ?? []).map((n: string, i: number) => (
+              <div key={i} style={{ color: '#8e8e93' }}>{n}</div>
+            ))}
+            <div>{aiFourActs.facts?.financingPlatform?.meaning}</div>
+            <div style={{ color: '#8e8e93', marginBottom: 12 }}>来源状态：{aiFourActs.facts?.financingPlatform?.sourceStatus}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFourActs.fourActs?.heading}
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　研究顺序，不是买卖名单。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 8 }}>
+            {aiFourActs.fourActs?.directionRight}
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiFourActs.fourActs?.acts ?? []}
+            columns={[
+              { title: '幕', width: 90, render: (_: unknown, r: any) => `${r.id}　${r.name}` },
+              { title: '核心问题', dataIndex: 'asks' },
+              { title: '谁赚钱', dataIndex: 'whoEarns' },
+            ]}
+          />
+          <div style={{ fontSize: 12, lineHeight: 1.8, margin: '8px 0 12px' }}>
+            <div>{aiFourActs.fourActs?.oldTrade}</div>
+            <div>{aiFourActs.fourActs?.newTrade}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFourActs.financingIsNotPoverty?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            <div>{aiFourActs.financingIsNotPoverty?.wrongRead}</div>
+            <div>{aiFourActs.financingIsNotPoverty?.accurate}</div>
+            <div>{aiFourActs.financingIsNotPoverty?.newRisk}</div>
+            <div>{aiFourActs.financingIsNotPoverty?.mustWatch}</div>
+            <div>{aiFourActs.financingIsNotPoverty?.connectsTo}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFourActs.profitCenter?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            <div>{aiFourActs.profitCenter?.realAsk}</div>
+            <div>{aiFourActs.profitCenter?.dangerousThought}</div>
+            <div>{aiFourActs.profitCenter?.whyWrong}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            对现有持仓重新分层
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　软件涨不是卖中际。浪潮、软件不进 MAINLINES。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={aiFourActs.holdingRechecks ?? []}
+            columns={[
+              { title: '公司', dataIndex: 'name', width: 180 },
+              { title: '核验带', dataIndex: 'band', width: 140 },
+              {
+                title: '该问什么',
+                render: (_: unknown, r: any) => (r.shouldAsk ?? []).join(' → '),
+              },
+            ]}
+          />
+          <Space direction="vertical" size={6} style={{ width: '100%', margin: '8px 0 12px' }}>
+            {(aiFourActs.holdingRechecks ?? []).map((h: any) => (
+              <div key={h.name} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text strong>{h.name}</Text>
+                <div>{h.ifStrengthens}</div>
+                <div>{h.ifStretched}</div>
+                <div style={{ color: '#8e8e93' }}>{h.r4Note}</div>
+              </div>
+            ))}
+          </Space>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFourActs.softwareBrake?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            <div>{aiFourActs.softwareBrake?.notEqual}</div>
+            <div>必须问：{(aiFourActs.softwareBrake?.mustAsk ?? []).join(' → ')}</div>
+            <div>{aiFourActs.softwareBrake?.forbidden}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {aiFourActs.fifthLayer?.heading}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 12 }}>
+            <div>{aiFourActs.fifthLayer?.rewrite}</div>
+            <div>{(aiFourActs.fifthLayer?.chain ?? []).join(' → ')}</div>
+            <div>{aiFourActs.fifthLayer?.lastLayer}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            四个待验证假设
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　没有一个自动买卖。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={aiFourActs.openHypotheses ?? []}
+            columns={[
+              { title: '假设', width: 70, dataIndex: 'id' },
+              { title: '主张', dataIndex: 'claim' },
+              { title: '状态', dataIndex: 'status', width: 80 },
+              {
+                title: '观察',
+                render: (_: unknown, r: any) => (r.watch ?? []).join('；'),
+              },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            对照
+          </div>
+          <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 12 }}>
+            {(aiFourActs.decisionNow?.contrast ?? []).map((c: any) => (
+              <div key={c.name} style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <Text strong>{c.name}</Text>
+                <span>　{c.meaning}</span>
+              </div>
+            ))}
+          </Space>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>现在禁止写成</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiFourActs.forbiddenNow ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>下一步只观察</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(aiFourActs.nextWatch ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && dalioPressureTest && (
