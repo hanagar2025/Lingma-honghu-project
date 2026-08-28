@@ -492,7 +492,7 @@ export function buildAgentShare(input: AgentShareInput): string {
   const items = input.changes?.items ?? []
   const L: string[] = []
   const w = (s = '') => L.push(s)
-  const oneLine = v?.oneLine ?? d.headline ?? ''
+  const oneLine = v?.oneLine ?? ''
   w('---')
   w('product: 鸿鹄理财')
   w('kind: agent-share')

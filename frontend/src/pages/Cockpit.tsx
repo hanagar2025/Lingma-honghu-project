@@ -239,7 +239,7 @@ const Cockpit: React.FC = () => {
         {!offline.on && <Button onClick={() => load(true)} loading={loading}>直连行情复跑</Button>}
         <ShareButton brief={data.brief} date={data.date} />
       </div>
-      <ShareHint />}
+      <ShareHint />
 
       {/* ── 离线快照模式：必须明说，否则会被当成实时接口数据 ── */}
       {offline.on && (
