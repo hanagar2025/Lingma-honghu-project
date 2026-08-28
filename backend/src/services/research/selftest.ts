@@ -1930,7 +1930,7 @@ try {
     S.hs2Hypothesis.id === 'H-S2'
     && S.hs2Hypothesis.status === 'OPEN'
     && S.hs2Hypothesis.cannotConclude.includes('不能提前押软件一定是下一条主线')
-    && S.hs2Hypothesis.place.includes('不进 MAINLINES'))
+    && S.hs2Hypothesis.place.includes('不新增进 MAINLINES'))
   ok('禁止写成买入、V5、进 MAINLINES',
     S.forbiddenNow.some(x => x.includes('买入池'))
     && S.forbiddenNow.some(x => x.includes('V5'))
