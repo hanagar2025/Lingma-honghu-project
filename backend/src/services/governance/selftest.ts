@@ -602,7 +602,7 @@ ok('新增变化台账后规则指纹仍为冻结基线值',
 
   // 字段名表必须随研究模块一起扩 —— 漏登记的字段不受保护
   ok('字段名表覆盖当前研究模块导出的关键字段',
-    ['hypotheses', 'attribution', 'alternatives', 'link2', 'causal', 'portfolioDefense', 'ownershipPhilosophy', 'aiPhaseTwo', 'aiFinancingQuality', 'dalioPressureTest', 'aiFourActs', 'aiActTwoPool']
+    ['hypotheses', 'attribution', 'alternatives', 'link2', 'causal', 'portfolioDefense', 'ownershipPhilosophy', 'aiPhaseTwo', 'aiFinancingQuality', 'dalioPressureTest', 'aiFourActs', 'aiActTwoPool', 'capexLadder']
       .every(f => (RESEARCH_FIELD_NAMES as readonly string[]).includes(f)))
 }
 

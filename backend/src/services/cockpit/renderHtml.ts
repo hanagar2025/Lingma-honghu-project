@@ -28,6 +28,7 @@ import { renderAiFinancingQuality } from '../research/aiFinancingQuality'
 import { renderDalioPressureTest } from '../research/dalioPressureTest'
 import { renderAiFourActs } from '../research/aiFourActs'
 import { renderAiActTwoPool } from '../research/aiActTwoPool'
+import { renderCapexLadder } from '../research/capexLadder'
 import { renderLookout, type LookoutView } from './lookout'
 
 function esc(s: unknown): string {
@@ -156,6 +157,8 @@ export interface HtmlInput {
   ownershipPhilosophy?: unknown
   /** AI 第二幕候选池。证据观察，不是买入。不产生动作 */
   aiActTwoPool?: unknown
+  /** AI 资本开支产业链迁移体检。逐层观察，不产生动作 */
+  capexLadder?: unknown
   /** AI 四幕与利润中心迁移。不产生动作 */
   aiFourActs?: unknown
   /** 达利欧反向压力测试。不产生动作 */
@@ -171,7 +174,7 @@ export interface HtmlInput {
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
-    powerChain, portfolioDefense, ownershipPhilosophy, aiActTwoPool, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, lookout,
+    powerChain, portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, lookout,
   } = input
   const h = d.headline
   const ms = d.marketStructure
@@ -694,6 +697,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (aiActTwoPool) {
     w(`</div><div class=card><h2>AI 第二幕候选池 —— 证据观察，不是买入</h2>`)
     w(`<pre class=plain>${esc(renderAiActTwoPool())}</pre>`)
+  }
+
+  if (capexLadder) {
+    w(`</div><div class=card><h2>AI 资本开支产业链迁移体检 —— 逐层检查走到哪一层，不预测谁涨</h2>`)
+    w(`<pre class=plain>${esc(renderCapexLadder())}</pre>`)
   }
 
   if (aiFourActs) {

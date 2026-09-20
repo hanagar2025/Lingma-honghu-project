@@ -297,6 +297,8 @@ export interface FiveLayerDashboardProps {
   ownershipPhilosophy?: any
   /** AI 第二幕候选池。只渲染，不产生任何操作入口 */
   aiActTwoPool?: any
+  /** AI 资本开支产业链迁移体检。只渲染，不产生任何操作入口 */
+  capexLadder?: any
   /** AI 四幕与利润中心迁移。只渲染，不产生任何操作入口 */
   aiFourActs?: any
   /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
@@ -311,7 +313,7 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiActTwoPool, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1200,6 +1202,136 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && capexLadder && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>AI 资本开支产业链迁移体检 —— 逐层检查走到哪一层，不预测谁涨</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。证据等级恒为 OBSERVATION。不改 V4.x。不加 V5。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{capexLadder.id}｜{capexLadder.hypothesis}　{capexLadder.claim}　{capexLadder.status}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{capexLadder.object}</div>
+                <div>{capexLadder.verdict?.diffusion}</div>
+                <div>{capexLadder.verdict?.demand}</div>
+                <div>{capexLadder.verdict?.permission}</div>
+                <div>{capexLadder.verdict?.firstCurve}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            四层扩散
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　上一层成立不推出下一层。断在哪一层就停在哪一层。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={capexLadder.layers ?? []}
+            columns={[
+              { title: '层', width: 130, render: (_: unknown, r: any) => `${r.id}　${r.name}` },
+              { title: '问什么', dataIndex: 'asks', width: 220 },
+              { title: '能证明', dataIndex: 'proves' },
+              { title: '推不出', dataIndex: 'doesNotProve' },
+              { title: '当前状态', dataIndex: 'standing', width: 200 },
+            ]}
+          />
+          <div style={{ fontSize: 12, color: '#8e8e93', margin: '6px 0 0' }}>
+            不覆盖：{capexLadder.doesNotCover}
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            七列体检
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　每一列都不能授予资本许可。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={capexLadder.columns ?? []}
+            columns={[
+              { title: '列', width: 110, render: (_: unknown, r: any) => `${r.no}. ${r.name}` },
+              { title: '数据状态', dataIndex: 'state', width: 100 },
+              { title: '来源', dataIndex: 'sourceStatus', width: 210 },
+              { title: '说明', dataIndex: 'what' },
+            ]}
+          />
+          <div style={{ fontSize: 12, lineHeight: 1.8, margin: '6px 0 0' }}>
+            七列里只有相对强度、成交额、回撤修复三列现在有数据，而这三列全是价格类。订单、收入、利润尚未接入；资金恒为不可得。故迁移当前无法被证据确认。
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            名单
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　在册状态决定能不能进流程，与产业逻辑是否顺无关。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="name"
+            dataSource={capexLadder.roster ?? []}
+            columns={[
+              { title: '层', dataIndex: 'layer', width: 60 },
+              { title: '公司', dataIndex: 'name', width: 110 },
+              { title: '节点', dataIndex: 'node', width: 150 },
+              { title: '在册状态', dataIndex: 'standing', width: 130 },
+              { title: '证据', width: 70, render: (_: unknown, r: any) => (r.grade === null ? '无等级' : `${r.grade}级`) },
+              { title: '持仓', width: 70, render: (_: unknown, r: any) => (r.held ? '持仓' : '未持仓') },
+              { title: '结论', dataIndex: 'verdict' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            需求端证据
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　公开有披露，尚未接入管道。需求强化不能推出资本迁移。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={capexLadder.demand ?? []}
+            columns={[
+              { title: '项目', dataIndex: 'item', width: 170 },
+              { title: '金额口径', dataIndex: 'figure', width: 280 },
+              { title: '来源状态', dataIndex: 'sourceStatus', width: 190 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>必须改掉的口径</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(capexLadder.corrections ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>口径守卫</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{capexLadder.basisGuard?.rule}</div>
+            <div style={{ color: '#8e8e93' }}>{capexLadder.basisGuard?.why}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(capexLadder.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(capexLadder.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && aiActTwoPool && (
