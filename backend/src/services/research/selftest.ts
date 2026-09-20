@@ -1965,5 +1965,138 @@ try {
     !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// C-01 资本开支产业链迁移体检：逐层观察，不打开 Capital Permission
+//
+// 这一块要守住的是三件最容易被绕过的事：
+//   ① 资金列不可得 —— 不许用价格或成交额代理冒充；
+//   ② 不在册标的不得进流程 —— 产业逻辑顺不是资格；
+//   ③ 第三层是研究主线 —— 液冷电源整层不进组合。
+// ══════════════════════════════════════════════════════════════
+{
+  const { buildCapexLadderView, renderCapexLadder } = await import('./capexLadder')
+  const { fingerprint: fp9 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase9 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./capexLadder.ts', import.meta.url), 'utf-8')
+  const C = buildCapexLadderView()
+
+  ok('C-01 证据等级是 OBSERVATION', C.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('H9-10 登记为开放假设，不是结论',
+    C.hypothesis === 'H9-10' && C.status === 'OPEN' && C.pool === '战略观察池')
+  ok('四层齐全且顺序是传导方向',
+    C.layers.length === 4
+    && C.layers.map(x => x.id).join('') === 'L1L2L3L4'
+    && C.layers.map(x => x.no).join('') === '1234')
+  ok('第三层写明是研究主线只研究不进组合',
+    C.layers[2]!.standing.includes('研究主线')
+    && C.layers[2]!.standing.includes('不进组合'))
+  ok('第四层写明无在册标的',
+    C.layers[3]!.standing.includes('无在册标的'))
+  ok('梯子明说不覆盖半导体设备',
+    C.doesNotCover.includes('半导体设备') && C.doesNotCover.includes('不在这四层上'))
+
+  ok('七列齐全，且没有一列能授予资本许可',
+    C.columns.length === 7
+    && C.columns.every(x => x.canGrantPermission === false))
+  ok('资金列恒为不可得，且禁止价格代理',
+    C.columns.some(x => x.name === '资金'
+      && x.state === '不可得'
+      && x.sourceStatus === 'MONEY_RADAR_UNAVAILABLE'
+      && x.what.includes('禁止用价格或成交额代理冒充')))
+  ok('订单、收入、利润三列均为尚未接入',
+    ['订单', '收入', '利润'].every(n => C.columns.some(x => x.name === n
+      && x.state === '尚未接入'
+      && x.sourceStatus === 'PUBLIC_NOT_YET_WIRED')))
+  ok('有数据的三列全是价格类',
+    C.columns.filter(x => x.sourceStatus === 'QUOTE').map(x => x.name).join('/')
+      === '相对强度/成交额/回撤修复')
+
+  ok('名单给每一只标出在册状态',
+    C.roster.length >= 16
+    && C.roster.every(r => ['作战主线在册', '研究主线在册', '在册但C级清退', '不在册'].includes(r.standing)))
+  ok('高澜、同飞、申菱、科士达、科华、生益电子、胜宏一律记为不在册',
+    ['高澜股份', '同飞股份', '申菱环境', '科士达', '科华数据', '生益电子', '胜宏科技']
+      .every(n => C.roster.find(r => r.name === n)?.standing === '不在册'))
+  ok('英维克、麦格米特、欧陆通记为研究主线在册，不是作战',
+    ['英维克', '麦格米特', '欧陆通']
+      .every(n => C.roster.find(r => r.name === n)?.standing === '研究主线在册'))
+  ok('深南在册未持仓，与沪电同节点',
+    C.roster.find(r => r.name === '深南电路')?.standing === '作战主线在册'
+    && C.roster.find(r => r.name === '深南电路')?.held === false
+    && C.roster.find(r => r.name === '深南电路')?.node
+      === C.roster.find(r => r.name === '沪电股份')?.node)
+  ok('澜起与兆易仍写成C级清退，不因扩散翻案',
+    ['澜起科技', '兆易创新']
+      .every(n => C.roster.find(r => r.name === n)?.standing === '在册但C级清退'))
+  ok('不在册者无证据等级 —— 没进流程就没有等级',
+    C.roster.filter(r => r.standing === '不在册').every(r => r.grade === null))
+
+  ok('需求端证据一律记为未接入或未验证',
+    C.demand.every(x => x.sourceStatus === 'PUBLIC_NOT_YET_WIRED' || x.sourceStatus === 'UNVERIFIED'))
+  ok('轨道算力按未验证处理，不与地面租金混算',
+    C.demand.some(x => x.item === '轨道算力' && x.sourceStatus === 'UNVERIFIED'))
+  ok('年化跑数与已实现年收入被明确区分',
+    C.demand.some(x => x.note.includes('年化跑数，不是已实现的年度收入')))
+  ok('三处口径修正都在：跑数、久期、GPU 口径',
+    C.corrections.length === 3
+    && C.corrections.some(x => x.includes('年化跑数'))
+    && C.corrections.some(x => x.includes('90 天'))
+    && C.corrections.some(x => x.includes('不得用月费除以 GPU 数')))
+
+  ok('口径守卫钉住组合口径，拒绝券商口径造集中度',
+    C.basisGuard.rule.includes('组合口径')
+    && C.basisGuard.why.includes('券商口径'))
+  ok('结论明说 Capital Permission 不开，且理由是三道闸门不是价格',
+    C.verdict.permission.includes('Capital Permission 不开')
+    && C.verdict.permission.includes('理由不是价格不好'))
+  ok('结论明说继续守第一曲线，且跑输不是减仓理由',
+    C.verdict.firstCurve.includes('继续守第一曲线')
+    && C.verdict.firstCurve.includes('不是法定减仓理由'))
+  ok('阻塞项覆盖执行债务、熔断、研究主线、不在册、数据缺列',
+    C.blockers.some(x => x.includes('执行债务'))
+    && C.blockers.some(x => x.includes('熔断'))
+    && C.blockers.some(x => x.includes('只研究不进组合'))
+    && C.blockers.some(x => x.includes('永不输出为候选'))
+    && C.blockers.some(x => x.includes('尚未接入')))
+  ok('否定式覆盖接棒、买不在册、升主线、打开许可、跑输减仓',
+    C.doesNotImply.some(x => x.includes('接棒'))
+    && C.doesNotImply.some(x => x.includes('高澜'))
+    && C.doesNotImply.some(x => x.includes('升为作战主线'))
+    && C.doesNotImply.some(x => x.includes('Capital Permission'))
+    && C.doesNotImply.some(x => x.includes('跑输不是法定理由')))
+  ok('导出字段名不含 score/rank/weight',
+    !/\b(score|rank|weight)\s*[:=]/i.test(src))
+  // 这里钉的是返回类型而不是字面量：`(): false` 让编译器也拦住「哪天改成 true」
+  ok('源码钉死否定式：扩散不给许可，价格不迁生命线，不在册不能成候选',
+    src.includes('diffusionGrantsPermission(): false')
+    && src.includes('priceRepairMigratesLifeline(): false')
+    && src.includes('notInUniverseCanBeCandidate(): false')
+    && src.includes('coolingAndPowerEnterPortfolio(): false')
+    && src.includes('moneyRadarWired(): false')
+    && src.includes('videoChangesPosition(): false'))
+
+  const txt = renderCapexLadder()
+  ok('渲染含四层、七列与名单',
+    txt.includes('四层扩散') && txt.includes('七列体检') && txt.includes('名单'))
+  ok('渲染声明不打分不产生动作',
+    txt.includes('不打分') && txt.includes('不产生动作') && txt.includes('OBSERVATION'))
+  ok('渲染写明资金不可得与三列价格类',
+    txt.includes('资金恒为不可得')
+    && txt.includes('这三列全是价格类'))
+  ok('渲染写明 Capital Permission 不开',
+    txt.includes('Capital Permission 不开'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(C)))
+  ok('视图 flags 全部钉死否定式，仅链断即停为真',
+    Object.entries(C.flags).every(([k, v]) => (k === 'chainBreakStopsHere' ? v === true : v === false)))
+
+  const base9 = loadBase9()
+  const fpc = fp9()
+  ok('加入资本开支迁移体检后规则指纹未变',
+    !!base9 && fpc.hash === base9.hash, `${base9?.hash} → ${fpc.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

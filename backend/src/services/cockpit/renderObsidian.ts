@@ -17,6 +17,7 @@ import { homedir } from 'node:os'
 import { DAILY_QUESTION, PHASE, FROZEN_RULE_FINGERPRINT } from '../decision/charter'
 import { renderLookout, type LookoutView } from './lookout'
 import { renderAiActTwoPool } from '../research/aiActTwoPool'
+import { renderCapexLadder } from '../research/capexLadder'
 import { renderAiFourActs } from '../research/aiFourActs'
 import { renderDalioPressureTest } from '../research/dalioPressureTest'
 import { renderAiFinancingQuality } from '../research/aiFinancingQuality'
@@ -65,6 +66,7 @@ export const DEFAULT_OBSIDIAN_DIR = join(HERE, 'data', 'obsidian')
 export const VAULT_FOLDER = '鸿鹄'
 
 const RESEARCH_NOTES = [
+  { title: 'C-01 资本开支迁移体检', render: renderCapexLadder, focus: true },
   { title: 'S-01 第二幕候选池', render: renderAiActTwoPool, focus: true },
   { title: 'A-01 四幕与利润中心', render: renderAiFourActs, focus: true },
   { title: 'T-01 达利欧反向压力测试', render: renderDalioPressureTest, focus: true },

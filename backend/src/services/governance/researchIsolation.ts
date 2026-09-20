@@ -54,6 +54,7 @@ export const RESEARCH_MODULES = [
   'research/dalioPressureTest.ts',
   'research/aiFourActs.ts',
   'research/aiActTwoPool.ts',
+  'research/capexLadder.ts',
 ] as const
 
 /**
@@ -77,6 +78,7 @@ export const RESEARCH_FIELD_NAMES = [
   'dalioPressureTest', 'axisFirewall', 'hdlHypothesis',
   'aiFourActs', 'profitCenter', 'hpcHypothesis',
   'aiActTwoPool', 'evidenceMatrix', 'hs2Hypothesis',
+  'capexLadder', 'examColumns', 'roster', 'h910Hypothesis',
 ] as const
 
 export interface IsolationFinding {

@@ -193,6 +193,7 @@ const Cockpit: React.FC = () => {
       portfolioDefense={data.portfolioDefense}
       ownershipPhilosophy={data.ownershipPhilosophy}
       aiActTwoPool={data.aiActTwoPool}
+      capexLadder={data.capexLadder}
       aiFourActs={data.aiFourActs}
       dalioPressureTest={data.dalioPressureTest}
       aiFinancingQuality={data.aiFinancingQuality}
@@ -485,7 +486,7 @@ const Cockpit: React.FC = () => {
                 items={[
                   {
                     key: 'focus',
-                    label: '当前焦点 · 第二幕候选池，不是买入池',
+                    label: '当前焦点 · 资本开支迁移体检，不是买入名单',
                     children: researchDash(true, 'focus'),
                   },
                   {
