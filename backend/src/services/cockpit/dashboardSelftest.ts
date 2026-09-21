@@ -628,6 +628,46 @@ ok('CLI 先打达利欧压力测试再打融资质量',
   runSrc.indexOf('renderDalioPressureTest()')
     < runSrc.indexOf('renderAiFinancingQuality()')
   && runSrc.indexOf('renderDalioPressureTest()') > 0)
+// ── 账本时效 ──
+//
+// 市值早就不手抄了。但股数与现金仍然是手抄的，记在 portfolio.json 的 asOf 那天。
+// 于是仓位、熔断、单票超限每天照算照报，而账本可能几周没对过 —— 一个准确算出来的
+// 百分比，分母若来自几周前的现金，它的精确只是排版上的精确。
+{
+  const { accountFreshness } = await import('./accountFreshness')
+
+  const fresh = accountFreshness('2026-09-19', '2026-09-21')
+  ok('账本只落后两天 → 不算缺口（跨周末不误报）',
+    fresh.stale === false && fresh.staleDays === 2
+    && fresh.lines.length === 0 && fresh.gaps.length === 0)
+
+  const stale = accountFreshness('2026-08-15', '2026-09-21')
+  ok('账本落后 37 天 → 判为缺口并报出天数',
+    stale.stale === true && stale.staleDays === 37
+    && stale.gaps.some(g => g.includes('落后 37 天')))
+  ok('缺口文案点明分子分母可能已不是今日事实',
+    stale.lines.some(l => l.includes('可能已经不是今天的事实')))
+  ok('缺口文案明说系统不猜差额、不按券商页面反推股数',
+    stale.lines.some(l => l.includes('不会自行猜测差额'))
+    && stale.lines.some(l => l.includes('不按券商页面反推股数')))
+  ok('缺口要求按「账本可能过期」读，不得当成当日资本事实',
+    stale.gaps.some(g => g.includes('不得当成当日资本事实')))
+
+  const noDate = accountFreshness(undefined, '2026-09-21')
+  ok('账本没记日期 → 按缺口处理，不是按新鲜处理',
+    noDate.stale === true && noDate.staleDays === null
+    && noDate.gaps.some(g => g.includes('缺 asOf')))
+
+  ok('账本时效缺口进入 Obsidian 的数据缺口，不只打在命令行',
+    /dataGaps: \[\.\.\.account\.gaps/.test(runSrc))
+  ok('仓位口径区块带着账本时效一起播报',
+    runSrc.indexOf('const account = accountFreshness') > 0
+    && runSrc.indexOf('if (account.stale)')
+      > runSrc.indexOf('【仓位口径】'))
+  ok('守卫不改账本 —— 源码里不出现按现价反推股数的写法',
+    !/quantity\s*=\s*.*\/\s*(px|price)/.test(runSrc))
+}
+
 ok('CLI 先打资本开支迁移体检再打第二幕候选池',
   runSrc.indexOf('renderCapexLadder()')
     < runSrc.indexOf('renderAiActTwoPool()')

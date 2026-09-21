@@ -56,6 +56,7 @@ import { renderCapexLadder, buildCapexLadderView } from '../research/capexLadder
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildObsidianVault, formatObsidianResult, resolveFreshness, resolveObsidianRoot, writeObsidianVault } from './renderObsidian'
+import { accountFreshness } from './accountFreshness'
 import { agentShareFile, buildWebSnapshot, saveAgentShare, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
@@ -73,6 +74,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 export const PORTFOLIO_FILE = join(HERE, 'data', 'portfolio.json')
 
 interface PortfolioFile {
+  /** 账本快照日。股数与现金记于这一天，行情却按今天取 —— 两者落差必须显形 */
+  asOf?: string
   cash: number
   peakAssets: number
   householdAnnualExpense: number | null
@@ -164,6 +167,8 @@ function printReport(rep: CockpitReport): void {
 async function main(): Promise<void> {
   const file = process.env.PORTFOLIO ?? PORTFOLIO_FILE
   const pf = JSON.parse(readFileSync(file, 'utf-8')) as PortfolioFile
+  const account = accountFreshness(pf.asOf)
+  for (const line of account.lines) process.stdout.write(`${line}\n`)
 
   const codes = Array.from(new Set([...allCodes(), ...pf.positions.map(p => p.code)]))
   const benchmarks = Array.from(new Set([...allBenchmarks(), 'sz399006']))
@@ -542,6 +547,11 @@ async function main(): Promise<void> {
       + `    最大单票 ${biggest.name} ${(biggest.marketValue / portfolioTotal * 100).toFixed(2)}%`
       + `（上限 12%）\n`
     )
+    // 百分比必须带着账本时效一起读 —— 一个准确算出来的百分比，
+    // 分母若来自几周前的现金，它的精确只是排版上的精确。
+    if (account.stale) {
+      for (const line of account.lines) process.stdout.write(`  ${line}\n`)
+    }
     if (peakBasis !== 'PORTFOLIO') {
       process.stdout.write(
         `  ⚠ 净值峰值 ${w(pf.peakAssets)} 记于券商账户口径，与组合口径不可比 →\n`
@@ -731,7 +741,7 @@ async function main(): Promise<void> {
         drifted: audit.rules.drift?.drifted ?? false,
         detail: audit.rules.drift?.detail,
       },
-      dataGaps: dashForHtml?.dataGaps ?? rep.dataGaps,
+      dataGaps: [...account.gaps, ...(dashForHtml?.dataGaps ?? rep.dataGaps)],
       source: lookoutForHtml ? 'live' : 'research-only',
     })
     const root = resolveObsidianRoot()
