@@ -81,6 +81,7 @@ export const RESEARCH_FIELD_NAMES = [
   'aiActTwoPool', 'evidenceMatrix', 'hs2Hypothesis',
   'capexLadder', 'examColumns', 'roster', 'h910Hypothesis',
   'macroRiskLights', 'lightBands', 'riskChain', 'specDefects', 'hmrHypothesis',
+  'scenarioGroups', 'breadthQuality', 'contractGap', 'accountBasisAudit', 'finalStateLocks',
 ] as const
 
 export interface IsolationFinding {

@@ -259,6 +259,118 @@ export interface Reading {
   note: string
 }
 
+export type ScenarioGroupId = 'TRIGGER' | 'STRUCTURE' | 'TIME'
+
+export interface ScenarioGroup {
+  id: ScenarioGroupId
+  name: string
+  question: string
+  items: readonly string[]
+  boundary: string
+}
+
+/**
+ * Wilson 的 7100 压力情景拆成三组。
+ *
+ * 三组不能互相替代：
+ *   · 油价和利率恶化，不能替代市场内部广度；
+ *   · 指数仍在高位，不能替代盈利修正；
+ *   · 11 月时间窗，不能替代任何触发因素。
+ */
+export const SCENARIO_GROUPS: readonly ScenarioGroup[] = [
+  {
+    id: 'TRIGGER',
+    name: '触发因素',
+    question: '外部压力有没有继续恶化？',
+    items: ['Brent 油价', '10Y / 30Y 长端利率', '金融条件'],
+    boundary: '只描述风险环境，不回答市场是否已经确认 7100 情景。',
+  },
+  {
+    id: 'STRUCTURE',
+    name: '市场结构',
+    question: '指数表面与内部结构是否继续背离？',
+    items: ['指数位置', '市场内部广度', '个股回撤', '盈利修正'],
+    boundary: '指数新高不能替代广度，广度恶化也不能替代盈利验证。',
+  },
+  {
+    id: 'TIME',
+    name: '时间因素',
+    question: '压力情景有没有进入它原本的时间窗口？',
+    items: ['11 月中期选举窗口'],
+    boundary: '时间窗口只是一枚时钟，不是触发器，也不是卖出理由。',
+  },
+]
+
+export interface BreadthField {
+  field: string
+  status: typeof EXTERNAL_NOT_WIRED | typeof NO_DEFINED_METRIC
+  note: string
+}
+
+/**
+ * Index Level 与 Breadth Quality 必须拆开。
+ *
+ * 这是结构数据契约，不是信号。任何字段接线后仍不得直接生成买卖动作。
+ */
+export const BREADTH_QUALITY: readonly BreadthField[] = [
+  {
+    field: '指数位置',
+    status: EXTERNAL_NOT_WIRED,
+    note: '记录指数相对历史高点与趋势位置；只回答权重指数在哪里。',
+  },
+  {
+    field: '新高 / 新低数量',
+    status: EXTERNAL_NOT_WIRED,
+    note: '记录市场内部上行与下行尾部；指数新高而新低更多，属于集中驱动警告。',
+  },
+  {
+    field: '中位数股票表现',
+    status: EXTERNAL_NOT_WIRED,
+    note: '避免市值加权指数掩盖多数股票的真实表现。',
+  },
+  {
+    field: '行业扩散度',
+    status: NO_DEFINED_METRIC,
+    note: '尚未定义行业上涨家数、盈利上修行业数或相对强度扩散中的哪一种，不能临时挑口径。',
+  },
+  {
+    field: '龙头集中度',
+    status: NO_DEFINED_METRIC,
+    note: '尚未定义市值贡献、涨幅贡献或成交贡献口径，不能用主观印象代替。',
+  },
+]
+
+export interface ContractGap {
+  id: 'M-01 Data/Rule Contract Gap'
+  status: 'OPEN'
+  dataGaps: readonly string[]
+  ruleGaps: readonly string[]
+  resolutionBoundary: string
+}
+
+/**
+ * 不为让灯今天亮起来临时改规则。先登记数据/规则契约缺口，
+ * 等输入、口径与滞后机制都被单独验证后，再决定要不要立项。
+ */
+export const DATA_RULE_CONTRACT_GAP: ContractGap = {
+  id: 'M-01 Data/Rule Contract Gap',
+  status: 'OPEN',
+  dataGaps: [
+    'Brent、盈亏平衡通胀率、10Y、30Y、金融条件指数、指数位置、广度、盈利修正均未接入稳定管道。',
+    '真实资金流免费源缺失，AI 龙头价格与资金同步性不可判定。',
+    'Breadth Quality 五字段中三项未接线、两项连口径都未定义。',
+  ],
+  ruleGaps: [
+    'Brent 95–98 美元未定义，105–110 美元重叠。',
+    '10Y 以 5.0% 为硬切点会被 7bp 波动反复触发。',
+    '尚未定义进入阈值、退出阈值、最短保持期与连续确认次数，因此没有 hysteresis。',
+    '三组情景之间尚未定义 AND / OR 关系，触发、结构、时间不得互相替代。',
+  ],
+  resolutionBoundary:
+    '保持规则指纹不变。不为了让灯今天有颜色而补阈值、加滞后或改 Capital Permission。'
+    + '本缺口只进入研究与数据合同待办，不进入 Decision。',
+}
+
 /**
  * 2026-09-22 的外部读数。全部核到一手或路透/CNBC 转载，
  * 但全部标 EXTERNAL_READ_NOT_WIRED —— 核得到 ≠ 接进来了。
@@ -388,15 +500,15 @@ export const ROTATION_CONFLICT: RotationConflict = {
   wilsonTo: ['更高质量', '更轻资产', '自由现金流更强', '软件 / 金融服务 / 保险 / 医疗服务'],
   committeeMapping: ['光模块', 'PCB/CCL', '电源', '液冷', '数据中心', 'AI 应用'],
   finding:
-    'M-01 与 C-01 方向冲突。Wilson 的换挡是从重资产换到轻资产；'
+    'M-01 与 C-01 方向冲突但可以同时成立。Wilson 的换挡是从重资产换到轻资产；'
     + 'C-01 的梯子是从光模块往更重资产的承载层、供电散热层、数据中心层扩散。'
-    + '两者不是同一个方向，而是相反方向。',
+    + '两者不是同一个方向：一个讨论资本市场给谁估值，一个讨论产业需求流向哪里。',
   why:
     'PCB/CCL、电源、液冷、数据中心的资本密集度高于光模块，自由现金流弱于光模块。'
-    + '若真的照 Wilson 的标准筛 A 股，被筛掉的恰好是那张梯子往下的几层。'
-    + '而且他点名要换出的就是半导体 —— 这不是"AI 主线内部换挡"，这是换出 AI 硬件。',
+    + '因此可能同时发生：AI 需求继续向下游扩散，但资本市场不给这些资本密集型环节更高估值。'
+    + 'Wilson 点名要换出的包括半导体，故不能把他的风格切换偷换成"AI 硬件内部换挡"。',
   handling:
-    '冲突照实登记，两边都不因此获得或失去资格：C-01 的订单、收入、利润三列尚未接入，'
+    '冲突共存，暂不裁决；两边都不因此获得或失去资格：C-01 的订单、收入、利润三列尚未接入，'
     + 'M-01 的六环链条一环未接线，两边都没有能定胜负的证据列。'
     + '把冲突抹平成"都在说换挡"，是这次最需要避免的一步 ——'
     + '一个被抹平的冲突，以后会被当成两份互相印证的证据引用。',
@@ -432,7 +544,7 @@ export const CASH_CLAIM_AUDIT: CashClaimAudit = {
     + '委员会 2026-08-15 已因口径变更判这两条挂单失效。不超限就不是减仓理由，'
     + '哪怕两只加起来确实是同一个风险因子。',
   conclusion:
-    '反弹正是执行未清债务的有利时点。这是"利用反弹提高现金"在本系统里'
+    '反弹改善的是债务执行窗口，不是产生"逢高减仓"信号。这是"利用反弹提高现金"在本系统里'
     + '唯一有法定基础的版本 —— 先把欠着的两笔执行掉，现金自然上来，'
     + '熔断缺口同时补上，而且不用动中际和新易盛，也不用引用 Wilson。',
 }
@@ -447,6 +559,61 @@ export const BASIS_GUARD = {
     + '另：当前账本 asOf 落后于今日，账户时效守卫已判为数据缺口，'
     + '故任何由它推出的百分比都是指示性的，不具备判定效力。',
 }
+
+export const ACCOUNT_BASIS_AUDIT = {
+  status: 'INDICATIVE_ONLY' as const,
+  inputs: {
+    brokerTotalWan: 321.9,
+    positionsValueWan: 275.4,
+    brokerCashWan: 46.5,
+    externalCashWan: 200,
+    source: '委员会 2026-09-22 口头约数；不是已更新的 portfolio.json',
+  },
+  formula:
+    '组合总资产 = 券商总资产 321.9万 + 账户外股票现金 200万 = 521.9万；'
+    + '股票仓位 = 275.4 ÷ 521.9 = 52.8%；总现金 = 46.5 + 200 = 246.5万，现金率 = 47.2%。',
+  correction:
+    '按这组口头约数重算，不是上一版的 51.7% / 48.3%。'
+    + '一级熔断 50% 股票上限对应的指示性缺口约 14.45万，而不是 8.6万。',
+  debtEstimate:
+    '澜起 + 兆易约 33万同样是估算：股数来自 2026-08-15 旧账本，价格来自盘中转述，'
+    + '未形成同一 asOf 的可审计快照。',
+  decisionBoundary:
+    '52.8%、47.2%、14.45万、约33万全部只能标 indicative / 非判定。'
+    + '在更新股数、现金、外部现金归属与同一时点价格之前，不得驱动实际交易。',
+}
+
+export const FINAL_STATE_LOCKS = [
+  {
+    item: 'M-01 宏观风险',
+    status: 'UNDECIDABLE',
+    boundary: '数据可查，但没有完整系统管道、稳定阈值与 hysteresis；不是黄、绿或红。',
+  },
+  {
+    item: 'Wilson',
+    status: 'RESEARCH_HYPOTHESIS',
+    boundary: '周期中段、资本密集型 → 更轻资产 / 高 FCF；不进入 Capital Permission。',
+  },
+  {
+    item: 'C-01 AI 产业链扩散',
+    status: 'INDEPENDENT_RESEARCH_HYPOTHESIS',
+    boundary: '订单、收入、利润尚未完整接入；不因 Wilson 降级，也不因 AI 故事升级。',
+  },
+  {
+    item: '海光 1000 系列',
+    status: 'SECOND_CURVE_EVIDENCE',
+    boundary:
+      '1000 系列 → Edge AI → Physical AI 只登记为第二曲线形成证据；'
+      + '收入与利润尚未验证，研究加分不等于买入权限。',
+  },
+  {
+    item: '当前现金动作',
+    status: 'WAIT_FOR_FRESH_ACCOUNT',
+    boundary:
+      '账本更新后若仍确认一级熔断超限且澜起 / 兆易执行债务成立，则执行债务。'
+      + '不是因为 Wilson 卖，也不是因为看空 AI 卖。',
+  },
+] as const
 
 export const M01_DOES_NOT_IMPLY = [
   '不意味着 7100 是基准预测 —— 它是压力情景，年末目标仍是 8000',
@@ -468,6 +635,7 @@ export const M01_BLOCKERS = [
   '红灯第五条依赖资金同步性，而 Money Radar 恒为不可得 → 红灯永远差一条。',
   '门槛有一个未定义区间（Brent 95–98）与一个重叠区间（105–110）→ 尚不可机械判定。',
   '10Y 在 4.94% 与 5.01% 之间反复 → 黄红边界一周内被多次跨过，灯不能当闸门。',
+  '尚未定义 hysteresis（进入阈值、退出阈值、保持期、连续确认次数）→ 不能让 7bp 波动反复开关。',
   '关闭资本许可的三道闸门与宏观无关 → 宏观转绿也不产生任何额度。',
   '账本 asOf 落后于今日 → 由它推出的仓位百分比只是指示性的。',
 ] as const
@@ -495,6 +663,7 @@ export interface MacroVerdict {
   permission: string
   cash: string
   mainline: string
+  dataContract: string
 }
 
 export function macroVerdict(): MacroVerdict {
@@ -510,8 +679,9 @@ export function macroVerdict(): MacroVerdict {
       + '而中位数个股盈利仍增长约 15%。他的框架词是周期中段切换。'
       + '7100 是压力情景，时间锚是 11 月中期选举，年末目标仍是 8000。',
     rotation:
-      '与 C-01 方向冲突，照实记录。Wilson 要换出的是资本密集型赢家（他点名半导体），'
+      '与 C-01 方向冲突但可以同时成立，冲突共存、暂不裁决。Wilson 要换出的是资本密集型赢家（他点名半导体），'
       + '换入的是轻资产、强自由现金流；而 C-01 的梯子越往下越重资产。'
+      + '可能同时发生：需求继续向下游扩散，但资本市场不给重资产环节更高估值。'
       + '两边都没有能定胜负的证据列，所以两边都不因此获得或失去资格。冲突不抹平。',
     permission:
       '灯不改资本许可。绿灯不开，因为关闭许可的三道闸门是执行债务、一级熔断、'
@@ -519,12 +689,17 @@ export function macroVerdict(): MacroVerdict {
     cash:
       '提现金可以，但理由不能写 Wilson。同一个动作本来就有两条法定通道：'
       + '熔断的股票上限缺口，以及澜起与兆易两笔未执行的债务。'
-      + '反弹正是执行欠账的有利时点 —— 这是"利用反弹提高现金"唯一有法定基础的版本。'
+      + '反弹改善的是债务执行窗口，不是产生"逢高减仓"信号。'
       + '而中际与新易盛在组合口径下未超单票上限，没有法定减仓理由。',
     mainline:
       '主线不变，且不需要寻找替代主线。看到风险不等于必须换主线 ——'
       + '没有新的产业链加资金加相对强度加龙头的同步证据，就没有迁仓权限。'
       + '现金可以是一种资产，空仓焦虑不是买入理由。',
+    dataContract:
+      'M-01 Data/Rule Contract Gap 保持 OPEN。先补数据接口与稳定契约，不改规则指纹，'
+      + '不为了让灯今天有颜色而临时添加阈值或 hysteresis。'
+      + '旧账本重算的 52.8% 股票、47.2% 现金、14.45万熔断缺口和约33万债务都只是 indicative，'
+      + '更新同一 asOf 的账本前不得驱动交易。',
   }
 }
 
@@ -532,6 +707,9 @@ export function buildMacroRiskLightsView() {
   return {
     ...M01,
     chain: RISK_CHAIN,
+    scenarioGroups: SCENARIO_GROUPS,
+    breadthQuality: BREADTH_QUALITY,
+    contractGap: DATA_RULE_CONTRACT_GAP,
     bands: LIGHT_BANDS,
     specDefects: SPEC_DEFECTS,
     lightState: LIGHT_STATE_TODAY,
@@ -540,6 +718,8 @@ export function buildMacroRiskLightsView() {
     rotationConflict: ROTATION_CONFLICT,
     cashAudit: CASH_CLAIM_AUDIT,
     basisGuard: BASIS_GUARD,
+    accountBasisAudit: ACCOUNT_BASIS_AUDIT,
+    finalStateLocks: FINAL_STATE_LOCKS,
     verdict: macroVerdict(),
     moneyRadar: MONEY_RADAR_UNAVAILABLE,
     flags: {
@@ -575,6 +755,28 @@ export function renderMacroRiskLights(): string {
   L.push(`  4. ${d.permission}`)
   L.push(`  5. ${d.cash}`)
   L.push(`  6. ${d.mainline}`)
+  L.push(`  7. ${d.dataContract}`)
+  L.push('')
+  L.push('  ── 7100 压力情景三组（触发、结构、时间不能互相替代）──')
+  for (const g of v.scenarioGroups) {
+    L.push(`  ${g.id}　${g.name}　问：${g.question}`)
+    L.push(`      字段：${g.items.join(' / ')}`)
+    L.push(`      边界：${g.boundary}`)
+  }
+  L.push('')
+  L.push('  ── Breadth Quality（结构数据，不直接生成买卖指令）──')
+  for (const b of v.breadthQuality) {
+    L.push(`  ${b.field}　${b.status}`)
+    L.push(`      ${b.note}`)
+  }
+  L.push('  Index Level 与 Breadth Quality 必须拆开：指数新高 ≠ 市场扩散健康。')
+  L.push('')
+  L.push(`  ── ${v.contractGap.id}　${v.contractGap.status} ──`)
+  L.push('  数据缺口：')
+  for (const x of v.contractGap.dataGaps) L.push(`    · ${x}`)
+  L.push('  规则契约缺口：')
+  for (const x of v.contractGap.ruleGaps) L.push(`    · ${x}`)
+  L.push(`  边界：${v.contractGap.resolutionBoundary}`)
   L.push('')
   L.push('  ── 风险链条六环（逐环标出本系统能不能读到它）──')
   for (const c of v.chain) {
@@ -627,6 +829,19 @@ export function renderMacroRiskLights(): string {
   for (const x of v.cashAudit.lawfulChannels) L.push(`    · ${x}`)
   L.push(`  ${v.cashAudit.concentrationClaim}`)
   L.push(`  ${v.cashAudit.conclusion}`)
+  L.push('')
+  L.push('  ── 旧账本组合口径复算（INDICATIVE_ONLY）──')
+  L.push(`  输入：${v.accountBasisAudit.inputs.source}`)
+  L.push(`  ${v.accountBasisAudit.formula}`)
+  L.push(`  修正：${v.accountBasisAudit.correction}`)
+  L.push(`  债务估算：${v.accountBasisAudit.debtEstimate}`)
+  L.push(`  判定边界：${v.accountBasisAudit.decisionBoundary}`)
+  L.push('')
+  L.push('  ── 最终状态锁 ──')
+  for (const s of v.finalStateLocks) {
+    L.push(`  ${s.item}　${s.status}`)
+    L.push(`      ${s.boundary}`)
+  }
   L.push('')
   L.push('  ── 口径守卫 ──')
   L.push(`  ${v.basisGuard.rule}`)

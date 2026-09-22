@@ -1228,6 +1228,7 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
                 <div>{macroRiskLights.verdict?.permission}</div>
                 <div>{macroRiskLights.verdict?.cash}</div>
                 <div>{macroRiskLights.verdict?.mainline}</div>
+                <div>{macroRiskLights.verdict?.dataContract}</div>
               </div>
             }
           />
@@ -1243,6 +1244,58 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
             <div>{macroRiskLights.lightState?.reading}</div>
             <div>{macroRiskLights.lightState?.systemVerdict}</div>
             <div style={{ color: '#8e8e93' }}>{macroRiskLights.lightState?.why}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            7100 压力情景三组
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　触发、结构、时间不能互相替代。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={macroRiskLights.scenarioGroups ?? []}
+            columns={[
+              { title: '组', width: 150, render: (_: unknown, r: any) => `${r.id}　${r.name}` },
+              { title: '问什么', dataIndex: 'question', width: 220 },
+              { title: '字段', width: 250, render: (_: unknown, r: any) => (r.items ?? []).join(' / ') },
+              { title: '边界', dataIndex: 'boundary' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            Breadth Quality
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　结构数据，不直接生成买卖指令。指数新高 ≠ 市场扩散健康。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="field"
+            dataSource={macroRiskLights.breadthQuality ?? []}
+            columns={[
+              { title: '字段', dataIndex: 'field', width: 180 },
+              { title: '数据契约', dataIndex: 'status', width: 220 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {macroRiskLights.contractGap?.id}　{macroRiskLights.contractGap?.status}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>数据缺口：</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {(macroRiskLights.contractGap?.dataGaps ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div>规则契约缺口：</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {(macroRiskLights.contractGap?.ruleGaps ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div><Text strong>{macroRiskLights.contractGap?.resolutionBoundary}</Text></div>
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
@@ -1353,6 +1406,30 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
             <div>{macroRiskLights.cashAudit?.concentrationClaim}</div>
             <div><Text strong>{macroRiskLights.cashAudit?.conclusion}</Text></div>
           </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            旧账本组合口径复算　{macroRiskLights.accountBasisAudit?.status}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>输入：{macroRiskLights.accountBasisAudit?.inputs?.source}</div>
+            <div>{macroRiskLights.accountBasisAudit?.formula}</div>
+            <div><Text strong>{macroRiskLights.accountBasisAudit?.correction}</Text></div>
+            <div>{macroRiskLights.accountBasisAudit?.debtEstimate}</div>
+            <div style={{ color: '#cf1322' }}>{macroRiskLights.accountBasisAudit?.decisionBoundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>最终状态锁</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={macroRiskLights.finalStateLocks ?? []}
+            columns={[
+              { title: '对象', dataIndex: 'item', width: 180 },
+              { title: '状态', dataIndex: 'status', width: 250 },
+              { title: '边界', dataIndex: 'boundary' },
+            ]}
+          />
 
           <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>口径守卫</div>
           <div style={{ fontSize: 12, lineHeight: 1.8 }}>

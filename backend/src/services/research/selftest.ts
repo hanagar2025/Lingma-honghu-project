@@ -2136,6 +2136,46 @@ try {
     M.chain.some(x => x.link.includes('A 股')
       && x.status === 'UNVERIFIED'
       && x.note.includes('额外一跳')))
+  ok('7100 情景拆成触发、结构、时间三组，三组不能互相替代',
+    M.scenarioGroups.map(x => x.id).join('/') === 'TRIGGER/STRUCTURE/TIME'
+    && M.scenarioGroups.every(x => x.boundary.includes('不') || x.boundary.includes('不能')))
+  ok('触发组覆盖油价、长端利率、金融条件',
+    M.scenarioGroups[0]!.items.some(x => x.includes('Brent'))
+    && M.scenarioGroups[0]!.items.some(x => x.includes('10Y'))
+    && M.scenarioGroups[0]!.items.some(x => x.includes('金融条件')))
+  ok('结构组覆盖指数位置、广度、个股回撤、盈利修正',
+    ['指数位置', '市场内部广度', '个股回撤', '盈利修正']
+      .every(x => M.scenarioGroups[1]!.items.includes(x)))
+  ok('时间组只保留中期选举窗口，不冒充触发器',
+    M.scenarioGroups[2]!.items.length === 1
+    && M.scenarioGroups[2]!.items[0]!.includes('中期选举')
+    && M.scenarioGroups[2]!.boundary.includes('不是触发器'))
+
+  ok('Breadth Quality 五字段齐全且全部未接线或未定义',
+    ['指数位置', '新高 / 新低数量', '中位数股票表现', '行业扩散度', '龙头集中度']
+      .every(x => M.breadthQuality.some(b => b.field === x))
+    && M.breadthQuality.every(b => ['EXTERNAL_READ_NOT_WIRED', 'NO_DEFINED_METRIC'].includes(b.status)))
+  ok('行业扩散与龙头集中口径未定义，不允许临时挑口径',
+    ['行业扩散度', '龙头集中度'].every(x => M.breadthQuality.some(b =>
+      b.field === x && b.status === 'NO_DEFINED_METRIC' && b.note.includes('不能'))))
+  ok('Breadth Quality 明确是结构数据，不直接生成动作',
+    src.includes('这是结构数据契约，不是信号')
+    && src.includes('任何字段接线后仍不得直接生成买卖动作'))
+
+  ok('M-01 Data/Rule Contract Gap 保持开放',
+    M.contractGap.id === 'M-01 Data/Rule Contract Gap'
+    && M.contractGap.status === 'OPEN')
+  ok('契约缺口覆盖数据管道、资金不可得、Breadth Quality',
+    M.contractGap.dataGaps.some(x => x.includes('稳定管道'))
+    && M.contractGap.dataGaps.some(x => x.includes('资金'))
+    && M.contractGap.dataGaps.some(x => x.includes('Breadth Quality')))
+  ok('契约缺口覆盖边界空白、重叠、hysteresis 与三组逻辑',
+    M.contractGap.ruleGaps.some(x => x.includes('未定义') && x.includes('重叠'))
+    && M.contractGap.ruleGaps.some(x => x.includes('hysteresis'))
+    && M.contractGap.ruleGaps.some(x => x.includes('AND / OR')))
+  ok('契约缺口明写保持规则指纹不变且不进 Decision',
+    M.contractGap.resolutionBoundary.includes('保持规则指纹不变')
+    && M.contractGap.resolutionBoundary.includes('不进入 Decision'))
 
   ok('三灯齐全，颜色是绿黄红三档',
     M.bands.length === 3 && M.bands.map(x => x.color).join('/') === 'GREEN/YELLOW/RED')
@@ -2195,13 +2235,20 @@ try {
     M.rotationConflict.wilsonFrom.some(x => x.includes('资本密集'))
     && M.rotationConflict.wilsonTo.some(x => x.includes('轻资产'))
     && M.rotationConflict.finding.includes('方向冲突')
-    && M.rotationConflict.finding.includes('相反方向'))
-  ok('冲突处置明写两边都不因此获得或失去资格，且不抹平',
-    M.rotationConflict.handling.includes('都不因此获得或失去资格')
+    && M.rotationConflict.finding.includes('估值')
+    && M.rotationConflict.finding.includes('产业需求'))
+  ok('冲突处置明写共存暂不裁决、两边都不因此获得或失去资格，且不抹平',
+    M.rotationConflict.handling.includes('冲突共存，暂不裁决')
+    && M.rotationConflict.handling.includes('都不因此获得或失去资格')
     && M.rotationConflict.handling.includes('抹平'))
-  ok('点明 Wilson 要换出的就是半导体，不是 AI 内部换挡',
+  ok('点明 Wilson 要换出的包括半导体，不能偷换成 AI 内部换挡',
     M.rotationConflict.why.includes('半导体')
-    && M.rotationConflict.why.includes('换出 AI 硬件'))
+    && M.rotationConflict.why.includes('不能')
+    && M.rotationConflict.why.includes('AI 硬件内部换挡'))
+  ok('冲突允许同时成立：需求扩散但资本市场不给重资产更高估值',
+    M.rotationConflict.why.includes('同时发生')
+    && M.rotationConflict.why.includes('不给')
+    && M.rotationConflict.why.includes('更高估值'))
 
   ok('提现金主张被判为宏观不是法定理由',
     M.cashAudit.macroIsNotReason.includes('不在法定减仓理由白名单'))
@@ -2213,8 +2260,9 @@ try {
   ok('中际与新易盛被判为未超限故无法定理由',
     M.cashAudit.concentrationClaim.includes('没有超过单票上限')
     && M.cashAudit.concentrationClaim.includes('没有法定理由'))
-  ok('结论指向执行欠账而不是动核心仓',
-    M.cashAudit.conclusion.includes('执行未清债务')
+  ok('结论把反弹写成债务执行窗口改善，不写成逢高减仓',
+    M.cashAudit.conclusion.includes('债务执行窗口')
+    && M.cashAudit.conclusion.includes('不是产生"逢高减仓"信号')
     && M.cashAudit.conclusion.includes('不用动中际和新易盛'))
 
   ok('口径守卫钉住组合口径，并点明委员会给的百分比是券商口径',
@@ -2223,6 +2271,36 @@ try {
     && M.basisGuard.why.includes('券商'))
   ok('口径守卫写明账本落后故百分比只是指示性的',
     M.basisGuard.why.includes('指示性'))
+  ok('按委员会最新口头约数重算：组合 521.9万、股票52.8%、现金47.2%',
+    M.accountBasisAudit.status === 'INDICATIVE_ONLY'
+    && M.accountBasisAudit.formula.includes('521.9万')
+    && M.accountBasisAudit.formula.includes('52.8%')
+    && M.accountBasisAudit.formula.includes('47.2%'))
+  ok('修正上一版 51.7% / 48.3% 与 8.6万缺口',
+    M.accountBasisAudit.correction.includes('不是上一版的 51.7% / 48.3%')
+    && M.accountBasisAudit.correction.includes('14.45万')
+    && M.accountBasisAudit.correction.includes('不是 8.6万'))
+  ok('约33万债务明确是旧股数加盘中转述的非同刻估算',
+    M.accountBasisAudit.debtEstimate.includes('约 33万')
+    && M.accountBasisAudit.debtEstimate.includes('2026-08-15')
+    && M.accountBasisAudit.debtEstimate.includes('同一 asOf'))
+  ok('全部复算数字标为非判定且更新账本前不得驱动交易',
+    M.accountBasisAudit.decisionBoundary.includes('非判定')
+    && M.accountBasisAudit.decisionBoundary.includes('不得驱动实际交易'))
+
+  ok('最终状态锁覆盖 M-01、Wilson、C-01、海光1000、现金动作',
+    ['M-01 宏观风险', 'Wilson', 'C-01 AI 产业链扩散', '海光 1000 系列', '当前现金动作']
+      .every(x => M.finalStateLocks.some(s => s.item === x)))
+  ok('海光1000只记第二曲线证据，研究加分不等于买入权限',
+    M.finalStateLocks.some(s => s.item === '海光 1000 系列'
+      && s.status === 'SECOND_CURVE_EVIDENCE'
+      && s.boundary.includes('收入与利润尚未验证')
+      && s.boundary.includes('研究加分不等于买入权限')))
+  ok('现金动作等待新账本，若条件仍成立则执行债务而不是因为 Wilson 卖',
+    M.finalStateLocks.some(s => s.item === '当前现金动作'
+      && s.status === 'WAIT_FOR_FRESH_ACCOUNT'
+      && s.boundary.includes('账本更新后')
+      && s.boundary.includes('不是因为 Wilson 卖')))
 
   ok('结论明写灯不改资本许可，两头都封',
     M.verdict.permission.includes('绿灯不开')
@@ -2230,11 +2308,12 @@ try {
   ok('结论明写主线不变且不需要寻找替代主线',
     M.verdict.mainline.includes('主线不变')
     && M.verdict.mainline.includes('不需要寻找替代主线'))
-  ok('阻塞项覆盖未接线、资金不可得、门槛缺陷、边界抖动、三道闸门、账本落后',
+  ok('阻塞项覆盖未接线、资金不可得、门槛缺陷、边界抖动、hysteresis、三道闸门、账本落后',
     M.blockers.some(x => x.includes('一环都没接入'))
     && M.blockers.some(x => x.includes('Money Radar'))
     && M.blockers.some(x => x.includes('未定义区间'))
     && M.blockers.some(x => x.includes('4.94%'))
+    && M.blockers.some(x => x.includes('hysteresis'))
     && M.blockers.some(x => x.includes('三道闸门'))
     && M.blockers.some(x => x.includes('asOf')))
   ok('否定式覆盖 7100 非预测、美股跌不等于卖 AI、绿灯不开许可、红灯不卖、与 C-01 方向相反',
@@ -2257,8 +2336,11 @@ try {
     && src.includes('riskRequiresNewMainline(): false'))
 
   const mtxt = renderMacroRiskLights()
-  ok('渲染含六环、三灯、门槛缺陷与灯态',
-    mtxt.includes('风险链条六环')
+  ok('渲染含三组、Breadth Quality、契约缺口、六环、三灯、门槛缺陷与灯态',
+    mtxt.includes('7100 压力情景三组')
+    && mtxt.includes('Breadth Quality')
+    && mtxt.includes('M-01 Data/Rule Contract Gap')
+    && mtxt.includes('风险链条六环')
     && mtxt.includes('三灯')
     && mtxt.includes('门槛缺陷')
     && mtxt.includes('今日灯态'))
@@ -2271,6 +2353,10 @@ try {
     mtxt.includes('六环一环未接线'))
   ok('渲染含换挡方向冲突与提现金法理审查',
     mtxt.includes('换挡方向冲突') && mtxt.includes('法理审查'))
+  ok('渲染含旧账本复算与最终状态锁',
+    mtxt.includes('旧账本组合口径复算')
+    && mtxt.includes('INDICATIVE_ONLY')
+    && mtxt.includes('最终状态锁'))
   ok('视图 JSON 不含 score/rank/weight 字段名',
     !/"(score|rank|weight)"/i.test(JSON.stringify(M)))
   ok('视图 flags 全部钉死否定式，仅现金可以是资产为真',

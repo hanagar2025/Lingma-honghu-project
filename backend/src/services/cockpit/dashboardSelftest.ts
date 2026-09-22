@@ -511,6 +511,21 @@ ok('三灯面板把两头都封写在表面：绿灯不开许可，红灯不产�
 ok('三灯面板并列显示转述读数与系统状态，且不抹平换挡冲突',
   fiveLayerSrc.includes('转述读数与系统状态并列显示，互不替代')
   && fiveLayerSrc.includes('照实登记，不抹平'))
+ok('三灯面板把 7100 拆成触发、结构、时间三组且不互相替代',
+  fiveLayerSrc.includes('7100 压力情景三组')
+  && fiveLayerSrc.includes('触发、结构、时间不能互相替代'))
+ok('三灯面板显示 Breadth Quality 且钉死结构数据不发令',
+  fiveLayerSrc.includes('Breadth Quality')
+  && fiveLayerSrc.includes('结构数据，不直接生成买卖指令')
+  && fiveLayerSrc.includes('指数新高 ≠ 市场扩散健康'))
+ok('三灯面板显示 Data/Rule Contract Gap 数据与规则两类缺口',
+  fiveLayerSrc.includes('macroRiskLights.contractGap?.id')
+  && fiveLayerSrc.includes('数据缺口')
+  && fiveLayerSrc.includes('规则契约缺口'))
+ok('三灯面板显示旧账本复算为 INDICATIVE_ONLY 与最终状态锁',
+  fiveLayerSrc.includes('旧账本组合口径复算')
+  && fiveLayerSrc.includes('macroRiskLights.accountBasisAudit?.status')
+  && fiveLayerSrc.includes('最终状态锁'))
 ok('宏观三灯在当前焦点里排在资本开支体检前面',
   fiveLayerSrc.indexOf('showFocus && macroRiskLights')
     < fiveLayerSrc.indexOf('showFocus && capexLadder')
