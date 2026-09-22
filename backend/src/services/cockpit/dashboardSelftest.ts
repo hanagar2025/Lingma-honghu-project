@@ -502,6 +502,19 @@ ok('研究区渲染第二幕候选池且不产生操作入口',
   /aiActTwoPool/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('证据观察，不是买入')
   && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('研究区渲染宏观风险三灯且不产生操作入口',
+  /macroRiskLights/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('灯永远不是理由')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('三灯面板把两头都封写在表面：绿灯不开许可，红灯不产生卖出令',
+  fiveLayerSrc.includes('绿灯不打开 Capital Permission，红灯不产生卖出令'))
+ok('三灯面板并列显示转述读数与系统状态，且不抹平换挡冲突',
+  fiveLayerSrc.includes('转述读数与系统状态并列显示，互不替代')
+  && fiveLayerSrc.includes('照实登记，不抹平'))
+ok('宏观三灯在当前焦点里排在资本开支体检前面',
+  fiveLayerSrc.indexOf('showFocus && macroRiskLights')
+    < fiveLayerSrc.indexOf('showFocus && capexLadder')
+  && fiveLayerSrc.indexOf('showFocus && macroRiskLights') > 0)
 ok('研究区渲染资本开支迁移体检且不产生操作入口',
   /capexLadder/.test(fiveLayerSrc)
   && fiveLayerSrc.includes('逐层检查走到哪一层，不预测谁涨')
@@ -543,10 +556,13 @@ ok('驾驶舱把第二幕候选池传入研究区',
   /aiActTwoPool=\{data\.aiActTwoPool\}/.test(cockpitPageSrc))
 ok('驾驶舱把资本开支迁移体检传入研究区',
   /capexLadder=\{data\.capexLadder\}/.test(cockpitPageSrc))
+ok('驾驶舱把宏观风险三灯传入研究区',
+  /macroRiskLights=\{data\.macroRiskLights\}/.test(cockpitPageSrc))
 ok('驾驶舱把四幕观察传入研究区',
   /aiFourActs=\{data\.aiFourActs\}/.test(cockpitPageSrc))
-ok('当前焦点改成资本开支迁移体检不是买入名单，候选池、四幕、达利欧、融资质量与第二阶段仍留在焦点层',
-  cockpitPageSrc.includes('当前焦点 · 资本开支迁移体检，不是买入名单')
+ok('当前焦点改成宏观风险三灯灯不是理由，体检表、候选池、四幕、达利欧、融资质量与第二阶段仍留在焦点层',
+  cockpitPageSrc.includes('当前焦点 · 宏观风险三灯，灯不是理由')
+  && cockpitPageSrc.includes('capexLadder={data.capexLadder}')
   && cockpitPageSrc.includes('aiActTwoPool={data.aiActTwoPool}')
   && cockpitPageSrc.includes('aiFourActs={data.aiFourActs}')
   && cockpitPageSrc.includes('dalioPressureTest={data.dalioPressureTest}')
@@ -557,7 +573,14 @@ ok('快照搬运融资质量观察', /aiFinancingQuality/.test(webSnapSrc))
 ok('快照搬运达利欧压力测试', /dalioPressureTest/.test(webSnapSrc))
 ok('快照搬运第二幕候选池', /aiActTwoPool/.test(webSnapSrc))
 ok('快照搬运资本开支迁移体检', /capexLadder/.test(webSnapSrc))
+ok('快照搬运宏观风险三灯', /macroRiskLights/.test(webSnapSrc))
 ok('快照搬运四幕观察', /aiFourActs/.test(webSnapSrc))
+ok('看台第一屏不把宏观风险三灯写成必须处理',
+  !lookoutAsmSrc.includes('M-01')
+  && !lookoutAsmSrc.includes('宏观风险三灯')
+  && !lookoutAsmSrc.includes('H-MR')
+  && !lookoutSrc.includes('M-01')
+  && !lookoutSrc.includes('宏观风险三灯'))
 ok('看台第一屏不把资本开支迁移体检写成必须处理',
   !lookoutAsmSrc.includes('C-01')
   && !lookoutAsmSrc.includes('资本开支迁移')
@@ -668,6 +691,12 @@ ok('CLI 先打达利欧压力测试再打融资质量',
     !/quantity\s*=\s*.*\/\s*(px|price)/.test(runSrc))
 }
 
+ok('CLI 先打宏观风险三灯再打资本开支迁移体检',
+  runSrc.indexOf('renderMacroRiskLights()')
+    < runSrc.indexOf('renderCapexLadder()')
+  && runSrc.indexOf('renderMacroRiskLights()') > 0)
+ok('两份快照都带上宏观风险三灯',
+  (runSrc.match(/macroRiskLights: buildMacroRiskLightsView\(\)/g) ?? []).length === 2)
 ok('CLI 先打资本开支迁移体检再打第二幕候选池',
   runSrc.indexOf('renderCapexLadder()')
     < runSrc.indexOf('renderAiActTwoPool()')
@@ -759,6 +788,7 @@ ok('本机时钟入口能按北京时间自动选盘前或盘后，且不连 Git
   const s01 = vault.notes.find(n => n.title === 'S-01 第二幕候选池')!.body
   const a01 = vault.notes.find(n => n.title === 'A-01 四幕与利润中心')!.body
   const c01 = vault.notes.find(n => n.title === 'C-01 资本开支迁移体检')!.body
+  const m01 = vault.notes.find(n => n.title === 'M-01 宏观风险三灯')!.body
   ok('无快照时仍写出研究笔记',
     vault.source === 'research-only'
     && vault.notes.some(n => n.title === 'S-01 第二幕候选池')
@@ -772,9 +802,18 @@ ok('本机时钟入口能按北京时间自动选盘前或盘后，且不连 Git
     && c01.includes('执行债务未清偿')
     && c01.includes('不在册标的永不输出为候选')
     && c01.includes('Capital Permission 不开'))
+  ok('三灯笔记写出六环未接线、灯不是理由与换挡冲突，且不写成买卖信号',
+    vault.notes.some(n => n.title === 'M-01 宏观风险三灯')
+    && m01.includes('风险链条六环')
+    && m01.includes('六环一环未接线')
+    && m01.includes('灯永远不是理由')
+    && m01.includes('不打开 Capital Permission')
+    && m01.includes('不产生卖出令')
+    && m01.includes('换挡方向冲突'))
   ok('首页仍按看台、依据、研究三层排列',
     home.indexOf('[[看台]]') < home.indexOf('[[依据]]')
-    && home.indexOf('[[依据]]') < home.indexOf('[[C-01 资本开支迁移体检]]')
+    && home.indexOf('[[依据]]') < home.indexOf('[[M-01 宏观风险三灯]]')
+    && home.indexOf('[[M-01 宏观风险三灯]]') < home.indexOf('[[C-01 资本开支迁移体检]]')
     && home.indexOf('[[C-01 资本开支迁移体检]]') < home.indexOf('[[S-01 第二幕候选池]]')
     && home.indexOf('[[S-01 第二幕候选池]]') < home.indexOf('[[A-01 四幕与利润中心]]'))
   ok('首页在看台下列出结论和变化',

@@ -53,6 +53,7 @@ import { renderDalioPressureTest, buildDalioPressureTestView } from '../research
 import { renderAiFourActs, buildAiFourActsView } from '../research/aiFourActs'
 import { renderAiActTwoPool, buildAiActTwoPoolView } from '../research/aiActTwoPool'
 import { renderCapexLadder, buildCapexLadderView } from '../research/capexLadder'
+import { renderMacroRiskLights, buildMacroRiskLightsView } from '../research/macroRiskLights'
 import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildObsidianVault, formatObsidianResult, resolveFreshness, resolveObsidianRoot, writeObsidianVault } from './renderObsidian'
@@ -401,6 +402,7 @@ async function main(): Promise<void> {
     process.stdout.write(`${renderPowerChain()}\n`)
     process.stdout.write(`${renderPortfolioDefense()}\n`)
     process.stdout.write(`${renderOwnershipPhilosophy()}\n`)
+    process.stdout.write(`${renderMacroRiskLights()}\n`)
     process.stdout.write(`${renderCapexLadder()}\n`)
     process.stdout.write(`${renderAiActTwoPool()}\n`)
     process.stdout.write(`${renderAiFourActs()}\n`)
@@ -587,6 +589,7 @@ async function main(): Promise<void> {
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
       aiActTwoPool: buildAiActTwoPoolView(),
       capexLadder: buildCapexLadderView(),
+      macroRiskLights: buildMacroRiskLightsView(),
       aiFourActs: buildAiFourActsView(),
       dalioPressureTest: buildDalioPressureTestView(),
       aiFinancingQuality: buildAiFinancingQualityView(),
@@ -658,6 +661,7 @@ async function main(): Promise<void> {
       ownershipPhilosophy: buildOwnershipPhilosophyView(),
       aiActTwoPool: buildAiActTwoPoolView(),
       capexLadder: buildCapexLadderView(),
+      macroRiskLights: buildMacroRiskLightsView(),
       aiFourActs: buildAiFourActsView(),
       dalioPressureTest: buildDalioPressureTestView(),
       aiFinancingQuality: buildAiFinancingQualityView(),

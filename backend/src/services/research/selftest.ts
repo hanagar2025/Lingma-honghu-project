@@ -2098,5 +2098,189 @@ try {
     !!base9 && fpc.hash === base9.hash, `${base9?.hash} → ${fpc.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// M-01 宏观风险三灯：观察面板，灯永远不是理由
+//
+// 一盏灯最危险的失败方式不是颜色判错，而是它悄悄获得了指挥资本的权力。
+// 所以这一块要守住四件事：
+//   ① 绿灯不开许可、红灯不产生卖出令 —— 两头都封；
+//   ② 灯态是「不可判定」，不是黄灯 —— 输入一环未接线，不许用转述冒充系统数据；
+//   ③ 红灯依赖的资金同步性恒不可判定 —— 不许用价格或成交额代理；
+//   ④ 与 C-01 的方向冲突必须留着 —— 抹平后会被当成两份互相印证的证据。
+// ══════════════════════════════════════════════════════════════
+{
+  const { buildMacroRiskLightsView, renderMacroRiskLights } = await import('./macroRiskLights')
+  const { fingerprint: fp10 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase10 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./macroRiskLights.ts', import.meta.url), 'utf-8')
+  const M = buildMacroRiskLightsView()
+
+  ok('M-01 证据等级是 OBSERVATION', M.tier === 'OBSERVATION')
+  ok('模块不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('H-MR 登记为开放假设，不是结论',
+    M.hypothesis === 'H-MR' && M.status === 'OPEN' && M.pool === '战略观察池')
+
+  ok('风险链条六环齐全且顺序是传导方向',
+    M.chain.length === 6 && M.chain.map(x => x.no).join('') === '123456')
+  // LinkStatus 这个联合类型里根本没有"已接线"这一档 —— 想把某一环标成已接线，
+  // 得先改类型，而改类型会在这里立刻失败。所以这一条钉的是白名单本身。
+  ok('六环没有一环接入本系统管道',
+    M.chain.every(x => ['EXTERNAL_READ_NOT_WIRED', 'NO_DEFINED_METRIC', 'UNVERIFIED'].includes(x.status)))
+  ok('链条状态类型里不存在「已接线」这一档',
+    /export type LinkStatus\s*=\s*\n?\s*\|\s*typeof EXTERNAL_NOT_WIRED/.test(src)
+    && !/LinkStatus[\s\S]{0,200}WIRED'/.test(src.replace(/NOT_WIRED/g, 'NW')))
+  ok('金融条件这一环写明本系统没有定义指标',
+    M.chain.some(x => x.link.includes('金融条件') && x.status === 'NO_DEFINED_METRIC'))
+  ok('传导到 A 股那一环记为未验证，且写明需要额外一跳',
+    M.chain.some(x => x.link.includes('A 股')
+      && x.status === 'UNVERIFIED'
+      && x.note.includes('额外一跳')))
+
+  ok('三灯齐全，颜色是绿黄红三档',
+    M.bands.length === 3 && M.bands.map(x => x.color).join('/') === 'GREEN/YELLOW/RED')
+  ok('绿灯明写不打开 Capital Permission',
+    M.bands[0]!.doesNot.includes('不打开 Capital Permission'))
+  ok('黄灯明写不构成仓位法定依据',
+    M.bands[1]!.doesNot.includes('不构成')
+    && M.bands[1]!.doesNot.includes('法定依据'))
+  ok('红灯明写不产生卖出令',
+    M.bands[2]!.doesNot.includes('不产生卖出令'))
+  ok('委员会门槛原样登记，未被悄悄补齐',
+    M.bands[0]!.committeeConditions.some(x => x.includes('95'))
+    && M.bands[1]!.committeeConditions.some(x => x.includes('98–105'))
+    && M.bands[2]!.committeeConditions.some(x => x.includes('105–110')))
+
+  ok('门槛缺陷覆盖未定义区间、重叠区间、边界抖动、资金不可判定、漏 30Y',
+    M.specDefects.some(x => x.defect.includes('未定义区间'))
+    && M.specDefects.some(x => x.defect.includes('重叠区间'))
+    && M.specDefects.some(x => x.where.includes('10Y') && x.why.includes('基点'))
+    && M.specDefects.some(x => x.defect.includes('不可判定') && x.defect.includes('Money Radar'))
+    && M.specDefects.some(x => x.where.includes('30Y') || x.defect.includes('30Y')))
+
+  ok('今日灯态是不可判定，不是黄灯',
+    M.lightState.state === 'UNDECIDABLE'
+    && M.lightState.systemVerdict.includes('不可判定'))
+  ok('转述读数与系统状态并列且明写互不替代',
+    M.lightState.reading.includes('黄灯')
+    && M.lightState.why.includes('不得互相替代'))
+
+  ok('外部读数一律标为未接线 —— 核得到不等于接进来了',
+    M.readings.length >= 10
+    && M.readings.every(x => x.status === 'EXTERNAL_READ_NOT_WIRED'))
+  ok('登记了纳指新高当天的负广度',
+    M.readings.some(x => x.item.includes('新高新低')
+      && x.value.includes('127')
+      && x.note.includes('指数新高不等于扩散健康')))
+  ok('登记了罗素 3000 的广度事实与前瞻 PE 已压缩',
+    M.readings.some(x => x.item.includes('罗素 3000') && x.value.includes('40%'))
+    && M.readings.some(x => x.item.includes('前瞻 PE') && x.note.includes('已经发生过一轮')))
+  ok('登记了 7100 的跌幅随参照日变，且要记点位不是百分比',
+    M.readings.some(x => x.item.includes('7100') && x.note.includes('不是某个百分比')))
+  ok('登记了中期选举季节性 —— 7100 情景的时间锚',
+    M.readings.some(x => x.item.includes('中期选举') && x.note.includes('时间锚')))
+
+  ok('口径修正覆盖霍尔木兹反转、油价高点、长端读数、标普未新高、负广度、估值已压缩、Fed 两面、时间锚',
+    M.corrections.length >= 8
+    && M.corrections.some(x => x.includes('霍尔木兹') && x.includes('已经反转'))
+    && M.corrections.some(x => x.includes('109.45'))
+    && M.corrections.some(x => x.includes('30Y') || x.includes('5.272'))
+    && M.corrections.some(x => x.includes('标普') && x.includes('8/13'))
+    && M.corrections.some(x => x.includes('两面都要用'))
+    && M.corrections.some(x => x.includes('已经压缩过了'))
+    && M.corrections.some(x => x.includes('2022 式紧缩'))
+    && M.corrections.some(x => x.includes('中期选举')))
+
+  ok('换挡冲突照实记录：Wilson 换出资本密集型，C-01 往更重资产走',
+    M.rotationConflict.wilsonFrom.some(x => x.includes('资本密集'))
+    && M.rotationConflict.wilsonTo.some(x => x.includes('轻资产'))
+    && M.rotationConflict.finding.includes('方向冲突')
+    && M.rotationConflict.finding.includes('相反方向'))
+  ok('冲突处置明写两边都不因此获得或失去资格，且不抹平',
+    M.rotationConflict.handling.includes('都不因此获得或失去资格')
+    && M.rotationConflict.handling.includes('抹平'))
+  ok('点明 Wilson 要换出的就是半导体，不是 AI 内部换挡',
+    M.rotationConflict.why.includes('半导体')
+    && M.rotationConflict.why.includes('换出 AI 硬件'))
+
+  ok('提现金主张被判为宏观不是法定理由',
+    M.cashAudit.macroIsNotReason.includes('不在法定减仓理由白名单'))
+  ok('法定通道列出熔断缺口与两笔未执行债务',
+    M.cashAudit.lawfulChannels.length === 3
+    && M.cashAudit.lawfulChannels.some(x => x.includes('熔断'))
+    && M.cashAudit.lawfulChannels.some(x => x.includes('澜起'))
+    && M.cashAudit.lawfulChannels.some(x => x.includes('兆易')))
+  ok('中际与新易盛被判为未超限故无法定理由',
+    M.cashAudit.concentrationClaim.includes('没有超过单票上限')
+    && M.cashAudit.concentrationClaim.includes('没有法定理由'))
+  ok('结论指向执行欠账而不是动核心仓',
+    M.cashAudit.conclusion.includes('执行未清债务')
+    && M.cashAudit.conclusion.includes('不用动中际和新易盛'))
+
+  ok('口径守卫钉住组合口径，并点明委员会给的百分比是券商口径',
+    M.basisGuard.rule.includes('组合口径')
+    && M.basisGuard.why.includes('85.5%')
+    && M.basisGuard.why.includes('券商'))
+  ok('口径守卫写明账本落后故百分比只是指示性的',
+    M.basisGuard.why.includes('指示性'))
+
+  ok('结论明写灯不改资本许可，两头都封',
+    M.verdict.permission.includes('绿灯不开')
+    && M.verdict.permission.includes('红灯不卖'))
+  ok('结论明写主线不变且不需要寻找替代主线',
+    M.verdict.mainline.includes('主线不变')
+    && M.verdict.mainline.includes('不需要寻找替代主线'))
+  ok('阻塞项覆盖未接线、资金不可得、门槛缺陷、边界抖动、三道闸门、账本落后',
+    M.blockers.some(x => x.includes('一环都没接入'))
+    && M.blockers.some(x => x.includes('Money Radar'))
+    && M.blockers.some(x => x.includes('未定义区间'))
+    && M.blockers.some(x => x.includes('4.94%'))
+    && M.blockers.some(x => x.includes('三道闸门'))
+    && M.blockers.some(x => x.includes('asOf')))
+  ok('否定式覆盖 7100 非预测、美股跌不等于卖 AI、绿灯不开许可、红灯不卖、与 C-01 方向相反',
+    M.doesNotImply.some(x => x.includes('7100 是基准预测'))
+    && M.doesNotImply.some(x => x.includes('美股要跌所以 AI 要卖'))
+    && M.doesNotImply.some(x => x.includes('绿灯可以打开'))
+    && M.doesNotImply.some(x => x.includes('红灯可以产生卖出令'))
+    && M.doesNotImply.some(x => x.includes('方向相反')))
+  ok('导出字段名不含 score/rank/weight',
+    !/\b(score|rank|weight)\s*[:=]/i.test(src))
+  // 钉返回类型而不是字面量：`(): false` 让编译器也拦住「哪天改成 true」
+  ok('源码钉死否定式：绿灯不开许可，红灯不卖，灯不是理由，资金同步不可判定',
+    src.includes('greenOpensPermission(): false')
+    && src.includes('redCreatesSellOrder(): false')
+    && src.includes('lightIsLegalReason(): false')
+    && src.includes('moneySyncEvaluable(): false')
+    && src.includes('scenarioIsForecast(): false')
+    && src.includes('usRotationMigratesLifeline(): false')
+    && src.includes('lightsMechanicallyDecidable(): false')
+    && src.includes('riskRequiresNewMainline(): false'))
+
+  const mtxt = renderMacroRiskLights()
+  ok('渲染含六环、三灯、门槛缺陷与灯态',
+    mtxt.includes('风险链条六环')
+    && mtxt.includes('三灯')
+    && mtxt.includes('门槛缺陷')
+    && mtxt.includes('今日灯态'))
+  ok('渲染声明不打分不产生动作且灯不是理由',
+    mtxt.includes('不打分')
+    && mtxt.includes('不产生动作')
+    && mtxt.includes('OBSERVATION')
+    && mtxt.includes('灯永远不是理由'))
+  ok('渲染写明六环一环未接线',
+    mtxt.includes('六环一环未接线'))
+  ok('渲染含换挡方向冲突与提现金法理审查',
+    mtxt.includes('换挡方向冲突') && mtxt.includes('法理审查'))
+  ok('视图 JSON 不含 score/rank/weight 字段名',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(M)))
+  ok('视图 flags 全部钉死否定式，仅现金可以是资产为真',
+    Object.entries(M.flags).every(([k, v]) => (k === 'cashIsAnAsset' ? v === true : v === false)))
+
+  const base10 = loadBase10()
+  const fpm = fp10()
+  ok('加入宏观风险三灯后规则指纹未变',
+    !!base10 && fpm.hash === base10.hash, `${base10?.hash} → ${fpm.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

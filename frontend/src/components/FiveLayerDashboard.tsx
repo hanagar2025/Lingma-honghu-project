@@ -299,6 +299,8 @@ export interface FiveLayerDashboardProps {
   aiActTwoPool?: any
   /** AI 资本开支产业链迁移体检。只渲染，不产生任何操作入口 */
   capexLadder?: any
+  /** 宏观风险三灯。只渲染，不产生任何操作入口 */
+  macroRiskLights?: any
   /** AI 四幕与利润中心迁移。只渲染，不产生任何操作入口 */
   aiFourActs?: any
   /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
@@ -313,7 +315,8 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, macroRiskLights,
+  aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1202,6 +1205,170 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && macroRiskLights && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>宏观风险三灯 —— 观察面板，灯永远不是理由</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。证据等级恒为 OBSERVATION。
+            绿灯不打开 Capital Permission，红灯不产生卖出令。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{macroRiskLights.id}｜{macroRiskLights.hypothesis}　{macroRiskLights.claim}　{macroRiskLights.status}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{macroRiskLights.object}</div>
+                <div>{macroRiskLights.verdict?.chain}</div>
+                <div>{macroRiskLights.verdict?.wilson}</div>
+                <div>{macroRiskLights.verdict?.rotation}</div>
+                <div>{macroRiskLights.verdict?.permission}</div>
+                <div>{macroRiskLights.verdict?.cash}</div>
+                <div>{macroRiskLights.verdict?.mainline}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            今日灯态
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　转述读数与系统状态并列显示，互不替代。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div><Text strong>{macroRiskLights.lightState?.state}</Text></div>
+            <div>{macroRiskLights.lightState?.reading}</div>
+            <div>{macroRiskLights.lightState?.systemVerdict}</div>
+            <div style={{ color: '#8e8e93' }}>{macroRiskLights.lightState?.why}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            风险链条六环
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　逐环标出本系统能不能读到它。六环一环未接线。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={macroRiskLights.chain ?? []}
+            columns={[
+              { title: '环', width: 200, render: (_: unknown, r: any) => `${r.no}. ${r.link}` },
+              { title: '接线状态', dataIndex: 'status', width: 210 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            三灯
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　原样登记委员会门槛，并写明每盏灯不会做什么。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="color"
+            dataSource={macroRiskLights.bands ?? []}
+            columns={[
+              { title: '灯', width: 130, render: (_: unknown, r: any) => `${r.color}　${r.name}` },
+              {
+                title: '委员会门槛', width: 280,
+                render: (_: unknown, r: any) => (r.committeeConditions ?? []).join('；'),
+              },
+              { title: '这盏灯不会做什么', dataIndex: 'doesNot' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            门槛缺陷
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　一盏会自己打架的灯比没有灯更危险。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="where"
+            dataSource={macroRiskLights.specDefects ?? []}
+            columns={[
+              { title: '位置', dataIndex: 'where', width: 200 },
+              { title: '缺陷', dataIndex: 'defect' },
+              { title: '为什么要紧', dataIndex: 'why' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            外部读数
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　核得到 ≠ 接进来了。一律 EXTERNAL_READ_NOT_WIRED。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={macroRiskLights.readings ?? []}
+            columns={[
+              { title: '项目', dataIndex: 'item', width: 170 },
+              { title: '读数', dataIndex: 'value', width: 300 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>必须改掉的口径</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(macroRiskLights.corrections ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            换挡方向冲突
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　照实登记，不抹平。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>Wilson 换出：{(macroRiskLights.rotationConflict?.wilsonFrom ?? []).join(' / ')}</div>
+            <div>Wilson 换入：{(macroRiskLights.rotationConflict?.wilsonTo ?? []).join(' / ')}</div>
+            <div>委员会对应到：{(macroRiskLights.rotationConflict?.committeeMapping ?? []).join(' → ')}</div>
+            <div><Text strong>{macroRiskLights.rotationConflict?.finding}</Text></div>
+            <div>{macroRiskLights.rotationConflict?.why}</div>
+            <div style={{ color: '#8e8e93' }}>{macroRiskLights.rotationConflict?.handling}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            「提现金到 18%–20%」的法理审查
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>主张：{macroRiskLights.cashAudit?.claim}</div>
+            <div>{macroRiskLights.cashAudit?.macroIsNotReason}</div>
+            <div>法定通道：</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {(macroRiskLights.cashAudit?.lawfulChannels ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div>{macroRiskLights.cashAudit?.concentrationClaim}</div>
+            <div><Text strong>{macroRiskLights.cashAudit?.conclusion}</Text></div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>口径守卫</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{macroRiskLights.basisGuard?.rule}</div>
+            <div style={{ color: '#8e8e93' }}>{macroRiskLights.basisGuard?.why}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(macroRiskLights.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(macroRiskLights.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && capexLadder && (
