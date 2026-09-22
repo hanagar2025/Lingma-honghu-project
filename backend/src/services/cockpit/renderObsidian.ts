@@ -19,6 +19,7 @@ import { renderLookout, type LookoutView } from './lookout'
 import { renderAiActTwoPool } from '../research/aiActTwoPool'
 import { renderCapexLadder } from '../research/capexLadder'
 import { renderMacroRiskLights } from '../research/macroRiskLights'
+import { renderMarketStructureWatch } from '../research/marketStructureWatch'
 import { renderAiFourActs } from '../research/aiFourActs'
 import { renderDalioPressureTest } from '../research/dalioPressureTest'
 import { renderAiFinancingQuality } from '../research/aiFinancingQuality'
@@ -67,6 +68,7 @@ export const DEFAULT_OBSIDIAN_DIR = join(HERE, 'data', 'obsidian')
 export const VAULT_FOLDER = '鸿鹄'
 
 const RESEARCH_NOTES = [
+  { title: 'B-01 市场结构观察', render: renderMarketStructureWatch, focus: true },
   { title: 'M-01 宏观风险三灯', render: renderMacroRiskLights, focus: true },
   { title: 'C-01 资本开支迁移体检', render: renderCapexLadder, focus: true },
   { title: 'S-01 第二幕候选池', render: renderAiActTwoPool, focus: true },

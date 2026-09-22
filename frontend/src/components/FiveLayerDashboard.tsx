@@ -301,6 +301,8 @@ export interface FiveLayerDashboardProps {
   capexLadder?: any
   /** 宏观风险三灯。只渲染，不产生任何操作入口 */
   macroRiskLights?: any
+  /** A股市场结构观察。只触发复核，不产生任何操作入口 */
+  marketStructureWatch?: any
   /** AI 四幕与利润中心迁移。只渲染，不产生任何操作入口 */
   aiFourActs?: any
   /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
@@ -315,7 +317,7 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, macroRiskLights,
+  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, macroRiskLights, marketStructureWatch,
   aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
@@ -1205,6 +1207,103 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && marketStructureWatch && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>市场结构观察 —— 放量滞涨只触发复核，不升级 TPO</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。M-01、B-01、C-01 与 Decision 分层判定，禁止跨模块串证。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{marketStructureWatch.id}｜{marketStructureWatch.provisionalState?.label}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{marketStructureWatch.provisionalState?.statement}</div>
+                <div>{marketStructureWatch.provisionalState?.whyProvisional}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>四问分开判</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={marketStructureWatch.checks ?? []}
+            columns={[
+              { title: '检查项', dataIndex: 'item', width: 150 },
+              { title: '数据状态', dataIndex: 'status', width: 220 },
+              { title: '当前', dataIndex: 'current' },
+              { title: '推不出', dataIndex: 'doesNotMean' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>真正危险的组合</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{(marketStructureWatch.dangerousCombination?.conditions ?? []).join(' + ')}</div>
+            <div>{marketStructureWatch.dangerousCombination?.interpretation}</div>
+            <div style={{ color: '#8e8e93' }}>{marketStructureWatch.dangerousCombination?.boundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>9/23 四种确认路径</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={marketStructureWatch.nextSessionPaths ?? []}
+            columns={[
+              { title: '路径', dataIndex: 'id', width: 70 },
+              { title: '观察', dataIndex: 'observation', width: 250 },
+              { title: '解释', dataIndex: 'interpretation' },
+              { title: 'TPO 边界', dataIndex: 'tpo' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>AI β 核心四只</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{(marketStructureWatch.aiBetaCore?.names ?? []).join(' / ')}</div>
+            <div>{marketStructureWatch.aiBetaCore?.watch}</div>
+            <div>{marketStructureWatch.aiBetaCore?.provisionalThreshold}</div>
+            <div style={{ color: '#8e8e93' }}>{marketStructureWatch.aiBetaCore?.boundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>跨模块防火墙</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="layer"
+            dataSource={marketStructureWatch.moduleFirewall ?? []}
+            columns={[
+              { title: '层', dataIndex: 'layer', width: 180 },
+              { title: '只回答', dataIndex: 'asks' },
+              { title: '不能推出', dataIndex: 'cannot' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>账本、执行与资本许可边界</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{marketStructureWatch.accountFirewall?.reported}　{marketStructureWatch.accountFirewall?.status}</div>
+            <div>{marketStructureWatch.accountFirewall?.action}</div>
+            <div><Text strong>{marketStructureWatch.accountFirewall?.wording}</Text></div>
+            <div>{marketStructureWatch.accountFirewall?.boundary}</div>
+            <div>
+              Capital Permission：
+              {marketStructureWatch.capitalPermission?.before} → {marketStructureWatch.capitalPermission?.after}；
+              changed={String(marketStructureWatch.capitalPermission?.changed)}
+            </div>
+            <div>{marketStructureWatch.capitalPermission?.reason}</div>
+            <div style={{ color: '#8e8e93' }}>{marketStructureWatch.capitalPermission?.not}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(marketStructureWatch.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && macroRiskLights && (

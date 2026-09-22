@@ -54,6 +54,8 @@ export interface WebSnapshotInput {
   capexLadder?: unknown
   /** 宏观风险三灯。观察面板，灯不是理由，不产生动作 */
   macroRiskLights?: unknown
+  /** A股市场结构观察。放量滞涨只触发复核，不升级 TPO，不产生动作 */
+  marketStructureWatch?: unknown
   /** AI 四幕与利润中心迁移。不产生动作 */
   aiFourActs?: unknown
   /** 达利欧反向压力测试。不产生动作 */
@@ -145,6 +147,7 @@ export function buildWebSnapshot(input: WebSnapshotInput): Record<string, unknow
     aiActTwoPool: input.aiActTwoPool ?? null,
     capexLadder: input.capexLadder ?? null,
     macroRiskLights: input.macroRiskLights ?? null,
+    marketStructureWatch: input.marketStructureWatch ?? null,
     aiFourActs: input.aiFourActs ?? null,
     dalioPressureTest: input.dalioPressureTest ?? null,
     aiFinancingQuality: input.aiFinancingQuality ?? null,

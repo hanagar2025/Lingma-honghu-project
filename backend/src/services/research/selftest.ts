@@ -2368,5 +2368,138 @@ try {
     !!base10 && fpm.hash === base10.hash, `${base10?.hash} → ${fpm.hash}`)
 }
 
+// ══════════════════════════════════════════════════════════════
+// B-01 市场结构观察：放量滞涨只触发复核，不升级 TPO
+// ══════════════════════════════════════════════════════════════
+{
+  const { buildMarketStructureWatchView, renderMarketStructureWatch } =
+    await import('./marketStructureWatch')
+  const { fingerprint: fp11 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase11 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./marketStructureWatch.ts', import.meta.url), 'utf-8')
+  const B = buildMarketStructureWatchView()
+
+  ok('B-01 证据等级是 OBSERVATION', B.tier === 'OBSERVATION')
+  ok('B-01 不 import makeAction',
+    !src.split('\n').filter(l => l.startsWith('import')).join('\n').includes('makeAction'))
+  ok('H-BQ 登记为开放假设，不是结论',
+    B.hypothesis === 'H-BQ' && B.status === 'OPEN' && B.pool === '战略观察池')
+  ok('9/22 状态明确是临时高换手低推进，不是顶部或退潮',
+    B.provisionalState.state === 'PROVISIONAL_HIGH_TURNOVER_LOW_ADVANCE'
+    && B.provisionalState.statement.includes('不直接解释为顶部')
+    && B.provisionalState.statement.includes('AI 主线退潮'))
+
+  ok('四问齐全：成交额、推进效率、Breadth、AI核心同步性',
+    ['成交额', '价格推进效率', 'Breadth Quality', 'AI 核心同步性']
+      .every(x => B.checks.some(c => c.item === x)))
+  ok('前两问只是委员会转述，未冒充系统数据',
+    B.checks.slice(0, 2).every(c => c.status === 'COMMITTEE_REPORTED_NOT_WIRED'))
+  ok('Breadth 尚未归档，AI资金同步恒不可得',
+    B.checks.some(c => c.item === 'Breadth Quality' && c.status === 'QUOTE_NOT_ARCHIVED')
+    && B.checks.some(c => c.item === 'AI 核心同步性'
+      && c.status === 'MONEY_RADAR_UNAVAILABLE'))
+  ok('成交额一问明说放量不等于派发顶部退潮',
+    B.checks.some(c => c.item === '成交额'
+      && c.doesNotMean.includes('不等于派发、顶部或退潮')))
+
+  ok('真正危险的组合覆盖持续放量、无法推进、核心同步转弱、Breadth恶化',
+    B.dangerousCombination.conditions.length === 4
+    && B.dangerousCombination.conditions.some(x => x.includes('持续放大'))
+    && B.dangerousCombination.conditions.some(x => x.includes('无法推进'))
+    && B.dangerousCombination.conditions.some(x => x.includes('RS'))
+    && B.dangerousCombination.conditions.some(x => x.includes('Breadth')))
+  ok('危险组合只进入 TPO 人工复核，不等于升级或动作',
+    B.dangerousCombination.interpretation.includes('人工复核')
+    && B.dangerousCombination.boundary.includes('不等于 TPO 已升级')
+    && B.dangerousCombination.boundary.includes('不等于产生减仓动作'))
+
+  ok('9/23 四种路径齐全且顺序是 S1-S4',
+    B.nextSessionPaths.length === 4
+    && B.nextSessionPaths.map(x => x.id).join('/') === 'S1/S2/S3/S4')
+  ok('缩量稳住与放量突破都不升级 TPO',
+    B.nextSessionPaths[0]!.tpo.includes('不升级')
+    && B.nextSessionPaths[1]!.tpo.includes('不因突破自动'))
+  ok('继续放量不涨只提高复核优先级，不产生动作',
+    B.nextSessionPaths[2]!.tpo.includes('提高 TPO 复核优先级')
+    && B.nextSessionPaths[2]!.tpo.includes('不产生动作'))
+  ok('放量下跌路径受资金不可得约束，不得提前判为已发生',
+    B.nextSessionPaths[3]!.tpo.includes('资金列不可得')
+    && B.nextSessionPaths[3]!.tpo.includes('不得提前'))
+
+  ok('AI β 核心固定为中际、新易盛、澜起、海光',
+    B.aiBetaCore.names.join('/') === '中际旭创/新易盛/澜起科技/海光信息')
+  ok('2–3只描述只是人工复核，不是机械阈值',
+    B.aiBetaCore.provisionalThreshold.includes('2–3 只')
+    && B.aiBetaCore.boundary.includes('不是机械阈值'))
+  ok('资金列不可得使三维同步当前不可判定',
+    B.aiBetaCore.boundary.includes('资金列恒不可得')
+    && B.aiBetaCore.boundary.includes('无法判定'))
+
+  ok('跨模块防火墙覆盖 M-01、B-01、AI主线与 Decision',
+    ['M-01', 'B-01', 'AI 主线 / Momentum', 'Portfolio / Decision']
+      .every(x => B.moduleFirewall.some(f => f.layer === x)))
+  ok('M-01 与 B-01 禁止串证推出 AI 要撤',
+    B.moduleFirewall.some(f => f.layer === 'M-01' && f.cannot.includes('AI 要撤')))
+  ok('Decision 只问新鲜账本，研究结论不得写进动作理由',
+    B.moduleFirewall.some(f => f.layer === 'Portfolio / Decision'
+      && f.asks.includes('新鲜账本')
+      && f.cannot.includes('研究结论')))
+
+  ok('账本层继续把 14.45万标为 indicative，不驱动交易',
+    B.accountFirewall.status === 'INDICATIVE_ONLY'
+    && B.accountFirewall.reported.includes('14.45 万')
+    && B.accountFirewall.boundary.includes('不得')
+    && B.accountFirewall.boundary.includes('直接驱动交易'))
+  ok('执行措辞固定为债务执行窗口改善，不得改写成放量滞涨或逢高减仓',
+    B.accountFirewall.wording.includes('债务执行窗口改善')
+    && B.accountFirewall.wording.includes('放量滞涨所以减仓')
+    && B.accountFirewall.wording.includes('逢高减仓'))
+  ok('不得因为放量滞涨扩大减仓范围',
+    B.accountFirewall.boundary.includes('不得因为 9/22 放量滞涨扩大减仓范围'))
+
+  ok('Capital Permission 前后都是 CLOSED 且 changed=false',
+    B.capitalPermission.before === 'CLOSED'
+    && B.capitalPermission.after === 'CLOSED'
+    && B.capitalPermission.changed === false)
+  ok('K线没有让许可更关闭，也没有新增法定阻断',
+    B.capitalPermission.reason.includes('没有让它“更关闭”')
+    && B.capitalPermission.reason.includes('没有新增法定阻断'))
+  ok('停止追AI不是 B-01 新动作，只是维持既有不新增状态',
+    B.capitalPermission.not.includes('不是 B-01 产生的新动作')
+    && B.capitalPermission.not.includes('维持既有的不新增状态'))
+
+  ok('源码钉死七个否定式，不允许观察层升级权限',
+    src.includes('volumeStallIsTop(): false')
+    && src.includes('volumeStallIsAiRetreat(): false')
+    && src.includes('b01UpgradesTpo(): false')
+    && src.includes('b01ChangesCapitalPermission(): false')
+    && src.includes('b01CombinesWithM01ToSellAi(): false')
+    && src.includes('twoOfFourCreatesOrder(): false')
+    && src.includes('thirdPartyMoneyIsSystemEvidence(): false'))
+  ok('视图 flags 全部为 false', Object.values(B.flags).every(x => x === false))
+  ok('B-01 不含 score/rank/weight 字段',
+    !/"(score|rank|weight)"/i.test(JSON.stringify(B))
+    && !/\b(score|rank|weight)\s*[:=]/i.test(src))
+
+  const btxt = renderMarketStructureWatch()
+  ok('渲染含临时状态、四问、危险组合、9/23路径与防火墙',
+    btxt.includes('9/22 临时状态')
+    && btxt.includes('四问分开判')
+    && btxt.includes('真正危险的组合')
+    && btxt.includes('9/23 四种确认路径')
+    && btxt.includes('跨模块防火墙'))
+  ok('渲染明写 TPO 不升级且不发令',
+    btxt.includes('不升级 TPO')
+    && btxt.includes('不产生动作'))
+  ok('渲染明写 Capital Permission 没变化',
+    btxt.includes('CLOSED → CLOSED')
+    && btxt.includes('changed=false'))
+
+  const base11 = loadBase11()
+  const fpb = fp11()
+  ok('加入市场结构观察后规则指纹未变',
+    !!base11 && fpb.hash === base11.hash, `${base11?.hash} → ${fpb.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

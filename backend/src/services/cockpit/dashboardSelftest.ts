@@ -526,6 +526,23 @@ ok('三灯面板显示旧账本复算为 INDICATIVE_ONLY 与最终状态锁',
   fiveLayerSrc.includes('旧账本组合口径复算')
   && fiveLayerSrc.includes('macroRiskLights.accountBasisAudit?.status')
   && fiveLayerSrc.includes('最终状态锁'))
+ok('研究区渲染市场结构观察且不产生操作入口',
+  /marketStructureWatch/.test(fiveLayerSrc)
+  && fiveLayerSrc.includes('放量滞涨只触发复核，不升级 TPO')
+  && fiveLayerSrc.includes('不产生任何操作入口'))
+ok('市场结构面板显示四问、危险组合、9/23路径与跨模块防火墙',
+  fiveLayerSrc.includes('四问分开判')
+  && fiveLayerSrc.includes('真正危险的组合')
+  && fiveLayerSrc.includes('9/23 四种确认路径')
+  && fiveLayerSrc.includes('跨模块防火墙'))
+ok('市场结构面板明写 Capital Permission 只维持原状态',
+  fiveLayerSrc.includes('Capital Permission：')
+  && fiveLayerSrc.includes('marketStructureWatch.capitalPermission?.before')
+  && fiveLayerSrc.includes('changed='))
+ok('市场结构观察在当前焦点里排在宏观三灯前面',
+  fiveLayerSrc.indexOf('showFocus && marketStructureWatch')
+    < fiveLayerSrc.indexOf('showFocus && macroRiskLights')
+  && fiveLayerSrc.indexOf('showFocus && marketStructureWatch') > 0)
 ok('宏观三灯在当前焦点里排在资本开支体检前面',
   fiveLayerSrc.indexOf('showFocus && macroRiskLights')
     < fiveLayerSrc.indexOf('showFocus && capexLadder')
@@ -573,10 +590,13 @@ ok('驾驶舱把资本开支迁移体检传入研究区',
   /capexLadder=\{data\.capexLadder\}/.test(cockpitPageSrc))
 ok('驾驶舱把宏观风险三灯传入研究区',
   /macroRiskLights=\{data\.macroRiskLights\}/.test(cockpitPageSrc))
+ok('驾驶舱把市场结构观察传入研究区',
+  /marketStructureWatch=\{data\.marketStructureWatch\}/.test(cockpitPageSrc))
 ok('驾驶舱把四幕观察传入研究区',
   /aiFourActs=\{data\.aiFourActs\}/.test(cockpitPageSrc))
-ok('当前焦点改成宏观风险三灯灯不是理由，体检表、候选池、四幕、达利欧、融资质量与第二阶段仍留在焦点层',
-  cockpitPageSrc.includes('当前焦点 · 宏观风险三灯，灯不是理由')
+ok('当前焦点改成市场结构观察只复核不发令，三灯、体检表、候选池、四幕、达利欧、融资质量与第二阶段仍留在焦点层',
+  cockpitPageSrc.includes('当前焦点 · 市场结构观察，只复核不发令')
+  && cockpitPageSrc.includes('macroRiskLights={data.macroRiskLights}')
   && cockpitPageSrc.includes('capexLadder={data.capexLadder}')
   && cockpitPageSrc.includes('aiActTwoPool={data.aiActTwoPool}')
   && cockpitPageSrc.includes('aiFourActs={data.aiFourActs}')
@@ -589,7 +609,14 @@ ok('快照搬运达利欧压力测试', /dalioPressureTest/.test(webSnapSrc))
 ok('快照搬运第二幕候选池', /aiActTwoPool/.test(webSnapSrc))
 ok('快照搬运资本开支迁移体检', /capexLadder/.test(webSnapSrc))
 ok('快照搬运宏观风险三灯', /macroRiskLights/.test(webSnapSrc))
+ok('快照搬运市场结构观察', /marketStructureWatch/.test(webSnapSrc))
 ok('快照搬运四幕观察', /aiFourActs/.test(webSnapSrc))
+ok('看台第一屏不把市场结构观察写成必须处理',
+  !lookoutAsmSrc.includes('B-01')
+  && !lookoutAsmSrc.includes('市场结构观察')
+  && !lookoutAsmSrc.includes('H-BQ')
+  && !lookoutSrc.includes('B-01')
+  && !lookoutSrc.includes('市场结构观察'))
 ok('看台第一屏不把宏观风险三灯写成必须处理',
   !lookoutAsmSrc.includes('M-01')
   && !lookoutAsmSrc.includes('宏观风险三灯')
@@ -706,6 +733,12 @@ ok('CLI 先打达利欧压力测试再打融资质量',
     !/quantity\s*=\s*.*\/\s*(px|price)/.test(runSrc))
 }
 
+ok('CLI 先打市场结构观察再打宏观风险三灯',
+  runSrc.indexOf('renderMarketStructureWatch()')
+    < runSrc.indexOf('renderMacroRiskLights()')
+  && runSrc.indexOf('renderMarketStructureWatch()') > 0)
+ok('两份快照都带上市场结构观察',
+  (runSrc.match(/marketStructureWatch: buildMarketStructureWatchView\(\)/g) ?? []).length === 2)
 ok('CLI 先打宏观风险三灯再打资本开支迁移体检',
   runSrc.indexOf('renderMacroRiskLights()')
     < runSrc.indexOf('renderCapexLadder()')
@@ -804,6 +837,7 @@ ok('本机时钟入口能按北京时间自动选盘前或盘后，且不连 Git
   const a01 = vault.notes.find(n => n.title === 'A-01 四幕与利润中心')!.body
   const c01 = vault.notes.find(n => n.title === 'C-01 资本开支迁移体检')!.body
   const m01 = vault.notes.find(n => n.title === 'M-01 宏观风险三灯')!.body
+  const b01 = vault.notes.find(n => n.title === 'B-01 市场结构观察')!.body
   ok('无快照时仍写出研究笔记',
     vault.source === 'research-only'
     && vault.notes.some(n => n.title === 'S-01 第二幕候选池')
@@ -825,9 +859,17 @@ ok('本机时钟入口能按北京时间自动选盘前或盘后，且不连 Git
     && m01.includes('不打开 Capital Permission')
     && m01.includes('不产生卖出令')
     && m01.includes('换挡方向冲突'))
+  ok('市场结构笔记写出临时状态、四问、9/23路径与跨模块防火墙',
+    vault.notes.some(n => n.title === 'B-01 市场结构观察')
+    && b01.includes('9/22 临时状态')
+    && b01.includes('四问分开判')
+    && b01.includes('9/23 四种确认路径')
+    && b01.includes('跨模块防火墙')
+    && b01.includes('CLOSED → CLOSED'))
   ok('首页仍按看台、依据、研究三层排列',
     home.indexOf('[[看台]]') < home.indexOf('[[依据]]')
-    && home.indexOf('[[依据]]') < home.indexOf('[[M-01 宏观风险三灯]]')
+    && home.indexOf('[[依据]]') < home.indexOf('[[B-01 市场结构观察]]')
+    && home.indexOf('[[B-01 市场结构观察]]') < home.indexOf('[[M-01 宏观风险三灯]]')
     && home.indexOf('[[M-01 宏观风险三灯]]') < home.indexOf('[[C-01 资本开支迁移体检]]')
     && home.indexOf('[[C-01 资本开支迁移体检]]') < home.indexOf('[[S-01 第二幕候选池]]')
     && home.indexOf('[[S-01 第二幕候选池]]') < home.indexOf('[[A-01 四幕与利润中心]]'))

@@ -195,6 +195,7 @@ const Cockpit: React.FC = () => {
       aiActTwoPool={data.aiActTwoPool}
       capexLadder={data.capexLadder}
       macroRiskLights={data.macroRiskLights}
+      marketStructureWatch={data.marketStructureWatch}
       aiFourActs={data.aiFourActs}
       dalioPressureTest={data.dalioPressureTest}
       aiFinancingQuality={data.aiFinancingQuality}
@@ -487,7 +488,7 @@ const Cockpit: React.FC = () => {
                 items={[
                   {
                     key: 'focus',
-                    label: '当前焦点 · 宏观风险三灯，灯不是理由',
+                    label: '当前焦点 · 市场结构观察，只复核不发令',
                     children: researchDash(true, 'focus'),
                   },
                   {

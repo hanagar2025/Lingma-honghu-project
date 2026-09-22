@@ -30,6 +30,7 @@ import { renderAiFourActs } from '../research/aiFourActs'
 import { renderAiActTwoPool } from '../research/aiActTwoPool'
 import { renderCapexLadder } from '../research/capexLadder'
 import { renderMacroRiskLights } from '../research/macroRiskLights'
+import { renderMarketStructureWatch } from '../research/marketStructureWatch'
 import { renderLookout, type LookoutView } from './lookout'
 
 function esc(s: unknown): string {
@@ -162,6 +163,8 @@ export interface HtmlInput {
   capexLadder?: unknown
   /** 宏观风险三灯。观察面板，灯不是理由，不产生动作 */
   macroRiskLights?: unknown
+  /** A股市场结构观察。只触发复核，不升级 TPO，不产生动作 */
+  marketStructureWatch?: unknown
   /** AI 四幕与利润中心迁移。不产生动作 */
   aiFourActs?: unknown
   /** 达利欧反向压力测试。不产生动作 */
@@ -177,7 +180,7 @@ export interface HtmlInput {
 export function renderDashboardHtml(input: HtmlInput): string {
   const {
     dashboard: d, changes, prevDate, discovery, freeze, intraday, verdict, decisionV2, hypotheses,
-    powerChain, portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, macroRiskLights,
+    powerChain, portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, macroRiskLights, marketStructureWatch,
     aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, lookout,
   } = input
   const h = d.headline
@@ -701,6 +704,11 @@ export function renderDashboardHtml(input: HtmlInput): string {
   if (aiActTwoPool) {
     w(`</div><div class=card><h2>AI 第二幕候选池 —— 证据观察，不是买入</h2>`)
     w(`<pre class=plain>${esc(renderAiActTwoPool())}</pre>`)
+  }
+
+  if (marketStructureWatch) {
+    w(`</div><div class=card><h2>市场结构观察 —— 放量滞涨只触发复核，不升级 TPO</h2>`)
+    w(`<pre class=plain>${esc(renderMarketStructureWatch())}</pre>`)
   }
 
   if (macroRiskLights) {
