@@ -55,6 +55,8 @@ export const RESEARCH_MODULES = [
   'research/aiFourActs.ts',
   'research/aiActTwoPool.ts',
   'research/capexLadder.ts',
+  'research/macroRiskLights.ts',
+  'research/marketStructureWatch.ts',
 ] as const
 
 /**
@@ -79,6 +81,9 @@ export const RESEARCH_FIELD_NAMES = [
   'aiFourActs', 'profitCenter', 'hpcHypothesis',
   'aiActTwoPool', 'evidenceMatrix', 'hs2Hypothesis',
   'capexLadder', 'examColumns', 'roster', 'h910Hypothesis',
+  'macroRiskLights', 'lightBands', 'riskChain', 'specDefects', 'hmrHypothesis',
+  'scenarioGroups', 'breadthQuality', 'contractGap', 'accountBasisAudit', 'finalStateLocks',
+  'marketStructureWatch', 'sessionChecks', 'nextSessionPaths', 'aiBetaCore', 'hbqHypothesis',
 ] as const
 
 export interface IsolationFinding {
@@ -193,6 +198,8 @@ export const RESEARCH_TEXT_MARKERS = [
   'T-01', 'H-DL', '达利欧', '反向压力测试',
   'A-01', 'H-PC', '四幕', '利润中心迁移',
   'S-01', 'H-S2', '第二幕候选', '证据矩阵',
+  'M-01', 'H-MR', '宏观风险三灯', '换挡方向冲突',
+  'B-01', 'H-BQ', '市场结构观察', '价格推进效率',
 ] as const
 
 /**

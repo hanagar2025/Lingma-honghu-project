@@ -299,6 +299,10 @@ export interface FiveLayerDashboardProps {
   aiActTwoPool?: any
   /** AI 资本开支产业链迁移体检。只渲染，不产生任何操作入口 */
   capexLadder?: any
+  /** 宏观风险三灯。只渲染，不产生任何操作入口 */
+  macroRiskLights?: any
+  /** A股市场结构观察。只触发复核，不产生任何操作入口 */
+  marketStructureWatch?: any
   /** AI 四幕与利润中心迁移。只渲染，不产生任何操作入口 */
   aiFourActs?: any
   /** 达利欧反向压力测试。只渲染，不产生任何操作入口 */
@@ -313,7 +317,8 @@ export interface FiveLayerDashboardProps {
 
 const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
   dashboard: d, changes, discovery, hypotheses, provisional, hideChanges = false, powerChain,
-  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
+  portfolioDefense, ownershipPhilosophy, aiActTwoPool, capexLadder, macroRiskLights, marketStructureWatch,
+  aiFourActs, dalioPressureTest, aiFinancingQuality, aiPhaseTwo, researchPane = 'all',
 }) => {
   if (!d) {
     return (
@@ -1202,6 +1207,344 @@ const FiveLayerDashboard: React.FC<FiveLayerDashboardProps> = ({
         </Card>
       )}
       </>
+      )}
+
+      {showFocus && marketStructureWatch && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>市场结构观察 —— 放量滞涨只触发复核，不升级 TPO</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。M-01、B-01、C-01 与 Decision 分层判定，禁止跨模块串证。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{marketStructureWatch.id}｜{marketStructureWatch.provisionalState?.label}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{marketStructureWatch.provisionalState?.statement}</div>
+                <div>{marketStructureWatch.provisionalState?.whyProvisional}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>四问分开判</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={marketStructureWatch.checks ?? []}
+            columns={[
+              { title: '检查项', dataIndex: 'item', width: 150 },
+              { title: '数据状态', dataIndex: 'status', width: 220 },
+              { title: '当前', dataIndex: 'current' },
+              { title: '推不出', dataIndex: 'doesNotMean' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>真正危险的组合</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{(marketStructureWatch.dangerousCombination?.conditions ?? []).join(' + ')}</div>
+            <div>{marketStructureWatch.dangerousCombination?.interpretation}</div>
+            <div style={{ color: '#8e8e93' }}>{marketStructureWatch.dangerousCombination?.boundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>9/23 四种确认路径</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={marketStructureWatch.nextSessionPaths ?? []}
+            columns={[
+              { title: '路径', dataIndex: 'id', width: 70 },
+              { title: '观察', dataIndex: 'observation', width: 250 },
+              { title: '解释', dataIndex: 'interpretation' },
+              { title: 'TPO 边界', dataIndex: 'tpo' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>AI β 核心四只</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{(marketStructureWatch.aiBetaCore?.names ?? []).join(' / ')}</div>
+            <div>{marketStructureWatch.aiBetaCore?.watch}</div>
+            <div>{marketStructureWatch.aiBetaCore?.provisionalThreshold}</div>
+            <div style={{ color: '#8e8e93' }}>{marketStructureWatch.aiBetaCore?.boundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>跨模块防火墙</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="layer"
+            dataSource={marketStructureWatch.moduleFirewall ?? []}
+            columns={[
+              { title: '层', dataIndex: 'layer', width: 180 },
+              { title: '只回答', dataIndex: 'asks' },
+              { title: '不能推出', dataIndex: 'cannot' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>账本、执行与资本许可边界</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{marketStructureWatch.accountFirewall?.reported}　{marketStructureWatch.accountFirewall?.status}</div>
+            <div>{marketStructureWatch.accountFirewall?.action}</div>
+            <div><Text strong>{marketStructureWatch.accountFirewall?.wording}</Text></div>
+            <div>{marketStructureWatch.accountFirewall?.boundary}</div>
+            <div>
+              Capital Permission：
+              {marketStructureWatch.capitalPermission?.before} → {marketStructureWatch.capitalPermission?.after}；
+              changed={String(marketStructureWatch.capitalPermission?.changed)}
+            </div>
+            <div>{marketStructureWatch.capitalPermission?.reason}</div>
+            <div style={{ color: '#8e8e93' }}>{marketStructureWatch.capitalPermission?.not}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(marketStructureWatch.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
+      )}
+
+      {showFocus && macroRiskLights && (
+        <Card
+          style={SECTION}
+          title={<Title level={5} style={{ margin: 0 }}>宏观风险三灯 —— 观察面板，灯永远不是理由</Title>}
+        >
+          <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.8 }}>
+            本区不打分、不排序、不产生候选、不产生动作。证据等级恒为 OBSERVATION。
+            绿灯不打开 Capital Permission，红灯不产生卖出令。
+          </div>
+          <Alert
+            type="warning"
+            message={<Text strong>{macroRiskLights.id}｜{macroRiskLights.hypothesis}　{macroRiskLights.claim}　{macroRiskLights.status}</Text>}
+            description={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <div>{macroRiskLights.object}</div>
+                <div>{macroRiskLights.verdict?.chain}</div>
+                <div>{macroRiskLights.verdict?.wilson}</div>
+                <div>{macroRiskLights.verdict?.rotation}</div>
+                <div>{macroRiskLights.verdict?.permission}</div>
+                <div>{macroRiskLights.verdict?.cash}</div>
+                <div>{macroRiskLights.verdict?.mainline}</div>
+                <div>{macroRiskLights.verdict?.dataContract}</div>
+              </div>
+            }
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            今日灯态
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　转述读数与系统状态并列显示，互不替代。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div><Text strong>{macroRiskLights.lightState?.state}</Text></div>
+            <div>{macroRiskLights.lightState?.reading}</div>
+            <div>{macroRiskLights.lightState?.systemVerdict}</div>
+            <div style={{ color: '#8e8e93' }}>{macroRiskLights.lightState?.why}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            7100 压力情景三组
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　触发、结构、时间不能互相替代。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={macroRiskLights.scenarioGroups ?? []}
+            columns={[
+              { title: '组', width: 150, render: (_: unknown, r: any) => `${r.id}　${r.name}` },
+              { title: '问什么', dataIndex: 'question', width: 220 },
+              { title: '字段', width: 250, render: (_: unknown, r: any) => (r.items ?? []).join(' / ') },
+              { title: '边界', dataIndex: 'boundary' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            Breadth Quality
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　结构数据，不直接生成买卖指令。指数新高 ≠ 市场扩散健康。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="field"
+            dataSource={macroRiskLights.breadthQuality ?? []}
+            columns={[
+              { title: '字段', dataIndex: 'field', width: 180 },
+              { title: '数据契约', dataIndex: 'status', width: 220 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            {macroRiskLights.contractGap?.id}　{macroRiskLights.contractGap?.status}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>数据缺口：</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {(macroRiskLights.contractGap?.dataGaps ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div>规则契约缺口：</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {(macroRiskLights.contractGap?.ruleGaps ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div><Text strong>{macroRiskLights.contractGap?.resolutionBoundary}</Text></div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            风险链条六环
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　逐环标出本系统能不能读到它。六环一环未接线。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="no"
+            dataSource={macroRiskLights.chain ?? []}
+            columns={[
+              { title: '环', width: 200, render: (_: unknown, r: any) => `${r.no}. ${r.link}` },
+              { title: '接线状态', dataIndex: 'status', width: 210 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            三灯
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　原样登记委员会门槛，并写明每盏灯不会做什么。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="color"
+            dataSource={macroRiskLights.bands ?? []}
+            columns={[
+              { title: '灯', width: 130, render: (_: unknown, r: any) => `${r.color}　${r.name}` },
+              {
+                title: '委员会门槛', width: 280,
+                render: (_: unknown, r: any) => (r.committeeConditions ?? []).join('；'),
+              },
+              { title: '这盏灯不会做什么', dataIndex: 'doesNot' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            门槛缺陷
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　一盏会自己打架的灯比没有灯更危险。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="where"
+            dataSource={macroRiskLights.specDefects ?? []}
+            columns={[
+              { title: '位置', dataIndex: 'where', width: 200 },
+              { title: '缺陷', dataIndex: 'defect' },
+              { title: '为什么要紧', dataIndex: 'why' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            外部读数
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　核得到 ≠ 接进来了。一律 EXTERNAL_READ_NOT_WIRED。
+            </Text>
+          </div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={macroRiskLights.readings ?? []}
+            columns={[
+              { title: '项目', dataIndex: 'item', width: 170 },
+              { title: '读数', dataIndex: 'value', width: 300 },
+              { title: '说明', dataIndex: 'note' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>必须改掉的口径</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(macroRiskLights.corrections ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            换挡方向冲突
+            <Text type="secondary" style={{ fontSize: 11, fontWeight: 400 }}>
+              　照实登记，不抹平。
+            </Text>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>Wilson 换出：{(macroRiskLights.rotationConflict?.wilsonFrom ?? []).join(' / ')}</div>
+            <div>Wilson 换入：{(macroRiskLights.rotationConflict?.wilsonTo ?? []).join(' / ')}</div>
+            <div>委员会对应到：{(macroRiskLights.rotationConflict?.committeeMapping ?? []).join(' → ')}</div>
+            <div><Text strong>{macroRiskLights.rotationConflict?.finding}</Text></div>
+            <div>{macroRiskLights.rotationConflict?.why}</div>
+            <div style={{ color: '#8e8e93' }}>{macroRiskLights.rotationConflict?.handling}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            「提现金到 18%–20%」的法理审查
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>主张：{macroRiskLights.cashAudit?.claim}</div>
+            <div>{macroRiskLights.cashAudit?.macroIsNotReason}</div>
+            <div>法定通道：</div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {(macroRiskLights.cashAudit?.lawfulChannels ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+            </ul>
+            <div>{macroRiskLights.cashAudit?.concentrationClaim}</div>
+            <div><Text strong>{macroRiskLights.cashAudit?.conclusion}</Text></div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>
+            旧账本组合口径复算　{macroRiskLights.accountBasisAudit?.status}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>输入：{macroRiskLights.accountBasisAudit?.inputs?.source}</div>
+            <div>{macroRiskLights.accountBasisAudit?.formula}</div>
+            <div><Text strong>{macroRiskLights.accountBasisAudit?.correction}</Text></div>
+            <div>{macroRiskLights.accountBasisAudit?.debtEstimate}</div>
+            <div style={{ color: '#cf1322' }}>{macroRiskLights.accountBasisAudit?.decisionBoundary}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>最终状态锁</div>
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="item"
+            dataSource={macroRiskLights.finalStateLocks ?? []}
+            columns={[
+              { title: '对象', dataIndex: 'item', width: 180 },
+              { title: '状态', dataIndex: 'status', width: 250 },
+              { title: '边界', dataIndex: 'boundary' },
+            ]}
+          />
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>口径守卫</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+            <div>{macroRiskLights.basisGuard?.rule}</div>
+            <div style={{ color: '#8e8e93' }}>{macroRiskLights.basisGuard?.why}</div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>本条成立也不意味着</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(macroRiskLights.doesNotImply ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+          <div style={{ fontSize: 13, fontWeight: 600, margin: '12px 0 6px' }}>阻塞项</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, lineHeight: 1.8 }}>
+            {(macroRiskLights.blockers ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
+          </ul>
+        </Card>
       )}
 
       {showFocus && capexLadder && (
