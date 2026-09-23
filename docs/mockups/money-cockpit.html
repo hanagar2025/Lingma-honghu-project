@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>鸿鹄 · 资金驾驶舱（效果图）</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0d1117; color: #d7dde5;
+    font-family: "WenQuanYi Micro Hei", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+  }
+  .page { width: 1600px; padding: 22px 26px 30px; display: none; }
+  .page.on { display: block; }
+  .hdr { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .hdr h1 { margin: 0; font-size: 22px; color: #fff; letter-spacing: 1px; }
+  .hdr .sub { color: #8b96a5; font-size: 12px; }
+  .mock { color: #f0b429; font-weight: bold; border: 1px solid #f0b429; padding: 2px 8px; border-radius: 4px; margin-left: 10px; font-size: 12px; }
+  .grid { display: grid; gap: 12px; }
+  .card { background: #161b22; border: 1px solid #262d36; border-radius: 8px; padding: 12px 14px; }
+  .card h3 { margin: 0 0 8px; font-size: 14px; color: #fff; display: flex; justify-content: space-between; align-items: baseline; }
+  .card h3 small { color: #8b96a5; font-weight: normal; font-size: 11px; }
+  .kpi { font-size: 22px; color: #fff; font-weight: bold; }
+  .muted { color: #8b96a5; }
+  .note { color: #8b96a5; font-size: 11px; line-height: 1.6; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: #8b96a5; font-weight: normal; border-bottom: 1px solid #262d36; padding: 5px 4px; white-space: nowrap; }
+  td { border-bottom: 1px solid #1f252d; padding: 5px 4px; white-space: nowrap; }
+  .chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; }
+  .s-lat { background: #2a3038; color: #9aa5b1; }
+  .s-sta { background: #10375c; color: #58a6ff; }
+  .s-tre { background: #0f3d2a; color: #3fb950; }
+  .s-bur { background: #4a2c05; color: #f0b429; }
+  .s-exh { background: #4b1d1d; color: #ff7b72; }
+  .s-out { background: #3b1236; color: #db61a2; }
+  .warn { color: #ff7b72; font-weight: bold; }
+  .up { color: #ff7b72; } .dn { color: #3fb950; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab { padding: 6px 14px; border-radius: 6px 6px 0 0; background: #161b22; border: 1px solid #262d36; color: #8b96a5; }
+  .tab.on { color: #fff; border-bottom-color: #161b22; background: #1c2330; }
+  .legend span { margin-right: 14px; font-size: 11px; }
+  .legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 4px; }
+  .foot { margin-top: 12px; color: #8b96a5; font-size: 11px; border-top: 1px dashed #262d36; padding-top: 8px; }
+  .alert { border-left: 3px solid #ff7b72; background: #1d1417; padding: 8px 10px; margin-bottom: 6px; border-radius: 4px; }
+  .alert.y { border-left-color: #f0b429; background: #1d1a12; }
+  .alert.b { border-left-color: #58a6ff; background: #121a24; }
+  .bar { height: 8px; border-radius: 4px; background: #262d36; overflow: hidden; }
+  .bar > div { height: 100%; }
+</style>
+</head>
+<body>
+
+<!-- ═════════════════ 第一屏：驾驶舱总览 ═════════════════ -->
+<div class="page" id="overview">
+  <div class="hdr">
+    <div>
+      <h1>鸿鹄 · 资金驾驶舱 <span class="mock">效果图 · 示意数据，非真实行情</span></h1>
+      <div class="sub">T 日 2026-09-22 收盘版　|　A1 成交额 ✓ 16:30　|　B1 龙虎榜 ✓ 18:30　|　A2 融资余额 / ETF 份额 ⏳ 待 T+1 08:30 补齐（显示为"待补"，不当作 0）</div>
+    </div>
+    <div class="sub">口径：申万 2021 二级（134）为行业骨架 · 主线篮子为分析刀 · C 级估算不入判定</div>
+  </div>
+
+  <!-- 顶栏：市场背景层 -->
+  <div class="grid" style="grid-template-columns: 1.3fr 1fr 1fr 1fr;">
+    <div class="card">
+      <h3>① 市场总水位 <small>全市场成交额 vs 250 日基线</small></h3>
+      <div style="display:flex; gap:16px; align-items:center;">
+        <div><div class="kpi">2.21 万亿</div><div class="muted">偏离基线 <span class="up">+38%</span> · 高于基线第 <b>27</b> 日</div></div>
+        <svg id="spk-market" width="260" height="60"></svg>
+      </div>
+      <div class="note">状态：<span class="chip s-tre">趋势</span>　水位高 ≠ 方向，只说明交换规模大</div>
+    </div>
+    <div class="card">
+      <h3>② 国家队温度计 <small>汇金持有的 18 只宽基 ETF · 份额</small></h3>
+      <svg id="bar-nt" width="330" height="64"></svg>
+      <div class="note">近 10 日净申赎 <span class="dn">−186 亿</span>（赎回）→ 读作<b>降温</b>，不是主线信号</div>
+    </div>
+    <div class="card">
+      <h3>③ 杠杆资金 <small>两融余额（T−1）</small></h3>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div><div class="kpi">2.38 万亿</div><div class="muted">20 日 <span class="up">+612 亿</span></div></div>
+        <svg id="spk-margin" width="170" height="56"></svg>
+      </div>
+      <div class="note">杠杆升温，与国家队降温<b>方向相反</b> → 分歧提示</div>
+    </div>
+    <div class="card">
+      <h3>④ 数据完整度 <small>缺失 ≠ 0</small></h3>
+      <table>
+        <tr><td>成交额（5,1xx 只）</td><td>✓ 100%</td></tr>
+        <tr><td>申万二级聚合（134）</td><td>✓ 134/134</td></tr>
+        <tr><td>融资余额</td><td class="muted">⏳ T+1 08:30</td></tr>
+        <tr><td>ETF 份额</td><td class="muted">⏳ T+1 08:30</td></tr>
+        <tr><td>双源校验偏差</td><td>✓ &lt; 0.3%</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 中栏：三入口资金迁移 -->
+  <div class="grid" style="grid-template-columns: 2.2fr 1fr; margin-top: 12px;">
+    <div class="card">
+      <h3>三个资金入口 · 份额迁移图 <small>各入口成交额占全市场比例 · 近 120 日 · 虚线为各自 250 日水位</small></h3>
+      <div class="legend">
+        <span><i style="background:#58a6ff"></i>入口① 持仓主线（8 只所在主线篮子）</span>
+        <span><i style="background:#3fb950"></i>入口② 观察仓主线（科技外溢）</span>
+        <span><i style="background:#f0b429"></i>入口③ 市场自选方向（资金雷达自动发现）</span>
+      </div>
+      <svg id="mig" width="1010" height="230"></svg>
+      <div class="note">读法：① 从高位回落、② 抬升、③ 新方向从水位下方穿越 —— 份额"一出一进"持续 N 日，才称为主线迁移。只出不进叫退潮，只进不出叫扩散。</div>
+    </div>
+    <div class="card">
+      <h3>迁移矩阵 <small>近 20 日超额资金流向（亿元，示意）</small></h3>
+      <table>
+        <tr><th>从 \ 到</th><th>入口①</th><th>入口②</th><th>入口③</th><th>场外</th></tr>
+        <tr><td>入口①</td><td class="muted">—</td><td class="up">+86</td><td class="up">+142</td><td class="up">+35</td></tr>
+        <tr><td>入口②</td><td class="muted">−</td><td class="muted">—</td><td class="up">+21</td><td class="muted">0</td></tr>
+        <tr><td>入口③</td><td class="muted">−</td><td class="muted">−</td><td class="muted">—</td><td class="dn">−18</td></tr>
+      </table>
+      <div class="note" style="margin-top:8px;">
+        ⚠ 成交额无方向，矩阵是"份额此消彼长"的<b>推断</b>，不是资金流水。<br>
+        需 A2 方向性数据（融资、ETF 申赎）同向才升为"确认"。
+      </div>
+      <div style="margin-top:10px;">
+        <div class="alert b">入口③「电网设备」潜伏 → 启动，第 6 日</div>
+        <div class="alert y">入口①「光模块篮子」趋势 → 衰竭，第 3 日</div>
+        <div class="alert">持仓 A 股：高位背离预警（详见第二屏）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下栏：三个入口的明细 -->
+  <div class="tabs" style="margin-top: 14px;">
+    <div class="tab on">入口① 持仓 · 8 只</div>
+    <div class="tab">入口② 观察仓 · 待委员会确认名单</div>
+    <div class="tab">入口③ 市场自选 · 申万二级 134 个 + 主线篮子</div>
+  </div>
+  <div class="grid" style="grid-template-columns: 1.25fr 1fr 1.15fr;">
+    <div class="card">
+      <h3>入口① 持仓资金卡 <small>资金池存量 = 累计超额成交额 · 持续 = 高于自身水位天数</small></h3>
+      <table id="t-hold"></table>
+    </div>
+    <div class="card">
+      <h3>入口② 观察仓 <small>名单须委员会确认 · 下为在册候选示意</small></h3>
+      <table id="t-watch"></table>
+    </div>
+    <div class="card">
+      <h3>入口③ 市场自选方向 <small>按超额资金排序 · 只排序不打分</small></h3>
+      <table id="t-mkt"></table>
+      <div class="note">不在册股票只显示、不进候选；概念板块只做标签，不参与份额计算。</div>
+    </div>
+  </div>
+
+  <div class="foot">本页是观察层（OBSERVATION）：状态跃迁只决定"先复核谁"，不产生买卖指令。资金规则须经影子运行 + 样本外检验 + 委员会冻结后，才可能进入法定理由。规则指纹 a401aaf3271e 不变。</div>
+</div>
+
+<!-- ═════════════════ 第二屏：个股资金卡详情（背离示例） ═════════════════ -->
+<div class="page" id="detail">
+  <div class="hdr">
+    <div>
+      <h1>资金卡详情 · 持仓 A 股（示例） <span class="mock">效果图 · 示意数据，非真实行情</span></h1>
+      <div class="sub">入口① 持仓　|　所属主线篮子：光模块（申万三级「通信网络设备及器件」内手工筛选）　|　T 日 2026-09-22</div>
+    </div>
+    <div><span class="chip s-exh" style="font-size:14px; padding:4px 12px;">高位背离预警 · 第 6 日</span></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns: 2.3fr 1fr;">
+    <div class="card">
+      <h3>资金波形图 <small>近 250 日 · 同一时间轴：水位带 / 成交额份额 / 价格</small></h3>
+      <div class="legend">
+        <span><i style="background:#3a4452; height:10px;"></i>250 日水位带（中位数 ± 波动）</span>
+        <span><i style="background:#58a6ff"></i>成交额份额（20 日）</span>
+        <span><i style="background:#f0b429"></i>成交额份额（5 日）</span>
+        <span><i style="background:#ff7b72"></i>股价（右轴）</span>
+      </div>
+      <svg id="wave" width="1050" height="330"></svg>
+      <svg id="margin" width="1050" height="110"></svg>
+      <div class="note">下图：融资余额（亿元）与相关主题 ETF 净申赎（柱）。方向性数据用来区分"缩量锁仓"和"缩量撤退"。</div>
+      <h3 style="margin-top:14px;">主线篮子内份额排名 <small>核心股是否在切换 · 近 60 日</small></h3>
+      <table>
+        <tr><th>篮子内股票</th><th>60 日前份额</th><th>20 日前份额</th><th>当前份额</th><th>排名变化</th><th>状态</th><th>在册</th></tr>
+        <tr><td><b>持仓 A（本股）</b></td><td>41%</td><td>38%</td><td>29%</td><td class="dn">1 → 1 ↓</td><td>衰竭</td><td>作战主线在册</td></tr>
+        <tr><td>持仓 B</td><td>33%</td><td>31%</td><td>27%</td><td class="dn">2 → 2 ↓</td><td>衰竭</td><td>作战主线在册</td></tr>
+        <tr><td>篮子股 K</td><td>9%</td><td>14%</td><td>22%</td><td class="up">4 → 3 ↑</td><td>趋势</td><td>作战主线在册</td></tr>
+        <tr><td>篮子股 L</td><td>6%</td><td>8%</td><td>13%</td><td class="up">5 → 4 ↑</td><td>启动</td><td class="muted">不在册 · 只显示</td></tr>
+        <tr><td colspan="7" class="note">龙头集中度（前两名份额和）：74% → 56%。龙头份额下降、二线上升 → 篮子处于"扩散"，尚未满足"核心股切换"（新股须站稳前两名并持续 N 日）。</td></tr>
+      </table>
+    </div>
+
+    <div class="grid" style="gap:12px;">
+      <div class="card">
+        <h3>资金池四问</h3>
+        <table>
+          <tr><td>原有资金量（水位）</td><td>份额中位数 <b>1.42%</b></td></tr>
+          <tr><td>资金池峰值存量</td><td><b>+612 亿</b> 累计超额</td></tr>
+          <tr><td>堆积持续</td><td><b>58 日</b> <span class="warn">（历史最长）</span></td></tr>
+          <tr><td>当前变化</td><td>存量 <span class="dn">−37%</span>，连续 <b>11 日</b>下降</td></tr>
+          <tr><td>对应价格</td><td>20 日 <span class="up">+9.6%</span>，距新高 −1.2%</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>资金目的 · 来源构成 <small>近 20 日 vs 堆积期</small></h3>
+        <div class="note">融资（杠杆 / 短线）</div>
+        <div class="bar"><div style="width:62%; background:#db61a2"></div></div>
+        <div class="note" style="margin-top:6px;">主题 ETF（配置型）</div>
+        <div class="bar"><div style="width:28%; background:#58a6ff"></div></div>
+        <div class="note" style="margin-top:6px;">龙虎榜机构席位（机构）</div>
+        <div class="bar"><div style="width:10%; background:#3fb950"></div></div>
+        <div class="note" style="margin-top:8px;">堆积期以 ETF 与机构为主；近 20 日增量主要来自融资 → 资金结构由<b>配置型转向杠杆型</b>。</div>
+      </div>
+      <div class="card">
+        <h3>背离判定 <small>四项条件 · 满足 4/4</small></h3>
+        <table>
+          <tr><td>✓ 资金池处于自身历史高分位 / 持续创纪录</td></tr>
+          <tr><td>✓ 5 日份额 &lt; 20 日份额，已 11 日</td></tr>
+          <tr><td>✓ 方向性确认：融资余额连降 9 日 + ETF 净赎回</td></tr>
+          <tr><td>✓ 价格仍在上涨 / 接近新高</td></tr>
+        </table>
+        <div class="note" style="margin-top:6px;">若缺第 3 项（只有缩量、没有方向性流出），只记"缩量上涨"，可能是锁仓，<b>不升为背离</b>。</div>
+      </div>
+      <div class="card" style="border-color:#5a2a2a;">
+        <h3>系统输出 <small>观察层 · 不是指令</small></h3>
+        <div class="alert">① 复核优先级：<b>最高</b>（今日第 1 位）</div>
+        <div class="alert y">② 撤退预案：若委员会裁定退出，按"债务执行窗口"分批，预案股数已算好待审</div>
+        <div class="alert b">③ 法定理由栏：当前 <b>无</b>（未超 12%，非熔断承担项）→ 系统不发令</div>
+        <div class="note">影子运行记录本次背离，60 日后回看：背离后价格与相对强度如何 —— 用来检验这条规则配不配升级。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <h3>状态时间轴 <small>每个状态带进入日期 · 进出阈值不同 · 最短保持期 5 日</small></h3>
+    <svg id="timeline" width="1540" height="70"></svg>
+  </div>
+  <div class="foot">"价格还在涨、资金已在撤"是本卡最重要的一种形态。系统把它放在第一位让你看到，并提前算好撤退预案；是否执行由委员会按法定理由决定。这条规则通过影子运行检验后，才可能升级为可执行规则。</div>
+</div>
+
+<script>
+// ─── 工具 ───
+let seed = 7
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646 }
+const $ = id => document.getElementById(id)
+const NS = 'http://www.w3.org/2000/svg'
+function el(svg, tag, attrs, text) {
+  const e = document.createElementNS(NS, tag)
+  for (const k in attrs) e.setAttribute(k, attrs[k])
+  if (text !== undefined) e.textContent = text
+  svg.appendChild(e); return e
+}
+function path(pts, x0, y0, w, h, lo, hi) {
+  return pts.map((v, i) => {
+    const x = x0 + (i / (pts.length - 1)) * w
+    const y = y0 + h - ((v - lo) / (hi - lo)) * h
+    return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1)
+  }).join(' ')
+}
+function smooth(n, base, amp, drift, noise) {
+  const out = []; let v = base
+  for (let i = 0; i < n; i++) { v += drift(i) + (rnd() - 0.5) * noise; out.push(v + amp * Math.sin(i / 9)) }
+  return out
+}
+function ma(a, k) { return a.map((_, i) => { const s = a.slice(Math.max(0, i - k + 1), i + 1); return s.reduce((x, y) => x + y, 0) / s.length }) }
+function spark(id, data, color, baseline) {
+  const s = $(id); const w = +s.getAttribute('width'), h = +s.getAttribute('height')
+  const lo = Math.min(...data) * 0.97, hi = Math.max(...data) * 1.02
+  if (baseline !== undefined) {
+    const y = h - ((baseline - lo) / (hi - lo)) * h
+    el(s, 'line', { x1: 0, x2: w, y1: y, y2: y, stroke: '#5b6573', 'stroke-dasharray': '4 3' })
+  }
+  el(s, 'path', { d: path(data, 0, 2, w, h - 4, lo, hi), fill: 'none', stroke: color, 'stroke-width': 1.8 })
+}
+const state = s => ({ 潜伏: 's-lat', 启动: 's-sta', 趋势: 's-tre', 爆发: 's-bur', 衰竭: 's-exh', 撤离: 's-out' }[s])
+const chip = s => `<span class="chip ${state(s)}">${s}</span>`
+
+// ─── 第一屏 ───
+spark('spk-market', smooth(90, 1.5, 0.08, i => (i > 55 ? 0.012 : 0.001), 0.06), '#58a6ff', 1.6)
+spark('spk-margin', smooth(60, 2.2, 0.01, () => 0.003, 0.012), '#db61a2')
+;(() => {
+  const s = $('bar-nt'); const vals = [12, 30, 8, -15, -40, -22, -35, -18, -26, -30]
+  vals.forEach((v, i) => {
+    const x = 8 + i * 32, mid = 32, hh = Math.abs(v) * 0.7
+    el(s, 'rect', { x, y: v > 0 ? mid - hh : mid, width: 20, height: hh, fill: v > 0 ? '#ff7b72' : '#3fb950' })
+  })
+  el(s, 'line', { x1: 0, x2: 330, y1: 32, y2: 32, stroke: '#5b6573' })
+  el(s, 'text', { x: 2, y: 62, fill: '#8b96a5', 'font-size': 10 }, '近 10 个交易日 · 红=申购（托底）绿=赎回（降温）')
+})()
+
+;(() => {
+  const s = $('mig'); const W = 960, H = 190, X = 40, Y = 10, n = 120
+  const a = smooth(n, 14, 0.4, i => (i < 70 ? 0.03 : -0.06), 0.35)
+  const b = smooth(n, 6, 0.3, i => (i < 60 ? 0 : 0.035), 0.3)
+  const c = smooth(n, 2.2, 0.2, i => (i < 80 ? -0.005 : 0.09), 0.25)
+  const lo = 0, hi = 20
+  for (let g = 0; g <= 20; g += 5) {
+    const y = Y + H - (g / hi) * H
+    el(s, 'line', { x1: X, x2: X + W, y1: y, y2: y, stroke: '#1f252d' })
+    el(s, 'text', { x: 4, y: y + 4, fill: '#8b96a5', 'font-size': 10 }, g + '%')
+  }
+  ;[[a, '#58a6ff', 13.2], [b, '#3fb950', 6.3], [c, '#f0b429', 2.6]].forEach(([d, col, base]) => {
+    const y = Y + H - (base / hi) * H
+    el(s, 'line', { x1: X, x2: X + W, y1: y, y2: y, stroke: col, 'stroke-dasharray': '5 4', opacity: 0.45 })
+    el(s, 'path', { d: path(d, X, Y, W, H, lo, hi), fill: 'none', stroke: col, 'stroke-width': 2.2 })
+  })
+  const mark = (i, t) => {
+    const x = X + (i / (n - 1)) * W
+    el(s, 'line', { x1: x, x2: x, y1: Y, y2: Y + H, stroke: '#8b96a5', 'stroke-dasharray': '2 3' })
+    el(s, 'text', { x: x + 4, y: Y + 12, fill: '#d7dde5', 'font-size': 11 }, t)
+  }
+  mark(70, '① 份额见顶')
+  mark(88, '③ 上穿水位（启动）')
+  el(s, 'text', { x: X, y: Y + H + 20, fill: '#8b96a5', 'font-size': 10 }, '120 日前')
+  el(s, 'text', { x: X + W - 30, y: Y + H + 20, fill: '#8b96a5', 'font-size': 10 }, 'T 日')
+})()
+
+$('t-hold').innerHTML = `
+<tr><th>持仓</th><th>状态</th><th>资金池</th><th>持续 / 历史最长</th><th>5 日偏离</th><th>20 日价</th><th>提示</th></tr>
+<tr><td>持仓 A</td><td>${chip('衰竭')}</td><td>+386 亿</td><td>58 / <b>58</b></td><td class="dn">−21%</td><td class="up">+9.6%</td><td class="warn">高位背离</td></tr>
+<tr><td>持仓 B</td><td>${chip('衰竭')}</td><td>+241 亿</td><td>51 / 64</td><td class="dn">−14%</td><td class="up">+7.1%</td><td class="warn">背离观察</td></tr>
+<tr><td>持仓 C</td><td>${chip('爆发')}</td><td>+198 亿</td><td>22 / 47</td><td class="up">+46%</td><td class="up">+18%</td><td>拥挤</td></tr>
+<tr><td>持仓 D</td><td>${chip('趋势')}</td><td>+75 亿</td><td>31 / 40</td><td class="up">+8%</td><td class="up">+4.2%</td><td class="muted">—</td></tr>
+<tr><td>持仓 E</td><td>${chip('趋势')}</td><td>+52 亿</td><td>27 / 52</td><td class="up">+5%</td><td class="up">+3.0%</td><td class="muted">—</td></tr>
+<tr><td>持仓 F</td><td>${chip('启动')}</td><td>+9 亿</td><td>6 / 33</td><td class="up">+19%</td><td class="up">+2.1%</td><td class="muted">—</td></tr>
+<tr><td>持仓 G</td><td>${chip('潜伏')}</td><td>−12 亿</td><td>0 / 29</td><td class="dn">−6%</td><td class="dn">−1.8%</td><td class="muted">—</td></tr>
+<tr><td>持仓 H</td><td>${chip('撤离')}</td><td>−31 亿</td><td>0 / 21</td><td class="dn">−33%</td><td class="dn">−6.4%</td><td class="warn">资金撤离</td></tr>`
+
+$('t-watch').innerHTML = `
+<tr><th>观察股</th><th>主线</th><th>状态</th><th>持续</th><th>主线内份额</th></tr>
+<tr><td>观察 1</td><td>PCB</td><td>${chip('启动')}</td><td>8</td><td>第 2 ↑</td></tr>
+<tr><td>观察 2</td><td>液冷</td><td>${chip('启动')}</td><td>6</td><td>第 1 ↑</td></tr>
+<tr><td>观察 3</td><td>服务器电源</td><td>${chip('趋势')}</td><td>19</td><td>第 1 →</td></tr>
+<tr><td>观察 4</td><td>CCL</td><td>${chip('潜伏')}</td><td>0</td><td>第 3 →</td></tr>
+<tr><td>观察 5</td><td>光器件</td><td>${chip('衰竭')}</td><td>44</td><td>第 2 ↓</td></tr>
+<tr><td class="muted" colspan="5">…… 其余待委员会确认名单</td></tr>`
+
+$('t-mkt').innerHTML = `
+<tr><th>方向（申万二级 / 篮子）</th><th>状态</th><th>超额资金 20 日</th><th>持续</th><th>份额前三</th></tr>
+<tr><td>电网设备</td><td>${chip('启动')}</td><td class="up">+168 亿</td><td>6</td><td>X1 · X2 · X3</td></tr>
+<tr><td>半导体</td><td>${chip('趋势')}</td><td class="up">+142 亿</td><td>34</td><td>Y1 · Y2 · Y3</td></tr>
+<tr><td>军工电子Ⅱ</td><td>${chip('启动')}</td><td class="up">+61 亿</td><td>4</td><td>Z1 · Z2 · Z3</td></tr>
+<tr><td>通信设备</td><td>${chip('衰竭')}</td><td class="dn">−95 亿</td><td>—</td><td>W1 · W2 · W3</td></tr>
+<tr><td>银行（托底标记）</td><td>${chip('潜伏')}</td><td class="muted">剔除</td><td>—</td><td class="muted">国家队相关，单列</td></tr>`
+
+// ─── 第二屏 ───
+;(() => {
+  const s = $('wave'); const W = 960, H = 280, X = 46, Y = 14, n = 250
+  const raw = []; let v = 1.3
+  for (let i = 0; i < n; i++) {
+    const drift = i < 120 ? 0.0005 : i < 178 ? 0.02 : i < 239 ? -0.004 : -0.03
+    v = Math.max(0.6, v + drift + (rnd() - 0.5) * 0.12); raw.push(v)
+  }
+  const s20 = ma(raw, 20), s5 = ma(raw, 5)
+  const price = []; let p = 100
+  for (let i = 0; i < n; i++) { p *= 1 + (i < 120 ? 0.0005 : i < 239 ? 0.0042 : 0.004) + (rnd() - 0.5) * 0.02; price.push(p) }
+  const lo = 0.4, hi = 3.4
+  const base = 1.42, band = 0.28
+  const yb = val => Y + H - ((val - lo) / (hi - lo)) * H
+  el(s, 'rect', { x: X, y: yb(base + band), width: W, height: yb(base - band) - yb(base + band), fill: '#3a4452', opacity: 0.55 })
+  el(s, 'line', { x1: X, x2: X + W, y1: yb(base), y2: yb(base), stroke: '#8b96a5', 'stroke-dasharray': '5 4' })
+  for (let g = 0.5; g <= 3.3; g += 0.5) {
+    el(s, 'text', { x: 4, y: yb(g) + 4, fill: '#8b96a5', 'font-size': 10 }, g.toFixed(1) + '%')
+  }
+  el(s, 'path', { d: path(s20, X, Y, W, H, lo, hi), fill: 'none', stroke: '#58a6ff', 'stroke-width': 2.4 })
+  el(s, 'path', { d: path(s5, X, Y, W, H, lo, hi), fill: 'none', stroke: '#f0b429', 'stroke-width': 1.3, opacity: 0.9 })
+  const plo = Math.min(...price) * 0.95, phi = Math.max(...price) * 1.03
+  el(s, 'path', { d: path(price, X, Y, W, H, plo, phi), fill: 'none', stroke: '#ff7b72', 'stroke-width': 2 })
+  el(s, 'text', { x: X + W + 6, y: Y + 10, fill: '#ff7b72', 'font-size': 10 }, '价格')
+  const xi = i => X + (i / (n - 1)) * W
+  const zone = (a, b, col, t) => {
+    el(s, 'rect', { x: xi(a), y: Y, width: xi(b) - xi(a), height: H, fill: col, opacity: 0.08 })
+    el(s, 'text', { x: xi(a) + 4, y: Y + H - 6, fill: '#d7dde5', 'font-size': 11 }, t)
+  }
+  zone(0, 120, '#8b96a5', '潜伏 · 在水位带内')
+  zone(120, 178, '#3fb950', '堆积 · 58 日（历史最长）')
+  zone(178, 239, '#f0b429', '高位')
+  zone(239, 249, '#ff7b72', '背离')
+  el(s, 'text', { x: xi(182), y: Y + 30, fill: '#ff7b72', 'font-size': 12, 'font-weight': 'bold' }, '价格仍在上行 ↗')
+  el(s, 'text', { x: xi(182), y: Y + 48, fill: '#58a6ff', 'font-size': 12, 'font-weight': 'bold' }, '资金份额已回落 ↘ 连续 11 日')
+})()
+
+;(() => {
+  const s = $('margin'); const W = 960, H = 80, X = 46, Y = 6, n = 60
+  const m = []; let v = 120
+  for (let i = 0; i < n; i++) { v += i < 45 ? 1.2 + (rnd() - 0.5) : -2.1 + (rnd() - 0.5); m.push(v) }
+  const lo = Math.min(...m) * 0.97, hi = Math.max(...m) * 1.02
+  const flows = Array.from({ length: n }, (_, i) => (i < 40 ? 3 + (rnd() - 0.4) * 6 : -4 + (rnd() - 0.6) * 6))
+  flows.forEach((f, i) => {
+    const x = X + (i / n) * W, mid = Y + H / 2, hh = Math.min(Math.abs(f) * 3.2, H / 2 - 2)
+    el(s, 'rect', { x, y: f > 0 ? mid - hh : mid, width: W / n - 3, height: hh, fill: f > 0 ? '#58a6ff' : '#3fb950', opacity: 0.55 })
+  })
+  el(s, 'path', { d: path(m, X, Y, W, H, lo, hi), fill: 'none', stroke: '#db61a2', 'stroke-width': 2 })
+  el(s, 'text', { x: 4, y: Y + 12, fill: '#db61a2', 'font-size': 10 }, '融资')
+  el(s, 'text', { x: 4, y: Y + H - 4, fill: '#58a6ff', 'font-size': 10 }, 'ETF')
+  el(s, 'text', { x: X + W - 230, y: Y + 12, fill: '#d7dde5', 'font-size': 11 }, '融资余额连降 9 日 · ETF 连续净赎回')
+})()
+
+;(() => {
+  const s = $('timeline'); const segs = [
+    ['潜伏', 0, 0.44, '#2a3038', '2025-09-24'], ['启动', 0.44, 0.5, '#10375c', '2026-03-18'],
+    ['趋势', 0.5, 0.68, '#0f3d2a', '2026-04-01'], ['爆发', 0.68, 0.75, '#4a2c05', '2026-06-22'],
+    ['趋势', 0.75, 0.93, '#0f3d2a', '2026-07-08'], ['衰竭 · 背离', 0.93, 1, '#4b1d1d', '2026-09-14'],
+  ]
+  const W = 1520
+  segs.forEach(([t, a, b, col, d]) => {
+    el(s, 'rect', { x: 10 + a * W, y: 10, width: (b - a) * W - 2, height: 26, fill: col, rx: 4 })
+    el(s, 'text', { x: 16 + a * W, y: 28, fill: '#fff', 'font-size': 12 }, t)
+    el(s, 'text', { x: 12 + a * W, y: 56, fill: '#8b96a5', 'font-size': 10 }, d)
+  })
+})()
+
+document.getElementById(location.hash === '#detail' ? 'detail' : 'overview').classList.add('on')
+</script>
+</body>
+</html>
