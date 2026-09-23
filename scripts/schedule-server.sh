@@ -139,6 +139,17 @@ else
   echo "⚠ 没有 today.agent.md（旧代码）。其他 Agent 还拿不到稳定链接。"
 fi
 echo "已发布，交易日 $SNAP_DATE"
+
+# 资金驾驶舱（/money）。失败不影响主驾驶舱：它只是观察层
+if npx tsx backend/src/services/moneyRadar/run.ts > /dev/null; then
+  MONEY=/opt/tios/frontend/public/data/money.json
+  if [[ -s "$MONEY" ]]; then
+    install -o www-data -g www-data -m 644 "$MONEY" /var/www/tios/data/money.json
+    echo "已发布资金驾驶舱 money.json"
+  fi
+else
+  echo "⚠ 资金驾驶舱本次未更新（主驾驶舱已发布，不受影响）"
+fi
 INNER
 sudo chmod +x "$REMOTE_DIR/update-snapshot.sh"
 sudo mkdir -p /var/log && sudo touch /var/log/tios-update.log
