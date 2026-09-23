@@ -113,8 +113,21 @@ const last = (ms: DayMetrics[]) => { const r = run(ms); return { state: r.days.a
   ok('份额回落但无方向性流出 → 回到潜伏，不判撤离',
     last([...trend, ...seq({ ...fall, a2Outflow: false }, 6)]).state === 'LATENT')
 
-  ok('份额仍高但价格响应衰减 → 衰竭',
-    last([...trend, ...seq({ ...trendDay, a2Inflow: true, pr10: 0.2, pr10Mean60: 1 }, 6)]).state === 'EXHAUST')
+  ok('10 日份额仍高但 10 日价格不涨，连续 3 日 → 衰竭（放量滞涨）',
+    last([...trend, ...seq({ ...trendDay, s10: 0.013, a2Inflow: true, ret10: -0.01 }, 6)]).state === 'EXHAUST')
+  ok('份额高且价格仍在推进 → 不判衰竭',
+    last([...trend, ...seq({ ...trendDay, s10: 0.013, a2Inflow: true, ret10: 0.03 }, 6)]).state === 'TREND')
+  ok('衰竭后价格重新推进 → 回到趋势',
+    last([...trend, ...seq({ ...trendDay, s10: 0.013, a2Inflow: true, ret10: -0.01 }, 6),
+      ...seq({ ...trendDay, s10: 0.013, a2Inflow: true, ret10: 0.03 }, 6)]).state === 'TREND')
+  ok('融资余额当日未发布时，用最近已发布日判断方向（T+1 发布）', (() => {
+    const ds = synthDataSet(300, [{
+      code: 'A', share: () => 0.01, price: () => 10,
+      margin: t => (t === 299 ? null : 1e9 + t * 1e6),
+    }])
+    const m = computeMetrics(rawSeries(one('A'), ds), ds.market.map(d => d.totalAmount))
+    return m[299]!.margin === null && m[299]!.marginDelta10 !== null && m[299]!.a2Inflow === true
+  })())
   ok('5 日份额高于 95% 分位且涨幅处于自身 90% 分位以上 → 爆发',
     last([...trend, ...seq({ ...trendDay, a2Inflow: true, s5: 0.02, ret20: 0.3, ret20Q90: 0.2 }, 6)]).state === 'BURST')
 

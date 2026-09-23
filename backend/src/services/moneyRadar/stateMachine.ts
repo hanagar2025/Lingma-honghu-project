@@ -49,9 +49,16 @@ export interface Transition {
 const gt = (a: number | null, b: number | null) => (a === null || b === null ? null : a > b)
 const lt = (a: number | null, b: number | null) => (a === null || b === null ? null : a < b)
 
+/** 放量滞涨：资金仍在高位，价格却不再推进 */
 function exhaustCond(m: DayMetrics): boolean | null {
-  if (m.s20 === null || m.q75 === null || m.pr10 === null || m.pr10Mean60 === null) return null
-  return m.s20 > m.q75 && m.pr10 < T.exhaustResponseRatio * m.pr10Mean60
+  if (m.s10 === null || m.q75 === null || m.ret10 === null) return null
+  return m.s10 > m.q75 && m.ret10 <= T.exhaustMaxRet10
+}
+
+/** 衰竭解除：资金仍高，价格重新推进 */
+function exhaustRecovered(m: DayMetrics): boolean | null {
+  if (m.s20 === null || m.q75 === null || m.ret10 === null) return null
+  return m.s20 > m.q75 && m.ret10 > T.exhaustMaxRet10
 }
 
 export function runStateMachine(ms: readonly DayMetrics[]): { days: StateDay[]; transitions: Transition[] } {
@@ -101,7 +108,7 @@ export function runStateMachine(ms: readonly DayMetrics[]): { days: StateDay[]; 
 
         case 'TREND':
           if (lastKDays(ms, t, T.exhaustConfirmDays, exhaustCond)) {
-            go(t, 'EXHAUST', `份额仍高，但价格响应连续 ${T.exhaustConfirmDays} 日低于 60 日均值的一半`)
+            go(t, 'EXHAUST', `10 日份额仍高于 75% 分位，但 10 日价格不涨，连续 ${T.exhaustConfirmDays} 日`)
           } else if (gt(m.s5, m.q95) === true && m.ret20 !== null && m.ret20Q90 !== null && m.ret20 >= m.ret20Q90) {
             go(t, 'BURST', '5 日份额高于 95% 分位，20 日涨幅处于自身 90% 分位以上')
           } else if (s20BelowMedian(T.trendExitDays)) {
@@ -113,7 +120,7 @@ export function runStateMachine(ms: readonly DayMetrics[]): { days: StateDay[]; 
 
         case 'BURST':
           if (lastKDays(ms, t, T.exhaustConfirmDays, exhaustCond)) {
-            go(t, 'EXHAUST', '爆发后价格响应衰减')
+            go(t, 'EXHAUST', '爆发后放量滞涨')
           } else if (lastKDays(ms, t, T.burstExitDays, x => (x.s5 === null || x.q95 === null ? null : x.s5 <= x.q95))) {
             go(t, 'TREND', `5 日份额连续 ${T.burstExitDays} 日回到 95% 分位以下`)
           }
@@ -124,10 +131,8 @@ export function runStateMachine(ms: readonly DayMetrics[]): { days: StateDay[]; 
             if (m.a2Outflow === true) go(t, 'RETREAT', `衰竭后 20 日份额连续 ${T.trendExitDays} 日低于中位数，A2 反向流出`)
             else if (m.a2Outflow === null) pending = 'RETREAT_NEEDS_A2'
             else go(t, 'LATENT', '份额回落到中位数以下，无方向性流出')
-          } else if (lastKDays(ms, t, T.exhaustConfirmDays, x =>
-            x.pr10 === null || x.pr10Mean60 === null || x.s20 === null || x.q75 === null
-              ? null : x.pr10 >= x.pr10Mean60 && x.s20 > x.q75)) {
-            go(t, 'TREND', '价格响应恢复，份额仍高于 75% 分位')
+          } else if (lastKDays(ms, t, T.exhaustConfirmDays, exhaustRecovered)) {
+            go(t, 'TREND', '价格重新推进，份额仍高于 75% 分位')
           }
           break
 

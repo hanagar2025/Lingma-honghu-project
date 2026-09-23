@@ -73,7 +73,10 @@ export interface ChartSeries {
   q75: Num[]
   close: Num[]
   margin: Num[]
-  poolYi: Num[]
+  /** 20 日日均成交额（亿元/日） */
+  level20Yi: Num[]
+  /** 水位对应的日均成交额（亿元/日） */
+  base20Yi: Num[]
 }
 
 export interface LeaderRow {
@@ -100,16 +103,20 @@ export interface ObjectView {
   pending: Pending
   persist: number | null
   maxPersistBefore: number | null
-  /** 资金池存量，亿元 */
-  poolYi: number | null
-  /** 近 20 日超额成交额（相对水位），亿元。正 = 资金在积累 */
-  excess20Yi: number | null
+  /** 当前资金量：20 日日均成交额，亿元/日 */
+  level20Yi: number | null
+  /** 原有资金量：水位对应的日均成交额，亿元/日 */
+  base20Yi: number | null
+  /** 近 20 日日均超额成交额（相对水位），亿元/日。正 = 资金在积累 */
+  excessDailyYi: number | null
   dev5: number | null
   dev20: number | null
   ret20: number | null
   a2: { marginDelta10Yi: number | null; etfNet10Yi: number | null; instNet10Yi: number | null }
   divergence: DivergenceVerdict | null
   divergenceDetail: string[]
+  /** 背离四项逐项结果；第 3 项 null = 方向性数据缺失 */
+  divergenceChecks: { poolHigh: boolean; shareFading: boolean; directionalOutflow: boolean | null; priceHolding: boolean } | null
   reviewClass: ReviewClass
   leaders: LeaderRow[]
   risers: LeaderRow[]
@@ -183,7 +190,8 @@ function chartOf(ms: readonly DayMetrics[], ds: DataSet): ChartSeries {
     median: pick('median').map(r4), q25: pick('q25').map(r4), q75: pick('q75').map(r4),
     close: pick('close').map(v => (v === null ? null : Math.round(v * 100) / 100)),
     margin: pick('margin').map(v => (v === null ? null : Math.round(v / 1e6) / 100)),
-    poolYi: ms.slice(from).map(m => Math.round(m.pool / 1e6) / 100),
+    level20Yi: pick('amount20').map(v => (v === null ? null : Math.round(v / 1e6) / 100)),
+    base20Yi: pick('baseLevel20').map(v => (v === null ? null : Math.round(v / 1e6) / 100)),
   }
 }
 
@@ -197,10 +205,10 @@ function viewOf(
   const empty: ObjectView = {
     id: obj.id, name: obj.name, kind: obj.kind, entry: obj.entry, standing, basket,
     dataStatus: 'NOT_WIRED', state: null, stateText: '数据源未接入', stateSince: null, pending: null,
-    persist: null, maxPersistBefore: null, poolYi: null, excess20Yi: null,
+    persist: null, maxPersistBefore: null, level20Yi: null, base20Yi: null, excessDailyYi: null,
     dev5: null, dev20: null, ret20: null,
     a2: { marginDelta10Yi: null, etfNet10Yi: null, instNet10Yi: null },
-    divergence: null, divergenceDetail: [], reviewClass: 'WATCH', leaders: [], risers: [], series: null,
+    divergence: null, divergenceDetail: [], divergenceChecks: null, reviewClass: 'WATCH', leaders: [], risers: [], series: null,
   }
   if (!ds || !ds.dates.length) return { view: empty, states: [], metrics: [] }
 
@@ -238,14 +246,19 @@ function viewOf(
       pending: d.pending,
       persist: m.persist,
       maxPersistBefore: m.maxPersistBefore,
-      poolYi: m.pool / 1e8,
-      excess20Yi: yiOf(excess20(metrics, raw, mkt, t)),
+      level20Yi: yiOf(m.amount20),
+      base20Yi: yiOf(m.baseLevel20),
+      excessDailyYi: (() => { const x = excess20(metrics, raw, mkt, t); return x === null ? null : x / 20 / 1e8 })(),
       dev5: dev(m.s5, m.median),
       dev20: dev(m.s20, m.median),
       ret20: m.ret20,
       a2: { marginDelta10Yi: yiOf(m.marginDelta10), etfNet10Yi: yiOf(m.etfNet10), instNet10Yi: yiOf(m.instNet10) },
       divergence: div.verdict,
       divergenceDetail: div.detail,
+      divergenceChecks: {
+        poolHigh: div.c1PoolHigh, shareFading: div.c2ShareFading,
+        directionalOutflow: div.c3DirectionalOutflow, priceHolding: div.c4PriceHolding,
+      },
       reviewClass,
       leaders,
       risers,
@@ -379,8 +392,8 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
       return b.view
     })
     if (e === 3) {
-      views.sort((a, b) => REVIEW_ORDER.indexOf(a.reviewClass) - REVIEW_ORDER.indexOf(b.reviewClass)
-        || (b.excess20Yi ?? -Infinity) - (a.excess20Yi ?? -Infinity))
+      // 入口③ 回答"市场正在把钱投向哪里"，按日均超额资金排；衰竭、撤离等提醒另进复核顺序
+      views.sort((a, b) => (b.excessDailyYi ?? -Infinity) - (a.excessDailyYi ?? -Infinity))
       // 入口③ 只给最值得看的一批补图表序列，控制快照体积
       const focus = views.filter(v => v.state && (IN_STATES.includes(v.state) || v.reviewClass !== 'WATCH')).slice(0, 16)
       for (const v of focus) {
@@ -399,8 +412,10 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
   })
 
   const all = entries.flatMap(e => e.objects)
-  const reviewQueue = all
-    .filter(v => v.reviewClass !== 'WATCH' && (v.entry !== 3 || v.reviewClass !== 'NEW_TRANSITION'))
+  // 入口① ② 是我们的仓位与观察仓，全部进复核队列；入口③ 只收背离与撤离，且最多 5 个 ——
+  // 市场上一百多个行业每天总有若干在跃迁，全放进来会淹没真正要看的持仓
+  const e3Serious = all.filter(v => v.entry === 3 && (v.reviewClass === 'DIVERGENCE' || v.reviewClass === 'RETREAT')).slice(0, 5)
+  const reviewQueue = [...all.filter(v => v.entry !== 3 && v.reviewClass !== 'WATCH'), ...e3Serious]
     .sort((a, b) => REVIEW_ORDER.indexOf(a.reviewClass) - REVIEW_ORDER.indexOf(b.reviewClass) || a.entry - b.entry)
     .map(v => ({ id: v.id, name: v.name, entry: v.entry, reviewClass: v.reviewClass, text: REVIEW_TEXT[v.reviewClass] }))
 
@@ -416,27 +431,40 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
   if (ds && ds.dates.length) {
     const t = ds.dates.length - 1
 
-    // 主线迁移：从持仓 / 观察仓篮子，到任何进入资金流入状态的篮子或行业
+    // 主线迁移：从持仓 / 观察仓篮子出发；目标只认处于趋势或爆发、且日均超额资金排在前 10 的篮子或行业。
+    // 进入"启动"的方向每天都有一批，全算作迁移目标会把"一出一进"稀释成噪音
     const sources = [...entries[0]!.objects, ...entries[1]!.objects].filter(v => v.kind === 'BASKET')
-    const targets = all.filter(v => v.kind !== 'STOCK' && v.state && IN_STATES.includes(v.state))
+    const targets = all
+      .filter(v => v.kind !== 'STOCK' && (v.state === 'TREND' || v.state === 'BURST') && (v.excessDailyYi ?? 0) > 0)
+      .sort((a, b) => (b.excessDailyYi ?? 0) - (a.excessDailyYi ?? 0))
+      .slice(0, 10)
     for (const a of sources) {
+      const found: (MoneyCockpitView['migrations'][number] & { strength: number })[] = []
       for (const b of targets) {
         if (a.id === b.id) continue
         const A = built[a.id]
         const B = built[b.id]
         if (!A?.states.length || !B?.states.length) continue
         const r = checkMigration({ states: A.states, metrics: A.metrics }, { states: B.states, metrics: B.metrics }, t)
-        if (r.verdict === 'MIGRATION') migrations.push({ from: a.name, to: b.name, ...r })
+        if (r.verdict === 'MIGRATION') found.push({ from: a.name, to: b.name, ...r, strength: b.excessDailyYi ?? 0 })
+      }
+      found.sort((x, y) => y.strength - x.strength)
+      for (const f of found.slice(0, 3)) {
+        const { strength: _s, ...rest } = f
+        migrations.push(rest)
       }
     }
 
-    // 三入口份额迁移图
+    // 三入口份额迁移图：① 8 只持仓，② 7 只观察股，③ 市场资金流入最强的 5 个行业（去掉与 ①② 重复的股票）。
+    // 三块互不重叠；主线篮子只在表格里作背景，不进这张图，否则观察股会因为和持仓同属一个篮子被去重掉
     const from = Math.max(0, ds.dates.length - CHART_DAYS)
-    const codes1 = [...new Set(objs[1].flatMap(o => o.codes))]
+    const codes1 = objs[1].filter(o => o.kind === 'STOCK').flatMap(o => o.codes)
     const set1 = new Set(codes1)
-    const codes2 = [...new Set(objs[2].flatMap(o => o.codes))].filter(c => !set1.has(c))
+    const codes2 = objs[2].filter(o => o.kind === 'STOCK').flatMap(o => o.codes).filter(c => !set1.has(c))
     const set2 = new Set(codes2)
-    const hot = entries[2]!.objects.filter(v => v.state && IN_STATES.includes(v.state)).slice(0, 5)
+    const hot = entries[2]!.objects
+      .filter(v => v.state && IN_STATES.includes(v.state) && (v.excessDailyYi ?? 0) > 0)
+      .slice(0, 5)
     const hotNames = hot.map(v => v.name)
     const codes3 = [...new Set(hot.flatMap(v => objs[3].find(o => o.id === v.id)?.codes ?? []))]
       .filter(c => !set1.has(c) && !set2.has(c))
@@ -486,7 +514,10 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
     if (withShares.length) {
       const flow = nationalTeamFlow(ds, withShares)
       const cls = classifyNationalTeam(flow)
-      const last10 = flow.slice(-10)
+      // ETF 份额 T+1 发布：取截至最近已发布日的 10 个交易日
+      let end = flow.length - 1
+      while (end >= 0 && flow[end] === null && end > flow.length - 4) end--
+      const last10 = flow.slice(Math.max(0, end - 9), end + 1)
       net10Yi = last10.length === 10 && last10.every(v => v !== null)
         ? (last10 as number[]).reduce((a, b) => a + b, 0) / 1e8 : null
       lastDay = [...cls].reverse().find(x => x !== null) ?? null
@@ -565,8 +596,10 @@ export function renderMoneyCockpit(v: MoneyCockpitView, entry3Limit = 15): strin
     L.push(`  ── ${e.title}（${e.objects.length}）── ${e.note}`)
     for (const o of rows) {
       const stand = o.standing ? `　${o.standing}` : ''
-      L.push(`  ${o.name.padEnd(12)}${o.stateText.padEnd(12)}20日超额 ${yi(o.excess20Yi).padEnd(11)}`
-        + `资金池 ${yi(o.poolYi).padEnd(11)}持续 ${o.persist ?? '—'}/${o.maxPersistBefore ?? '—'}　`
+      const lvl = o.level20Yi === null ? '—' : `${o.level20Yi.toFixed(1)}`
+      const bl = o.base20Yi === null ? '—' : `${o.base20Yi.toFixed(1)}`
+      L.push(`  ${o.name.padEnd(12)}${o.stateText.padEnd(12)}日均资金 ${lvl}/水位 ${bl} 亿`.padEnd(46)
+        + `日均超额 ${yi(o.excessDailyYi).padEnd(11)}持续 ${o.persist ?? '—'}/${o.maxPersistBefore ?? '—'}　`
         + `5日偏离 ${pct(o.dev5)}　20日涨幅 ${pct(o.ret20)}${stand}`)
       if (o.divergence && o.divergence !== 'NONE') {
         L.push(`      背离判定：${o.divergence}　${o.divergenceDetail.join('；')}`)

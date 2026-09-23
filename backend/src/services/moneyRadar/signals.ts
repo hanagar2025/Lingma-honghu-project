@@ -41,7 +41,7 @@ export function checkDivergence(ms: readonly DayMetrics[], t: number): Divergenc
   const persistHigh = m.maxPersistBefore >= T.trendPersistDays
     && m.persist >= T.divergencePersistRatio * m.maxPersistBefore
   const c1 = poolHigh || persistHigh
-  if (poolHigh) detail.push('资金池存量处于自身历史 90% 分位以上')
+  if (poolHigh) detail.push('本段堆积的累计超额成交处于自身历史 90% 分位以上')
   if (persistHigh) detail.push(`堆积 ${m.persist} 日，达到自身历史最长 ${m.maxPersistBefore} 日的 90% 以上`)
 
   const c2 = lastKDays(ms, t, T.divergenceShareDays, x =>

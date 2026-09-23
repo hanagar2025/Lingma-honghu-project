@@ -158,8 +158,18 @@ export interface DayMetrics {
   q75: Num
   q95: Num
   basis: BaselineBasis
-  /** 资金池存量（元）：连续高于水位期间的累计超额成交额 */
+  /**
+   * 堆积期累计超额成交额（元）。成交额是流量，同一笔钱每天被反复买卖，
+   * 累加值不代表"池子里有这么多钱"，只用来和该对象自己的历史比较高低（背离判定第 1 项）。
+   * 要表达"资金量有多少"，看 amount20（日均资金）对比 baseLevel20（水位）。
+   */
   pool: number
+  /** 20 日日均成交额（元/日）：当前的资金量 */
+  amount20: Num
+  /** 水位对应的日均成交额（元/日）= 份额中位数 × 两市 20 日日均成交额 */
+  baseLevel20: Num
+  /** 10 日涨幅 */
+  ret10: Num
   /** 当前连续高于水位的天数 */
   persist: number
   /** 此前历史上最长的连续天数（不含当前这一段） */
@@ -168,9 +178,6 @@ export interface DayMetrics {
   close: Num
   ret20: Num
   ret20Q90: Num
-  /** 10 日价格响应：10 日涨幅 ÷ 10 日份额偏离 */
-  pr10: Num
-  pr10Mean60: Num
   high60: Num
   margin: Num
   marginDelta10: Num
@@ -203,13 +210,14 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
   const s5 = rollingMean(raw.share, 5)
   const s10 = rollingMean(raw.share, 10)
   const s20 = rollingMean(raw.share, 20)
+  const a20 = rollingMean(raw.amount, 20)
+  const m20 = rollingMean(marketAmount, 20)
   const out: DayMetrics[] = []
   let pool = 0
   let persist = 0
   let maxPersist = 0
   const poolHist: number[] = []
   const ret20Hist: Num[] = []
-  const pr10Hist: Num[] = []
 
   const n = raw.share.length
   for (let t = 0; t < n; t++) {
@@ -241,15 +249,17 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
     const ret20 = close !== null && c20 !== null && c20 > 0 ? close / c20 - 1 : null
     const ret10 = close !== null && c10 !== null && c10 > 0 ? close / c10 - 1 : null
     const cur10 = s10[t] ?? null
-    const dev10 = cur10 !== null && median !== null && median > 0 ? cur10 / median - 1 : null
-    const pr10 = ret10 !== null && dev10 !== null && dev10 > 0.05 ? ret10 / dev10 : null
 
     const highs = trailing(raw.close, t, T.divergenceHighWindow).filter((v): v is number => v !== null)
     const high60 = highs.length ? Math.max(...highs) : null
 
+    // 融资余额 T+1 发布：当日未发布时，用最近 2 个交易日内已发布的那一天做方向判断
     const m = raw.margin[t] ?? null
-    const m10 = t >= T.a2WindowDays ? raw.margin[t - T.a2WindowDays] ?? null : null
-    const marginDelta10 = m !== null && m10 !== null ? m - m10 : null
+    let mj = t
+    while (mj > t - 3 && mj >= 0 && (raw.margin[mj] ?? null) === null) mj--
+    const mLast = mj > t - 3 && mj >= 0 ? raw.margin[mj] ?? null : null
+    const m10 = mLast !== null && mj >= T.a2WindowDays ? raw.margin[mj - T.a2WindowDays] ?? null : null
+    const marginDelta10 = mLast !== null && m10 !== null ? mLast - m10 : null
     const etfNet10 = sumWindow(raw.etfFlow, t, T.a2WindowDays, false)
     const instNet10 = sumWindow(raw.instNet, t, T.a2WindowDays, true)
 
@@ -257,26 +267,26 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
     const a2Inflow = a2Known.length ? a2Known.some(v => v > 0) : null
     const a2Outflow = a2Known.length ? a2Known.some(v => v < 0) : null
 
-    const pr10Window = trailing(pr10Hist, t - 1, 60).filter((v): v is number => v !== null)
-    const pr10Mean60 = pr10Window.length >= 20 ? pr10Window.reduce((a, b) => a + b, 0) / pr10Window.length : null
-
+    const mkt20 = m20[t] ?? null
     out.push({
       s5: cur5, s10: cur10, s20: s20[t] ?? null,
       median, q25, q75, q95, basis,
       pool, persist, maxPersistBefore: maxPersist,
+      amount20: a20[t] ?? null,
+      baseLevel20: median !== null && mkt20 !== null ? median * mkt20 : null,
+      ret10,
       // 背离只在最近几日判定，资金池分位只算最后 10 日，省去对整段历史逐日排序
       poolQ90: t >= n - 10
         ? quantile(trailing(poolHist, t, T.divergencePoolHistoryDays).filter(v => v > 0), T.divergencePoolQuantile)
         : null,
       close, ret20,
       ret20Q90: quantile(ret20Hist, T.burstReturnQuantile),
-      pr10, pr10Mean60, high60,
+      high60,
       margin: m, marginDelta10, etfNet10, instNet10,
       a2Inflow, a2Outflow,
       anomaly: raw.anomaly[t] ?? false,
     })
     ret20Hist.push(ret20)
-    pr10Hist.push(pr10)
   }
   return out
 }

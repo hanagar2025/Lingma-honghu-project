@@ -137,8 +137,12 @@ export const THRESHOLDS = {
   failWindowDays: 10,
   burstExitDays: 3,
   exhaustConfirmDays: 3,
-  /** 衰竭：10 日价格响应低于其 60 日均值的这个比例 */
-  exhaustResponseRatio: 0.5,
+  /**
+   * 衰竭 = 放量滞涨：10 日份额仍高于 75% 分位，但 10 日涨幅不超过这个值。
+   * 2026-09-23 实数据首跑修订：原定义"价格响应（涨幅 ÷ 份额偏离）低于其 60 日均值的一半"
+   * 在偏离接近零或均值为负时剧烈跳动，126 个行业大部分被误判为衰竭。阈值尚处预登记阶段，允许修订定义。
+   */
+  exhaustMaxRet10: 0,
   retreatRecoverDays: 5,
   burstReturnQuantile: 0.9,
 

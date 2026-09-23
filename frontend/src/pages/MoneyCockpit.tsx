@@ -100,6 +100,12 @@ const MoneyCockpit: React.FC = () => {
     return m
   }, [data])
 
+  // ?detail=stock:300308 直接打开某张资金卡，便于分享
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('detail')
+    if (id && byId.has(id)) setDetail(byId.get(id))
+  }, [byId])
+
   if (err) return <div className="mc-root"><style>{CSS}</style><Alert type="warning" message={err} /></div>
   if (!data) return <div className="mc-root" style={{ display: 'grid', placeItems: 'center' }}><style>{CSS}</style><Spin /></div>
 
@@ -120,13 +126,16 @@ const MoneyCockpit: React.FC = () => {
     },
     { title: '资金状态', dataIndex: 'stateText', width: 130, render: (v: string) => <StateChip text={v} /> },
     {
-      title: <Tooltip title="近 20 日相对自身水位的累计超额成交额。正 = 资金在积累">20 日超额</Tooltip>,
-      dataIndex: 'excess20Yi', width: 105, align: 'right' as const,
-      render: (v: Num) => <span className={cls(v)}>{yi(v)}</span>,
+      title: <Tooltip title="当前资金量：20 日日均成交额 / 原有资金量：250 日水位对应的日均成交额（亿元/日）">日均资金 / 水位</Tooltip>,
+      width: 130, align: 'right' as const,
+      render: (_: unknown, r: any) => (
+        <span>{r.level20Yi === null ? '—' : r.level20Yi.toFixed(1)}<span className="mc-note"> / {r.base20Yi === null ? '—' : r.base20Yi.toFixed(1)} 亿</span></span>
+      ),
     },
     {
-      title: <Tooltip title="连续高于水位期间累计的超额成交额">资金池</Tooltip>,
-      dataIndex: 'poolYi', width: 95, align: 'right' as const, render: (v: Num) => yi(v, 0).replace('+', ''),
+      title: <Tooltip title="近 20 日平均每天比水位多出（或少于）的成交额。正 = 资金在积累">日均超额</Tooltip>,
+      dataIndex: 'excessDailyYi', width: 100, align: 'right' as const,
+      render: (v: Num) => <span className={cls(v)}>{yi(v)}</span>,
     },
     {
       title: <Tooltip title="当前连续高于水位的天数 / 此前历史最长">持续 / 最长</Tooltip>, width: 95, align: 'right' as const,
@@ -241,9 +250,10 @@ const MoneyCockpit: React.FC = () => {
                 </div>
               ))}
             <h3 style={{ marginTop: 12 }}>入口③ 资金正在积累的方向 <small>前 5</small></h3>
-            {e3.objects.filter((o: any) => (o.excess20Yi ?? 0) > 0).slice(0, 5).map((o: any) => (
+            {[...e3.objects].filter((o: any) => (o.excessDailyYi ?? 0) > 0 && ['启动', '趋势', '爆发'].some(k => o.stateText.startsWith(k)))
+              .sort((a: any, b: any) => (b.excessDailyYi ?? 0) - (a.excessDailyYi ?? 0)).slice(0, 5).map((o: any) => (
               <div key={o.id} className="mc-alert" onClick={() => setDetail(o)}>
-                <b>{o.name}</b>　<StateChip text={o.stateText} />　<span className="mc-up">{yi(o.excess20Yi)}</span>
+                <b>{o.name}</b>　<StateChip text={o.stateText} />　<span className="mc-up">日均 {yi(o.excessDailyYi)}</span>
                 <div className="mc-note">{o.leaders.map((l: any) => l.name).join(' · ')}</div>
               </div>
             ))}
@@ -312,10 +322,18 @@ const DetailCard: React.FC<{ o: any }> = ({ o }) => {
                   { data: s.s5.map((v: Num) => (v === null ? null : v * 100)), color: '#f0b429', width: 1.2, label: '5日' },
                 ]}
                 right={{ data: s.close, color: '#ff7b72', label: '价格' }} />
-              <h3 style={{ marginTop: 10 }}>方向性资金 <small>融资余额（亿元）· 资金池存量（亿元）</small></h3>
-              <LinesChart dates={s.dates} width={720} height={130} unit=""
-                lines={[{ data: s.margin, color: '#db61a2', width: 2, label: '融资余额' }]}
-                right={{ data: s.poolYi, color: '#3fb950', label: '资金池' }} />
+              <h3 style={{ marginTop: 10 }}>资金量 <small>20 日日均成交额 vs 水位（亿元/日）· 融资余额（亿元，右轴）</small></h3>
+              <Legend items={[
+                { color: '#3fb950', label: '日均资金' },
+                { color: '#8b96a5', label: '水位', dash: true },
+                { color: '#db61a2', label: '融资余额（右轴）' },
+              ]} />
+              <LinesChart dates={s.dates} width={720} height={150} unit=""
+                lines={[
+                  { data: s.level20Yi, color: '#3fb950', width: 2, label: '日均资金' },
+                  { data: s.base20Yi, color: '#8b96a5', width: 1, dash: '5 4', label: '水位' },
+                ]}
+                right={{ data: s.margin, color: '#db61a2', label: '融资' }} />
             </>
           ) : <Empty description="该对象未生成图表序列" />}
           {o.leaders?.length > 0 && (
@@ -335,10 +353,10 @@ const DetailCard: React.FC<{ o: any }> = ({ o }) => {
             <h3>资金池四问</h3>
             <table className="mc-kv" style={{ width: '100%' }}>
               <tbody>
-                <tr><td>原有资金量（水位）</td><td>份额中位数 {s ? `${((lastOf(s.median) ?? 0) * 100).toFixed(3)}%` : '—'}</td></tr>
-                <tr><td>资金池存量</td><td>{yi(o.poolYi, 0).replace('+', '')}</td></tr>
+                <tr><td>原有资金量（水位）</td><td>{o.base20Yi === null ? '—' : `${o.base20Yi.toFixed(1)} 亿/日`}<span className="mc-note">　份额中位数 {s ? `${((lastOf(s.median) ?? 0) * 100).toFixed(3)}%` : '—'}</span></td></tr>
+                <tr><td>当前资金量</td><td>{o.level20Yi === null ? '—' : `${o.level20Yi.toFixed(1)} 亿/日`}</td></tr>
                 <tr><td>堆积持续</td><td>{o.persist ?? '—'} 日 / 历史最长 {o.maxPersistBefore ?? '—'} 日</td></tr>
-                <tr><td>近 20 日变化</td><td className={cls(o.excess20Yi)}>{yi(o.excess20Yi)}</td></tr>
+                <tr><td>近 20 日日均超额</td><td className={cls(o.excessDailyYi)}>{yi(o.excessDailyYi)}</td></tr>
                 <tr><td>5 / 20 日偏离</td><td>{pct(o.dev5)} / {pct(o.dev20)}</td></tr>
                 <tr><td>对应价格</td><td className={cls(o.ret20)}>20 日 {pct(o.ret20)}</td></tr>
               </tbody>
@@ -356,9 +374,20 @@ const DetailCard: React.FC<{ o: any }> = ({ o }) => {
             <div className="mc-note">"—" 表示没有观察到（未上榜、无对应 ETF 或未发布），不是 0</div>
           </div>
           <div className="mc-card">
-            <h3>背离判定 <small>四项条件</small></h3>
-            <div style={{ marginBottom: 6 }}>{div ? DIVERGENCE_TEXT[div] : '—'}</div>
-            {(o.divergenceDetail ?? []).map((x: string, i: number) => <div key={i} className="mc-note">✓ {x}</div>)}
+            <h3>背离判定 <small>四项全满足才成立</small></h3>
+            <div style={{ marginBottom: 6 }}>
+              {div && div !== 'NONE' ? <b style={{ color: div === 'DIVERGENCE' ? '#ff7b72' : '#f0b429' }}>{DIVERGENCE_TEXT[div]}</b> : '未成立'}
+            </div>
+            {o.divergenceChecks && ([
+              ['① 堆积处于自身历史高位', o.divergenceChecks.poolHigh],
+              ['② 5 日份额连续 5 日低于 20 日份额', o.divergenceChecks.shareFading],
+              ['③ 方向性流出（融资降 / ETF 赎回 / 机构卖）', o.divergenceChecks.directionalOutflow],
+              ['④ 价格仍在上涨、接近 60 日高点', o.divergenceChecks.priceHolding],
+            ] as [string, boolean | null][]).map(([t, v]) => (
+              <div key={t} className="mc-note" style={{ color: v === true ? '#ff7b72' : undefined }}>
+                {v === true ? '✓' : v === null ? '？' : '·'} {t}{v === null ? '（数据缺失）' : ''}
+              </div>
+            ))}
             <div className="mc-note" style={{ marginTop: 6 }}>缺方向性确认（融资下降、ETF 赎回或机构净卖出）时只记"缩量上涨"或"待 A2 确认"，不升为背离。</div>
           </div>
           <div className="mc-card" style={{ borderColor: '#5a2a2a' }}>
