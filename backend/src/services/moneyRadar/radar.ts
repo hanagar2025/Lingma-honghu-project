@@ -339,6 +339,10 @@ export interface MoneyCockpitView {
   thresholds: typeof THRESHOLDS
   taxonomy: typeof INDUSTRY_TAXONOMY
   dataNotes: string[]
+  /** 一次性校准与样本外检验的结果（冻结后才有） */
+  calibration?: unknown
+  /** 影子运行台账摘要（冻结后才有） */
+  shadow?: unknown
   doesNotImply: readonly string[]
   flags: Record<string, boolean>
 }

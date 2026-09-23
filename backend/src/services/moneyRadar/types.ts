@@ -79,6 +79,8 @@ export interface MarketDay {
   totalAmount: number | null
   /** 全市场融资余额（元） */
   marginTotal: number | null
+  /** 两市基准指数（上证指数与深证综指日收益平均，起点 100）。用于计算相对收益 */
+  close?: number | null
   /** 异常日：指数调仓、季末、ETF 集中申赎。状态机在这些日子不跃迁 */
   anomaly?: boolean
 }

@@ -39,6 +39,21 @@ export function quantile(values: readonly Num[], q: number): Num {
   return a + (b - a) * (pos - lo)
 }
 
+/** 有序数组的增删（二分定位），用于滚动窗口分位数，避免每天整体重排 */
+function sortedInsert(xs: number[], v: number): void {
+  let lo = 0
+  let hi = xs.length
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (xs[mid]! < v) lo = mid + 1; else hi = mid }
+  xs.splice(lo, 0, v)
+}
+
+function sortedRemove(xs: number[], v: number): void {
+  let lo = 0
+  let hi = xs.length
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (xs[mid]! < v) lo = mid + 1; else hi = mid }
+  if (xs[lo] === v) xs.splice(lo, 1)
+}
+
 function sortedQuantile(xs: readonly number[], q: number): number | null {
   if (!xs.length) return null
   const pos = (xs.length - 1) * q
@@ -217,11 +232,17 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
   let persist = 0
   let maxPersist = 0
   const poolHist: number[] = []
-  const ret20Hist: Num[] = []
+  const poolSorted: number[] = []
+  const ret20Sorted: number[] = []
+  const s5Sorted: number[] = []
 
   const n = raw.share.length
   for (let t = 0; t < n; t++) {
-    const hist = trailing(s5, t, T.baselineWindow).filter((v): v is number => v !== null).sort((a, b) => a - b)
+    const add5 = s5[t]
+    if (add5 !== null && add5 !== undefined) sortedInsert(s5Sorted, add5)
+    const drop5 = t - T.baselineWindow >= 0 ? s5[t - T.baselineWindow] : null
+    if (drop5 !== null && drop5 !== undefined) sortedRemove(s5Sorted, drop5)
+    const hist = s5Sorted
     const basis: BaselineBasis = hist.length >= T.baselineWindow ? 'FULL'
       : hist.length >= T.baselineMinWindow ? 'SHORT' : 'INSUFFICIENT'
     const ok = basis !== 'INSUFFICIENT'
@@ -242,6 +263,9 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
       pool = 0
     }
     poolHist.push(pool)
+    if (pool > 0) sortedInsert(poolSorted, pool)
+    const dropPool = t - T.divergencePoolHistoryDays >= 0 ? poolHist[t - T.divergencePoolHistoryDays]! : 0
+    if (dropPool > 0) sortedRemove(poolSorted, dropPool)
 
     const close = raw.close[t] ?? null
     const c20 = t >= 20 ? raw.close[t - 20] ?? null : null
@@ -275,18 +299,15 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
       amount20: a20[t] ?? null,
       baseLevel20: median !== null && mkt20 !== null ? median * mkt20 : null,
       ret10,
-      // 背离只在最近几日判定，资金池分位只算最后 10 日，省去对整段历史逐日排序
-      poolQ90: t >= n - 10
-        ? quantile(trailing(poolHist, t, T.divergencePoolHistoryDays).filter(v => v > 0), T.divergencePoolQuantile)
-        : null,
+      poolQ90: sortedQuantile(poolSorted, T.divergencePoolQuantile),
       close, ret20,
-      ret20Q90: quantile(ret20Hist, T.burstReturnQuantile),
+      ret20Q90: sortedQuantile(ret20Sorted, T.burstReturnQuantile),
       high60,
       margin: m, marginDelta10, etfNet10, instNet10,
       a2Inflow, a2Outflow,
       anomaly: raw.anomaly[t] ?? false,
     })
-    ret20Hist.push(ret20)
+    if (ret20 !== null) sortedInsert(ret20Sorted, ret20)
   }
   return out
 }

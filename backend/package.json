@@ -36,7 +36,8 @@
     "decision:v4x": "tsx src/services/decision/v4xSelftest.ts",
     "money:selftest": "tsx src/services/moneyRadar/selftest.ts",
     "money:demo": "tsx src/services/moneyRadar/demo.ts",
-    "money": "tsx src/services/moneyRadar/run.ts"
+    "money": "tsx src/services/moneyRadar/run.ts",
+    "money:calibrate": "tsx src/services/moneyRadar/calibrate.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

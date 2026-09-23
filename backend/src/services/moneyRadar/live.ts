@@ -34,11 +34,15 @@ export interface LiveOptions {
   log: (s: string) => void
 }
 
+/**
+ * 800 日是腾讯日 K 单次可取的上限。扣掉 250 日水位预热，剩约 550 日，
+ * 才够切成"样本内校准 + 样本外检验"两段。
+ */
 export const DEFAULT_LIVE: Omit<LiveOptions, 'log'> = {
-  days: 420,
-  marginDays: 260,
+  days: 800,
+  marginDays: 560,
   instDays: 60,
-  etfDays: 260,
+  etfDays: 560,
   concurrency: 10,
 }
 
@@ -90,9 +94,17 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
   const szMap = new Map(sz.map(b => [b.date, b]))
   const dates = sh.map(b => b.date).filter(d => szMap.has(d))
   const shMap = new Map(sh.map(b => [b.date, b]))
-  const market: MarketDay[] = dates.map(date => ({
-    date, totalAmount: shMap.get(date)!.amount + szMap.get(date)!.amount, marginTotal: null,
-  }))
+  // 两市基准指数：上证指数与深证综指日收益的平均，用于样本外检验的相对收益
+  let bench = 100
+  const market: MarketDay[] = dates.map((date, i) => {
+    if (i > 0) {
+      const prev = dates[i - 1]!
+      const r1 = shMap.get(date)!.close / shMap.get(prev)!.close - 1
+      const r2 = szMap.get(date)!.close / szMap.get(prev)!.close - 1
+      bench *= 1 + (r1 + r2) / 2
+    }
+    return { date, totalAmount: shMap.get(date)!.amount + szMap.get(date)!.amount, marginTotal: null, close: bench }
+  })
   const latest = dates.at(-1)!
   mark('MARKET_AMOUNT', '腾讯日K：上证指数+深证综指', latest, 'OK')
 

@@ -353,7 +353,80 @@ console.log('\n【真实数据对齐】')
   ok('行业对象优先读预汇总序列', Math.abs((agg.share[10] ?? 0) - 0.05) < 1e-9 && agg.close[10] === 110)
 }
 
-// ─────────────────────────── ⑧ 治理边界 ───────────────────────────
+// ─────────────────────────── ⑧ 校准 · 冻结 · 影子运行 ───────────────────────────
+console.log('\n【校准 · 冻结 · 影子运行】')
+{
+  const bt = await import('./backtest')
+  const sh = await import('./shadow')
+  const { CALIBRATION } = await import('./config')
+
+  ok('超额收益 = 对象涨幅 − 基准涨幅', Math.abs(bt.excessReturn([10, 11, 12], [100, 100, 105], 0, 2)! - (0.2 - 0.05)) < 1e-12)
+  ok('未到期或缺数据时超额收益为 null', bt.excessReturn([10, 11], [100, 101], 0, 5) === null
+    && bt.excessReturn([10, null, 12], [100, 100, 100], 1, 1) === null)
+
+  const same = [{ date: 'd1', v: 0.1 }, { date: 'd1', v: 0.3 }]
+  const ci1 = bt.clusteredBootstrap(same)
+  ok('按交易日分组抽样：只有一个交易日时区间退化为该日均值', !!ci1 && Math.abs(ci1[0] - 0.2) < 1e-12 && Math.abs(ci1[1] - 0.2) < 1e-12)
+  const spread = Array.from({ length: 60 }, (_, i) => ({ date: `d${i}`, v: i % 2 ? 0.02 : -0.02 }))
+  ok('分组抽样结果可复现（确定性随机数）', JSON.stringify(bt.clusteredBootstrap(spread)) === JSON.stringify(bt.clusteredBootstrap(spread)))
+  ok('均值为 0 的样本置信区间含 0', (() => { const c = bt.clusteredBootstrap(spread)!; return c[0] < 0 && c[1] > 0 })())
+
+  const sp = bt.splitWindow(800)
+  ok('样本切分：从水位满 250 日之后开始，样本内与样本外不重叠且首尾相接',
+    sp.inSample[0] === THRESHOLDS.baselineWindow + 20 && sp.inSample[1] === sp.outOfSample[0] && sp.outOfSample[1] === 800)
+
+  const h0 = bt.thresholdsHash()
+  ok('阈值指纹稳定', h0 === bt.thresholdsHash())
+  ok('阈值指纹不受状态字段影响', bt.thresholdsHash({ ...THRESHOLDS, status: 'FROZEN' }) === h0)
+  ok('任何阈值取值改动都会改变指纹', bt.thresholdsHash({ ...THRESHOLDS, startConfirmDays: 4 }) !== h0)
+
+  ok('卫生标准先于数据登记，且含六项', bt.HYGIENE_CRITERIA.registeredOn === '2026-09-23'
+    && bt.hygiene([], 0, 1).length === 6)
+  ok('每条规则都事先声明了预期方向', Object.values(bt.RULE_HYPOTHESIS).every(h => h.sign === 1 || h.sign === -1))
+
+  // 端到端：合成数据上跑卫生检查与事件研究
+  const n = 400
+  const ds = synthDataSet(n, [
+    { code: 'A', share: t => (t < 320 ? 0.01 + wobble(t, 0.0003) : 0.02), price: t => 10 + t * 0.01, margin: t => 1e9 + t * 1e6 },
+    { code: 'B', share: t => 0.005 + wobble(t + 7, 0.0002), price: t => 10 + wobble(t, 0.1), margin: t => 5e8 },
+  ])
+  ds.market.forEach((m, t) => { m.close = 100 + t * 0.01 })
+  const objs = bt.replayObjects(ds, [one('A'), one('B')])
+  const hy = bt.hygiene(objs, 270, 335)
+  ok('卫生检查逐项给出实测值', hy.every(h => typeof h.pass === 'boolean'))
+  const ev = bt.collectEvents(objs, ds, 270, n)
+  ok('事件研究能从回放中收集到规则事件', ev.some(e => e.rule === 'START'))
+  const res = bt.eventStudy(ev, objs, ds)
+  ok('触发少于 30 次的规则判为样本不足，不下结论',
+    res.every(r => r.n >= THRESHOLDS.minTriggersForVerdict || r.verdict === 'INSUFFICIENT_SAMPLE'))
+
+  // 影子台账
+  const start = ds.dates[315]!
+  const l1 = sh.updateLedger(null, objs, ds, start, h0)
+  ok('影子台账只记录冻结日之后的事件', l1.events.every(e => e.date >= start))
+  ok('影子台账记录了冻结后的启动事件', l1.events.some(e => e.rule === 'START' || e.rule === 'TREND'))
+  const l2 = sh.updateLedger(JSON.parse(JSON.stringify(l1)), objs, ds, start, h0)
+  ok('同一数据重跑不产生重复事件（幂等）', l2.events.length === l1.events.length)
+  const firstFilled = l1.events.find(e => e.h20 !== null)
+  const tampered = JSON.parse(JSON.stringify(l1)) as typeof l1
+  if (firstFilled) tampered.events.find(e => e.key === firstFilled.key)!.h20 = 0.123
+  const l3 = sh.updateLedger(tampered, objs, ds, start, h0)
+  ok('已回填的结果不被重算覆盖（只增不改）', !firstFilled || l3.events.find(e => e.key === firstFilled.key)!.h20 === 0.123)
+  ok('未到期的结果保持为空', l1.events.filter(e => ds.dates.indexOf(e.date) + 20 >= n).every(e => e.h20 === null))
+  const sum = sh.summarize(l1)
+  ok('台账摘要按规则汇总，并给出距 30 次触发还差多少', sum.rows.length === 7 && sum.rows.every(r => r.toVerdict >= 0))
+
+  // 冻结完整性
+  if (THRESHOLDS.status === 'FROZEN') {
+    ok('阈值已冻结：必须有冻结记录', CALIBRATION !== null)
+    ok('阈值已冻结：当前阈值指纹与冻结记录一致（冻结后未被改动）', CALIBRATION?.thresholdsHash === h0,
+      `${CALIBRATION?.thresholdsHash} vs ${h0}`)
+  } else {
+    ok('阈值尚未冻结时不存在冻结记录', CALIBRATION === null)
+  }
+}
+
+// ─────────────────────────── ⑨ 治理边界 ───────────────────────────
 console.log('\n【治理边界】')
 {
   const dir = new URL('./', import.meta.url)

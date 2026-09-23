@@ -173,7 +173,7 @@ const MoneyCockpit: React.FC = () => {
           </div>
           <div className="mc-sub" style={{ textAlign: 'right' }}>
             口径：申万 2021 二级为行业骨架 · 主线篮子为分析刀 · 主力净流入等估算数据不入判定<br />
-            阈值 {data.thresholds.status}（登记于 {data.thresholds.registeredOn}）· 生成于 {new Date(data.generatedAt).toLocaleString('zh-CN')}
+            阈值 {data.thresholds.status === 'FROZEN' ? '已冻结' : data.thresholds.status}（登记于 {data.thresholds.registeredOn}）· 生成于 {new Date(data.generatedAt).toLocaleString('zh-CN')}
           </div>
         </div>
 
@@ -269,6 +269,13 @@ const MoneyCockpit: React.FC = () => {
           ]} />
         </div>
 
+        {(data.calibration || data.shadow) && (
+          <div className="mc-grid" style={{ gridTemplateColumns: '1.35fr 1fr', marginTop: 12 }}>
+            {data.calibration && <CalibrationCard c={data.calibration} />}
+            {data.shadow && <ShadowCard s={data.shadow} />}
+          </div>
+        )}
+
         {data.dataNotes?.length > 0 && (
           <div className="mc-card" style={{ marginTop: 12 }}>
             <h3>数据说明</h3>
@@ -289,6 +296,95 @@ const MoneyCockpit: React.FC = () => {
     </ConfigProvider>
   )
 }
+
+const VERDICT_STYLE: Record<string, { text: string; color: string }> = {
+  INSUFFICIENT_SAMPLE: { text: '样本不足', color: '#8b96a5' },
+  SUPPORTS: { text: '支持预期', color: '#3fb950' },
+  CONTRADICTS: { text: '与预期相反', color: '#ff7b72' },
+  NO_EFFECT: { text: '无显著效果', color: '#f0b429' },
+}
+
+const RULE_TEXT: Record<string, string> = {
+  START: '启动', TREND: '趋势', BURST: '爆发', EXHAUST: '衰竭', RETREAT: '撤离', FAILED_START: '启动失败', DIVERGENCE: '高位背离',
+}
+
+const CalibrationCard: React.FC<{ c: any }> = ({ c }) => {
+  const rows = (c.outOfSample ?? []).filter((r: any) => r.horizon === 20)
+  const r60 = new Map((c.outOfSample ?? []).filter((r: any) => r.horizon === 60).map((r: any) => [r.rule, r]))
+  return (
+    <div className="mc-card">
+      <h3>校准与样本外检验 <small>一次性 · {c.runOn} · 阈值指纹 {c.thresholdsHash}</small></h3>
+      <div className="mc-note" style={{ marginBottom: 6 }}>
+        样本内 {c.split.inSample[0]} ~ {c.split.inSample[1]}：只检查信号卫生，不拿收益调参 ——
+        {c.decision === 'CONFIRMED_NO_CHANGE' ? '预登记初值全部通过，原样确认并冻结' : '有未通过项'}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+        {c.hygiene.map((h: any) => (
+          <Tooltip key={h.id} title={h.text}>
+            <span className="mc-chip" style={{ background: h.pass ? '#0f3d2a' : '#4b1d1d', color: h.pass ? '#3fb950' : '#ff7b72' }}>
+              {h.pass ? '✓' : '✗'} {h.id}
+            </span>
+          </Tooltip>
+        ))}
+      </div>
+      <div className="mc-note" style={{ marginBottom: 4 }}>
+        样本外 {c.split.outOfSample[0]} ~ {c.split.outOfSample[1]}：触发后相对两市基准的超额收益，95% 置信区间按交易日分组抽样
+      </div>
+      <table className="mc-kv" style={{ width: '100%', fontSize: 12 }}>
+        <tbody>
+          <tr style={{ color: '#8b96a5' }}><td>规则（预期）</td><td>触发</td><td>20 日均值</td><td>20 日区间</td><td>结论</td><td>60 日结论</td></tr>
+          {rows.map((r: any) => {
+            const v = VERDICT_STYLE[r.verdict]!
+            const s60: any = r60.get(r.rule)
+            const v60 = s60 ? VERDICT_STYLE[s60.verdict]! : null
+            return (
+              <tr key={r.rule}>
+                <td>{RULE_TEXT[r.rule]}<span className="mc-note">　{r.hypothesis.split('→')[1]?.trim()}</span></td>
+                <td>{r.n}</td>
+                <td className={cls(r.mean)}>{pct(r.mean, 2)}</td>
+                <td className="mc-note">{r.ci ? `[${pct(r.ci[0], 2)}, ${pct(r.ci[1], 2)}]` : '—'}</td>
+                <td style={{ color: v.color }}>{v.text}</td>
+                <td style={{ color: v60?.color }}>{v60?.text ?? '—'}{s60 ? <span className="mc-note">（{pct(s60.mean, 1)}）</span> : null}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      <div className="mc-note" style={{ marginTop: 6 }}>{c.note}</div>
+    </div>
+  )
+}
+
+const ShadowCard: React.FC<{ s: any }> = ({ s }) => (
+  <div className="mc-card">
+    <h3>影子运行台账 <small>自 {s.startedOn} 起 · 累计 {s.total} 条</small></h3>
+    <div className="mc-note" style={{ marginBottom: 6 }}>阈值冻结后每日记录状态跃迁，到期回填第 20 / 60 日结果；只增不改。每条规则攒够 30 次触发才交委员会裁定。</div>
+    <table className="mc-kv" style={{ width: '100%', fontSize: 12 }}>
+      <tbody>
+        <tr style={{ color: '#8b96a5' }}><td>规则</td><td>触发</td><td>已到期 20 日</td><td>20 日均值</td><td>距 30 次</td></tr>
+        {s.rows.map((r: any) => (
+          <tr key={r.rule}>
+            <td>{RULE_TEXT[r.rule]}</td>
+            <td>{r.count}</td>
+            <td>{r.filled20}</td>
+            <td className={cls(r.mean20)}>{pct(r.mean20, 2)}</td>
+            <td className="mc-note">{r.toVerdict === 0 ? '可裁定' : `还差 ${r.toVerdict}`}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    {s.latest?.length > 0 && (
+      <>
+        <h3 style={{ marginTop: 10 }}>最近记录</h3>
+        {s.latest.slice(0, 8).map((e: any) => (
+          <div key={e.key} className="mc-note">
+            {e.date}　{e.entry ? `入口${['', '①', '②', '③'][e.entry]}` : ''} <b style={{ color: '#d7dde5' }}>{e.name}</b>　{RULE_TEXT[e.rule]}
+          </div>
+        ))}
+      </>
+    )}
+  </div>
+)
 
 const DetailCard: React.FC<{ o: any }> = ({ o }) => {
   const s = o.series

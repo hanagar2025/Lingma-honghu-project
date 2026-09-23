@@ -122,18 +122,23 @@ export async function fetchKline(symbol: string, days: number): Promise<KBar[]> 
  * 个股 K 线，带缓存增量更新：缓存已到最新交易日则直接用；
  * 否则只补最近一段并与缓存合并。
  */
+/** 缓存记下当初请求过多少日：新股历史本来就短，不能靠条数判断"够不够长" */
+interface KlineCache { days: number; bars: KBar[] }
+
 export async function stockKlineCached(code: string, days: number, latestDate: string): Promise<KBar[]> {
-  const cached = readCache<KBar[]>('kline', `${code}.json`)
-  if (cached && cached.length && cached.at(-1)!.date >= latestDate) return cached
+  const raw = readCache<KlineCache | KBar[]>('kline', `${code}.json`)
+  const cached: KlineCache | null = raw === null ? null
+    : Array.isArray(raw) ? { days: raw.length, bars: raw } : raw
+  const longEnough = !!cached && cached.days >= days
+  if (cached && longEnough && cached.bars.length && cached.bars.at(-1)!.date >= latestDate) return cached.bars
   const sym = `${exchangeOf(code)}${code}`
-  const need = cached && cached.length >= days - 5 ? 30 : days
-  const fresh = await fetchKline(sym, need)
+  const fresh = await fetchKline(sym, longEnough ? 30 : days)
   const merged = new Map<string, KBar>()
-  for (const b of cached ?? []) merged.set(b.date, b)
+  for (const b of cached?.bars ?? []) merged.set(b.date, b)
   for (const b of fresh) merged.set(b.date, b)
-  const out = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-days)
-  writeCache(out, 'kline', `${code}.json`)
-  return out
+  const bars = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-days)
+  writeCache({ days: Math.max(days, cached?.days ?? 0), bars } satisfies KlineCache, 'kline', `${code}.json`)
+  return bars
 }
 
 // ─────────────────────────── 东方财富数据中心 ───────────────────────────

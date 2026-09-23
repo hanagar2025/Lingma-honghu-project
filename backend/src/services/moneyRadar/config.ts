@@ -173,6 +173,18 @@ export const THRESHOLDS = {
   minTriggersForVerdict: 30,
 } as const
 
+/**
+ * 一次性校准与冻结记录。冻结之后 thresholdsHash 必须与当前阈值一致，
+ * 否则影子台账拒绝记账、自检报错 —— 冻结后改阈值必须显式地出现在这里。
+ */
+export const CALIBRATION: {
+  frozenOn: string
+  thresholdsHash: string
+  decision: 'CONFIRMED_NO_CHANGE' | 'ADJUSTED_ONCE'
+  changes: readonly string[]
+  report: string
+} | null = null
+
 /** 阈值状态只能向前：PRE_REGISTERED → CALIBRATED → FROZEN */
 export function thresholdTransitionAllowed(from: ThresholdStatus, to: ThresholdStatus): boolean {
   const order: ThresholdStatus[] = ['PRE_REGISTERED', 'CALIBRATED', 'FROZEN']

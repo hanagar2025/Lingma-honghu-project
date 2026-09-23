@@ -13,8 +13,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CALIBRATION, THRESHOLDS } from './config'
+import { replayObjects, thresholdsHash } from './backtest'
+import { loadLatestCalibration } from './calibrate'
 import { DEFAULT_LIVE, industryObjects, loadLiveDataSet } from './live'
-import { buildMoneyCockpitView, renderMoneyCockpit } from './radar'
+import { buildMoneyCockpitView, entryObjects, renderMoneyCockpit } from './radar'
+import { loadLedger, saveLedger, summarize, updateLedger } from './shadow'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const MONEY_SNAPSHOT_FILE = process.env.MONEY_SNAPSHOT_FILE
@@ -42,11 +46,26 @@ async function main(): Promise<void> {
     '个股成交额来自腾讯日 K，暂无第二来源交叉校验（东方财富行情接口在本环境不可用）',
   ]
 
-  const view = buildMoneyCockpitView(live.ds, 'LIVE', {
-    names: live.names,
-    industries: industryObjects(live.industries),
-    dataNotes,
-  })
+  const industries = industryObjects(live.industries)
+  const view = buildMoneyCockpitView(live.ds, 'LIVE', { names: live.names, industries, dataNotes })
+
+  const calibration = loadLatestCalibration()
+  if (calibration) view.calibration = calibration
+
+  // 影子运行：阈值冻结之后才记台账；阈值指纹与冻结记录对不上时拒绝记账 —— 那说明阈值被改过
+  if (THRESHOLDS.status === 'FROZEN' && CALIBRATION) {
+    const hash = thresholdsHash()
+    if (hash !== CALIBRATION.thresholdsHash) {
+      log(`⚠ 阈值指纹 ${hash} 与冻结记录 ${CALIBRATION.thresholdsHash} 不一致：阈值在冻结后被改动，影子台账本次不更新`)
+    } else {
+      const objs = entryObjects(industries)
+      const replayed = replayObjects(live.ds, [...objs[1], ...objs[2], ...objs[3]])
+      const ledger = updateLedger(loadLedger(), replayed, live.ds, CALIBRATION.frozenOn, hash)
+      saveLedger(ledger)
+      view.shadow = summarize(ledger)
+      log(`· 影子台账：累计 ${ledger.events.length} 条事件（自 ${ledger.startedOn} 起）`)
+    }
+  }
 
   process.stdout.write(renderMoneyCockpit(view))
   mkdirSync(dirname(MONEY_SNAPSHOT_FILE), { recursive: true })
