@@ -69,6 +69,9 @@ export const RESEARCH_MODULES = [
   'moneyRadar/fetch.ts',
   'moneyRadar/live.ts',
   'moneyRadar/run.ts',
+  'moneyRadar/backtest.ts',
+  'moneyRadar/calibrate.ts',
+  'moneyRadar/shadow.ts',
 ] as const
 
 /**
