@@ -1,0 +1,377 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import { Alert, ConfigProvider, Drawer, Empty, Spin, Table, Tabs, Tooltip, theme } from 'antd'
+import { FlowBars, Legend, LinesChart, Spark } from '../components/money/Charts'
+
+/**
+ * 资金驾驶舱（R-01）
+ *
+ * 读 CLI 盘后落下的 /data/money.json（npm run money 生成），只渲染、不重算。
+ * 三块：入口① 持仓、入口② 观察仓、入口③ 市场自选方向，全部以资金池变化衡量。
+ * 本页是观察层：最高输出是复核顺序，没有任何操作入口。
+ */
+
+const base = import.meta.env.BASE_URL ?? '/'
+const SNAPSHOT_URL = `${base}data/money.json`.replace(/([^:])\/{2,}/g, '$1/')
+
+type Num = number | null
+
+const STATE_STYLE: Record<string, { bg: string; fg: string }> = {
+  潜伏: { bg: '#2a3038', fg: '#9aa5b1' },
+  启动: { bg: '#10375c', fg: '#58a6ff' },
+  趋势: { bg: '#0f3d2a', fg: '#3fb950' },
+  爆发: { bg: '#4a2c05', fg: '#f0b429' },
+  衰竭: { bg: '#4b1d1d', fg: '#ff7b72' },
+  撤离: { bg: '#3b1236', fg: '#db61a2' },
+  样本不足: { bg: '#2a3038', fg: '#6e7681' },
+  数据源未接入: { bg: '#2a3038', fg: '#6e7681' },
+}
+
+const REVIEW_COLOR: Record<string, string> = {
+  DIVERGENCE: '#ff7b72',
+  RETREAT: '#db61a2',
+  EXHAUST: '#f0b429',
+  DIVERGENCE_PENDING_A2: '#f0b429',
+  NEW_TRANSITION: '#58a6ff',
+}
+
+const DIVERGENCE_TEXT: Record<string, string> = {
+  DIVERGENCE: '高位背离',
+  DIVERGENCE_PENDING_A2: '背离待 A2 确认',
+  LOW_VOLUME_RISE: '缩量上涨（可能锁仓）',
+  NONE: '—',
+}
+
+const pct = (v: Num, digits = 1) => {
+  if (v === null || v === undefined) return '—'
+  const s = (v * 100).toFixed(digits)
+  if (Number(s) === 0) return '0.0%'
+  return `${v > 0 ? '+' : ''}${s}%`
+}
+const yi = (v: Num, digits = 1) => (v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(digits)} 亿`)
+const cls = (v: Num) => (v === null || v === undefined ? '' : v > 0 ? 'mc-up' : v < 0 ? 'mc-dn' : '')
+
+const StateChip: React.FC<{ text: string }> = ({ text }) => {
+  const key = Object.keys(STATE_STYLE).find(k => text.startsWith(k)) ?? '潜伏'
+  const s = STATE_STYLE[key]!
+  return <span className="mc-chip" style={{ background: s.bg, color: s.fg }}>{text}</span>
+}
+
+const CSS = `
+.mc-root { background:#0d1117; color:#d7dde5; margin:-24px; padding:20px 24px 28px; min-height:100vh;
+  font-family:"PingFang SC","Microsoft YaHei","WenQuanYi Micro Hei",sans-serif; font-size:13px; }
+.mc-hdr { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:14px; gap:16px; flex-wrap:wrap; }
+.mc-hdr h1 { margin:0; font-size:22px; color:#fff; letter-spacing:1px; }
+.mc-sub { color:#8b96a5; font-size:12px; line-height:1.7; }
+.mc-grid { display:grid; gap:12px; }
+.mc-card { background:#161b22; border:1px solid #262d36; border-radius:8px; padding:12px 14px; min-width:0; }
+.mc-card h3 { margin:0 0 8px; font-size:14px; color:#fff; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.mc-card h3 small { color:#8b96a5; font-weight:normal; font-size:11px; }
+.mc-kpi { font-size:22px; color:#fff; font-weight:700; }
+.mc-note { color:#8b96a5; font-size:11px; line-height:1.7; }
+.mc-chip { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; white-space:nowrap; }
+.mc-up { color:#ff7b72; } .mc-dn { color:#3fb950; }
+.mc-warn { color:#ff7b72; font-weight:700; }
+.mc-alert { border-left:3px solid #58a6ff; background:#121a24; padding:6px 10px; margin-bottom:6px; border-radius:4px; font-size:12px; cursor:pointer; }
+.mc-foot { margin-top:14px; color:#8b96a5; font-size:11px; border-top:1px dashed #262d36; padding-top:8px; line-height:1.8; }
+.mc-root .ant-table { font-size:12px; }
+.mc-root .ant-table-row { cursor:pointer; }
+.mc-kv td { padding:4px 6px; border-bottom:1px solid #1f252d; }
+.mc-kv td:first-child { color:#8b96a5; white-space:nowrap; }
+`
+
+const MoneyCockpit: React.FC = () => {
+  const [data, setData] = useState<any>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [detail, setDetail] = useState<any>(null)
+  const [tab, setTab] = useState('1')
+
+  useEffect(() => {
+    fetch(SNAPSHOT_URL, { cache: 'no-store' })
+      .then(async r => {
+        if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) throw new Error('not found')
+        setData(await r.json())
+      })
+      .catch(() => setErr(`未找到资金驾驶舱快照（${SNAPSHOT_URL}）。先在 backend 目录跑一次 npm run money 生成它。`))
+  }, [])
+
+  const byId = useMemo(() => {
+    const m = new Map<string, any>()
+    for (const e of data?.entries ?? []) for (const o of e.objects) m.set(o.id, o)
+    return m
+  }, [data])
+
+  if (err) return <div className="mc-root"><style>{CSS}</style><Alert type="warning" message={err} /></div>
+  if (!data) return <div className="mc-root" style={{ display: 'grid', placeItems: 'center' }}><style>{CSS}</style><Spin /></div>
+
+  const e1 = data.entries[0]
+  const e2 = data.entries[1]
+  const e3 = data.entries[2]
+  const mk = data.market
+  const nt = data.nationalTeam
+  const es = data.entryShares
+  const colors = ['#58a6ff', '#3fb950', '#f0b429']
+
+  const columns = (entry: number) => [
+    {
+      title: entry === 3 ? '方向（申万二级）' : '对象', dataIndex: 'name', width: entry === 3 ? 130 : 150,
+      render: (v: string, r: any) => (
+        <span>{v}{r.kind === 'BASKET' && <span className="mc-note">　篮子</span>}</span>
+      ),
+    },
+    { title: '资金状态', dataIndex: 'stateText', width: 130, render: (v: string) => <StateChip text={v} /> },
+    {
+      title: <Tooltip title="近 20 日相对自身水位的累计超额成交额。正 = 资金在积累">20 日超额</Tooltip>,
+      dataIndex: 'excess20Yi', width: 105, align: 'right' as const,
+      render: (v: Num) => <span className={cls(v)}>{yi(v)}</span>,
+    },
+    {
+      title: <Tooltip title="连续高于水位期间累计的超额成交额">资金池</Tooltip>,
+      dataIndex: 'poolYi', width: 95, align: 'right' as const, render: (v: Num) => yi(v, 0).replace('+', ''),
+    },
+    {
+      title: <Tooltip title="当前连续高于水位的天数 / 此前历史最长">持续 / 最长</Tooltip>, width: 95, align: 'right' as const,
+      render: (_: unknown, r: any) => {
+        const record = r.maxPersistBefore >= 10 && r.persist >= r.maxPersistBefore
+        return <span className={record ? 'mc-warn' : ''}>{r.persist ?? '—'} / {r.maxPersistBefore ?? '—'}</span>
+      },
+    },
+    { title: '5 日偏离', dataIndex: 'dev5', width: 80, align: 'right' as const, render: (v: Num) => <span className={cls(v)}>{pct(v)}</span> },
+    { title: '20 日涨幅', dataIndex: 'ret20', width: 80, align: 'right' as const, render: (v: Num) => <span className={cls(v)}>{pct(v)}</span> },
+    {
+      title: '背离', dataIndex: 'divergence', width: 120,
+      render: (v: string | null) => (v && v !== 'NONE'
+        ? <span style={{ color: v === 'DIVERGENCE' ? '#ff7b72' : '#f0b429' }}>{DIVERGENCE_TEXT[v]}</span> : <span className="mc-note">—</span>),
+    },
+    entry === 3
+      ? {
+        title: '份额前三', dataIndex: 'leaders',
+        render: (ls: any[]) => <span className="mc-note">{(ls ?? []).map(l => `${l.name} ${(l.share20 * 100).toFixed(0)}%`).join(' · ')}</span>,
+      }
+      : { title: '在册', dataIndex: 'standing', width: 110, render: (v: string | null) => <span className="mc-note">{v ?? '—'}</span> },
+  ]
+
+  return (
+    <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorBgContainer: '#161b22', colorBorderSecondary: '#262d36' } }}>
+      <div className="mc-root">
+        <style>{CSS}</style>
+        <div className="mc-hdr">
+          <div>
+            <h1>鸿鹄 · 资金驾驶舱</h1>
+            <div className="mc-sub">
+              截至 {data.asOf}　|　{data.dataMode === 'LIVE' ? '真实数据' : data.dataMode === 'FIXTURE' ? '合成数据（示意）' : '数据源未接入'}
+              　|　{data.provenance.map((p: any) => `${p.kind} ${p.status === 'OK' ? '✓' : p.status === 'PENDING' ? '⏳' : '✗'}`).join('　')}
+            </div>
+          </div>
+          <div className="mc-sub" style={{ textAlign: 'right' }}>
+            口径：申万 2021 二级为行业骨架 · 主线篮子为分析刀 · 主力净流入等估算数据不入判定<br />
+            阈值 {data.thresholds.status}（登记于 {data.thresholds.registeredOn}）· 生成于 {new Date(data.generatedAt).toLocaleString('zh-CN')}
+          </div>
+        </div>
+
+        {/* 背景层 */}
+        <div className="mc-grid" style={{ gridTemplateColumns: '1.3fr 1fr 1fr 1.2fr' }}>
+          <div className="mc-card">
+            <h3>市场总水位 <small>两市成交额 5 日均值 vs 250 日水位</small></h3>
+            {mk ? (
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div>
+                  <div className="mc-kpi">{mk.latestYi ? `${(mk.latestYi / 1e4).toFixed(2)} 万亿` : '—'}</div>
+                  <div className="mc-note">偏离水位 <span className={cls(mk.deviation)}>{pct(mk.deviation)}</span>
+                    {mk.daysAbove > 0 ? ` · 高于水位第 ${mk.daysAbove} 日` : ' · 低于水位'}</div>
+                </div>
+                <Spark data={mk.amount5Yi} baseline={mk.baselineYi} color="#58a6ff" width={230} />
+              </div>
+            ) : <Empty />}
+            <div className="mc-note">水位高只说明交换规模大，本身没有方向</div>
+          </div>
+          <div className="mc-card">
+            <h3>国家队温度计 <small>{nt.withHistory}/{nt.etfs.length} 只宽基 ETF 有份额历史</small></h3>
+            {nt.flowYi?.length ? <FlowBars data={nt.flowYi} width={300} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="份额历史积累中" />}
+            <div className="mc-note">近 10 日净申赎 <span className={cls(nt.net10Yi)}>{yi(nt.net10Yi)}</span>
+              {nt.lastDay ? ` · 最近一日 ${nt.lastDay === 'RESCUE' ? '托底' : nt.lastDay === 'COOL' ? '降温' : '常态'}` : ''}
+              　红=申购（托底）绿=赎回（降温）。背景层，不是主线信号</div>
+          </div>
+          <div className="mc-card">
+            <h3>杠杆资金 <small>全市场融资余额</small></h3>
+            {mk ? (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div>
+                  <div className="mc-kpi">{(() => { const v = [...mk.marginYi].reverse().find((x: Num) => x !== null); return v ? `${(v / 1e4).toFixed(2)} 万亿` : '—' })()}</div>
+                  <div className="mc-note">20 日 <span className={cls(mk.marginDelta20Yi)}>{yi(mk.marginDelta20Yi, 0)}</span></div>
+                </div>
+                <Spark data={mk.marginYi} color="#db61a2" width={150} />
+              </div>
+            ) : <Empty />}
+            <div className="mc-note">融资余额 T+1 约 08:30 发布</div>
+          </div>
+          <div className="mc-card">
+            <h3>复核顺序 <small>按类别排，不打分</small></h3>
+            {data.reviewQueue.length === 0 && <div className="mc-note">今日没有需要优先复核的对象。</div>}
+            {data.reviewQueue.slice(0, 6).map((r: any) => (
+              <div key={r.id} className="mc-alert" style={{ borderLeftColor: REVIEW_COLOR[r.reviewClass] ?? '#58a6ff' }}
+                onClick={() => setDetail(byId.get(r.id))}>
+                <b>{r.name}</b>　{r.text}<span className="mc-note">　入口{['', '①', '②', '③'][r.entry]}</span>
+              </div>
+            ))}
+            {data.reviewQueue.length > 6 && <div className="mc-note">另有 {data.reviewQueue.length - 6} 项，见下方各入口</div>}
+          </div>
+        </div>
+
+        {/* 三入口份额迁移 */}
+        <div className="mc-grid" style={{ gridTemplateColumns: '2.3fr 1fr', marginTop: 12 }}>
+          <div className="mc-card">
+            <h3>三个资金入口 · 份额迁移 <small>各入口 20 日成交额占两市比例 · 近 250 日 · 虚线为各自 250 日水位</small></h3>
+            {es ? (
+              <>
+                <Legend items={es.lines.map((l: any, i: number) => ({ color: colors[i]!, label: l.label + (l.entry === 3 && es.entry3Members.length ? `（${es.entry3Members.join('、')}）` : '') }))} />
+                <LinesChart dates={es.dates} width={1000} height={240}
+                  lines={es.lines.map((l: any, i: number) => ({ data: l.s20, color: colors[i]!, width: 2.2, label: l.label }))}
+                  refs={es.lines.map((l: any, i: number) => ({ value: l.baseline, color: colors[i]! }))} />
+                <div className="mc-note">读法：一个入口份额从高位回落、另一个入口越过自身水位 —— 这种一出一进持续 10 日以上，才叫主线迁移。只出不进叫退潮，只进不出叫扩散。入口③ 取当前资金流入最强的 5 个行业。</div>
+              </>
+            ) : <Empty />}
+          </div>
+          <div className="mc-card">
+            <h3>主线迁移 <small>一出一进持续 10 日</small></h3>
+            {data.migrations.length === 0
+              ? <div className="mc-note">当前没有满足条件的主线迁移。</div>
+              : data.migrations.slice(0, 8).map((m: any, i: number) => (
+                <div key={i} className="mc-alert" style={{ borderLeftColor: m.confirmation === 'CONFIRMED' ? '#ff7b72' : '#f0b429', cursor: 'default' }}>
+                  {m.from} → <b>{m.to}</b>　{m.days} 日　<span className="mc-note">{m.confirmation === 'CONFIRMED' ? 'A2 两头确认' : '份额推断，待 A2 确认'}</span>
+                </div>
+              ))}
+            <h3 style={{ marginTop: 12 }}>入口③ 资金正在积累的方向 <small>前 5</small></h3>
+            {e3.objects.filter((o: any) => (o.excess20Yi ?? 0) > 0).slice(0, 5).map((o: any) => (
+              <div key={o.id} className="mc-alert" onClick={() => setDetail(o)}>
+                <b>{o.name}</b>　<StateChip text={o.stateText} />　<span className="mc-up">{yi(o.excess20Yi)}</span>
+                <div className="mc-note">{o.leaders.map((l: any) => l.name).join(' · ')}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 三个入口明细 */}
+        <div className="mc-card" style={{ marginTop: 12 }}>
+          <Tabs activeKey={tab} onChange={setTab} items={[
+            { key: '1', label: `入口① 持仓 · ${e1.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e1.note}。点击任一行看资金卡</div><Table size="small" rowKey="id" pagination={false} dataSource={e1.objects} columns={columns(1)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
+            { key: '2', label: `入口② 观察仓 · ${e2.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e2.note}</div><Table size="small" rowKey="id" pagination={false} dataSource={e2.objects} columns={columns(2)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
+            { key: '3', label: `入口③ 市场自选 · ${e3.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e3.note}。不在册股票只显示、不进候选</div><Table size="small" rowKey="id" pagination={{ pageSize: 20, size: 'small' }} dataSource={e3.objects} columns={columns(3)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
+          ]} />
+        </div>
+
+        {data.dataNotes?.length > 0 && (
+          <div className="mc-card" style={{ marginTop: 12 }}>
+            <h3>数据说明</h3>
+            {data.dataNotes.map((x: string, i: number) => <div key={i} className="mc-note">· {x}</div>)}
+          </div>
+        )}
+
+        <div className="mc-foot">
+          本页是观察层（OBSERVATION）：状态跃迁只决定"先复核谁"，不产生买卖指令。资金规则须经影子运行、样本外检验并由委员会冻结后，才可能进入法定理由。
+          {data.doesNotImply.map((x: string) => `　· ${x}`).join('')}
+        </div>
+
+        <Drawer open={!!detail} onClose={() => setDetail(null)} width={1120} title={detail ? `资金卡 · ${detail.name}` : ''}
+          styles={{ body: { background: '#0d1117', padding: 16 }, header: { background: '#161b22' } }}>
+          {detail && <DetailCard o={detail} />}
+        </Drawer>
+      </div>
+    </ConfigProvider>
+  )
+}
+
+const DetailCard: React.FC<{ o: any }> = ({ o }) => {
+  const s = o.series
+  const div = o.divergence as string | null
+  const lastOf = (xs: Num[] | undefined) => (xs ? [...xs].reverse().find(v => v !== null) ?? null : null)
+  return (
+    <div style={{ color: '#d7dde5' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+        <StateChip text={o.stateText} />
+        {o.stateSince && <span className="mc-note">自 {o.stateSince} 起</span>}
+        {o.standing && <span className="mc-note">· {o.standing}</span>}
+        {div && div !== 'NONE' && <span className="mc-chip" style={{ background: '#4b1d1d', color: '#ff7b72' }}>{DIVERGENCE_TEXT[div]}</span>}
+      </div>
+      <div className="mc-grid" style={{ gridTemplateColumns: '2.2fr 1fr' }}>
+        <div className="mc-card">
+          <h3>资金波形图 <small>近 250 日 · 同一时间轴：水位带 / 成交额份额 / 价格</small></h3>
+          {s ? (
+            <>
+              <Legend items={[
+                { color: '#3a4452', label: '水位带（25%–75% 分位）', band: true },
+                { color: '#8b96a5', label: '水位（中位数）', dash: true },
+                { color: '#58a6ff', label: '份额 20 日' },
+                { color: '#f0b429', label: '份额 5 日' },
+                { color: '#ff7b72', label: o.kind === 'STOCK' ? '股价（右轴）' : '等权指数（右轴）' },
+              ]} />
+              <LinesChart dates={s.dates} width={720} height={280}
+                band={{ lo: s.q25.map((v: Num) => (v === null ? null : v * 100)), hi: s.q75.map((v: Num) => (v === null ? null : v * 100)) }}
+                lines={[
+                  { data: s.median.map((v: Num) => (v === null ? null : v * 100)), color: '#8b96a5', width: 1, dash: '5 4', label: '水位' },
+                  { data: s.s20.map((v: Num) => (v === null ? null : v * 100)), color: '#58a6ff', width: 2.4, label: '20日' },
+                  { data: s.s5.map((v: Num) => (v === null ? null : v * 100)), color: '#f0b429', width: 1.2, label: '5日' },
+                ]}
+                right={{ data: s.close, color: '#ff7b72', label: '价格' }} />
+              <h3 style={{ marginTop: 10 }}>方向性资金 <small>融资余额（亿元）· 资金池存量（亿元）</small></h3>
+              <LinesChart dates={s.dates} width={720} height={130} unit=""
+                lines={[{ data: s.margin, color: '#db61a2', width: 2, label: '融资余额' }]}
+                right={{ data: s.poolYi, color: '#3fb950', label: '资金池' }} />
+            </>
+          ) : <Empty description="该对象未生成图表序列" />}
+          {o.leaders?.length > 0 && (
+            <>
+              <h3 style={{ marginTop: 10 }}>内部份额排名 <small>核心股是否在切换 · 20 日成交额占比</small></h3>
+              <table className="mc-kv" style={{ width: '100%', fontSize: 12 }}>
+                <tbody>
+                  <tr><td>份额前三</td><td>{o.leaders.map((l: any) => `${l.name} ${(l.share20 * 100).toFixed(1)}%（${l.change20 === null ? '—' : `${l.change20 > 0 ? '+' : ''}${(l.change20 * 100).toFixed(1)}pt`}）· ${l.standing}`).join('　')}</td></tr>
+                  <tr><td>上升最快</td><td>{o.risers.length ? o.risers.map((l: any) => `${l.name} +${(l.change20 * 100).toFixed(1)}pt · ${l.standing}`).join('　') : '—'}</td></tr>
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+        <div className="mc-grid" style={{ gap: 12, alignContent: 'start' }}>
+          <div className="mc-card">
+            <h3>资金池四问</h3>
+            <table className="mc-kv" style={{ width: '100%' }}>
+              <tbody>
+                <tr><td>原有资金量（水位）</td><td>份额中位数 {s ? `${((lastOf(s.median) ?? 0) * 100).toFixed(3)}%` : '—'}</td></tr>
+                <tr><td>资金池存量</td><td>{yi(o.poolYi, 0).replace('+', '')}</td></tr>
+                <tr><td>堆积持续</td><td>{o.persist ?? '—'} 日 / 历史最长 {o.maxPersistBefore ?? '—'} 日</td></tr>
+                <tr><td>近 20 日变化</td><td className={cls(o.excess20Yi)}>{yi(o.excess20Yi)}</td></tr>
+                <tr><td>5 / 20 日偏离</td><td>{pct(o.dev5)} / {pct(o.dev20)}</td></tr>
+                <tr><td>对应价格</td><td className={cls(o.ret20)}>20 日 {pct(o.ret20)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mc-card">
+            <h3>资金目的 · 方向性数据 <small>近 10 日</small></h3>
+            <table className="mc-kv" style={{ width: '100%' }}>
+              <tbody>
+                <tr><td>融资余额变化（杠杆）</td><td className={cls(o.a2.marginDelta10Yi)}>{yi(o.a2.marginDelta10Yi, 2)}</td></tr>
+                <tr><td>主题 ETF 净申赎（配置）</td><td className={cls(o.a2.etfNet10Yi)}>{yi(o.a2.etfNet10Yi, 2)}</td></tr>
+                <tr><td>龙虎榜机构净买（机构）</td><td className={cls(o.a2.instNet10Yi)}>{yi(o.a2.instNet10Yi, 2)}</td></tr>
+              </tbody>
+            </table>
+            <div className="mc-note">"—" 表示没有观察到（未上榜、无对应 ETF 或未发布），不是 0</div>
+          </div>
+          <div className="mc-card">
+            <h3>背离判定 <small>四项条件</small></h3>
+            <div style={{ marginBottom: 6 }}>{div ? DIVERGENCE_TEXT[div] : '—'}</div>
+            {(o.divergenceDetail ?? []).map((x: string, i: number) => <div key={i} className="mc-note">✓ {x}</div>)}
+            <div className="mc-note" style={{ marginTop: 6 }}>缺方向性确认（融资下降、ETF 赎回或机构净卖出）时只记"缩量上涨"或"待 A2 确认"，不升为背离。</div>
+          </div>
+          <div className="mc-card" style={{ borderColor: '#5a2a2a' }}>
+            <h3>系统输出 <small>观察层 · 不是指令</small></h3>
+            <div className="mc-alert" style={{ borderLeftColor: REVIEW_COLOR[o.reviewClass] ?? '#5b6573', cursor: 'default' }}>
+              复核类别：{({ DIVERGENCE: '高位背离，最高优先', RETREAT: '资金撤离', EXHAUST: '资金衰竭', DIVERGENCE_PENDING_A2: '背离待 A2 确认', NEW_TRANSITION: '近 5 日状态跃迁', WATCH: '常规观察' } as Record<string, string>)[o.reviewClass]}
+            </div>
+            <div className="mc-note">法定理由以每日驾驶舱第⑤问为准。本卡不发令；若委员会裁定退出，按"债务执行窗口"分批执行。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default MoneyCockpit

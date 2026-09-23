@@ -39,6 +39,14 @@ export function quantile(values: readonly Num[], q: number): Num {
   return a + (b - a) * (pos - lo)
 }
 
+function sortedQuantile(xs: readonly number[], q: number): number | null {
+  if (!xs.length) return null
+  const pos = (xs.length - 1) * q
+  const lo = Math.floor(pos)
+  const hi = Math.ceil(pos)
+  return xs[lo]! + (xs[hi]! - xs[lo]!) * (pos - lo)
+}
+
 function trailing<T>(xs: readonly T[], t: number, w: number): T[] {
   return xs.slice(Math.max(0, t - w + 1), t + 1)
 }
@@ -55,6 +63,8 @@ export interface RawSeries {
 }
 
 export function rawSeries(obj: MoneyObject, ds: DataSet): RawSeries {
+  const agg = ds.aggregates?.[obj.id]
+  if (agg) return seriesFromAggregate(agg, obj, ds)
   const n = ds.dates.length
   const amount: Num[] = []
   const margin: Num[] = []
@@ -110,6 +120,30 @@ export function rawSeries(obj: MoneyObject, ds: DataSet): RawSeries {
   })
   const anomaly = ds.market.map(d => d.anomaly === true)
   return { amount, share, close, margin, etfFlow, instNet, anomaly }
+}
+
+function seriesFromAggregate(agg: DataSet['stocks'][string], obj: MoneyObject, ds: DataSet): RawSeries {
+  const amount = agg.map(d => d.amount)
+  const share = amount.map((a, t) => {
+    const total = ds.market[t]?.totalAmount ?? null
+    return a === null || total === null || total <= 0 ? null : a / total
+  })
+  const instNet = ds.dates.map((_, t) => {
+    let s: Num = null
+    for (const code of obj.codes) {
+      const v = ds.inst[code]?.[t]?.netBuy ?? null
+      if (v !== null) s = (s ?? 0) + v
+    }
+    return s
+  })
+  return {
+    amount, share,
+    close: agg.map(d => d.close),
+    margin: agg.map(d => d.marginBalance),
+    etfFlow: ds.dates.map(() => null),
+    instNet,
+    anomaly: ds.market.map(d => d.anomaly === true),
+  }
 }
 
 export type BaselineBasis = 'FULL' | 'SHORT' | 'INSUFFICIENT'
@@ -177,15 +211,16 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
   const ret20Hist: Num[] = []
   const pr10Hist: Num[] = []
 
-  for (let t = 0; t < raw.share.length; t++) {
-    const hist = trailing(s5, t, T.baselineWindow).filter((v): v is number => v !== null)
+  const n = raw.share.length
+  for (let t = 0; t < n; t++) {
+    const hist = trailing(s5, t, T.baselineWindow).filter((v): v is number => v !== null).sort((a, b) => a - b)
     const basis: BaselineBasis = hist.length >= T.baselineWindow ? 'FULL'
       : hist.length >= T.baselineMinWindow ? 'SHORT' : 'INSUFFICIENT'
     const ok = basis !== 'INSUFFICIENT'
-    const median = ok ? quantile(hist, 0.5) : null
-    const q25 = ok ? quantile(hist, T.bandLow) : null
-    const q75 = ok ? quantile(hist, T.bandHigh) : null
-    const q95 = ok ? quantile(hist, T.burstQuantile) : null
+    const median = ok ? sortedQuantile(hist, 0.5) : null
+    const q25 = ok ? sortedQuantile(hist, T.bandLow) : null
+    const q75 = ok ? sortedQuantile(hist, T.bandHigh) : null
+    const q95 = ok ? sortedQuantile(hist, T.burstQuantile) : null
 
     const cur5 = s5[t] ?? null
     const daily = raw.share[t] ?? null
@@ -229,7 +264,10 @@ export function computeMetrics(raw: RawSeries, marketAmount: readonly Num[]): Da
       s5: cur5, s10: cur10, s20: s20[t] ?? null,
       median, q25, q75, q95, basis,
       pool, persist, maxPersistBefore: maxPersist,
-      poolQ90: quantile(trailing(poolHist, t, T.divergencePoolHistoryDays).filter(v => v > 0), T.divergencePoolQuantile),
+      // 背离只在最近几日判定，资金池分位只算最后 10 日，省去对整段历史逐日排序
+      poolQ90: t >= n - 10
+        ? quantile(trailing(poolHist, t, T.divergencePoolHistoryDays).filter(v => v > 0), T.divergencePoolQuantile)
+        : null,
       close, ret20,
       ret20Q90: quantile(ret20Hist, T.burstReturnQuantile),
       pr10, pr10Mean60, high60,

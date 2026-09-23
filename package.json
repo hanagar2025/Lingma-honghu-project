@@ -27,7 +27,8 @@
     "web:deploy": "npm run web:build && npm run web:preflight",
     "web:status": "node scripts/check-live.mjs",
     "ship": "./scripts/ship.sh",
-    "reaudit": "cd backend && npx tsx reaudit.ts"
+    "reaudit": "cd backend && npx tsx reaudit.ts",
+    "money": "cd backend && npm run money"
   },
   "workspaces": [
     "backend",

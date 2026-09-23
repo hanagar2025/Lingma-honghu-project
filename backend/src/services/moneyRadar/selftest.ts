@@ -14,7 +14,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { findMember } from '../msr/universe'
 import {
-  THRESHOLDS, WATCHLIST, NATIONAL_TEAM_ETFS, UNIVERSE_CODE_DEFECTS,
+  THRESHOLDS, WATCHLIST, NATIONAL_TEAM_ETFS,
   holdingCodes, basketOf, thresholdTransitionAllowed,
 } from './config'
 import { dm, synthDataSet, wobble, SYNTH_MARKET_TOTAL } from './fixtures'
@@ -220,13 +220,11 @@ console.log('\n【配置 · 数据源】')
   const holdings = holdingCodes()
   ok('入口① 持仓读自账本，共 8 只', holdings.length === 8)
   ok('入口② 观察仓起始 7 只', WATCHLIST.length === 7)
-  ok('观察仓全部在册（按已登记的代码更正）', WATCHLIST.every(w => basketOf(w.code) !== null))
+  ok('观察仓全部在册', WATCHLIST.every(w => basketOf(w.code) !== null))
   ok('英维克使用正确代码 002837', WATCHLIST.some(w => w.name === '英维克' && w.code === '002837'))
-
-  const d = UNIVERSE_CODE_DEFECTS[0]!
-  const stillWrong = findMember(d.registered)?.member.name === d.name
-  ok('股票池代码缺陷仍在 universe.ts 中 —— 委员会修正后须删除 UNIVERSE_CODE_DEFECTS 这一条', stillWrong,
-    stillWrong ? '' : '（universe.ts 已修正，请删除更正条目）')
+  ok('股票池中英维克已纠正为 002837（2026-09-23 委员会授权）',
+    findMember('002837')?.member.name === '英维克' && findMember('688292') === null)
+  ok('观察仓名称与股票池登记一致', WATCHLIST.every(w => findMember(w.code)?.member.name === w.name))
 
   ok('国家队观察名单 18 只，代码为 6 位且不重复',
     NATIONAL_TEAM_ETFS.length === 18
@@ -281,7 +279,6 @@ console.log('\n【装配 · 渲染】')
 
   const txt0 = renderMoneyCockpit(v0)
   ok('渲染写明数据源未接入、不产生动作', txt0.includes('数据源未接入') && txt0.includes('不产生动作'))
-  ok('渲染登记英维克代码缺陷', txt0.includes('英维克') && txt0.includes('688292') && txt0.includes('002837'))
 
   // 合成一只背离的持仓，其余对象给平稳数据
   const all = [...new Set(Object.values(objs).flat().flatMap(o => o.codes))]
@@ -303,7 +300,47 @@ console.log('\n【装配 · 渲染】')
   ok('合成数据视图标为 FIXTURE', v1.dataMode === 'FIXTURE' && renderMoneyCockpit(v1).includes('合成数据'))
 }
 
-// ─────────────────────────── ⑦ 治理边界 ───────────────────────────
+// ─────────────────────────── ⑦ 真实数据对齐规则 ───────────────────────────
+console.log('\n【真实数据对齐】')
+{
+  const { alignStock, industryObjects, INDUSTRY_MIN_COVERAGE } = await import('./live')
+  const { exchangeOf, inShSzUniverse } = await import('./fetch')
+  const dates = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']
+  const bars = [
+    { date: '2026-09-02', close: 10, amount: 1e8 },
+    { date: '2026-09-04', close: 11, amount: 2e8 },
+  ]
+  const margin = { '2026-09-04': { X: 5e8 }, '2026-09-03': null }
+  const al = alignStock('X', bars, dates, margin)
+  ok('上市前的日子记为缺失（null），不是 0', al[0]!.amount === null && al[0]!.close === null)
+  ok('上市后腾讯不出行的日子按停牌：成交额 0、价格沿用前值', al[2]!.amount === 0 && al[2]!.close === 10)
+  ok('正常交易日原样保留', al[3]!.amount === 2e8 && al[3]!.close === 11)
+  ok('融资余额未发布的日子为 null', al[2]!.marginBalance === null && al[3]!.marginBalance === 5e8)
+
+  ok('交易所识别：沪市 6/5 开头、深市 0/3/1 开头、北交所 4/8/92 开头',
+    exchangeOf('600183') === 'sh' && exchangeOf('510300') === 'sh' && exchangeOf('002837') === 'sz'
+    && exchangeOf('159915') === 'sz' && exchangeOf('920071') === 'bj' && exchangeOf('830799') === 'bj')
+  ok('北交所不纳入两市份额计算', !inShSzUniverse('920071') && inShSzUniverse('300308'))
+
+  const objs = industryObjects([
+    { id: 'industry:a', code: 'a', name: '甲', members: ['1', '2', '3'], coverage: 1, usable: true },
+    { id: 'industry:b', code: 'b', name: '乙', members: ['4'], coverage: 0.5, usable: false },
+  ])
+  ok('覆盖率不足的行业不进入入口③', objs.length === 1 && objs[0]!.entry === 3 && objs[0]!.kind === 'INDUSTRY')
+  ok('行业覆盖率门槛为 95%', INDUSTRY_MIN_COVERAGE === 0.95)
+
+  const n = 300
+  const ds = synthDataSet(n, [
+    { code: 'A', share: t => 0.01 + wobble(t, 0.0003), price: t => 10 + t * 0.01 },
+  ])
+  ds.aggregates = {
+    'industry:z': ds.dates.map((date, t) => ({ date, code: 'industry:z', close: 100 + t, amount: 0.05 * SYNTH_MARKET_TOTAL, marginBalance: null })),
+  }
+  const agg = rawSeries({ id: 'industry:z', name: 'z', kind: 'INDUSTRY', entry: 3, codes: ['A'], themeEtfs: [] }, ds)
+  ok('行业对象优先读预汇总序列', Math.abs((agg.share[10] ?? 0) - 0.05) < 1e-9 && agg.close[10] === 110)
+}
+
+// ─────────────────────────── ⑧ 治理边界 ───────────────────────────
 console.log('\n【治理边界】')
 {
   const dir = new URL('./', import.meta.url)
@@ -321,7 +358,7 @@ console.log('\n【治理边界】')
   const { loadBaseline } = await import('../governance/freeze')
   const base = loadBaseline()
   const fp = fingerprint()
-  ok('加入资金驾驶舱框架后规则指纹未变', !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+  ok('当前规则与冻结基线一致（资金驾驶舱不新增决策规则）', !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

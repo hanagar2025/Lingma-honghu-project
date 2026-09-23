@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Cockpit from './pages/Cockpit'
 import DailyReport from './pages/DailyReport'
 import Portfolio from './pages/Portfolio'
+import MoneyCockpit from './pages/MoneyCockpit'
 import { useAppSelector } from './hooks/redux'
 import { OFFLINE_FORCED } from './services/api'
 import './styles/global.css'
@@ -22,6 +23,7 @@ function App() {
     <AppLayout>
       <Routes>
         <Route path="/" element={<Cockpit />} />
+        <Route path="/money" element={<MoneyCockpit />} />
         <Route path="/daily" element={<DailyReport />} />
         <Route path="/portfolio" element={<Portfolio />} />
         <Route path="*" element={<Navigate to="/" replace />} />

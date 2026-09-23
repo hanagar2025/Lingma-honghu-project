@@ -34,3 +34,7 @@ node_modules
 /backend/src/services/cockpit/data/obsidian
 # 若把库根目录指到本仓库，生成的「鸿鹄」文件夹也不入库。
 /鸿鹄
+
+# 资金驾驶舱：公开数据缓存与网页快照，均可由 npm run money 重建
+/backend/src/services/moneyRadar/data/cache
+/frontend/public/data/money.json

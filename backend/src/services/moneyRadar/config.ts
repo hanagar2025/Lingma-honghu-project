@@ -49,56 +49,27 @@ export const INDUSTRY_TAXONOMY = {
   standard: '申万 2021',
   level: 'L2' as const,
   expectedCount: 134,
+  /** 东方财富行业估值表按申万二级披露的行业数（成分过少的行业不单独披露），2026-09-23 实测 */
+  observedCount: 127,
   drillDown: 'L3' as const,
   conceptBoards: '只作命名标签，不参与份额计算' as const,
 }
 
-/**
- * 股票池里的代码缺陷。2026-09-23 用腾讯行情核实：
- * universe.ts 把英维克登记为 688292，而 688292 是浩瀚深度，英维克是 002837。
- *
- * 成员代码计入规则指纹（UNIVERSE 域），改 universe.ts 会改变指纹，须委员会裁定。
- * 所以这里不改 universe.ts，只在资金驾驶舱内部按更正后的代码取数，并把缺陷登记在案。
- * 委员会修正 universe.ts 之后，自检会提示删除这条更正。
- */
-export const UNIVERSE_CODE_DEFECTS: readonly {
-  name: string
-  registered: string
-  registeredIs: string
-  correct: string
-  verifiedOn: string
-  verifiedBy: string
-}[] = [
-  {
-    name: '英维克',
-    registered: '688292',
-    registeredIs: '浩瀚深度',
-    correct: '002837',
-    verifiedOn: '2026-09-23',
-    verifiedBy: '腾讯行情 qt.gtimg.cn',
-  },
-]
-
-function correctedCode(code: string): string {
-  return UNIVERSE_CODE_DEFECTS.find(d => d.registered === code)?.correct ?? code
-}
-
-/** 主线篮子：取自 msr/universe.ts，不另起一套主线定义；只套用已登记的代码更正 */
+/** 主线篮子：取自 msr/universe.ts，不另起一套主线定义 */
 export function basketObjects(entry: EntryNo | null = null): MoneyObject[] {
   return MAINLINES.map(ml => ({
     id: `basket:${ml.id}`,
     name: `${ml.name}（主线篮子）`,
     kind: 'BASKET' as const,
     entry,
-    codes: ml.members.map(m => correctedCode(m.code)),
+    codes: ml.members.map(m => m.code),
     themeEtfs: [],
   }))
 }
 
 /** 某只股票所在的主线篮子 id；不在册返回 null */
 export function basketOf(code: string): string | null {
-  const registered = UNIVERSE_CODE_DEFECTS.find(d => d.correct === code)?.registered ?? code
-  const hit = findMember(registered)
+  const hit = findMember(code)
   return hit ? `basket:${hit.mainline.id}` : null
 }
 

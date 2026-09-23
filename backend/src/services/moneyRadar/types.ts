@@ -112,6 +112,11 @@ export interface DataSet {
   stocks: Record<string, StockDay[]>
   etfs: Record<string, EtfDay[]>
   inst: Record<string, InstDay[]>
+  /**
+   * 预先汇总好的对象序列（行业）。行业成分上百只，逐只严格求和会因为一只停牌或新股
+   * 让整个行业当日变成缺失；所以行业在装载时按覆盖率汇总，覆盖率不足才整体标缺失。
+   */
+  aggregates?: Record<string, StockDay[]>
   /** 每一类数据来自哪个数据源、截至何时 */
   provenance: { kind: DataKind; source: string; asOf: string; status: Availability }[]
 }
