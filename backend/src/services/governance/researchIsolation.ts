@@ -57,6 +57,15 @@ export const RESEARCH_MODULES = [
   'research/capexLadder.ts',
   'research/macroRiskLights.ts',
   'research/marketStructureWatch.ts',
+  'moneyRadar/types.ts',
+  'moneyRadar/config.ts',
+  'moneyRadar/providers.ts',
+  'moneyRadar/metrics.ts',
+  'moneyRadar/stateMachine.ts',
+  'moneyRadar/signals.ts',
+  'moneyRadar/radar.ts',
+  'moneyRadar/fixtures.ts',
+  'moneyRadar/demo.ts',
 ] as const
 
 /**
@@ -84,6 +93,7 @@ export const RESEARCH_FIELD_NAMES = [
   'macroRiskLights', 'lightBands', 'riskChain', 'specDefects', 'hmrHypothesis',
   'scenarioGroups', 'breadthQuality', 'contractGap', 'accountBasisAudit', 'finalStateLocks',
   'marketStructureWatch', 'sessionChecks', 'nextSessionPaths', 'aiBetaCore', 'hbqHypothesis',
+  'moneyCockpit', 'reviewQueue', 'divergence', 'migrations', 'nationalTeam',
 ] as const
 
 export interface IsolationFinding {
@@ -200,6 +210,7 @@ export const RESEARCH_TEXT_MARKERS = [
   'S-01', 'H-S2', '第二幕候选', '证据矩阵',
   'M-01', 'H-MR', '宏观风险三灯', '换挡方向冲突',
   'B-01', 'H-BQ', '市场结构观察', '价格推进效率',
+  'R-01', '资金驾驶舱', '高位背离', '国家队温度计',
 ] as const
 
 /**
