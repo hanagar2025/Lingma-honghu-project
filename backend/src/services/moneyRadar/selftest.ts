@@ -246,7 +246,7 @@ console.log('\n【配置 · 数据源】')
   ok('国家队名单与持仓、观察仓不重叠',
     NATIONAL_TEAM_ETFS.every(e => !holdings.some(h => h.code === e.code) && !WATCHLIST.some(w => w.code === e.code)))
 
-  ok('阈值状态为预登记，登记日 2026-09-23', THRESHOLDS.status === 'PRE_REGISTERED' && THRESHOLDS.registeredOn === '2026-09-23')
+  ok('阈值 2026-09-23 登记、同日校准后冻结', THRESHOLDS.status === 'FROZEN' && THRESHOLDS.registeredOn === '2026-09-23')
   ok('阈值状态只能向前：预登记 → 校准 → 冻结',
     thresholdTransitionAllowed('PRE_REGISTERED', 'CALIBRATED')
     && thresholdTransitionAllowed('CALIBRATED', 'FROZEN')
@@ -287,7 +287,9 @@ console.log('\n【装配 · 渲染】')
     v0.dataMode === 'NOT_WIRED' && v0.entries.flatMap(e => e.objects).every(o => o.dataStatus === 'NOT_WIRED'))
   ok('无数据时复核队列为空', v0.reviewQueue.length === 0)
   ok('证据等级为 OBSERVATION', v0.tier === 'OBSERVATION')
-  ok('flags 全部为 false', Object.values(v0.flags).every(x => x === false))
+  ok('否定式 flags 全部为 false（发令、许可、估算数据、国家队当主线、背离当卖令）',
+    Object.entries(v0.flags).filter(([k]) => k !== 'thresholdsFrozen').every(([, x]) => x === false))
+  ok('视图如实标出阈值已冻结', v0.flags.thresholdsFrozen === true)
   ok('视图 JSON 不含 score/rank/weight 字段名', !/"(score|rank|weight)"/i.test(JSON.stringify(v0)))
 
   const txt0 = renderMoneyCockpit(v0)

@@ -121,7 +121,8 @@ export type ThresholdStatus = 'PRE_REGISTERED' | 'CALIBRATED' | 'FROZEN'
  */
 export const THRESHOLDS = {
   registeredOn: '2026-09-23',
-  status: 'PRE_REGISTERED' as ThresholdStatus,
+  /** 2026-09-23 样本内卫生六项全部通过，初值原样确认并冻结（见 CALIBRATION） */
+  status: 'FROZEN' as ThresholdStatus,
 
   baselineWindow: 250,
   /** 历史不足这个长度时，水位按"样本不足"处理，不出状态 */
@@ -183,7 +184,13 @@ export const CALIBRATION: {
   decision: 'CONFIRMED_NO_CHANGE' | 'ADJUSTED_ONCE'
   changes: readonly string[]
   report: string
-} | null = null
+} | null = {
+  frozenOn: '2026-09-23',
+  thresholdsHash: '0798bc2aa327',
+  decision: 'CONFIRMED_NO_CHANGE',
+  changes: [],
+  report: 'backend/src/services/moneyRadar/data/calibration/2026-09-23.json',
+}
 
 /** 阈值状态只能向前：PRE_REGISTERED → CALIBRATED → FROZEN */
 export function thresholdTransitionAllowed(from: ThresholdStatus, to: ThresholdStatus): boolean {
