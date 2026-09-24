@@ -7,7 +7,9 @@
  *             —— 申购赎回是真金白银进出，T+1 可得；再按中证月末权重摊到成分股
  *   机构持仓  基金、机构合计占流通股比例（季度）。只有中报、年报是全部持仓，一季报、三季报只含前十大重仓，
  *             所以"变化"只拿中报对中报前的年报、年报对中报这种全持仓对全持仓来比
- *   股东户数  上市公司定期报告披露，带公告日；户数下降 = 筹码在集中
+ *   股东户数  个股展示用最近一次披露（不少公司按旬 / 按月披露，不限季末），注明截止日与上期截止日；
+ *             分组中位数与历史检验仍用季末定期报告 —— 各家披露间隔长短不一，混在一起比较没有意义。
+ *             户数下降 = 筹码在集中
  *
  * 可得时点（事先写死，检验时只用"那天之后"的价格）：
  *   ETF 份额 T+1；基金中报全持仓 08-31、年报 03-31；股东户数按每家公司的公告日，次一交易日起算。
@@ -20,7 +22,7 @@
 
 import { excessReturn } from './backtest'
 import {
-  fetchHolderNum, fetchIndexWeights, fetchKline, fetchOrgHold, fetchSecurityNames, fetchSseEtfShares,
+  fetchHolderNum, fetchHolderNumLatest, fetchIndexWeights, fetchKline, fetchOrgHold, fetchSecurityNames, fetchSseEtfShares,
   runPool, stockKlineCached, type HolderNumRow, type IndexWeights, type OrgHoldRow,
 } from './fetch'
 import { pearson, spearman } from './leadlag'
@@ -96,6 +98,8 @@ export interface SlowData {
   orgHold: Record<string, { inst: Record<string, OrgHoldRow>; fund: Record<string, OrgHoldRow> }>
   /** 截止日 → 股东户数 */
   holderNum: Record<string, Record<string, HolderNumRow>>
+  /** 每只股票最近一次披露（不限季末），用于当前展示 */
+  holderLatest: Record<string, HolderNumRow>
   marketCap: Record<string, number>
 }
 
@@ -182,7 +186,9 @@ export async function loadSlowData(
     }
     if (hn.length) holderNum[q] = Object.fromEntries(hn.map(r => [r.code, r]))
   })
-  return { dates: [...dates], indexes, orgHold, holderNum, marketCap: opts.marketCap }
+  let holderLatest: Record<string, HolderNumRow> = {}
+  try { holderLatest = await fetchHolderNumLatest() } catch { log('    最新股东户数拉取失败，个股改用季末口径') }
+  return { dates: [...dates], indexes, orgHold, holderNum, holderLatest, marketCap: opts.marketCap }
 }
 
 // ─────────────────────────── 当日视图 ───────────────────────────
@@ -238,7 +244,11 @@ export interface SlowStockView {
   holders: number | null
   holdersChange: number | null
   holdersEndDate: string | null
+  /** 比较的上一期截止日 */
+  holdersPrevEndDate: string | null
   holdersNotice: string | null
+  /** LATEST = 最近一次披露（不限季末）；QUARTER = 季末定期报告 */
+  holdersBasis: 'LATEST' | 'QUARTER' | null
 }
 
 export interface SlowGroupView {
@@ -249,7 +259,7 @@ export interface SlowGroupView {
   fundRatio: number | null
   fundRatioPrev: number | null
   instRatio: number | null
-  /** 股东户数较上期变化的中位数（%） */
+  /** 股东户数较上期变化的中位数（%，季末定期报告口径） */
   holdersChangeMedian: number | null
 }
 
@@ -343,7 +353,10 @@ export function buildSlowView(
     const bars = ds.stocks[code] ?? []
     const amt = bars.slice(-20).map(b => b.amount).filter((v): v is number => v !== null)
     const avgAmt = amt.length === 20 ? amt.reduce((a, b) => a + b, 0) / 20 : null
-    const hr = latestHolder(sd.holderNum, code, asOf)
+    const q = latestHolder(sd.holderNum, code, asOf)
+    const l = sd.holderLatest[code]
+    const useLatest = !!l && l.noticeDate <= asOf && (!q || l.endDate >= q.endDate)
+    const hr = useLatest ? l : q
     return {
       code, name, indexWeights: iw,
       passive20: passive !== null ? passive / Y : null,
@@ -353,7 +366,8 @@ export function buildSlowView(
       instRatio: rep ? sd.orgHold[rep]!.inst[code]?.ratio ?? null : null,
       holdReport: rep, holdReportPrev: prev,
       holders: hr?.holders ?? null, holdersChange: hr?.ratio ?? null,
-      holdersEndDate: hr?.endDate ?? null, holdersNotice: hr?.noticeDate ?? null,
+      holdersEndDate: hr?.endDate ?? null, holdersPrevEndDate: hr?.prevEndDate ?? null, holdersNotice: hr?.noticeDate ?? null,
+      holdersBasis: hr ? (useLatest ? 'LATEST' : 'QUARTER') : null,
     }
   })
 
@@ -376,6 +390,7 @@ export function buildSlowView(
       'ETF 申赎：沪市 ETF 每日份额变化 × 收盘价，T+1 可得；深市科创 ETF 无份额历史，未计入',
       `机构持仓：${rep ?? '—'} 为最近一个全持仓报告期（中报 08-31、年报 03-31 才算可得），与 ${prev ?? '—'} 比较；一季报、三季报只含前十大重仓，不用于比较`,
       '机构合计含"其他"（一般法人、大股东关联方等），1 − 机构合计 不等于散户占比',
+      '股东户数：个股用最近一次披露（不限季末），"较上期"是与该公司上一次披露比，间隔长短不一，看截止日；分组中位数用季末定期报告口径',
       'ETF 规模占比按成分股总市值近似，自由流通市值口径会更高',
       '摊到个股只用最近一个月末权重，没有历史权重，因此只用于当前展示，不进入历史检验',
     ],

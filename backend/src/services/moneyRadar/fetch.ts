@@ -220,7 +220,7 @@ async function dcAll<T>(report: string, columns: string, filter: string, sort = 
   const out: T[] = []
   for (let page = 1; page < 200; page++) {
     const url = `${DC}?reportName=${report}&columns=${columns}&pageSize=500&pageNumber=${page}`
-      + `&filter=${encodeURIComponent(filter)}${sort}`
+      + (filter ? `&filter=${encodeURIComponent(filter)}` : '') + sort
     const j = await httpJson<DcResp<T>>(url)
     if (!j.result) break
     out.push(...j.result.data)
@@ -394,7 +394,28 @@ export async function fetchOrgHold(reportDate: string, orgType: '00' | '01'): Pr
   return out
 }
 
-export interface HolderNumRow { code: string; holders: number; ratio: number | null; endDate: string; noticeDate: string }
+export interface HolderNumRow { code: string; holders: number; ratio: number | null; endDate: string; noticeDate: string; prevEndDate?: string | null }
+
+/**
+ * 全市场每只股票最近一次披露的股东户数（RPT_HOLDERNUMLATEST），不限季末：
+ * 不少公司在互动平台、临时公告里按旬 / 按月披露。带截止日、上期截止日和公告日。每天刷新一次。
+ */
+export async function fetchHolderNumLatest(): Promise<Record<string, HolderNumRow>> {
+  const cached = readCache<{ fetchedAt: string; rows: Record<string, HolderNumRow> }>('holdernum-latest.json')
+  if (cached && fresh(cached.fetchedAt, 0.5)) return cached.rows
+  const rows = await dcAll<{ SECURITY_CODE: string; HOLDER_NUM: number | null; HOLDER_NUM_RATIO: number | null; END_DATE: string; PRE_END_DATE: string | null; HOLD_NOTICE_DATE: string | null }>(
+    'RPT_HOLDERNUMLATEST', 'SECURITY_CODE,HOLDER_NUM,HOLDER_NUM_RATIO,END_DATE,PRE_END_DATE,HOLD_NOTICE_DATE', '')
+  const out: Record<string, HolderNumRow> = {}
+  for (const r of rows) {
+    if (r.HOLDER_NUM === null || !r.HOLD_NOTICE_DATE) continue
+    out[r.SECURITY_CODE] = {
+      code: r.SECURITY_CODE, holders: r.HOLDER_NUM, ratio: r.HOLDER_NUM_RATIO,
+      endDate: r.END_DATE.slice(0, 10), noticeDate: r.HOLD_NOTICE_DATE.slice(0, 10), prevEndDate: r.PRE_END_DATE?.slice(0, 10) ?? null,
+    }
+  }
+  if (Object.keys(out).length) writeCache({ fetchedAt: new Date().toISOString(), rows: out }, 'holdernum-latest.json')
+  return Object.keys(out).length ? out : cached?.rows ?? {}
+}
 
 /** 某截止日全市场股东户数（东方财富数据中心 RPT_HOLDERNUM_DET），带公告日期 */
 export async function fetchHolderNum(endDate: string): Promise<HolderNumRow[]> {
