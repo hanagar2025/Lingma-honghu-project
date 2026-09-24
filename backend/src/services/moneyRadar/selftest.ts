@@ -430,9 +430,10 @@ console.log('\n【校准 · 冻结 · 影子运行】')
   const l3 = sh.updateLedger(tampered, objs, ds, start, h0)
   ok('已回填的结果不被重算覆盖（只增不改）', !firstFilled || l3.events.find(e => e.key === firstFilled.key)!.h20 === 0.123)
   ok('未到期的结果保持为空', l1.events.filter(e => ds.dates.indexOf(e.date) + 20 >= n).every(e => e.h20 === null))
-  ok('盘中（北京 13:10，最新 K 线为今天）判为盘中，不记台账',
+  ok('盘中（北京 13:10，最新 K 线为今天）判为未定稿，不记台账',
     sh.isIntraday('2026-09-24', new Date('2026-09-24T05:10:00Z')))
-  ok('收盘后（北京 15:10）不是盘中', !sh.isIntraday('2026-09-24', new Date('2026-09-24T07:10:00Z')))
+  ok('收盘初版（北京 15:10）仍未定稿：科创板盘后交易到 15:30', sh.isIntraday('2026-09-24', new Date('2026-09-24T07:10:00Z')))
+  ok('收盘定稿（北京 16:35）才记账', !sh.isIntraday('2026-09-24', new Date('2026-09-24T08:35:00Z')))
   ok('盘前（最新 K 线是昨天）不是盘中', !sh.isIntraday('2026-09-23', new Date('2026-09-24T01:20:00Z')))
   const sum = sh.summarize(l1)
   ok('台账摘要按规则汇总，并给出距 30 次触发还差多少', sum.rows.length === 7 && sum.rows.every(r => r.toVerdict >= 0))
@@ -447,7 +448,105 @@ console.log('\n【校准 · 冻结 · 影子运行】')
   }
 }
 
-// ─────────────────────────── ⑨ 治理边界 ───────────────────────────
+// ─────────────────────────── ⑨ 累计提醒 ───────────────────────────
+console.log('\n【累计提醒】')
+{
+  const al = await import('./alerts')
+  const lg = await import('./alertLedger')
+  const bt = await import('./backtest')
+  const { lastBarFinal } = await import('./fetch')
+
+  ok('提醒档位登记于 2026-09-24，取值指纹与登记时一致（登记后未被改动）',
+    al.ALERT_RULES.registeredOn === '2026-09-24' && al.alertRulesHash() === al.ALERT_RULES_HASH,
+    `${al.alertRulesHash()} vs ${al.ALERT_RULES_HASH}`)
+  ok('任何档位取值改动都会改变指纹', al.alertRulesHash({ ...al.ALERT_RULES, runDays: 9 }) !== al.ALERT_RULES_HASH)
+
+  ok('K 线缓存：16:30 前抓到的当日 K 线不算定稿', !lastBarFinal('2026-09-24', '2026-09-24T05:10:00Z'))
+  ok('K 线缓存：16:30 后抓到的当日 K 线算定稿', lastBarFinal('2026-09-24', '2026-09-24T08:40:00Z'))
+  ok('K 线缓存：没有抓取时间的旧缓存不算定稿（会重抓）', !lastBarFinal('2026-09-24', undefined))
+  ok('K 线缓存：次日抓到的前一日 K 线算定稿', lastBarFinal('2026-09-23', '2026-09-24T01:20:00Z'))
+
+  // 合成：A 持仓，最后 15 日资金跌到常态一半以下、价格仍涨、融资在加（杠杆推涨）
+  //       B 持仓，最后 30 日资金升到常态 3 倍、融资在加（资金积累 + 趋势）
+  //       C 观察股，平稳（不应出提醒）
+  const n = 420
+  const tail = (t: number, k: number) => t >= n - k
+  const ds = synthDataSet(n, [
+    { code: 'A', share: t => (tail(t, 15) ? 0.004 : 0.01 + wobble(t, 0.0003)), price: t => 10 + t * 0.01 + (tail(t, 20) ? (t - n + 20) * 0.05 : 0), margin: t => 1e9 + t * 1e6 },
+    { code: 'B', share: t => (tail(t, 30) ? 0.03 : 0.01 + wobble(t + 3, 0.0003)), price: t => 10 + t * 0.01, margin: t => 1e9 + t * 2e6 },
+    { code: 'C', share: t => 0.006 + wobble(t + 9, 0.0002), price: () => 10, margin: () => 5e8 },
+  ])
+  ds.market.forEach((m, t) => { m.close = 100 + t * 0.01 })
+  const mk = (code: string, entry: 1 | 2 | 3) => ({ id: `stock:${code}`, name: code, kind: 'STOCK' as const, entry, codes: [code], themeEtfs: [] })
+  const rep = bt.replayObjects(ds, [mk('A', 1), mk('B', 1), mk('C', 2)])
+  const ctx = al.buildAlertContext(ds, rep)
+  const t = n - 1
+  const today = al.alertsAt(ctx, t)
+  const has = (id: string, type: string) => today.some(a => a.objectId === `stock:${id}` && a.type === type)
+  ok('资金连续低于常态 ≥10 日 → 风险·资金流失', has('A', 'RISK_OUTFLOW'))
+  ok('资金处于自身低位、价格在涨、融资在加 → 风险·杠杆推涨', has('A', 'RISK_LEVERAGE'))
+  ok('资金连续高于常态且处于自身高分位 → 机会·资金积累', has('B', 'OPP_ACCUM'))
+  ok('平稳对象不出提醒（不因为每天的小波动打扰）', !today.some(a => a.objectId === 'stock:C'))
+
+  const { view, life } = al.buildAlerts(ctx, new Map([['stock:A', '甲'], ['stock:B', '乙'], ['stock:C', '丙']]))
+  const cardA = view.cards.find(c => c.objectId === 'stock:A')!
+  ok('一个对象一张卡：同一对象的多条提醒合并，次要的作为附注', view.cards.filter(c => c.objectId === 'stock:A').length === 1 && cardA.tags.length >= 1)
+  ok('持仓的卡在左列，观察仓与市场在右列', cardA.column === 'LEFT')
+  ok('卡片一句话里有数字：日均比常态多少、连续几日、分位、价格、融资',
+    /日均比常态少 [\d.]+ 亿/.test(cardA.detail) && /连续 \d+ 日低于常态/.test(cardA.detail)
+    && /分位/.test(cardA.detail) && /价格 20 日/.test(cardA.detail) && /融资 10 日/.test(cardA.detail))
+  const outflow = life.active.find(a => a.objectId === 'stock:A' && a.type === 'RISK_OUTFLOW')!
+  ok('"第 N 天"从条件真正成立那天算起（回放得出，不是从上线那天算）', outflow.days >= 2 && outflow.days <= 10, `days=${outflow.days}`)
+  ok('卡片带 5 / 10 / 20 / 60 日累计窗口', cardA.windows.map(w => w.k).join('/') === '5/10/20/60')
+  ok('5 日累计超额为负（资金在流失）', (cardA.windows[0]!.cumYi ?? 0) < 0)
+  ok('首页展开的卡片不超过 8 张', view.cards.filter(c => c.expanded).length <= al.ALERT_RULES.maxExpanded)
+  ok('"注意"类（放量滞涨）不占首页展开名额', view.cards.filter(c => c.expanded).every(c => c.category !== 'NOTE'))
+  ok('每张卡都标明证据等级', view.cards.every(c => c.evidence.length > 0))
+  ok('趋势类提醒标为已验证，其余不冒充已验证',
+    al.ALERT_TYPE.OPP_TREND.evidence.startsWith('已验证')
+    && (Object.keys(al.ALERT_TYPE) as (keyof typeof al.ALERT_TYPE)[]).filter(k => k !== 'OPP_TREND').every(k => !al.ALERT_TYPE[k].evidence.startsWith('已验证')))
+  ok('放量滞涨归为"注意"，不归为风险', al.ALERT_TYPE.NOTE_EXHAUST.category === 'NOTE')
+
+  // 生命周期：条件结束后解除
+  const cut = n - 3
+  const ds2 = { ...ds, dates: ds.dates.slice(0, cut), market: ds.market.slice(0, cut),
+    stocks: Object.fromEntries(Object.entries(ds.stocks).map(([k, v]) => [k, v.slice(0, cut)])),
+    inst: {}, etfs: {} }
+  const life2 = al.replayLifecycle(al.buildAlertContext(ds2, bt.replayObjects(ds2, [mk('A', 1)])))
+  ok('生命周期记录新增事件', life2.events.some(e => e.event === 'NEW'))
+
+  // 台账
+  const ledger = lg.emptyLedger(ds.dates[n - 10]!, al.ALERT_RULES_HASH)
+  lg.appendEvents(ledger, life, new Map())
+  const count = ledger.events.length
+  lg.appendEvents(ledger, life, new Map())
+  ok('提醒台账只记录登记日之后的事件', ledger.events.every(e => e.date >= ledger.startedOn))
+  ok('提醒台账重复追加不产生重复事件（幂等）', ledger.events.length === count)
+
+  // 数据异常
+  const prov = (s: 'OK' | 'MISSING' | 'PENDING') => [{ kind: 'MARGIN' as const, source: 'x', asOf: 'd', status: s }]
+  const L2 = lg.emptyLedger('2026-09-01', al.ALERT_RULES_HASH)
+  lg.updateFailures(L2, prov('MISSING'), '2026-09-01', 0)
+  const sameDay = lg.updateFailures(L2, prov('MISSING'), '2026-09-01', 0)
+  ok('同一交易日重复失败只算一次，不出异常卡', sameDay.length === 0 && L2.sourceFailures.MARGIN!.consecutive === 1)
+  const second = lg.updateFailures(L2, prov('MISSING'), '2026-09-02', 0)
+  ok('连续 2 个交易日失败 → 数据异常卡', second.length === 1 && second[0]!.text.includes('融资余额'))
+  lg.updateFailures(L2, prov('OK'), '2026-09-03', 0)
+  ok('恢复后计数清零', L2.sourceFailures.MARGIN!.consecutive === 0)
+  ok('"按发布时间还没到"（PENDING）不算失败', (lg.updateFailures(L2, prov('PENDING'), '2026-09-04', 0), L2.sourceFailures.MARGIN!.consecutive === 0))
+  ok('个股抓取失败率超过 5% 也算失败', (lg.updateFailures(L2, [], '2026-09-05', 0.2), L2.sourceFailures.STOCK_AMOUNT!.consecutive === 1))
+
+  // Agent 文件带今日提醒
+  const { buildMoneyAgentShare } = await import('./agentShare')
+  const vx = buildMoneyCockpitView(ds, 'FIXTURE')
+  vx.alerts = view
+  const md = buildMoneyAgentShare(vx)
+  ok('Agent 文件在约束之后、数据口径之前列出今日提醒',
+    md.indexOf('# 约束') < md.indexOf('# 今日提醒') && md.indexOf('# 今日提醒') < md.indexOf('# 数据口径')
+    && md.includes('## 持仓（入口①）') && md.includes('甲'))
+}
+
+// ─────────────────────────── ⑩ 治理边界 ───────────────────────────
 console.log('\n【治理边界】')
 {
   const dir = new URL('./', import.meta.url)

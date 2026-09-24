@@ -122,22 +122,43 @@ export async function fetchKline(symbol: string, days: number): Promise<KBar[]> 
  * 个股 K 线，带缓存增量更新：缓存已到最新交易日则直接用；
  * 否则只补最近一段并与缓存合并。
  */
-/** 缓存记下当初请求过多少日：新股历史本来就短，不能靠条数判断"够不够长" */
-interface KlineCache { days: number; bars: KBar[] }
+/** 北京时间的日期与 HHMM */
+export function beijingClock(at = new Date()): { date: string; hhmm: number } {
+  const bj = new Date(at.getTime() + 8 * 3600_000)
+  return { date: bj.toISOString().slice(0, 10), hhmm: bj.getUTCHours() * 100 + bj.getUTCMinutes() }
+}
+
+/** 当日 K 线定稿时刻：科创板盘后固定价格交易到 15:30，16:30 后成交额才完整 */
+export const KLINE_FINAL_HHMM = 1630
+
+/**
+ * 缓存里最后一根 K 线是不是定稿的。
+ * 盘中抓到的当日 K 线是半截数据；若把它当成"已是最新日期"，收盘后就再也不会重抓 ——
+ * 这一天的成交额会永远停在盘中那一刻。
+ */
+export function lastBarFinal(lastDate: string, fetchedAt: string | undefined): boolean {
+  if (!fetchedAt) return false
+  const f = beijingClock(new Date(fetchedAt))
+  return lastDate < f.date || (lastDate === f.date && f.hhmm >= KLINE_FINAL_HHMM)
+}
+
+/** 缓存记下当初请求过多少日（新股历史本来就短，不能靠条数判断"够不够长"）与抓取时刻 */
+interface KlineCache { days: number; bars: KBar[]; fetchedAt?: string }
 
 export async function stockKlineCached(code: string, days: number, latestDate: string): Promise<KBar[]> {
   const raw = readCache<KlineCache | KBar[]>('kline', `${code}.json`)
   const cached: KlineCache | null = raw === null ? null
     : Array.isArray(raw) ? { days: raw.length, bars: raw } : raw
   const longEnough = !!cached && cached.days >= days
-  if (cached && longEnough && cached.bars.length && cached.bars.at(-1)!.date >= latestDate) return cached.bars
+  const last = cached?.bars.at(-1)?.date ?? ''
+  if (cached && longEnough && last >= latestDate && lastBarFinal(last, cached.fetchedAt)) return cached.bars
   const sym = `${exchangeOf(code)}${code}`
   const fresh = await fetchKline(sym, longEnough ? 30 : days)
   const merged = new Map<string, KBar>()
   for (const b of cached?.bars ?? []) merged.set(b.date, b)
   for (const b of fresh) merged.set(b.date, b)
   const bars = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-days)
-  writeCache({ days: Math.max(days, cached?.days ?? 0), bars } satisfies KlineCache, 'kline', `${code}.json`)
+  writeCache({ days: Math.max(days, cached?.days ?? 0), bars, fetchedAt: new Date().toISOString() } satisfies KlineCache, 'kline', `${code}.json`)
   return bars
 }
 
@@ -204,7 +225,9 @@ export async function fetchTopInstByDate(date: string): Promise<Record<string, n
     'RPT_ORGANIZATION_TRADE_DETAILS', 'SECURITY_CODE,NET_BUY_AMT', `(TRADE_DATE='${date}')`)
   const out: Record<string, number> = {}
   for (const r of rows) if (r.NET_BUY_AMT !== null) out[r.SECURITY_CODE] = (out[r.SECURITY_CODE] ?? 0) + r.NET_BUY_AMT
-  writeCache(out, 'topinst', `${date}.json`)
+  // 龙虎榜当日晚间才发布完整；19:30 之前抓到的当日结果不写缓存，免得把"还没发布"永久记成"没有上榜"
+  const now = beijingClock()
+  if (date < now.date || now.hhmm >= 1930) writeCache(out, 'topinst', `${date}.json`)
   return out
 }
 

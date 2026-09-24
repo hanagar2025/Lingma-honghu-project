@@ -32,6 +32,17 @@ HOUR="$(TZ=Asia/Shanghai date +%H)"
 
 cd "${ROOT}"
 
+# 持仓与观察仓今天新增或升级到"警示"及以上的提醒，用 macOS 系统通知弹出一行；其他提醒只在页面上看
+notify_money() {
+  local f="${ROOT}/frontend/public/data/money.notify.txt"
+  [[ -s "$f" ]] || return 0
+  command -v osascript >/dev/null 2>&1 || return 0
+  local n body
+  n="$(awk 'END{print NR}' "$f")"
+  body="$(head -3 "$f" | tr '\n' '；' | sed 's/"/\\"/g')"
+  osascript -e "display notification \"${body}\" with title \"鸿鹄资金提醒 · ${n} 条\"" >/dev/null 2>&1 || true
+}
+
 case "${ACTION}" in
 refresh)
   npm run obsidian:refresh
@@ -48,10 +59,16 @@ auto)
   else
     npm run obsidian:refresh
   fi
-  npm run money || printf '资金驾驶舱本次未更新（看台已写好，不受影响）\n' >&2
+  if npm run money; then
+    # 公开链接：当日数据未定稿（16:30 前）时发布脚本自己会拒绝，不影响后续
+    npm run money:publish >/dev/null 2>&1 || true
+    notify_money
+  else
+    printf '资金驾驶舱本次未更新（看台已写好，不受影响）\n' >&2
+  fi
   ;;
 money)
-  npm run money
+  npm run money && { npm run money:publish >/dev/null 2>&1 || true; notify_money; }
   ;;
 *)
   printf '用法：OBSIDIAN_VAULT=库路径 %s refresh|pre|pull|auto|money\n' "$0" >&2

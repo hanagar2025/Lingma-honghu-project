@@ -39,3 +39,4 @@ node_modules
 /backend/src/services/moneyRadar/data/cache
 /frontend/public/data/money.json
 /frontend/public/data/money.agent.md
+/frontend/public/data/money.notify.txt

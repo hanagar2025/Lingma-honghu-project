@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, ConfigProvider, Drawer, Empty, Space, Spin, Table, Tabs, Tooltip, message, theme } from 'antd'
 import { LinkOutlined } from '@ant-design/icons'
 import { FlowBars, Legend, LinesChart, Spark } from '../components/money/Charts'
+import AlertsPanel from '../components/money/AlertsPanel'
 
 /**
  * 资金驾驶舱（R-01）
@@ -207,6 +208,8 @@ const MoneyCockpit: React.FC = () => {
             阈值 {data.thresholds.status === 'FROZEN' ? '已冻结' : data.thresholds.status}（登记于 {data.thresholds.registeredOn}）· 生成于 {new Date(data.generatedAt).toLocaleString('zh-CN')}
           </div>
         </div>
+
+        {data.alerts && <AlertsPanel alerts={data.alerts} />}
 
         {/* 背景层 */}
         <div className="mc-grid" style={{ gridTemplateColumns: '1.3fr 1fr 1fr 1.2fr' }}>

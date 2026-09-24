@@ -55,6 +55,41 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
   w('- 你的任务：找矛盾、验算术、指出证据不足、提出需要补的数据，并说明你的推论依赖哪几行数据。')
   w('')
 
+  const al = v.alerts as any
+  if (al) {
+    w('# 今日提醒（累计变化，一对象一条；只决定先复核谁）')
+    for (const a of al.anomalies ?? []) w(`- [数据异常] ${a.text}`)
+    const cards = (al.cards ?? []) as any[]
+    const line = (c: any) => {
+      const ev = ({ NEW: '新增', UP: '升级', DOWN: '降级', CONTINUE: '持续', RESOLVED: '解除' } as Record<string, string>)[c.event]
+      const cat = ({ RISK: '风险', OPP: '机会', NOTE: '注意', DATA: '数据' } as Record<string, string>)[c.category]
+      const lv = ({ 1: '关注', 2: '警示', 3: '重大' } as Record<number, string>)[c.level]
+      const tags = c.tags?.length ? `｜另：${c.tags.map((x: any) => x.text).join('、')}` : ''
+      return `- [${cat}·${lv}] ${c.name}（${c.objectId}，入口${c.entry ?? '-'}）：${c.title}。${c.detail}。第 ${c.days} 天（${ev}，自 ${c.firstDate}）｜证据：${c.evidence}${tags}`
+    }
+    w('## 持仓（入口①）')
+    const left = cards.filter(c => c.column === 'LEFT')
+    if (!left.length) w('无')
+    for (const c of left) w(line(c))
+    w('## 观察仓与市场（入口② ③）')
+    const right = cards.filter(c => c.column === 'RIGHT')
+    if (!right.length) w('无')
+    for (const c of right) w(line(c))
+    if (al.resolvedToday?.length) {
+      w('## 今日解除')
+      for (const r of al.resolvedToday) w(`- ${r.name}：${r.text}`)
+    }
+    if (al.tempPool?.length) {
+      w('## 临时观察池（市场新方向自动加入，20 日无提醒自动移出）')
+      for (const p of al.tempPool) w(`- ${p.name}：${p.joined} 起，最近一次提醒 ${p.lastAlert}；核心股 ${p.leaders.join('、')}`)
+    }
+    const d = al.digest
+    if (d) {
+      w(`## 近 5 日：新增 ${d.days5.newCount}、升级 ${d.days5.upCount}、解除 ${d.days5.resolvedCount}；近 20 日：新增 ${d.days20.newCount}、升级 ${d.days20.upCount}、解除 ${d.days20.resolvedCount}`)
+    }
+    w('')
+  }
+
   w('# 数据口径')
   w('- 两市成交额 = 上证指数 + 深证综指（北交所不计入）。基准收益 = 两者日收益平均。')
   w('- 行业 = 申万 2021 二级，成分来自东方财富行业估值表；按当前成分回看历史。')

@@ -343,6 +343,8 @@ export interface MoneyCockpitView {
   calibration?: unknown
   /** 影子运行台账摘要（冻结后才有） */
   shadow?: unknown
+  /** 累计提醒 */
+  alerts?: unknown
   doesNotImply: readonly string[]
   flags: Record<string, boolean>
 }

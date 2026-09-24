@@ -69,6 +69,10 @@ export interface EvalObject {
   /** 每日背离是否成立（四项全满足） */
   divergence: boolean[]
   close: Num[]
+  /** 每日超额成交额（元）=（当日份额 − 当日水位）× 两市成交额 */
+  dailyExcess: Num[]
+  /** 对象的成分股代码（用于核心股切换） */
+  codes: string[]
 }
 
 export function replayObjects(ds: DataSet, objs: readonly MoneyObject[]): EvalObject[] {
@@ -84,6 +88,12 @@ export function replayObjects(ds: DataSet, objs: readonly MoneyObject[]): EvalOb
       transitions,
       divergence: metrics.map((_, t) => checkDivergence(metrics, t).verdict === 'DIVERGENCE'),
       close: raw.close,
+      dailyExcess: raw.share.map((s, t) => {
+        const med = metrics[t]?.median ?? null
+        const m = mkt[t] ?? null
+        return s === null || med === null || m === null ? null : (s - med) * m
+      }),
+      codes: obj.codes,
     }
   })
 }

@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { THRESHOLDS } from './config'
 import { HORIZONS, RULE_HYPOTHESIS, excessReturn, type EvalObject, type RuleId } from './backtest'
+import { KLINE_FINAL_HHMM, beijingClock } from './fetch'
 import type { DataSet, EntryNo } from './types'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -38,12 +39,13 @@ export interface ShadowLedger {
   events: ShadowEvent[]
 }
 
-/** 最新 K 线是北京时间今天，且还没到 15:05 → 盘中，当日数据不完整，不记台账 */
+/**
+ * 最新 K 线是北京时间今天，且还没到 16:30 → 当日数据未定稿，不记台账。
+ * 科创板盘后固定价格交易到 15:30，15:10 那次运行时当日成交额还不完整。
+ */
 export function isIntraday(latestDate: string, now = new Date()): boolean {
-  const bj = new Date(now.getTime() + 8 * 3600_000)
-  const today = bj.toISOString().slice(0, 10)
-  const hhmm = bj.getUTCHours() * 100 + bj.getUTCMinutes()
-  return latestDate === today && hhmm < 1505
+  const { date, hhmm } = beijingClock(now)
+  return latestDate === date && hhmm < KLINE_FINAL_HHMM
 }
 
 export function loadLedger(file = SHADOW_FILE): ShadowLedger | null {
