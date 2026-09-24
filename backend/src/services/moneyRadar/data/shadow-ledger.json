@@ -85,6 +85,18 @@
    "state": "TREND→EXHAUST：10 日份额仍高于 75% 分位，但 10 日价格不涨，连续 3 日",
    "h20": null,
    "h60": null
+  },
+  {
+   "key": "2026-09-24|industry:016016|EXHAUST",
+   "date": "2026-09-24",
+   "rule": "EXHAUST",
+   "objectId": "industry:016016",
+   "name": "航运港口",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "TREND→EXHAUST：10 日份额仍高于 75% 分位，但 10 日价格不涨，连续 3 日",
+   "h20": null,
+   "h60": null
   }
  ]
 }

@@ -496,10 +496,28 @@ export function buildAlerts(
     || catRank(a) - catRank(b) || b.level - a.level || evRank[a.event] - evRank[b.event]
     || (a.entry ?? 9) - (b.entry ?? 9) || a.days - b.days)
 
-  // 首页最多展开 8 张：持仓风险优先，其余按排序依次填满
-  const prio = (c: AlertCard) => (c.column === 'LEFT' && c.category === 'RISK' ? 0 : c.column === 'LEFT' && c.category === 'OPP' ? 1 : c.entry === 2 ? 2 : 3)
-  const byPrio = [...cards].filter(c => c.category !== 'NOTE').sort((a, b) => prio(a) - prio(b) || b.level - a.level)
-  for (const c of byPrio.slice(0, ALERT_RULES.maxExpanded)) c.expanded = true
+  // 首页最多展开 8 张。两列都要有内容：先放持仓风险（最多 5），右列保底 3 张（观察仓先于市场），
+  // 余下名额给持仓机会。同一档里今天新增或升级的排在长期持续的前面
+  const fresh = (c: AlertCard) => (c.event === 'NEW' || c.event === 'UP' ? 0 : 1)
+  const rank = (a: AlertCard, b: AlertCard) => b.level - a.level || fresh(a) - fresh(b) || a.days - b.days
+  const pool = cards.filter(c => c.category !== 'NOTE')
+  const leftRisk = pool.filter(c => c.column === 'LEFT' && c.category === 'RISK').sort(rank)
+  const leftOpp = pool.filter(c => c.column === 'LEFT' && c.category !== 'RISK').sort(rank)
+  // 右列保底：观察仓 2 张 + 市场 1 张（市场里新出现的方向优先），不够再互补
+  const watch = pool.filter(c => c.column === 'RIGHT' && c.entry === 2).sort(rank)
+  const market = pool.filter(c => c.column === 'RIGHT' && c.entry !== 2).sort((a, b) => fresh(a) - fresh(b) || rank(a, b))
+  const rightPick = [...watch.slice(0, 2), ...market.slice(0, 1)]
+  for (const c of [...watch.slice(2), ...market.slice(1)]) { if (rightPick.length >= 3) break; rightPick.push(c) }
+  const pick: AlertCard[] = [...leftRisk.slice(0, 5), ...rightPick]
+  const rest = [...watch, ...market].filter(c => !rightPick.includes(c))
+  for (const c of [...leftOpp, ...leftRisk.slice(5), ...rest]) {
+    if (pick.length >= ALERT_RULES.maxExpanded) break
+    pick.push(c)
+  }
+  for (const c of pick.slice(0, ALERT_RULES.maxExpanded)) c.expanded = true
+  // 列内显示顺序与展开顺序一致：展开的在前
+  cards.sort((a, b) => (a.column === b.column ? 0 : a.column === 'LEFT' ? -1 : 1)
+    || Number(b.expanded) - Number(a.expanded) || catRank(a) - catRank(b) || rank(a, b))
 
   const d5 = new Set(ctx.ds.dates.slice(-5))
   const d20 = new Set(ctx.ds.dates.slice(-20))
@@ -521,10 +539,16 @@ export function buildAlerts(
     asOf: ctx.ds.dates[t]!,
     rules: ALERT_RULES,
     cards,
-    resolvedToday: life.resolvedToday.map(r => ({
-      objectId: r.objectId, name: names.get(r.objectId) ?? byId.get(r.objectId)?.name ?? r.objectId, type: r.type,
-      text: `${CATEGORY_TEXT[ALERT_TYPE[r.type].category]}·${TYPE_LABEL[r.type]}（${LEVEL_TEXT[r.level]}，自 ${r.firstDate}）解除`, firstDate: r.firstDate,
-    })),
+    resolvedToday: life.resolvedToday.map(r => {
+      // 迁移与核心股切换的 key 里带着对端 / 新进股，解除时要写出来，否则分不清解除的是哪一条
+      const extra = r.key.split('|')[2]
+      const peer = extra ? `→ ${names.get(extra) ?? byId.get(extra)?.name ?? extra}` : ''
+      return {
+        objectId: r.objectId, name: names.get(r.objectId) ?? byId.get(r.objectId)?.name ?? r.objectId, type: r.type,
+        text: `${CATEGORY_TEXT[ALERT_TYPE[r.type].category]}·${TYPE_LABEL[r.type]}${peer}（${LEVEL_TEXT[r.level]}，自 ${r.firstDate}）解除`,
+        firstDate: r.firstDate,
+      }
+    }),
     tempPool: life.tempPool.map(p => {
       const o = byId.get(p.objectId)
       return { ...p, name: o?.name ?? p.objectId, leaders: o ? leadersOf(o) : [] }
