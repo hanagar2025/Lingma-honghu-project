@@ -6,7 +6,7 @@
  */
 
 import { THRESHOLDS as T } from './config'
-import { lastKDays, quantile, type DayMetrics, type Num } from './metrics'
+import { etfFlowOf, lastKDays, quantile, sumEtfFlows, type DayMetrics, type Num } from './metrics'
 import type { MoneyState } from './stateMachine'
 import type { DataSet } from './types'
 
@@ -169,17 +169,10 @@ export type NationalTeamDay = 'RESCUE' | 'COOL' | 'NORMAL' | null
  * 某只 ETF 当日缺数据 → 当日合计为 null，不用其余几只凑数。
  */
 export function nationalTeamFlow(ds: DataSet, codes: readonly string[]): Num[] {
-  return ds.dates.map((_, t) => {
-    if (t === 0) return null
-    let s = 0
-    for (const code of codes) {
-      const cur = ds.etfs[code]?.[t]
-      const prev = ds.etfs[code]?.[t - 1]
-      if (!cur || !prev || cur.share === null || prev.share === null || cur.close === null) return null
-      s += (cur.share - prev.share) * cur.close
-    }
-    return s
-  })
+  const series = codes.map(c => etfFlowOf(ds, c))
+  // 名单里任一只在整段数据里都没有份额，温度计就不可判定（不是"那只没人申赎"）
+  if (series.some(s => s.first < 0)) return ds.dates.map(() => null)
+  return sumEtfFlows(series, ds.dates.length, t => t === 0).flow
 }
 
 /** 托底日 / 降温日：当日净申赎落在自身 250 日分布的尾部（只用当日之前的数据） */

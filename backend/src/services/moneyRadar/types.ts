@@ -63,7 +63,10 @@ export interface EtfDay {
   code: string
   /** 份额（份）。null = 缺失或未发布 */
   share: number | null
+  /** 复权收盘价（算收益用） */
   close: number | null
+  /** 不复权收盘价（算规模、识别份额折算用）。缺省时按与 close 相同处理 */
+  rawClose?: number | null
 }
 
 export interface InstDay {

@@ -60,6 +60,8 @@ export interface LiveResult {
   industries: IndustryInfo[]
   names: Record<string, string>
   marketMargin: (number | null)[]
+  /** 个股总市值（元），取自申万行业估值表最新交易日 */
+  marketCap: Record<string, number>
   coverage: { stocksWanted: number; stocksFetched: number; failed: string[] }
 }
 
@@ -174,7 +176,11 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
   const etfCodes = NATIONAL_TEAM_ETFS.map(e => e.code)
   log(`· 国家队 ETF：${etfCodes.length} 只（沪市份额有历史，深市份额只有当日值）`)
   const etfBars: Record<string, KBar[]> = {}
-  await runPool(etfCodes, 6, async c => { etfBars[c] = await fetchKline(`${exchangeOf(c)}${c}`, opt.days) })
+  const etfRaw: Record<string, KBar[]> = {}
+  await runPool(etfCodes, 6, async c => {
+    etfBars[c] = await fetchKline(`${exchangeOf(c)}${c}`, opt.days)
+    etfRaw[c] = await fetchKline(`${exchangeOf(c)}${c}`, opt.days, 'raw')
+  })
   const etfDates = dates.slice(-opt.etfDays)
   const sse: Record<string, Record<string, number> | null> = {}
   await runPool(etfDates, 4, async d => { sse[d] = await fetchSseEtfShares(d) })
@@ -188,11 +194,12 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
   const etfs: Record<string, EtfDay[]> = {}
   for (const code of etfCodes) {
     const closeBy = new Map((etfBars[code] ?? []).map(b => [b.date, b.close]))
+    const rawBy = new Map((etfRaw[code] ?? []).map(b => [b.date, b.close]))
     etfs[code] = dates.map(date => {
       const fromSse = sse[date]?.[code]
       const fromArchive = szArchive[date]?.[code]
       const share = exchangeOf(code) === 'sh' ? (fromSse ?? null) : (fromArchive ?? null)
-      return { date, code, share, close: closeBy.get(date) ?? null }
+      return { date, code, share, close: closeBy.get(date) ?? null, rawClose: rawBy.get(date) ?? null }
     })
   }
   mark('ETF_SHARE', '上交所 commonQuery（沪市）+ 腾讯行情（深市当日，逐日存档）', latest,
@@ -238,6 +245,7 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
     industries,
     names,
     marketMargin,
+    marketCap: Object.fromEntries(members.filter(m => m.marketCap !== null).map(m => [m.code, m.marketCap!])),
     coverage: { stocksWanted: wanted.length, stocksFetched: Object.keys(bars).length, failed },
   }
 }

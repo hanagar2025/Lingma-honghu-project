@@ -66,6 +66,109 @@ function trailing<T>(xs: readonly T[], t: number, w: number): T[] {
   return xs.slice(Math.max(0, t - w + 1), t + 1)
 }
 
+/**
+ * ETF 每日净申赎（元）与规模（元），能识别份额折算 / 合并。
+ *
+ * 份额折算（如 1 拆 3）当天份额翻 3 倍、不复权价跌到 1/3，钱一分没进来；
+ * 只拿"份额差 × 价格"会把它记成一笔等于全部规模的申购。
+ * 识别办法：不复权价 ÷ 复权价 这个因子在分红时只动几个百分点，折算时成倍跳变 ——
+ * 跳变日 p 的倍数 k 即折算比例。交易所份额与行情价格的折算日可能错开一天，
+ * 所以在 p−1、p、p+1 里找份额比最接近 k 的那天 d，作为份额侧的折算日。
+ *
+ * 之后按"份额单位"和"价格单位"各自已经折算过几次，把价格换成与份额同一单位：
+ *   P_t = 不复权价_t × u价(t) ÷ u份(t)
+ *   净申赎_t = (份额_t − 份额_{t−1} × u份(t)/u份(t−1)) × P_t，规模_t = 份额_t × P_t
+ *
+ * 首个有份额的日子（上市或数据起点）不算申购；之后某天份额缺失 → 当天为 null。
+ * 没有不复权价时（合成数据）按无折算处理。
+ */
+export interface EtfFlow {
+  flow: Num[]
+  aum: Num[]
+  splits: { priceDay: number; shareDay: number; k: number }[]
+  /** 第一个有份额的下标；之前视为尚未上市（-1 = 从未有份额） */
+  first: number
+}
+
+export function etfFlowSeries(share: readonly Num[], raw: readonly Num[], adj: readonly Num[]): EtfFlow {
+  const n = share.length
+  const splits: { priceDay: number; shareDay: number; k: number }[] = []
+  let prevF: number | null = null
+  for (let t = 0; t < n; t++) {
+    const r = raw[t] ?? null
+    const a = adj[t] ?? null
+    if (r === null || a === null || r <= 0 || a <= 0) continue
+    const f = r / a
+    if (prevF !== null) {
+      const g = f / prevF
+      if (g < 0.8 || g > 1.25) {
+        const k = 1 / g
+        let best = t
+        let bestErr = Infinity
+        for (const d of [t - 1, t, t + 1]) {
+          const s1 = share[d] ?? null
+          const s0 = share[d - 1] ?? null
+          if (s1 === null || s0 === null || s0 <= 0 || s1 <= 0) continue
+          const err = Math.abs(Math.log(s1 / s0) - Math.log(k))
+          if (err < bestErr) { bestErr = err; best = d }
+        }
+        splits.push({ priceDay: t, shareDay: bestErr < Math.log(1.3) ? best : t, k })
+      }
+    }
+    prevF = f
+  }
+  const uShare = (t: number) => splits.reduce((m, s) => (s.shareDay <= t ? m * s.k : m), 1)
+  const uPrice = (t: number) => splits.reduce((m, s) => (s.priceDay <= t ? m * s.k : m), 1)
+
+  const flow: Num[] = []
+  const aum: Num[] = []
+  let first = -1
+  for (let t = 0; t < n; t++) {
+    const s = share[t] ?? null
+    const r = raw[t] ?? adj[t] ?? null
+    if (s === null || r === null) {
+      flow.push(null)
+      aum.push(null)
+      continue
+    }
+    const px = r * uPrice(t) / uShare(t)
+    aum.push(s * px)
+    const sp = t > 0 ? share[t - 1] ?? null : null
+    if (first < 0) { flow.push(0); first = t; continue }
+    if (sp === null) { flow.push(null); continue }
+    flow.push((s - sp * uShare(t) / uShare(t - 1)) * px)
+  }
+  return { flow, aum, splits, first }
+}
+
+/** 多只 ETF 按日汇总：尚未上市的不计；已上市的某天缺失 → 当天整体为 null，不当 0 */
+export function sumEtfFlows(xs: readonly EtfFlow[], n: number, dayMissing: (t: number) => boolean = () => false): { flow: Num[]; aum: Num[] } {
+  const flow: Num[] = []
+  const aum: Num[] = []
+  for (let t = 0; t < n; t++) {
+    if (dayMissing(t)) { flow.push(null); aum.push(null); continue }
+    let f: Num = 0
+    let a: Num = 0
+    for (const x of xs) {
+      if (x.first < 0 || t < x.first) continue
+      const v = x.flow[t] ?? null
+      const m = x.aum[t] ?? null
+      if (v === null || m === null) { f = null; a = null; break }
+      f += v
+      a += m
+    }
+    flow.push(f)
+    aum.push(a)
+  }
+  return { flow, aum }
+}
+
+/** 某只 ETF 在数据集里的净申赎序列 */
+export function etfFlowOf(ds: DataSet, code: string): EtfFlow {
+  const days = ds.etfs[code] ?? []
+  return etfFlowSeries(days.map(d => d.share), days.map(d => (d.rawClose === undefined ? d.close : d.rawClose)), days.map(d => d.close))
+}
+
 /** 原始序列：把成分股按日期汇总成对象的成交额、价格、融资、ETF 净申赎、机构净买 */
 export interface RawSeries {
   amount: Num[]
@@ -87,6 +190,7 @@ export function rawSeries(obj: MoneyObject, ds: DataSet): RawSeries {
   const etfFlow: Num[] = []
   const close: Num[] = []
   let index = 100
+  const themeFlow = obj.themeEtfs.length ? sumEtfFlows(obj.themeEtfs.map(c => etfFlowOf(ds, c)), n).flow : null
 
   for (let t = 0; t < n; t++) {
     let a: Num = 0
@@ -108,14 +212,7 @@ export function rawSeries(obj: MoneyObject, ds: DataSet): RawSeries {
     margin.push(m)
     instNet.push(inst)
 
-    let flow: Num = obj.themeEtfs.length ? 0 : null
-    for (const code of obj.themeEtfs) {
-      const cur = ds.etfs[code]?.[t]
-      const prev = t > 0 ? ds.etfs[code]?.[t - 1] : undefined
-      if (!cur || !prev || cur.share === null || prev.share === null || cur.close === null) flow = null
-      else if (flow !== null) flow += (cur.share - prev.share) * cur.close
-    }
-    etfFlow.push(flow)
+    etfFlow.push(themeFlow ? themeFlow[t] ?? null : null)
 
     if (obj.codes.length === 1) {
       close.push(ds.stocks[obj.codes[0]!]?.[t]?.close ?? null)

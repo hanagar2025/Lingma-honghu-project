@@ -38,6 +38,7 @@
     "money:demo": "tsx src/services/moneyRadar/demo.ts",
     "money": "tsx src/services/moneyRadar/run.ts",
     "money:calibrate": "tsx src/services/moneyRadar/calibrate.ts",
+    "money:leadlag": "tsx src/services/moneyRadar/leadlagRun.ts",
     "money:share": "tsx src/services/moneyRadar/share.ts",
     "money:publish": "tsx src/services/moneyRadar/publish.ts"
   },
@@ -51,7 +52,8 @@
     "mysql2": "^3.6.5",
     "node-cron": "^3.0.3",
     "uuid": "^9.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
