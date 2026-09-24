@@ -38,7 +38,8 @@
     "money:demo": "tsx src/services/moneyRadar/demo.ts",
     "money": "tsx src/services/moneyRadar/run.ts",
     "money:calibrate": "tsx src/services/moneyRadar/calibrate.ts",
-    "money:share": "tsx src/services/moneyRadar/share.ts"
+    "money:share": "tsx src/services/moneyRadar/share.ts",
+    "money:publish": "tsx src/services/moneyRadar/publish.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
