@@ -80,6 +80,7 @@ export const RESEARCH_MODULES = [
   'moneyRadar/leadlag.ts',
   'moneyRadar/leadlagRun.ts',
   'moneyRadar/slowMoney.ts',
+  'moneyRadar/crossCheck.ts',
 ] as const
 
 /**

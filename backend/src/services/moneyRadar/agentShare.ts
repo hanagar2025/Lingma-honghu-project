@@ -51,6 +51,9 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
   w('- "资金池 / 资金量"指 20 日日均成交额（亿元/日）对比其 250 日水位，不是存量。')
   w('- 样本外检验里，"衰竭（放量滞涨）"之后 60 日平均跑赢基准，与"见顶"预期相反。不要把衰竭当卖出信号。')
   w('- 只有"趋势"一条规则得到样本外支持；其他规则无显著效果或样本不足。样本外只有一年。')
+  if ((v.crossCheck as any)?.status === 'FAIL') {
+    w('- 今日第二数据源交叉核对不通过：主数据与新浪行情不一致超过阈值。先看"第二数据源交叉核对"一节，不要在核对不通过的数据上下结论。')
+  }
   const ll = v.leadlag as any
   if (ll) {
     w(`- 时效检验（${ll.runOn}）：${ll.verdict}资金信号主要跟着价格走；横截面上资金越热之后 20 日反而略弱；大盘成交额与融资余额没有择时能力。不要把"放量 / 融资增加 / ETF 申购 / 基金加仓"解读为"之后会涨"。`)
@@ -91,6 +94,28 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
     if (d) {
       w(`## 近 5 日：新增 ${d.days5.newCount}、升级 ${d.days5.upCount}、解除 ${d.days5.resolvedCount}；近 20 日：新增 ${d.days20.newCount}、升级 ${d.days20.upCount}、解除 ${d.days20.resolvedCount}`)
     }
+    w('')
+  }
+
+  const cc = v.crossCheck as any
+  if (cc) {
+    w(`# 第二数据源交叉核对（${cc.asOf}）：${cc.status} ${cc.statusText}`)
+    for (const s of cc.sources) w(`- ${s}`)
+    const t = cc.today
+    if (t) {
+      w(`- 当日全量：${t.checked} 只双方都有当日数据；收盘价不一致 ${t.closeMismatch}，成交额不一致 ${t.amountMismatch}；新浪当日无数据 ${t.secondMissing}（多为停牌）`)
+      w(`- 两市总成交额：腾讯 ${num(t.market.primary === null ? null : t.market.primary / 1e8, 2)} 亿，新浪 ${num(t.market.second === null ? null : t.market.second / 1e8, 2)} 亿，相差 ${t.market.diffPct === null ? 'NA' : `${(t.market.diffPct * 100).toFixed(4)}%`}`)
+      for (const m of t.worst ?? []) w(`  - 不一致：${m.name}（${m.code}）${m.field === 'close' ? '收盘价' : '成交额'} 腾讯 ${m.primary} / 新浪 ${m.second}`)
+    } else if (cc.todayNote) {
+      w(`- 当日：${cc.todayNote}`)
+    }
+    w('')
+    w('| 对象 | 核对来源 | 天数 | 收盘价不一致 | 成交额不一致 | 成交额最大偏差 |')
+    w('|---|---|---|---|---|---|')
+    for (const h of cc.history) {
+      w(`| ${h.name}（${h.code}） | ${h.source} | ${h.days} | ${h.closeMismatch} | ${h.amountMismatch ?? '无成交额'} | ${h.amountMaxRel === null ? 'NA' : `${(h.amountMaxRel * 100).toFixed(4)}%`} |`)
+    }
+    for (const n of cc.notes) w(`- ${n}`)
     w('')
   }
 
@@ -190,11 +215,11 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
       w(`| ${g.text} | ${g.size} | ${num(g.fundRatio, 2)}% | ${num(g.fundRatioPrev, 2)}% | ${num(g.instRatio, 2)}% | ${g.holdersChangeMedian === null ? 'NA' : `${num(g.holdersChangeMedian, 2)}%`} |`)
     }
     w('')
-    w('| 股票 | 科创系指数权重 | 被动资金20日摊到该股(亿) | 占20日日均成交额 | 基金持股/流通 | 上期 | 机构合计/流通 | 股东户数 | 较上期 | 截止/公告 |')
-    w('|---|---|---|---|---|---|---|---|---|---|')
+    w('| 股票 | 科创系指数权重 | 被动资金20日摊到该股(亿) | 占20日日均成交额 | 基金持股/流通 | 上期 | 机构合计/流通 | 股东户数 | 较上期 | 截止/上期截止/公告 | 户数口径 |')
+    w('|---|---|---|---|---|---|---|---|---|---|---|')
     for (const s of sl.stocks as any[]) {
       const iw = s.indexWeights.length ? s.indexWeights.map((x: any) => `${x.name} ${x.weight.toFixed(2)}%`).join('、') : '-'
-      w(`| ${s.name}（${s.code}） | ${iw} | ${yi(s.passive20, 2)} | ${pct(s.passiveOfTurnover)} | ${num(s.fundRatio, 2)}% | ${num(s.fundRatioPrev, 2)}% | ${num(s.instRatio, 2)}% | ${s.holders ?? 'NA'} | ${s.holdersChange === null ? 'NA' : `${num(s.holdersChange, 1)}%`} | ${s.holdersEndDate ?? 'NA'}/${s.holdersNotice ?? 'NA'} |`)
+      w(`| ${s.name}（${s.code}） | ${iw} | ${yi(s.passive20, 2)} | ${pct(s.passiveOfTurnover)} | ${num(s.fundRatio, 2)}% | ${num(s.fundRatioPrev, 2)}% | ${num(s.instRatio, 2)}% | ${s.holders ?? 'NA'} | ${s.holdersChange === null ? 'NA' : `${num(s.holdersChange, 1)}%`} | ${s.holdersEndDate ?? 'NA'}/${s.holdersPrevEndDate ?? 'NA'}/${s.holdersNotice ?? 'NA'} | ${s.holdersBasis === 'LATEST' ? '最近一次披露' : s.holdersBasis === 'QUARTER' ? '季末定期报告' : 'NA'} |`)
     }
     w('')
   }

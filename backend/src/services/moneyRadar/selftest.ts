@@ -638,6 +638,63 @@ console.log('\n【时效检验与慢钱】')
   ok('跟踪校验：同一条价格序列的日收益相关 = 1', Math.abs((returnCorr(up, up) ?? 0) - 1) < 1e-9)
 }
 
+// ─────────────────────────── ⑨c 第二数据源交叉核对 ───────────────────────────
+console.log('\n【第二数据源交叉核对】')
+{
+  const { parseSinaQuotes, compareToday, compareHistory, crossStatus, amountMatches } = await import('./crossCheck')
+  const txt = 'var hq_str_sz300308="中际旭创,918.510,922.500,895.860,936.580,895.860,895.850,895.860,18486628,16868775637.990,100,895.850,700,895.840,600,895.800,200,895.770,100,895.740,185,895.860,200,895.870,100,895.880,400,895.890,1400,895.900,2026-09-24,15:35:45,00";\n'
+    + 'var hq_str_sh600000="";\n'
+  const q = parseSinaQuotes(txt)
+  ok('新浪行情解析：收盘价、成交额（元）、日期', q.sz300308?.close === 895.86 && q.sz300308?.amount === 16868775637.99 && q.sz300308?.date === '2026-09-24')
+  ok('新浪行情解析：空行（停牌或代码不存在）跳过', !q.sh600000)
+  ok('成交额容差：腾讯万元取整（差 4600 元）算一致', amountMatches(4236800000, 4236795354))
+  ok('成交额容差：差 1% 算不一致', !amountMatches(4236800000, 4194000000))
+
+  const second = {
+    sz300308: { code: '300308', date: '2026-09-24', close: 895.86, amount: 16868775637.99 },
+    sh688041: { code: '688041', date: '2026-09-24', close: 248.3, amount: 4236795354 },
+    sz300502: { code: '300502', date: '2026-09-23', close: 451.2, amount: 1e9 },
+  }
+  const good = compareToday('2026-09-24', {
+    '300308': { close: 895.86, amount: 16868780000 }, '688041': { close: 248.3, amount: 4236800000 }, '300502': { close: 435, amount: 9e9 },
+  }, second, {}, { primary: 100, second: 100 })
+  ok('当日核对：一致的两只通过；新浪日期不是当日的算"新浪无数据"而不是不一致',
+    good.checked === 2 && good.closeMismatch === 0 && good.amountMismatch === 0 && good.secondMissing === 1)
+  ok('当日核对全部一致 → PASS', crossStatus(good, []) === 'PASS')
+  const stale = compareToday('2026-09-24', {
+    '300308': { close: 904.01, amount: 11e9 }, '688041': { close: 252.2, amount: 3e9 },
+  }, second, { '300308': '中际旭创' }, { primary: 100, second: 100 })
+  ok('当日核对：盘中价被当成收盘（本次 QW 版的问题）→ 收盘价、成交额都报不一致', stale.closeMismatch === 2 && stale.amountMismatch === 2)
+  ok('收盘价不一致超过 1% → FAIL', crossStatus(stale, []) === 'FAIL')
+  const mkt = compareToday('2026-09-24', { '300308': { close: 895.86, amount: 16868780000 } }, second, {}, { primary: 1.002e12, second: 1e12 })
+  ok('两市总成交额相差 0.2% → FAIL', crossStatus(mkt, []) === 'FAIL')
+
+  const bars = [{ date: '2026-09-22', close: 10, amount: 1e8 }, { date: '2026-09-23', close: 11, amount: 2e8 }, { date: '2026-09-24', close: 12, amount: 3e8 }]
+  const h1 = compareHistory('上交所官方', 'X', 'X', bars, [{ date: '2026-09-22', close: 10, amount: 1e8 }, { date: '2026-09-23', close: 11.2, amount: 2e8 }, { date: '2026-09-24', close: 12, amount: 2.5e8 }])
+  ok('历史核对：逐日比收盘价与成交额', h1.days === 3 && h1.closeMismatch === 1 && h1.amountMismatch === 1 && h1.first?.date === '2026-09-23')
+  const h2 = compareHistory('新浪日K', 'X', 'X', bars, [{ date: '2026-09-24', close: 12.5 }], '2026-09-24')
+  ok('历史核对：盘中跳过当日；没有成交额的来源只比收盘价', h2.days === 0 && h2.amountMismatch === null)
+  ok('历史有不一致、当日一致 → WARN', crossStatus(good, [h1]) === 'WARN')
+  ok('没有当日核对也没有历史 → SKIPPED', crossStatus(null, []) === 'SKIPPED')
+
+  const { buildSlowView } = await import('./slowMoney')
+  const dsH = synthDataSet(30, [{ code: '002371', share: () => 0.001, price: () => 10 }])
+  const asOfH = dsH.dates.at(-1)!
+  const sdH = {
+    dates: dsH.dates, indexes: [], orgHold: {}, marketCap: {},
+    holderNum: { '2023-01-31': { '002371': { code: '002371', holders: 100, ratio: 8, endDate: '2023-01-31', noticeDate: '2023-02-01' } } },
+    holderLatest: { '002371': { code: '002371', holders: 90, ratio: -3.9, endDate: dsH.dates.at(-5)!, prevEndDate: dsH.dates.at(-10)!, noticeDate: asOfH } },
+  }
+  const vH = buildSlowView(sdH, dsH, [{ code: '002371', name: '北方华创' }], { ALL: { text: '全部', codes: ['002371'] }, STAR: { text: '', codes: [] }, TECH: { text: '', codes: [] } })
+  const sH = vH.stocks[0]!
+  ok('股东户数：个股用最近一次披露（不限季末），注明截止日与上期截止日',
+    sH.holdersBasis === 'LATEST' && sH.holdersChange === -3.9 && sH.holdersEndDate === dsH.dates.at(-5) && sH.holdersPrevEndDate === dsH.dates.at(-10))
+  ok('股东户数：分组中位数仍用季末定期报告口径', vH.groups[0]!.holdersChangeMedian === 8)
+  const sdFuture = { ...sdH, holderLatest: { '002371': { ...sdH.holderLatest['002371'], noticeDate: '2099-01-01' } } }
+  ok('股东户数：公告日晚于数据日的最新披露不用，退回季末口径',
+    buildSlowView(sdFuture, dsH, [{ code: '002371', name: '北方华创' }], { ALL: { text: '', codes: [] }, STAR: { text: '', codes: [] }, TECH: { text: '', codes: [] } }).stocks[0]!.holdersBasis === 'QUARTER')
+}
+
 // ─────────────────────────── ⑩ 治理边界 ───────────────────────────
 console.log('\n【治理边界】')
 {

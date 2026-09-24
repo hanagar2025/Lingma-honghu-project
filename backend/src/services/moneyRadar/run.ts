@@ -25,6 +25,7 @@ import { appendEvents, emptyLedger, loadAlertLedger, saveAlertLedger, updateFail
 import { CALIBRATION, THRESHOLDS, WATCHLIST, holdingCodes } from './config'
 import { loadLatestLeadLag, slowGroups, summarizeLeadLag } from './leadlag'
 import { buildSlowView, loadSlowData } from './slowMoney'
+import { runCrossCheck } from './crossCheck'
 import { replayObjects, thresholdsHash } from './backtest'
 import { loadLatestCalibration } from './calibrate'
 import { DEFAULT_LIVE, industryObjects, loadLiveDataSet } from './live'
@@ -54,7 +55,6 @@ async function main(): Promise<void> {
       ? `融资余额 T+1 约 08:30 发布，${lastDate} 当日融资余额尚未发布，方向性判断以最近已发布日为准`
       : '融资余额已更新到最新交易日',
     '深市国家队 ETF（7 只）没有可访问的份额历史来源，从接入之日起逐日存档积累；温度计暂只用沪市 ETF',
-    '个股成交额来自腾讯日 K，暂无第二来源交叉校验（东方财富行情接口在本环境不可用）',
   ]
 
   const industries = industryObjects(live.industries)
@@ -85,6 +85,27 @@ async function main(): Promise<void> {
     log('· 当日数据未定稿：台账本次不记账（16:30 后再跑）')
   } else if (!writeLedgers) {
     log('· MONEY_LEDGER_WRITE=0：本机作备用，不写台账')
+  }
+
+  try {
+    const primaryToday: Record<string, { close: number | null; amount: number | null }> = {}
+    for (const [code, days] of Object.entries(live.ds.stocks)) {
+      const d = days.at(-1)
+      if (d && d.date === lastDate && (d.amount ?? 0) > 0) primaryToday[code] = { close: d.close, amount: d.amount }
+    }
+    const focus = [...holdingCodes(), ...WATCHLIST.filter(w => !holdingCodes().some(h => h.code === w.code))]
+    const cc = await runCrossCheck({
+      asOf: lastDate, intraday, primaryToday, focus, names: live.names,
+      marketPrimary: live.ds.market.at(-1)?.totalAmount ?? null, log,
+    })
+    view.crossCheck = cc
+    const t = cc.today
+    view.dataNotes.push(`第二数据源交叉核对：${cc.statusText}`
+      + (t ? `（当日 ${t.checked} 只：收盘价不一致 ${t.closeMismatch}、成交额不一致 ${t.amountMismatch}；两市总成交额相差 ${t.market.diffPct === null ? '—' : `${(t.market.diffPct * 100).toFixed(3)}%`}）` : cc.todayNote ? `（${cc.todayNote}）` : ''))
+    if (cc.status === 'FAIL') view.dataNotes.unshift('⚠ 交叉核对不通过：今日数据与第二数据源不一致超过阈值，结论需人工复核后再用')
+    log(`· 交叉核对：${cc.statusText}`)
+  } catch (e) {
+    view.dataNotes.push(`第二数据源交叉核对本次失败（${e instanceof Error ? e.message : String(e)}）`)
   }
 
   const objs = entryObjects(industries)

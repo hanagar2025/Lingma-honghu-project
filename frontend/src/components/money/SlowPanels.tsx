@@ -182,8 +182,9 @@ export const SlowMoneyCard: React.FC<{ s: any }> = ({ s }) => (
               <td className={cls(d)}>{d === null ? '—' : `${d > 0 ? '+' : ''}${d.toFixed(1)}pt`}</td>
               <td>{pp(x.instRatio)}</td>
               <td className={cls(x.holdersChange === null ? null : -x.holdersChange)}>
-                <Tooltip title={x.holdersEndDate ? `截止 ${x.holdersEndDate}，公告 ${x.holdersNotice}，${x.holders} 户` : ''}>
+                <Tooltip title={x.holdersEndDate ? `${x.holders} 户；截止 ${x.holdersEndDate}，较 ${x.holdersPrevEndDate ?? '上期'}；公告 ${x.holdersNotice}（${x.holdersBasis === 'LATEST' ? '最近一次披露' : '季末定期报告'}）` : ''}>
                   {x.holdersChange === null ? '—' : `${x.holdersChange > 0 ? '+' : ''}${x.holdersChange.toFixed(1)}%`}
+                  <span className="mc-note"> {x.holdersEndDate?.slice(5) ?? ''}</span>
                 </Tooltip>
               </td>
             </tr>
@@ -195,6 +196,32 @@ export const SlowMoneyCard: React.FC<{ s: any }> = ({ s }) => (
   </div>
 )
 
+const CROSS_COLOR: Record<string, string> = { PASS: '#3fb950', WARN: '#f0b429', FAIL: '#ff7b72', SKIPPED: '#8b96a5' }
+
+export const CrossCheckCard: React.FC<{ c: any }> = ({ c }) => {
+  const t = c.today
+  const bad = (c.history ?? []).filter((h: any) => h.closeMismatch > 0 || (h.amountMismatch ?? 0) > 0)
+  return (
+    <div className="mc-card" style={{ borderColor: CROSS_COLOR[c.status] }}>
+      <h3>
+        <span>数据核对 · 第二数据源 <span style={{ color: CROSS_COLOR[c.status], fontWeight: 'normal', fontSize: 12 }}>{c.statusText}</span></span>
+        <small>主：腾讯日 K · 核：新浪行情（全市场当日）、上交所官方日 K、新浪日 K</small>
+      </h3>
+      <div className="mc-note">
+        {t
+          ? <>当日 {t.checked} 只：收盘价不一致 <b style={{ color: t.closeMismatch ? '#ff7b72' : '#3fb950' }}>{t.closeMismatch}</b>、成交额不一致 <b style={{ color: t.amountMismatch ? '#f0b429' : '#3fb950' }}>{t.amountMismatch}</b>
+            （新浪当日无数据 {t.secondMissing} 只，多为停牌）；两市总成交额相差 {t.market.diffPct === null ? '—' : `${(t.market.diffPct * 100).toFixed(4)}%`}。</>
+          : c.todayNote}
+        　历史：{(c.history ?? []).length} 个重点对象、每个约 {c.history?.[0]?.days ?? '—'} 日，
+        {bad.length ? <span style={{ color: '#f0b429' }}>{bad.map((h: any) => `${h.name}（收盘价 ${h.closeMismatch}、成交额 ${h.amountMismatch ?? '—'} 处）`).join('、')} 不一致</span> : '逐日一致'}。
+      </div>
+      {t?.worst?.length > 0 && (
+        <div className="mc-note">不一致示例：{t.worst.slice(0, 6).map((m: any) => `${m.name} ${m.field === 'close' ? '收盘' : '成交额'} ${m.primary} / ${m.second}`).join('；')}</div>
+      )}
+    </div>
+  )
+}
+
 export const SlowStockBlock: React.FC<{ x: any; evidence?: any }> = ({ x, evidence }) => {
   const d = x.fundRatio !== null && x.fundRatioPrev !== null ? x.fundRatio - x.fundRatioPrev : null
   return (
@@ -204,7 +231,7 @@ export const SlowStockBlock: React.FC<{ x: any; evidence?: any }> = ({ x, eviden
         <tbody>
           <tr><td>基金持股 / 流通股</td><td>{pp(x.fundRatio)}<span className={`mc-note ${cls(d)}`}>　较 {x.holdReportPrev ?? '—'} {d === null ? '—' : `${d > 0 ? '+' : ''}${d.toFixed(1)}pt`}</span></td></tr>
           <tr><td>机构合计 / 流通股</td><td>{pp(x.instRatio)}</td></tr>
-          <tr><td>股东户数</td><td>{x.holders ?? '—'}<span className={`mc-note ${cls(x.holdersChange === null ? null : -x.holdersChange)}`}>　较上期 {x.holdersChange === null ? '—' : `${x.holdersChange > 0 ? '+' : ''}${x.holdersChange.toFixed(1)}%`}（截止 {x.holdersEndDate ?? '—'}，公告 {x.holdersNotice ?? '—'}）</span></td></tr>
+          <tr><td>股东户数</td><td>{x.holders ?? '—'}<span className={`mc-note ${cls(x.holdersChange === null ? null : -x.holdersChange)}`}>　较上期 {x.holdersChange === null ? '—' : `${x.holdersChange > 0 ? '+' : ''}${x.holdersChange.toFixed(1)}%`}（截止 {x.holdersEndDate ?? '—'}，较 {x.holdersPrevEndDate ?? '上期'}，公告 {x.holdersNotice ?? '—'}；{x.holdersBasis === 'LATEST' ? '最近一次披露' : '季末定期报告'}）</span></td></tr>
           <tr><td>科创系指数权重</td><td>{x.indexWeights.length ? x.indexWeights.map((w: any) => `${w.name} ${w.weight.toFixed(2)}%`).join('、') : '不在科创系指数中'}</td></tr>
           <tr><td>被动资金 20 日</td><td className={cls(x.passive20)}>{yi(x.passive20, 2)}<span className="mc-note">{x.passiveOfTurnover === null ? '' : `　约为日均成交额的 ${(x.passiveOfTurnover * 100).toFixed(2)}%`}</span></td></tr>
         </tbody>

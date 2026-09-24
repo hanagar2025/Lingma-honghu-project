@@ -3,7 +3,7 @@ import { Alert, Button, ConfigProvider, Drawer, Empty, Space, Spin, Table, Tabs,
 import { LinkOutlined } from '@ant-design/icons'
 import { FlowBars, Legend, LinesChart, Spark } from '../components/money/Charts'
 import AlertsPanel from '../components/money/AlertsPanel'
-import { LeadLagCard, SlowMoneyCard, SlowStockBlock } from '../components/money/SlowPanels'
+import { CrossCheckCard, LeadLagCard, SlowMoneyCard, SlowStockBlock } from '../components/money/SlowPanels'
 
 /**
  * 资金驾驶舱（R-01）
@@ -209,6 +209,8 @@ const MoneyCockpit: React.FC = () => {
             阈值 {data.thresholds.status === 'FROZEN' ? '已冻结' : data.thresholds.status}（登记于 {data.thresholds.registeredOn}）· 生成于 {new Date(data.generatedAt).toLocaleString('zh-CN')}
           </div>
         </div>
+
+        {data.crossCheck && <div style={{ marginBottom: 12 }}><CrossCheckCard c={data.crossCheck} /></div>}
 
         {data.alerts && <AlertsPanel alerts={data.alerts} />}
 

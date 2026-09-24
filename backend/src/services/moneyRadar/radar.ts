@@ -349,6 +349,8 @@ export interface MoneyCockpitView {
   leadlag?: unknown
   /** 慢钱层：科创系 ETF 申赎、机构持仓、股东户数 */
   slow?: unknown
+  /** 第二数据源交叉核对 */
+  crossCheck?: unknown
   doesNotImply: readonly string[]
   flags: Record<string, boolean>
 }
