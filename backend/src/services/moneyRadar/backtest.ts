@@ -241,7 +241,8 @@ export interface RuleResult {
   verdict: RuleVerdict
 }
 
-export function eventStudy(events: readonly RuleEvent[], objs: readonly EvalObject[], ds: DataSet): RuleResult[] {
+/** delay：收益从触发后第几个交易日的收盘起算。0 = 触发日收盘（校准留档口径），1 = 次日收盘（实际能成交的口径） */
+export function eventStudy(events: readonly RuleEvent[], objs: readonly EvalObject[], ds: DataSet, delay = 0): RuleResult[] {
   const byId = new Map(objs.map(o => [o.id, o]))
   const bench = ds.market.map(d => d.close ?? null)
   const out: RuleResult[] = []
@@ -253,7 +254,7 @@ export function eventStudy(events: readonly RuleEvent[], objs: readonly EvalObje
         if (e.rule !== rule) continue
         const o = byId.get(e.objectId)
         if (!o) continue
-        const v = excessReturn(o.close, bench, e.t, h)
+        const v = excessReturn(o.close, bench, e.t + delay, h)
         if (v !== null) vals.push({ date: e.date, v })
       }
       const n = vals.length

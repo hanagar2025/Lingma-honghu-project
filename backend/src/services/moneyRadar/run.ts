@@ -22,7 +22,9 @@ import { fileURLToPath } from 'node:url'
 import { buildMoneyAgentShare } from './agentShare'
 import { ALERT_RULES, alertRulesHash, buildAlertContext, buildAlerts, cardLine } from './alerts'
 import { appendEvents, emptyLedger, loadAlertLedger, saveAlertLedger, updateFailures } from './alertLedger'
-import { CALIBRATION, THRESHOLDS } from './config'
+import { CALIBRATION, THRESHOLDS, WATCHLIST, holdingCodes } from './config'
+import { loadLatestLeadLag, slowGroups, summarizeLeadLag } from './leadlag'
+import { buildSlowView, loadSlowData } from './slowMoney'
 import { replayObjects, thresholdsHash } from './backtest'
 import { loadLatestCalibration } from './calibrate'
 import { DEFAULT_LIVE, industryObjects, loadLiveDataSet } from './live'
@@ -59,6 +61,21 @@ async function main(): Promise<void> {
   const view = buildMoneyCockpitView(live.ds, 'LIVE', { names: live.names, industries, dataNotes })
   const calibration = loadLatestCalibration()
   if (calibration) view.calibration = calibration
+
+  const leadlag = loadLatestLeadLag()
+  if (leadlag) view.leadlag = summarizeLeadLag(leadlag)
+  try {
+    const boardOf: Record<string, string> = {}
+    for (const i of live.industries) for (const c of i.members) boardOf[c] = i.name
+    const sd = await loadSlowData(live.ds, log, { etfDays: DEFAULT_LIVE.etfDays, marketCap: live.marketCap })
+    const focus = [...holdingCodes(), ...WATCHLIST.filter(w => !holdingCodes().some(h => h.code === w.code))]
+    const slow = buildSlowView(sd, live.ds, focus, slowGroups(live.ds, live.names, boardOf))
+    if (leadlag?.slow) slow.evidence = leadlag.slow
+    view.slow = slow
+  } catch (e) {
+    view.dataNotes.push(`慢钱层本次装载失败（${e instanceof Error ? e.message : String(e)}），页面不显示该层`)
+    log('· 慢钱层装载失败，跳过')
+  }
 
   // 当日数据未定稿（16:30 前）：可以刷新页面，但不记台账 —— 台账只增不改，半截数据记进去就改不掉了
   const intraday = isIntraday(lastDate)

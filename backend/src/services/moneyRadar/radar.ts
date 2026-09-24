@@ -345,6 +345,10 @@ export interface MoneyCockpitView {
   shadow?: unknown
   /** 累计提醒 */
   alerts?: unknown
+  /** 资金信号时效检验摘要（领先还是跟随、隔夜偏差、战术一句话） */
+  leadlag?: unknown
+  /** 慢钱层：科创系 ETF 申赎、机构持仓、股东户数 */
+  slow?: unknown
   doesNotImply: readonly string[]
   flags: Record<string, boolean>
 }

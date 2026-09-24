@@ -546,6 +546,98 @@ console.log('\n【累计提醒】')
     && md.includes('## 持仓（入口①）') && md.includes('甲'))
 }
 
+// ─────────────────────────── ⑨b 时效检验与慢钱 ───────────────────────────
+console.log('\n【时效检验与慢钱】')
+{
+  const { ranks, spearman, blockBootstrap, buildPanel, studySignal, tacticalVerdict, SIGNALS } = await import('./leadlag')
+  const {
+    orgHoldAvailableOn, isFullHoldingReport, firstTradingAfter, latestFullReports, quarterEnds, returnCorr,
+  } = await import('./slowMoney')
+  const { etfFlowSeries, sumEtfFlows } = await import('./metrics')
+  const { klineDrifted } = await import('./fetch')
+  const cachedK = { days: 3, bars: [{ date: '2026-09-01', close: 10, amount: 1 }, { date: '2026-09-02', close: 11, amount: 1 }], fetchedAt: '2026-09-03T01:00:00Z' }
+  ok('K 线缓存：前复权历史被除权重新缩放 → 判为漂移，整段重抓',
+    klineDrifted(cachedK, [{ date: '2026-09-02', close: 10.5, amount: 1 }, { date: '2026-09-03', close: 12, amount: 1 }]))
+  ok('K 线缓存：重叠日一致 → 不重抓', !klineDrifted(cachedK, [{ date: '2026-09-02', close: 11, amount: 1 }, { date: '2026-09-03', close: 12, amount: 1 }]))
+  const intradayK = { ...cachedK, fetchedAt: '2026-09-02T05:00:00Z' }
+  ok('K 线缓存：盘中抓的最后一根与定稿不同，不算漂移', !klineDrifted(intradayK, [{ date: '2026-09-02', close: 11.3, amount: 1 }]))
+  const { eventStudy, excessReturn } = await import('./backtest')
+
+  ok('秩：并列取平均秩', JSON.stringify(ranks([3, 1, 3, 2])) === JSON.stringify([3.5, 1, 3.5, 2]))
+  ok('秩相关：单调同向 = 1、反向 = −1',
+    spearman([1, 2, 3, 4], [10, 20, 30, 1000]) === 1 && spearman([1, 2, 3, 4], [4, 3, 2, 1]) === -1)
+  const noisy = Array.from({ length: 200 }, (_, i) => 0.05 + wobble(i * 3 + 1, 0.2))
+  const noisyMean = noisy.reduce((a, b) => a + b, 0) / noisy.length
+  const ci = blockBootstrap(noisy)
+  ok('块自助抽样：区间包住样本均值且有宽度', !!ci && ci[0] < noisyMean && ci[1] > noisyMean, JSON.stringify(ci))
+  ok('块自助抽样：样本不足两块返回 null', blockBootstrap([1, 2, 3]) === null)
+
+  // 合成：A 的份额在 t 日放大，之后 5 日才涨 —— 信号领先；B、C… 份额不变、价格不动
+  const N = 320
+  const lead = synthDataSet(N, Array.from({ length: 40 }, (_, k) => ({
+    code: `S${k}`,
+    share: (t: number) => 0.001 * (1 + (k % 7 === 0 && t % 40 >= 20 && t % 40 < 25 ? 1 : 0) + wobble(t + k * 13, 0.05)),
+    price: (t: number) => 10 * (1 + 0.1 * (k % 7 === 0 ? Math.floor((t + 15) / 40) : 0)),
+  })))
+  lead.market.forEach(m => { m.close = 100 })
+  const objs = Object.keys(lead.stocks).map(c => one(c))
+  const panel = buildPanel('ALL', objs, lead)
+  ok('面板：每个信号都与对象数对齐', Object.keys(SIGNALS).every(s => panel.signals[s as keyof typeof SIGNALS].length === objs.length))
+  const res = studySignal(panel, 'A1_ACCEL', lead)
+  const w = (id: string) => res.windows.find(x => x.window === id)!
+  ok('合成领先信号：之后 20 日 IC 为正', (w('F1_20').ic ?? 0) > 0, `${w('F1_20').ic}`)
+  ok('未来收益从 T+1 收盘起算：F1_20 与 F0_20 是两个不同窗口', w('F1_20').days > 0 && w('F0_20').days > 0)
+
+  ok('冻结规则事件研究：delay 参数可选，默认按触发日收盘起算', eventStudy.length === 3)
+  const r0 = excessReturn([10, 11, 12], [100, 100, 100], 0, 1)!
+  const r1 = excessReturn([10, 11, 12], [100, 100, 100], 1, 1)!
+  ok('T 日起算与 T+1 起算是两段不同收益', Math.abs(r0 - 0.1) < 1e-12 && Math.abs(r1 - 1 / 11) < 1e-12)
+
+  const verdictAll = tacticalVerdict({
+    results: [{ ...res, universe: 'ALL', follow: 'FOLLOWS', lead: 'LEADS_REVERSE' }],
+    timing: [{ signal: 'MKT_AMOUNT', text: '', knownAt: '', past: { r: 0.7, ci: [0.5, 0.8] }, fwd: { r: 0, ci: [-0.2, 0.2] }, independent: 30 }],
+    eventDelay: [{ rule: 'TREND', horizon: 60, n: 300, meanT0: 0.04, meanT1: 0.04, ciT1: [0.01, 0.07], verdictT0: '', verdictT1: '' }],
+  })
+  ok('战术一句话：只跟随 + 大盘无择时 + 60 日趋势成立 → "可行一半"', verdictAll.startsWith('可行一半'), verdictAll)
+  const verdictNone = tacticalVerdict({
+    results: [{ ...res, universe: 'ALL', follow: 'FOLLOWS', lead: 'NO_LEAD' }],
+    timing: [], eventDelay: [{ rule: 'TREND', horizon: 60, n: 300, meanT0: 0, meanT1: 0, ciT1: [-0.01, 0.02], verdictT0: '', verdictT1: '' }],
+  })
+  ok('战术一句话：60 日趋势也不成立 → "不可行"', verdictNone.startsWith('不可行'), verdictNone)
+
+  ok('机构持仓可得日：一季报 04-30、中报 08-31、三季报 10-31、年报次年 03-31',
+    orgHoldAvailableOn('2026-03-31') === '2026-04-30' && orgHoldAvailableOn('2026-06-30') === '2026-08-31'
+    && orgHoldAvailableOn('2026-09-30') === '2026-10-31' && orgHoldAvailableOn('2025-12-31') === '2026-03-31')
+  ok('只有中报、年报是全部持仓', isFullHoldingReport('2026-06-30') && isFullHoldingReport('2025-12-31') && !isFullHoldingReport('2026-03-31'))
+  ok('季末列表', JSON.stringify(quarterEnds('2025-11-01', '2026-07-01')) === JSON.stringify(['2025-12-31', '2026-03-31', '2026-06-30']))
+  const ds3 = ['2026-08-28', '2026-08-31', '2026-09-01']
+  ok('公告日之后第一个交易日：当天公告不算当天可买', firstTradingAfter(ds3, '2026-08-31') === 2 && firstTradingAfter(ds3, '2026-08-30') === 1 && firstTradingAfter(ds3, '2026-09-01') === -1)
+  const oh = { '2026-03-31': { inst: {}, fund: {} }, '2025-12-31': { inst: {}, fund: {} }, '2025-06-30': { inst: {}, fund: {} }, '2026-06-30': { inst: {}, fund: {} } }
+  ok('最新全持仓报告期：08-31 之前还不能用中报', JSON.stringify(latestFullReports(oh, '2026-08-30')) === JSON.stringify(['2025-12-31', '2025-06-30']))
+  ok('最新全持仓报告期：08-31 起用中报', JSON.stringify(latestFullReports(oh, '2026-08-31')) === JSON.stringify(['2026-06-30', '2025-12-31']))
+
+  const one1 = [1, 1, 1, 1, 1]
+  const e1 = etfFlowSeries([100, 110, 110, null, 120], one1, one1)
+  const e2 = etfFlowSeries([null, null, 50, 60, 60], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2])
+  const f = sumEtfFlows([e1, e2], 5)
+  ok('ETF 申赎：份额差 × 价格；上市首日不算申购；未上市的不计', f.flow[1] === 10 && f.flow[2] === 0 && e2.first === 2)
+  ok('ETF 申赎：上市后某天份额缺失 → 当天整个指数缺失，不当 0', f.flow[3] === null && f.aum[3] === null)
+  ok('ETF 规模 = Σ 份额 × 价格', f.aum[2] === 110 + 100)
+  const sp0 = etfFlowSeries([100, 100, 300, 300], [3, 3, 1, 1], [1, 1, 1, 1])
+  ok('份额 1 拆 3（份额与价格同日折算）：不算申购，规模连续', sp0.flow[2] === 0 && sp0.aum[1] === 300 && sp0.aum[2] === 300 && sp0.splits[0]?.k === 3)
+  const sp1 = etfFlowSeries([100, 300, 300, 300], [3, 3, 1, 1], [1, 1, 1, 1])
+  ok('份额 1 拆 3（交易所份额比行情价格早一天折算）：两天都不算申购',
+    sp1.flow[1] === 0 && sp1.flow[2] === 0 && sp1.aum[1] === 300 && sp1.splits[0]?.shareDay === 1 && sp1.splits[0]?.priceDay === 2)
+  const sp2 = etfFlowSeries([200, 100], [1, 2], [1, 1])
+  ok('份额 2 合 1：不算赎回', sp2.flow[1] === 0 && sp2.aum[1] === 200)
+  const sp3 = etfFlowSeries([100, 100, 330], [3, 3, 1], [1, 1, 1])
+  ok('折算当天另有真实申购：只记真实的那部分', sp3.flow[2] === 30, `${sp3.flow[2]}`)
+  const div = etfFlowSeries([100, 100, 100], [1.00, 0.97, 0.97], [0.97, 0.97, 0.97])
+  ok('分红（因子只动几个百分点）不当成折算', div.splits.length === 0 && div.flow[1] === 0)
+  const up = Array.from({ length: 80 }, (_, i) => 10 * (1 + 0.01 * Math.sin(i)))
+  ok('跟踪校验：同一条价格序列的日收益相关 = 1', Math.abs((returnCorr(up, up) ?? 0) - 1) < 1e-9)
+}
+
 // ─────────────────────────── ⑩ 治理边界 ───────────────────────────
 console.log('\n【治理边界】')
 {

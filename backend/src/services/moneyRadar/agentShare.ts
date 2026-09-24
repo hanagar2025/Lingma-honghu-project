@@ -51,6 +51,10 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
   w('- "资金池 / 资金量"指 20 日日均成交额（亿元/日）对比其 250 日水位，不是存量。')
   w('- 样本外检验里，"衰竭（放量滞涨）"之后 60 日平均跑赢基准，与"见顶"预期相反。不要把衰竭当卖出信号。')
   w('- 只有"趋势"一条规则得到样本外支持；其他规则无显著效果或样本不足。样本外只有一年。')
+  const ll = v.leadlag as any
+  if (ll) {
+    w(`- 时效检验（${ll.runOn}）：${ll.verdict}资金信号主要跟着价格走；横截面上资金越热之后 20 日反而略弱；大盘成交额与融资余额没有择时能力。不要把"放量 / 融资增加 / ETF 申购 / 基金加仓"解读为"之后会涨"。`)
+  }
   w('- 不要输出综合评分、总分或排名。"不可判断"是合法结论，数据不足时不要补一个答案。')
   w('- 你的任务：找矛盾、验算术、指出证据不足、提出需要补的数据，并说明你的推论依赖哪几行数据。')
   w('')
@@ -150,6 +154,47 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
     w('|---|---|---|---|---|---|---|')
     for (const r of cal.outOfSample) {
       w(`| ${r.rule} | ${r.hypothesis} | ${r.horizon} | ${r.n} | ${pct(r.mean, 2)} | ${r.ci ? `[${pct(r.ci[0], 2)}, ${pct(r.ci[1], 2)}]` : 'NA'} | ${r.verdict} |`)
+    }
+    w('')
+  }
+
+  if (ll) {
+    w(`# 资金信号时效检验（${ll.period[0]} ~ ${ll.period[1]}；IC = 每日横截面秩相关的均值；未来收益从 T+1 收盘起算）`)
+    w(`战术一句话：${ll.verdict}`)
+    w('')
+    w('| 股票池 | 信号 | 可得时点 | 过去20日IC | 之后20日IC | 区间 | 最强1/5 之后20日 | 最弱1/5 之后20日 | 跟随 | 领先 |')
+    w('|---|---|---|---|---|---|---|---|---|---|')
+    for (const r of ll.rows as any[]) {
+      w(`| ${r.universeText} | ${r.signalText} | ${r.knownAt} | ${num(r.pastIc, 3)} | ${num(r.fwdIc, 3)} | ${r.fwdCi ? `[${num(r.fwdCi[0], 3)}, ${num(r.fwdCi[1], 3)}]` : 'NA'} | ${pct(r.top, 2)} | ${pct(r.bottom, 2)} | ${r.follow} | ${r.lead} |`)
+    }
+    for (const t of ll.timing as any[]) w(`- 大盘择时 ${t.text}（${t.knownAt}）：与过去 20 日 r=${num(t.past.r, 3)}；与之后 20 日 r=${num(t.fwd.r, 3)}，区间 ${t.fwd.ci ? `[${num(t.fwd.ci[0], 3)}, ${num(t.fwd.ci[1], 3)}]` : 'NA'}；独立样本约 ${t.independent} 段`)
+    for (const e of ll.eventDelay as any[]) w(`- 冻结规则 ${e.rule} ${e.horizon} 日：T 日收盘起算 ${pct(e.meanT0, 2)} → T+1 收盘起算 ${pct(e.meanT1, 2)}（${e.verdictT1}）`)
+    for (const s of ll.slow as string[]) w(`- 慢钱：${s}`)
+    w('')
+  }
+
+  const sl = v.slow as any
+  if (sl) {
+    w(`# 慢钱（钱是谁的；截至 ${sl.asOf}）`)
+    for (const n of sl.notes ?? []) w(`- 口径：${n}`)
+    w('')
+    w('| 指数 | 跟踪ETF数 | 份额截至 | 5日净申赎(亿) | 20日净申赎(亿) | 60日净申赎(亿) | ETF规模(亿) | 20日净申赎/规模 | 指数20日涨幅 | ETF规模/成分总市值 |')
+    w('|---|---|---|---|---|---|---|---|---|---|')
+    for (const x of sl.indexes as any[]) {
+      w(`| ${x.name} | ${x.etfCount} | ${x.asOf ?? 'NA'} | ${yi(x.flow5)} | ${yi(x.flow20)} | ${yi(x.flow60)} | ${num(x.aum, 0)} | ${pct(x.flow20Pct, 2)} | ${pct(x.ret20)} | ${pct(x.aumOfCap)} |`)
+    }
+    w('')
+    w(`| 分组 | 个数 | 基金持股/流通(${sl.holdReport ?? 'NA'}) | 基金持股/流通(${sl.holdReportPrev ?? 'NA'}) | 机构合计/流通 | 股东户数较上期变化中位数 |`)
+    w('|---|---|---|---|---|---|')
+    for (const g of sl.groups as any[]) {
+      w(`| ${g.text} | ${g.size} | ${num(g.fundRatio, 2)}% | ${num(g.fundRatioPrev, 2)}% | ${num(g.instRatio, 2)}% | ${g.holdersChangeMedian === null ? 'NA' : `${num(g.holdersChangeMedian, 2)}%`} |`)
+    }
+    w('')
+    w('| 股票 | 科创系指数权重 | 被动资金20日摊到该股(亿) | 占20日日均成交额 | 基金持股/流通 | 上期 | 机构合计/流通 | 股东户数 | 较上期 | 截止/公告 |')
+    w('|---|---|---|---|---|---|---|---|---|---|')
+    for (const s of sl.stocks as any[]) {
+      const iw = s.indexWeights.length ? s.indexWeights.map((x: any) => `${x.name} ${x.weight.toFixed(2)}%`).join('、') : '-'
+      w(`| ${s.name}（${s.code}） | ${iw} | ${yi(s.passive20, 2)} | ${pct(s.passiveOfTurnover)} | ${num(s.fundRatio, 2)}% | ${num(s.fundRatioPrev, 2)}% | ${num(s.instRatio, 2)}% | ${s.holders ?? 'NA'} | ${s.holdersChange === null ? 'NA' : `${num(s.holdersChange, 1)}%`} | ${s.holdersEndDate ?? 'NA'}/${s.holdersNotice ?? 'NA'} |`)
     }
     w('')
   }

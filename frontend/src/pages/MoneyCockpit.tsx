@@ -3,6 +3,7 @@ import { Alert, Button, ConfigProvider, Drawer, Empty, Space, Spin, Table, Tabs,
 import { LinkOutlined } from '@ant-design/icons'
 import { FlowBars, Legend, LinesChart, Spark } from '../components/money/Charts'
 import AlertsPanel from '../components/money/AlertsPanel'
+import { LeadLagCard, SlowMoneyCard, SlowStockBlock } from '../components/money/SlowPanels'
 
 /**
  * 资金驾驶舱（R-01）
@@ -260,6 +261,8 @@ const MoneyCockpit: React.FC = () => {
           </div>
         </div>
 
+        {data.slow && <div style={{ marginTop: 12 }}><SlowMoneyCard s={data.slow} /></div>}
+
         {/* 三入口份额迁移 */}
         <div className="mc-grid" style={{ gridTemplateColumns: '2.3fr 1fr', marginTop: 12 }}>
           <div className="mc-card">
@@ -303,6 +306,8 @@ const MoneyCockpit: React.FC = () => {
           ]} />
         </div>
 
+        {data.leadlag && <div style={{ marginTop: 12 }}><LeadLagCard l={data.leadlag} /></div>}
+
         {(data.calibration || data.shadow) && (
           <div className="mc-grid" style={{ gridTemplateColumns: '1.35fr 1fr', marginTop: 12 }}>
             {data.calibration && <CalibrationCard c={data.calibration} />}
@@ -324,7 +329,7 @@ const MoneyCockpit: React.FC = () => {
 
         <Drawer open={!!detail} onClose={() => setDetail(null)} width={1120} title={detail ? `资金卡 · ${detail.name}` : ''}
           styles={{ body: { background: '#0d1117', padding: 16 }, header: { background: '#161b22' } }}>
-          {detail && <DetailCard o={detail} />}
+          {detail && <DetailCard o={detail} slow={data.slow} />}
         </Drawer>
       </div>
     </ConfigProvider>
@@ -420,8 +425,9 @@ const ShadowCard: React.FC<{ s: any }> = ({ s }) => (
   </div>
 )
 
-const DetailCard: React.FC<{ o: any }> = ({ o }) => {
+const DetailCard: React.FC<{ o: any; slow?: any }> = ({ o, slow }) => {
   const s = o.series
+  const slowStock = o.kind === 'STOCK' ? slow?.stocks?.find((x: any) => x.code === o.codes?.[0] || `stock:${x.code}` === o.id) : null
   const div = o.divergence as string | null
   const lastOf = (xs: Num[] | undefined) => (xs ? [...xs].reverse().find(v => v !== null) ?? null : null)
   return (
@@ -503,6 +509,7 @@ const DetailCard: React.FC<{ o: any }> = ({ o }) => {
             </table>
             <div className="mc-note">"—" 表示没有观察到（未上榜、无对应 ETF 或未发布），不是 0</div>
           </div>
+          {slowStock && <SlowStockBlock x={slowStock} evidence={slow?.evidence} />}
           <div className="mc-card">
             <h3>背离判定 <small>四项全满足才成立</small></h3>
             <div style={{ marginBottom: 6 }}>
