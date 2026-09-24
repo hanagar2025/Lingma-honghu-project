@@ -48,9 +48,12 @@ export function checkDivergence(ms: readonly DayMetrics[], t: number): Divergenc
     x.s5 === null || x.s20 === null ? null : x.s5 < x.s20)
   if (c2) detail.push(`5 日份额连续 ${T.divergenceShareDays} 日低于 20 日份额`)
 
-  let marginKnown = t >= T.divergenceMarginDays
+  // 融资余额 T+1 发布：从最近 2 个交易日内已发布的那一天往回数
+  let end = t
+  while (end > t - 3 && end >= 0 && (ms[end]?.margin ?? null) === null) end--
+  let marginKnown = end > t - 3 && end >= T.divergenceMarginDays
   let marginFalling = marginKnown
-  for (let i = t - T.divergenceMarginDays + 1; marginKnown && i <= t; i++) {
+  for (let i = end - T.divergenceMarginDays + 1; marginKnown && i <= end; i++) {
     const cur = ms[i]?.margin ?? null
     const prev = ms[i - 1]?.margin ?? null
     if (cur === null || prev === null) { marginKnown = false; marginFalling = false }

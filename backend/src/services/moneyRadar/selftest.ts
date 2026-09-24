@@ -168,6 +168,8 @@ console.log('\n【高位背离】')
     checkDivergence(mk([null, null, null, null, null, null]), 5).verdict === 'DIVERGENCE_PENDING_A2')
   ok('方向性数据显示无流出 → 缩量上涨（可能锁仓），不升为背离',
     checkDivergence(mk([100, 101, 102, 103, 104, 105], { etfNet10: 5e8 }), 5).verdict === 'LOW_VOLUME_RISE')
+  ok('当日融资余额未发布（T+1）时，从最近已发布日往回判断连续下降',
+    checkDivergence(mk([112, 110, 108, 106, 104, 102, null]), 6).verdict === 'DIVERGENCE')
   ok('融资未降但 ETF 净赎回 → 方向性确认成立',
     checkDivergence(mk([100, 101, 102, 103, 104, 105], { etfNet10: -5e8 }), 5).verdict === 'DIVERGENCE')
   ok('龙虎榜机构净卖出也可作为方向性确认',
@@ -415,6 +417,10 @@ console.log('\n【校准 · 冻结 · 影子运行】')
   const l3 = sh.updateLedger(tampered, objs, ds, start, h0)
   ok('已回填的结果不被重算覆盖（只增不改）', !firstFilled || l3.events.find(e => e.key === firstFilled.key)!.h20 === 0.123)
   ok('未到期的结果保持为空', l1.events.filter(e => ds.dates.indexOf(e.date) + 20 >= n).every(e => e.h20 === null))
+  ok('盘中（北京 13:10，最新 K 线为今天）判为盘中，不记台账',
+    sh.isIntraday('2026-09-24', new Date('2026-09-24T05:10:00Z')))
+  ok('收盘后（北京 15:10）不是盘中', !sh.isIntraday('2026-09-24', new Date('2026-09-24T07:10:00Z')))
+  ok('盘前（最新 K 线是昨天）不是盘中', !sh.isIntraday('2026-09-23', new Date('2026-09-24T01:20:00Z')))
   const sum = sh.summarize(l1)
   ok('台账摘要按规则汇总，并给出距 30 次触发还差多少', sum.rows.length === 7 && sum.rows.every(r => r.toVerdict >= 0))
 

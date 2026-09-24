@@ -38,6 +38,14 @@ export interface ShadowLedger {
   events: ShadowEvent[]
 }
 
+/** 最新 K 线是北京时间今天，且还没到 15:05 → 盘中，当日数据不完整，不记台账 */
+export function isIntraday(latestDate: string, now = new Date()): boolean {
+  const bj = new Date(now.getTime() + 8 * 3600_000)
+  const today = bj.toISOString().slice(0, 10)
+  const hhmm = bj.getUTCHours() * 100 + bj.getUTCMinutes()
+  return latestDate === today && hhmm < 1505
+}
+
 export function loadLedger(file = SHADOW_FILE): ShadowLedger | null {
   if (!existsSync(file)) return null
   try { return JSON.parse(readFileSync(file, 'utf-8')) as ShadowLedger } catch { return null }

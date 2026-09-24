@@ -18,7 +18,7 @@ import { replayObjects, thresholdsHash } from './backtest'
 import { loadLatestCalibration } from './calibrate'
 import { DEFAULT_LIVE, industryObjects, loadLiveDataSet } from './live'
 import { buildMoneyCockpitView, entryObjects, renderMoneyCockpit } from './radar'
-import { loadLedger, saveLedger, summarize, updateLedger } from './shadow'
+import { isIntraday, loadLedger, saveLedger, summarize, updateLedger } from './shadow'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const MONEY_SNAPSHOT_FILE = process.env.MONEY_SNAPSHOT_FILE
@@ -52,8 +52,15 @@ async function main(): Promise<void> {
   const calibration = loadLatestCalibration()
   if (calibration) view.calibration = calibration
 
+  // 盘中运行时当日 K 线还不完整：可以刷新页面，但不记影子台账 —— 台账只增不改，半天的数据记进去就改不掉了
+  const intraday = isIntraday(lastDate)
+  if (intraday) {
+    view.dataNotes.unshift(`盘中快照：${lastDate} 当日成交额与价格尚未收盘，状态仅供参考；影子台账本次不记账`)
+    log('· 盘中运行：影子台账本次不记账（收盘后 15:05 起再跑）')
+  }
+
   // 影子运行：阈值冻结之后才记台账；阈值指纹与冻结记录对不上时拒绝记账 —— 那说明阈值被改过
-  if (THRESHOLDS.status === 'FROZEN' && CALIBRATION) {
+  if (THRESHOLDS.status === 'FROZEN' && CALIBRATION && !intraday) {
     const hash = thresholdsHash()
     if (hash !== CALIBRATION.thresholdsHash) {
       log(`⚠ 阈值指纹 ${hash} 与冻结记录 ${CALIBRATION.thresholdsHash} 不一致：阈值在冻结后被改动，影子台账本次不更新`)
