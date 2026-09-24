@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Alert, ConfigProvider, Drawer, Empty, Spin, Table, Tabs, Tooltip, theme } from 'antd'
+import { Alert, Button, ConfigProvider, Drawer, Empty, Space, Spin, Table, Tabs, Tooltip, message, theme } from 'antd'
+import { LinkOutlined } from '@ant-design/icons'
 import { FlowBars, Legend, LinesChart, Spark } from '../components/money/Charts'
 
 /**
@@ -12,6 +13,35 @@ import { FlowBars, Legend, LinesChart, Spark } from '../components/money/Charts'
 
 const base = import.meta.env.BASE_URL ?? '/'
 const SNAPSHOT_URL = `${base}data/money.json`.replace(/([^:])\/{2,}/g, '$1/')
+
+/** 给其他 Agent 的稳定链接：同一份已经算好的结果，开头带约束 */
+function absUrl(file: string): string {
+  const path = `${base}data/${file}`.replace(/\/{2,}/g, '/')
+  return typeof window === 'undefined' ? path : `${window.location.origin}${path}`
+}
+
+const AgentLinks: React.FC = () => {
+  const copy = async (url: string, what: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      message.success(`已复制${what}链接，发给其他 Agent 即可`)
+    } catch {
+      window.prompt('浏览器拒绝了剪贴板，请手动复制：', url)
+    }
+  }
+  return (
+    <Space size={6} wrap>
+      <Tooltip title="Markdown，开头带约束，适合直接交给大模型读">
+        <Button size="small" type="primary" icon={<LinkOutlined />} onClick={() => copy(absUrl('money.agent.md'), ' Agent ')}>
+          复制 Agent 链接
+        </Button>
+      </Tooltip>
+      <Tooltip title="完整 JSON，含每个对象 250 日序列，适合程序做二次计算">
+        <Button size="small" onClick={() => copy(absUrl('money.json'), '完整数据')}>复制完整数据链接</Button>
+      </Tooltip>
+    </Space>
+  )
+}
 
 type Num = number | null
 
@@ -172,6 +202,7 @@ const MoneyCockpit: React.FC = () => {
             </div>
           </div>
           <div className="mc-sub" style={{ textAlign: 'right' }}>
+            <div style={{ marginBottom: 6 }}><AgentLinks /></div>
             口径：申万 2021 二级为行业骨架 · 主线篮子为分析刀 · 主力净流入等估算数据不入判定<br />
             阈值 {data.thresholds.status === 'FROZEN' ? '已冻结' : data.thresholds.status}（登记于 {data.thresholds.registeredOn}）· 生成于 {new Date(data.generatedAt).toLocaleString('zh-CN')}
           </div>

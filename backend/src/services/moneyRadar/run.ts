@@ -10,7 +10,9 @@
  * （融资余额、ETF 份额发布后，背离判定第 3 项才完整）。
  */
 
+import { execSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { buildMoneyAgentShare } from './agentShare'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CALIBRATION, THRESHOLDS } from './config'
@@ -77,6 +79,10 @@ async function main(): Promise<void> {
   process.stdout.write(renderMoneyCockpit(view))
   mkdirSync(dirname(MONEY_SNAPSHOT_FILE), { recursive: true })
   writeFileSync(MONEY_SNAPSHOT_FILE, JSON.stringify(view), 'utf-8')
+  const agentFile = join(dirname(MONEY_SNAPSHOT_FILE), 'money.agent.md')
+  const commit = (() => { try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return 'unknown' } })()
+  writeFileSync(agentFile, buildMoneyAgentShare(view, { intraday, commit }), 'utf-8')
+  log(`已写入 Agent 分享：${agentFile}`)
   log(`\n已写入网页快照：${MONEY_SNAPSHOT_FILE}（${(JSON.stringify(view).length / 1024).toFixed(0)} KB，用时 ${((Date.now() - t0) / 1000).toFixed(0)} 秒）`)
 }
 

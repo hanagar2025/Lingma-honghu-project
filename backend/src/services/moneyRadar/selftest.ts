@@ -35,6 +35,7 @@ function ok(name: string, cond: boolean, detail = '') {
   else { failed++; fails.push(`${name} ${detail}`); console.log(`  ✗ ${name} ${detail}`) }
 }
 
+const ENTRY_TEXT_1 = '入口① 持仓主线'
 const one = (code: string): MoneyObject => ({ id: `stock:${code}`, name: code, kind: 'STOCK', entry: 1, codes: [code], themeEtfs: [] })
 
 console.log('\n═══ 资金驾驶舱 R-01 自检 ═══\n')
@@ -315,6 +316,18 @@ console.log('\n【装配 · 渲染】')
   ok('合成背离样本：排在复核队列第一位',
     v1.reviewQueue[0]?.id === `stock:${target}` && v1.reviewQueue[0]?.reviewClass === 'DIVERGENCE')
   ok('合成数据视图标为 FIXTURE', v1.dataMode === 'FIXTURE' && renderMoneyCockpit(v1).includes('合成数据'))
+
+  const { buildMoneyAgentShare } = await import('./agentShare')
+  const md = buildMoneyAgentShare(v1, { intraday: true })
+  ok('Agent 分享带机器可读的头信息', md.startsWith('---\nproduct: 鸿鹄理财\nkind: money-agent-share') && md.includes('intraday: true'))
+  ok('Agent 分享开头写明约束：观察层、成交额无方向、不补估算数据、衰竭不是卖出信号、不打分',
+    md.indexOf('# 约束') < md.indexOf('# 数据口径')
+    && md.includes('观察层') && md.includes('没有方向') && md.includes('不要从别处补进来')
+    && md.includes('不要把衰竭当卖出信号') && md.includes('不要输出综合评分'))
+  ok('Agent 分享含复核顺序与三个入口的数据表',
+    md.includes('# 复核顺序') && md.includes(ENTRY_TEXT_1) && md.includes('| 名称 | id | 状态 |'))
+  ok('Agent 分享里被判背离的对象带着背离结论', md.includes('DIVERGENCE'))
+  ok('Agent 分享不含 score/rank/weight 字样', !/\b(score|rank|weight)\b/i.test(md))
 }
 
 // ─────────────────────────── ⑦ 真实数据对齐规则 ───────────────────────────

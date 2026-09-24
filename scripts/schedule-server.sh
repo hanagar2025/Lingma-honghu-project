@@ -147,6 +147,11 @@ if npx tsx backend/src/services/moneyRadar/run.ts > /dev/null; then
     install -o www-data -g www-data -m 644 "$MONEY" /var/www/tios/data/money.json
     echo "已发布资金驾驶舱 money.json"
   fi
+  MONEY_AGENT=/opt/tios/frontend/public/data/money.agent.md
+  if [[ -s "$MONEY_AGENT" ]]; then
+    install -o www-data -g www-data -m 644 "$MONEY_AGENT" /var/www/tios/data/money.agent.md
+    echo "已发布资金驾驶舱 Agent 分享 money.agent.md"
+  fi
 else
   echo "⚠ 资金驾驶舱本次未更新（主驾驶舱已发布，不受影响）"
 fi
