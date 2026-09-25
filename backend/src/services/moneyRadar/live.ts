@@ -21,6 +21,7 @@ import { NATIONAL_TEAM_ETFS, WATCHLIST, holdingCodes } from './config'
 import {
   fetchKline, fetchMarginByDate, fetchMarginTotal, fetchQuoteEtfShares, fetchSseEtfShares,
   fetchSwMembership, fetchTopInstByDate, inShSzUniverse, exchangeOf, runPool, stockKlineCached,
+  dropCache, marginDayComplete,
   readCache, writeCache, type KBar, type SwMember,
 } from './fetch'
 import type { DataKind, DataSet, EtfDay, InstDay, MarketDay, MoneyObject, StockDay, Availability } from './types'
@@ -60,6 +61,8 @@ export interface LiveResult {
   industries: IndustryInfo[]
   names: Record<string, string>
   marketMargin: (number | null)[]
+  /** 两融明细只发布了一部分交易所、按未发布处理的日子 */
+  marginPartial: string[]
   /** 个股总市值（元），取自申万行业估值表最新交易日 */
   marketCap: Record<string, number>
   coverage: { stocksWanted: number; stocksFetched: number; failed: string[] }
@@ -145,6 +148,21 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
   log(`· 个股融资余额：${marginDates.length} 个交易日（按日全市场拉取，已缓存的跳过）`)
   const margin: Record<string, Record<string, number> | null> = {}
   await runPool(marginDates, 4, async d => { margin[d] = await fetchMarginByDate(d) }, (d, n) => log(`    ${d}/${n}`))
+  const marginPartial: string[] = []
+  let ref: Record<string, number> | null = null
+  for (const d of marginDates) {
+    const m = margin[d]
+    if (!m) continue
+    const chk = ref ? marginDayComplete(m, ref) : { ok: true, missing: [] }
+    if (!chk.ok) {
+      margin[d] = null
+      dropCache('margin', `${d}.json`)
+      marginPartial.push(`${d}（${chk.missing.map(x => ({ sh: '沪市', sz: '深市', bj: '北交所' })[x]).join('、')}未发布完）`)
+      continue
+    }
+    ref = m
+  }
+  if (marginPartial.length) log(`    两融明细未发布完整，按未发布处理：${marginPartial.join('；')}`)
   const marginLatest = [...marginDates].reverse().find(d => margin[d]) ?? null
   mark('MARGIN', '东方财富数据中心 RPTA_WEB_RZRQ_GGMX', marginLatest ?? '—', margin[latest] ? 'OK' : 'PENDING')
 
@@ -245,6 +263,7 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
     industries,
     names,
     marketMargin,
+    marginPartial,
     marketCap: Object.fromEntries(members.filter(m => m.marketCap !== null).map(m => [m.code, m.marketCap!])),
     coverage: { stocksWanted: wanted.length, stocksFetched: Object.keys(bars).length, failed },
   }

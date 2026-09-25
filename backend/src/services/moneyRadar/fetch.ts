@@ -15,7 +15,7 @@
  * 一切结果先落本地缓存，重跑只补缺的部分。缓存不入库。
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -256,6 +256,27 @@ export async function fetchMarginByDate(date: string): Promise<Record<string, nu
   for (const r of rows) if (r.RZYE !== null) out[r.SCODE] = r.RZYE
   writeCache(out, 'margin', `${date}.json`)
   return out
+}
+
+/**
+ * 某日两融明细是否发布完整。沪深北三所分开发布，节假日前后常见"沪市已出、深市未出"：
+ * 只拿到半截时，行业融资余额会凭空"下降一半"。按交易所比对行数，任一所不到参照日的 80% 即视为未发布完。
+ */
+export function marginDayComplete(cur: Record<string, number>, ref: Record<string, number>): { ok: boolean; missing: Exchange[] } {
+  const count = (m: Record<string, number>) => {
+    const c: Record<Exchange, number> = { sh: 0, sz: 0, bj: 0 }
+    for (const k of Object.keys(m)) c[exchangeOf(k)]++
+    return c
+  }
+  const a = count(cur)
+  const b = count(ref)
+  const missing = (['sh', 'sz', 'bj'] as const).filter(x => b[x] > 0 && a[x] < 0.8 * b[x])
+  return { ok: missing.length === 0, missing }
+}
+
+export function dropCache(...parts: string[]): void {
+  const p = join(CACHE_DIR, ...parts)
+  if (existsSync(p)) rmSync(p)
 }
 
 /** 全市场融资余额历史（元） */
