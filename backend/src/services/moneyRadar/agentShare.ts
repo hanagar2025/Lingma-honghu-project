@@ -17,13 +17,23 @@ const num = (v: number | null | undefined, d = 1) => (v === null || v === undefi
 
 function row(o: ObjectView): string {
   const a2 = o.a2
-  return `| ${o.name} | ${o.id} | ${o.stateText} | ${o.stateSince ?? 'NA'} | ${num(o.level20Yi)} | ${num(o.base20Yi)} | ${yi(o.excessDailyYi)} `
-    + `| ${o.persist ?? 'NA'}/${o.maxPersistBefore ?? 'NA'} | ${pct(o.dev5)} | ${pct(o.ret20)} `
+  return `| ${o.name} | ${o.id} | ${o.state ?? 'NA'} ${o.stateText} | ${o.stateSince ?? 'NA'} | ${o.stateDays ?? 'NA'} | ${o.stateLongestDays ?? 'NA'} `
+    + `| ${num(o.level20Yi, 2)} | ${num(o.base20Yi, 2)} | ${yi(o.excessDailyYi, 2)} `
+    + `| ${o.persist ?? 'NA'} | ${o.maxPersistBefore ?? 'NA'} | ${pct(o.dev5)} | ${pct(o.ret20)} `
     + `| ${yi(a2.marginDelta10Yi, 2)} | ${yi(a2.instNet10Yi, 2)} | ${o.divergence ?? 'NA'} | ${o.standing ?? '-'} |`
 }
 
-const HEAD = '| 名称 | id | 状态 | 状态起始 | 日均资金(亿/日) | 水位(亿/日) | 日均超额(亿/日) | 持续/历史最长(日) | 5日偏离 | 20日涨幅 | 融资10日变化(亿) | 机构10日净买(亿) | 背离 | 在册 |'
-const SEP = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'
+/** 已知偏差：不改变算法，但限定结论的解释力度 */
+export const KNOWN_BIASES: readonly string[] = [
+  '当前成分回看历史（current-constituent backtest）：行业用今天的申万二级成分回看过去，新股上市前按 0 计，没有按历史成分逐日调整；样本外结论不等于"当时可交易的行业篮子"的回测，带幸存者 / 成分变更偏差',
+  'A2 方向性数据只有融资余额（行业、个股）与少数 ETF 份额（篮子、国家队）；融资偏杠杆资金，不代表全部主动资金；"确认"只说明两端融资方向一致',
+  '样本外与时效检验只覆盖 2023-06 以来，基本是同一种市场环境，未经历完整牛熊',
+  '前复权价在除权后会整体重排历史；收益计算用前复权、规模与交叉核对用不复权',
+  '深市个股历史成交额只有腾讯一个来源（当日值已与新浪逐只核对）；深市 ETF 份额历史从 2026-09-23 起积累',
+]
+
+const HEAD = '| 名称 | id | 状态 | 状态起始 | 状态天数 | 该状态此前最长(日) | 20日均成交额(亿/日) | 水位(亿/日) | 日均超额(亿/日) | 高于水位连续(日) | 高于水位此前最长(日) | 5日偏离 | 20日涨幅 | 融资10日变化(亿) | 机构10日净买(亿) | 背离 | 在册 |'
+const SEP = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'
 
 export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boolean; commit?: string } = {}): string {
   const L: string[] = []
@@ -49,8 +59,9 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
   w('- 成交额是流量且没有方向：每一笔成交同时有买方和卖方。不要把"份额上升"说成"净流入"。有方向的只有融资余额与 ETF 份额（T+1 发布）。')
   w('- 数据里没有"主力净流入 / 大单"这类软件估算值，也不要从别处补进来。')
   w('- "资金池 / 资金量"指 20 日日均成交额（亿元/日）对比其 250 日水位，不是存量。')
-  w('- 样本外检验里，"衰竭（放量滞涨）"之后 60 日平均跑赢基准，与"见顶"预期相反。不要把衰竭当卖出信号。')
-  w('- 只有"趋势"一条规则得到样本外支持；其他规则无显著效果或样本不足。样本外只有一年。')
+  w('- EXHAUST（中文"高成交·价格停滞"，旧称"衰竭"）只表示成交额仍高、价格推进不足。样本外之后 60 日平均跑赢基准，与"见顶"预期相反。不要把它当卖出信号，也不要写成"资金衰竭 / 资金撤退"。')
+  w('- 证据等级锁定：只有 TREND 有样本外支持（可提高人工复核优先级）；START / BURST / RETREAT / FAILED_START 无显著效果，DIVERGENCE 样本不足，EXHAUST 与预期相反。不要把它们说成启动信号、拥挤预警或下跌预警。')
+  w('- "20日均成交额"不是资金流入；"成交额份额迁移"说的是成交额结构变化，不是净资金从 A 流向 B。迁移的证据等级看两端 A2 净方向（CONFIRMED / CONFLICT / INFERRED）。')
   if ((v.crossCheck as any)?.status === 'FAIL') {
     w('- 今日第二数据源交叉核对不通过：主数据与新浪行情不一致超过阈值。先看"第二数据源交叉核对"一节，不要在核对不通过的数据上下结论。')
   }
@@ -123,7 +134,9 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
   w('- 两市成交额 = 上证指数 + 深证综指（北交所不计入）。基准收益 = 两者日收益平均。')
   w('- 行业 = 申万 2021 二级，成分来自东方财富行业估值表；按当前成分回看历史。')
   w('- 水位 = 该对象成交额占两市比例的 250 日中位数；水位带 = 25%–75% 分位。')
-  w('- 状态：潜伏 / 启动 / 趋势 / 爆发 / 衰竭 / 撤离；进出阈值不同、最短保持 5 日、连续确认。')
+  w('- 状态：潜伏 / 启动 / 趋势 / 爆发 / 高成交·价格停滞（EXHAUST）/ 撤离；进出阈值不同、最短保持 5 日、连续确认。')
+  w('- 字段："状态天数"从状态起始日算；"高于水位连续"是 5 日份额连续高于 250 日中位数的天数，与状态无关，两者口径不同。高于水位连续 > 此前最长 = 创纪录。')
+  w('- 精度：20日均成交额、水位、日均超额都按原始精度计算（日均超额 = 20日均成交额 − 水位），表中各自四舍五入到 0.01，所以显示值相减可能差 0.01；状态判定只用原始精度。')
   for (const p of v.provenance) w(`- 来源 ${p.kind}: ${p.source}（截至 ${p.asOf}，${p.status}）`)
   for (const n of v.dataNotes) w(`- 说明：${n}`)
   w('')
@@ -166,9 +179,10 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
     }
   }
 
-  w('# 主线迁移（一出一进持续 ≥10 日；INFERRED = 仅份额推断，缺 A2 两头确认）')
+  w('# 成交额份额迁移（一出一进持续 ≥10 日；不是净资金流向）')
+  w('证据等级：CONFIRMED = 出端 A2 净流出且进端 A2 净流入；CONFLICT = 任一端 A2 方向与迁移相反；INFERRED = 任一端无 A2 数据，仅份额推断。A2 = 融资 10 日变化 + ETF 10 日净申赎（行业只有融资）。')
   if (!v.migrations.length) w('无')
-  for (const m of v.migrations) w(`- ${m.from} -> ${m.to}：${m.verdict} ${m.confirmation} ${m.days} 日`)
+  for (const m of v.migrations) w(`- ${m.from} -> ${m.to}：${m.verdict} ${m.confirmation}（出端 A2 ${yi(m.fromA2Yi)} 亿，进端 A2 ${yi(m.toA2Yi)} 亿）${m.days} 日`)
   w('')
 
   if (cal) {
@@ -233,6 +247,10 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
     for (const e of sh.latest ?? []) w(`- ${e.date} ${e.name}（${e.objectId}）${e.rule}：${e.state}`)
     w('')
   }
+
+  w('# 已知偏差（Known Bias，解读结论时要考虑）')
+  for (const b of KNOWN_BIASES) w(`- ${b}`)
+  w('')
 
   w('# 不意味着')
   for (const x of v.doesNotImply) w(`- ${x}`)

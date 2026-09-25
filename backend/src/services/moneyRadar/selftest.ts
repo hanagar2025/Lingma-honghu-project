@@ -195,11 +195,37 @@ console.log('\n【迁移 · 核心股 · 国家队】')
   const n = 12
   const mig = checkMigration({ states: S('EXHAUST', n), metrics: mm(n) }, { states: S('TREND', n), metrics: mm(n) }, n - 1)
   ok('一出一进持续 10 日 → 迁移', mig.verdict === 'MIGRATION' && mig.days === 12)
-  ok('没有 A2 两头同向 → 迁移只是推断', mig.confirmation === 'INFERRED')
+  ok('任一端没有 A2 数据 → 迁移只是推断（INFERRED）', mig.confirmation === 'INFERRED' && mig.fromA2 === null)
   const conf = checkMigration(
-    { states: S('RETREAT', n), metrics: mm(n, { a2Outflow: true }) },
-    { states: S('TREND', n), metrics: mm(n, { a2Inflow: true }) }, n - 1)
-  ok('A2 两头同向 → 迁移确认', conf.confirmation === 'CONFIRMED')
+    { states: S('RETREAT', n), metrics: mm(n, { marginDelta10: -12e8 }) },
+    { states: S('TREND', n), metrics: mm(n, { marginDelta10: 47e8 }) }, n - 1)
+  ok('出端 A2 净流出、进端 A2 净流入 → CONFIRMED，并带两端证据', conf.confirmation === 'CONFIRMED' && conf.fromA2 === -12e8 && conf.toA2 === 47e8)
+  const clash = checkMigration(
+    { states: S('RETREAT', n), metrics: mm(n, { marginDelta10: 5e8 }) },
+    { states: S('TREND', n), metrics: mm(n, { marginDelta10: 47e8 }) }, n - 1)
+  ok('出端融资反而在加 → CONFLICT，不算确认', clash.verdict === 'MIGRATION' && clash.confirmation === 'CONFLICT')
+  const mixed = checkMigration(
+    { states: S('RETREAT', n), metrics: mm(n, { marginDelta10: 3e8, etfNet10: -1e8 }) },
+    { states: S('TREND', n), metrics: mm(n, { marginDelta10: 47e8 }) }, n - 1)
+  ok('融资与 ETF 方向相反时按净额：出端净 +2 亿 → CONFLICT（旧口径"任一项为负"会误判为确认）', mixed.confirmation === 'CONFLICT' && mixed.fromA2 === 2e8)
+  {
+    const { longestPriorSegment } = await import('./radar')
+    const days = [
+      ...Array.from({ length: 5 }, () => ({ state: 'TREND' as MoneyState, since: 0 })),
+      ...Array.from({ length: 3 }, () => ({ state: 'EXHAUST' as MoneyState, since: 5 })),
+      ...Array.from({ length: 2 }, () => ({ state: 'TREND' as MoneyState, since: 8 })),
+    ]
+    ok('状态天数字段：此前同一状态最长的一段（不含当前）', longestPriorSegment(days, 9) === 5 && longestPriorSegment(days, 7) === 0)
+    const fx = synthDataSet(320, [
+      { code: 'A', share: t => 0.004 * (1 + 0.3 * Math.sin(t / 17)) + wobble(t, 0.0003), price: t => 10 + t * 0.01 },
+      { code: 'B', share: t => 0.002 * (1 + 0.5 * Math.cos(t / 23)) + wobble(t + 3, 0.0002), price: t => 20 - t * 0.01 },
+    ])
+    fx.market.forEach((m, i) => { m.totalAmount = SYNTH_MARKET_TOTAL * (1 + 0.2 * Math.sin(i / 11)) })
+    const vx = buildMoneyCockpitView(fx, 'FIXTURE', { industries: [one('A'), one('B')].map(o => ({ ...o, kind: 'INDUSTRY' as const, entry: 3 as const })) })
+    const objsX = vx.entries.flatMap(e => e.objects).filter(o => o.excessDailyYi !== null && o.level20Yi !== null && o.base20Yi !== null)
+    ok('日均超额 = 20日均成交额 − 水位（原始精度，误差 < 1e-9 亿）',
+      objsX.length > 0 && objsX.every(o => Math.abs(o.excessDailyYi! - (o.level20Yi! - o.base20Yi!)) < 1e-9))
+  }
   ok('只出不进 → 退潮', checkMigration({ states: S('RETREAT', n), metrics: mm(n) }, { states: S('LATENT', n), metrics: mm(n) }, n - 1).verdict === 'EBB')
   ok('只进不出 → 扩散', checkMigration({ states: S('TREND', n), metrics: mm(n) }, { states: S('START', n), metrics: mm(n) }, n - 1).verdict === 'DIFFUSION')
   ok('不足 10 日 → 不判', checkMigration({ states: S('EXHAUST', 8), metrics: mm(8) }, { states: S('TREND', 8), metrics: mm(8) }, 7).verdict === 'NONE')
@@ -323,7 +349,7 @@ console.log('\n【装配 · 渲染】')
   ok('Agent 分享开头写明约束：观察层、成交额无方向、不补估算数据、衰竭不是卖出信号、不打分',
     md.indexOf('# 约束') < md.indexOf('# 数据口径')
     && md.includes('观察层') && md.includes('没有方向') && md.includes('不要从别处补进来')
-    && md.includes('不要把衰竭当卖出信号') && md.includes('不要输出综合评分'))
+    && md.includes('不要把它当卖出信号') && md.includes('不要输出综合评分'))
   ok('Agent 分享含复核顺序与三个入口的数据表',
     md.includes('# 复核顺序') && md.includes(ENTRY_TEXT_1) && md.includes('| 名称 | id | 状态 |'))
   ok('Agent 分享里被判背离的对象带着背离结论', md.includes('DIVERGENCE'))
@@ -493,7 +519,7 @@ console.log('\n【累计提醒】')
   ok('一个对象一张卡：同一对象的多条提醒合并，次要的作为附注', view.cards.filter(c => c.objectId === 'stock:A').length === 1 && cardA.tags.length >= 1)
   ok('持仓的卡在左列，观察仓与市场在右列', cardA.column === 'LEFT')
   ok('卡片一句话里有数字：日均比常态多少、连续几日、分位、价格、融资',
-    /日均比常态少 [\d.]+ 亿/.test(cardA.detail) && /连续 \d+ 日低于常态/.test(cardA.detail)
+    /成交额比常态少 [\d.]+ 亿/.test(cardA.detail) && /连续 \d+ 日低于常态/.test(cardA.detail)
     && /分位/.test(cardA.detail) && /价格 20 日/.test(cardA.detail) && /融资 10 日/.test(cardA.detail))
   const outflow = life.active.find(a => a.objectId === 'stock:A' && a.type === 'RISK_OUTFLOW')!
   ok('"第 N 天"从条件真正成立那天算起（回放得出，不是从上线那天算）', outflow.days >= 2 && outflow.days <= 10, `days=${outflow.days}`)
@@ -559,6 +585,13 @@ console.log('\n【时效检验与慢钱】')
   ok('K 线缓存：前复权历史被除权重新缩放 → 判为漂移，整段重抓',
     klineDrifted(cachedK, [{ date: '2026-09-02', close: 10.5, amount: 1 }, { date: '2026-09-03', close: 12, amount: 1 }]))
   ok('K 线缓存：重叠日一致 → 不重抓', !klineDrifted(cachedK, [{ date: '2026-09-02', close: 11, amount: 1 }, { date: '2026-09-03', close: 12, amount: 1 }]))
+  const { marginDayComplete } = await import('./fetch')
+  const refM: Record<string, number> = {}
+  for (let i = 0; i < 100; i++) { refM[`60${String(i).padStart(4, '0')}`] = 1; refM[`00${String(i).padStart(4, '0')}`] = 1 }
+  const shOnly = Object.fromEntries(Object.entries(refM).filter(([k]) => k.startsWith('6')))
+  const chkM = marginDayComplete(shOnly, refM)
+  ok('两融明细只发布了沪市（深市未出）→ 判为未发布完，不当成融资减半', !chkM.ok && chkM.missing.includes('sz'))
+  ok('两融明细沪深都齐 → 完整', marginDayComplete(refM, refM).ok)
   const intradayK = { ...cachedK, fetchedAt: '2026-09-02T05:00:00Z' }
   ok('K 线缓存：盘中抓的最后一根与定稿不同，不算漂移', !klineDrifted(intradayK, [{ date: '2026-09-02', close: 11.3, amount: 1 }]))
   const { eventStudy, excessReturn } = await import('./backtest')

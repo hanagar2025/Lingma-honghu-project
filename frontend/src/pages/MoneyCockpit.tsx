@@ -52,7 +52,8 @@ const STATE_STYLE: Record<string, { bg: string; fg: string }> = {
   启动: { bg: '#10375c', fg: '#58a6ff' },
   趋势: { bg: '#0f3d2a', fg: '#3fb950' },
   爆发: { bg: '#4a2c05', fg: '#f0b429' },
-  衰竭: { bg: '#4b1d1d', fg: '#ff7b72' },
+  高成交: { bg: '#4a3a05', fg: '#f0b429' },
+  衰竭: { bg: '#4a3a05', fg: '#f0b429' },
   撤离: { bg: '#3b1236', fg: '#db61a2' },
   样本不足: { bg: '#2a3038', fg: '#6e7681' },
   数据源未接入: { bg: '#2a3038', fg: '#6e7681' },
@@ -158,19 +159,23 @@ const MoneyCockpit: React.FC = () => {
     },
     { title: '资金状态', dataIndex: 'stateText', width: 130, render: (v: string) => <StateChip text={v} /> },
     {
-      title: <Tooltip title="当前资金量：20 日日均成交额 / 原有资金量：250 日水位对应的日均成交额（亿元/日）">日均资金 / 水位</Tooltip>,
+      title: <Tooltip title="20 日平均成交额 / 250 日水位对应的 20 日平均成交额（亿元/日）。成交额没有方向，不是资金流入">20日均成交额 / 水位</Tooltip>,
       width: 130, align: 'right' as const,
       render: (_: unknown, r: any) => (
         <span>{r.level20Yi === null ? '—' : r.level20Yi.toFixed(1)}<span className="mc-note"> / {r.base20Yi === null ? '—' : r.base20Yi.toFixed(1)} 亿</span></span>
       ),
     },
     {
-      title: <Tooltip title="近 20 日平均每天比水位多出（或少于）的成交额。正 = 资金在积累">日均超额</Tooltip>,
+      title: <Tooltip title="= 20日均成交额 − 水位，原始精度计算，展示各自取整">日均超额</Tooltip>,
       dataIndex: 'excessDailyYi', width: 100, align: 'right' as const,
       render: (v: Num) => <span className={cls(v)}>{yi(v)}</span>,
     },
     {
-      title: <Tooltip title="当前连续高于水位的天数 / 此前历史最长">持续 / 最长</Tooltip>, width: 95, align: 'right' as const,
+      title: <Tooltip title="当前状态已持续的交易日数 / 此前同一状态最长的一段">状态天数</Tooltip>, width: 80, align: 'right' as const,
+      render: (_: unknown, r: any) => <span>{r.stateDays ?? '—'}<span className="mc-note"> / {r.stateLongestDays ?? '—'}</span></span>,
+    },
+    {
+      title: <Tooltip title="5 日份额连续高于自身水位的天数 / 此前最长的一段。与状态无关；当前 ≥ 此前最长（标红）= 创纪录">高于水位连续</Tooltip>, width: 100, align: 'right' as const,
       render: (_: unknown, r: any) => {
         const record = r.maxPersistBefore >= 10 && r.persist >= r.maxPersistBefore
         return <span className={record ? 'mc-warn' : ''}>{r.persist ?? '—'} / {r.maxPersistBefore ?? '—'}</span>
@@ -280,12 +285,13 @@ const MoneyCockpit: React.FC = () => {
             ) : <Empty />}
           </div>
           <div className="mc-card">
-            <h3>主线迁移 <small>一出一进持续 10 日</small></h3>
+            <h3>成交额份额迁移 <small>一出一进持续 10 日 · 不是净资金流向</small></h3>
             {data.migrations.length === 0
-              ? <div className="mc-note">当前没有满足条件的主线迁移。</div>
+              ? <div className="mc-note">当前没有满足条件的份额迁移。</div>
               : data.migrations.slice(0, 8).map((m: any, i: number) => (
-                <div key={i} className="mc-alert" style={{ borderLeftColor: m.confirmation === 'CONFIRMED' ? '#ff7b72' : '#f0b429', cursor: 'default' }}>
-                  {m.from} → <b>{m.to}</b>　{m.days} 日　<span className="mc-note">{m.confirmation === 'CONFIRMED' ? 'A2 两头确认' : '份额推断，待 A2 确认'}</span>
+                <div key={i} className="mc-alert" style={{ borderLeftColor: m.confirmation === 'CONFIRMED' ? '#ff7b72' : m.confirmation === 'CONFLICT' ? '#8b96a5' : '#f0b429', cursor: 'default' }}>
+                  {m.from} → <b>{m.to}</b>　{m.days} 日　<span className="mc-note">{({ CONFIRMED: '两端融资方向一致', CONFLICT: '融资方向矛盾', INFERRED: '仅份额推断' } as Record<string, string>)[m.confirmation]}
+                    （出端 {yi(m.fromA2Yi)}，进端 {yi(m.toA2Yi)}）</span>
                 </div>
               ))}
             <h3 style={{ marginTop: 12 }}>入口③ 资金正在积累的方向 <small>前 5</small></h3>
@@ -346,7 +352,7 @@ const VERDICT_STYLE: Record<string, { text: string; color: string }> = {
 }
 
 const RULE_TEXT: Record<string, string> = {
-  START: '启动', TREND: '趋势', BURST: '爆发', EXHAUST: '衰竭', RETREAT: '撤离', FAILED_START: '启动失败', DIVERGENCE: '高位背离',
+  START: '启动', TREND: '趋势', BURST: '爆发', EXHAUST: '高成交·价格停滞', RETREAT: '撤离', FAILED_START: '启动失败', DIVERGENCE: '高位背离',
 }
 
 const CalibrationCard: React.FC<{ c: any }> = ({ c }) => {
@@ -460,15 +466,15 @@ const DetailCard: React.FC<{ o: any; slow?: any }> = ({ o, slow }) => {
                   { data: s.s5.map((v: Num) => (v === null ? null : v * 100)), color: '#f0b429', width: 1.2, label: '5日' },
                 ]}
                 right={{ data: s.close, color: '#ff7b72', label: '价格' }} />
-              <h3 style={{ marginTop: 10 }}>资金量 <small>20 日日均成交额 vs 水位（亿元/日）· 融资余额（亿元，右轴）</small></h3>
+              <h3 style={{ marginTop: 10 }}>成交额 <small>20 日平均成交额 vs 水位（亿元/日）· 融资余额（亿元，右轴）</small></h3>
               <Legend items={[
-                { color: '#3fb950', label: '日均资金' },
+                { color: '#3fb950', label: '20日均成交额' },
                 { color: '#8b96a5', label: '水位', dash: true },
                 { color: '#db61a2', label: '融资余额（右轴）' },
               ]} />
               <LinesChart dates={s.dates} width={720} height={150} unit=""
                 lines={[
-                  { data: s.level20Yi, color: '#3fb950', width: 2, label: '日均资金' },
+                  { data: s.level20Yi, color: '#3fb950', width: 2, label: '20日均成交额' },
                   { data: s.base20Yi, color: '#8b96a5', width: 1, dash: '5 4', label: '水位' },
                 ]}
                 right={{ data: s.margin, color: '#db61a2', label: '融资' }} />
@@ -488,12 +494,13 @@ const DetailCard: React.FC<{ o: any; slow?: any }> = ({ o, slow }) => {
         </div>
         <div className="mc-grid" style={{ gap: 12, alignContent: 'start' }}>
           <div className="mc-card">
-            <h3>资金池四问</h3>
+            <h3>成交额四问 <small>成交额没有方向</small></h3>
             <table className="mc-kv" style={{ width: '100%' }}>
               <tbody>
-                <tr><td>原有资金量（水位）</td><td>{o.base20Yi === null ? '—' : `${o.base20Yi.toFixed(1)} 亿/日`}<span className="mc-note">　份额中位数 {s ? `${((lastOf(s.median) ?? 0) * 100).toFixed(3)}%` : '—'}</span></td></tr>
-                <tr><td>当前资金量</td><td>{o.level20Yi === null ? '—' : `${o.level20Yi.toFixed(1)} 亿/日`}</td></tr>
-                <tr><td>堆积持续</td><td>{o.persist ?? '—'} 日 / 历史最长 {o.maxPersistBefore ?? '—'} 日</td></tr>
+                <tr><td>水位（20日均成交额）</td><td>{o.base20Yi === null ? '—' : `${o.base20Yi.toFixed(1)} 亿/日`}<span className="mc-note">　份额中位数 {s ? `${((lastOf(s.median) ?? 0) * 100).toFixed(3)}%` : '—'}</span></td></tr>
+                <tr><td>20日均成交额</td><td>{o.level20Yi === null ? '—' : `${o.level20Yi.toFixed(1)} 亿/日`}</td></tr>
+                <tr><td>状态天数</td><td>{o.stateDays ?? '—'} 日（自 {o.stateSince ?? '—'}）/ 此前同状态最长 {o.stateLongestDays ?? '—'} 日</td></tr>
+                <tr><td>高于水位连续</td><td>{o.persist ?? '—'} 日 / 此前最长 {o.maxPersistBefore ?? '—'} 日<span className="mc-note">　与状态无关</span></td></tr>
                 <tr><td>近 20 日日均超额</td><td className={cls(o.excessDailyYi)}>{yi(o.excessDailyYi)}</td></tr>
                 <tr><td>5 / 20 日偏离</td><td>{pct(o.dev5)} / {pct(o.dev20)}</td></tr>
                 <tr><td>对应价格</td><td className={cls(o.ret20)}>20 日 {pct(o.ret20)}</td></tr>
@@ -532,7 +539,7 @@ const DetailCard: React.FC<{ o: any; slow?: any }> = ({ o, slow }) => {
           <div className="mc-card" style={{ borderColor: '#5a2a2a' }}>
             <h3>系统输出 <small>观察层 · 不是指令</small></h3>
             <div className="mc-alert" style={{ borderLeftColor: REVIEW_COLOR[o.reviewClass] ?? '#5b6573', cursor: 'default' }}>
-              复核类别：{({ DIVERGENCE: '高位背离，最高优先', RETREAT: '资金撤离', EXHAUST: '资金衰竭', DIVERGENCE_PENDING_A2: '背离待 A2 确认', NEW_TRANSITION: '近 5 日状态跃迁', WATCH: '常规观察' } as Record<string, string>)[o.reviewClass]}
+              复核类别：{({ DIVERGENCE: '高位背离，最高优先', RETREAT: '资金撤离', EXHAUST: '高成交·价格停滞（不是卖出信号）', DIVERGENCE_PENDING_A2: '背离待 A2 确认', NEW_TRANSITION: '近 5 日状态跃迁', WATCH: '常规观察' } as Record<string, string>)[o.reviewClass]}
             </div>
             <div className="mc-note">法定理由以每日驾驶舱第⑤问为准。本卡不发令；若委员会裁定退出，按"债务执行窗口"分批执行。</div>
           </div>

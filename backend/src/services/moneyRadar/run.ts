@@ -54,6 +54,7 @@ async function main(): Promise<void> {
     marginMissingToday
       ? `融资余额 T+1 约 08:30 发布，${lastDate} 当日融资余额尚未发布，方向性判断以最近已发布日为准`
       : '融资余额已更新到最新交易日',
+    ...(live.marginPartial.length ? [`两融明细未发布完整、按未发布处理：${live.marginPartial.join('；')}（沪深北分开发布，节假日前后常见只出一半；半截数据会让融资余额凭空减半）`] : []),
     '深市国家队 ETF（7 只）没有可访问的份额历史来源，从接入之日起逐日存档积累；温度计暂只用沪市 ETF',
   ]
 

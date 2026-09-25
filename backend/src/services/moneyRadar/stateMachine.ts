@@ -24,7 +24,8 @@ export const STATE_TEXT: Record<MoneyState, string> = {
   START: '启动',
   TREND: '趋势',
   BURST: '爆发',
-  EXHAUST: '衰竭',
+  // 机器名仍是 EXHAUST。中文不叫"衰竭"：成交额仍高、只是价格推进不足，样本外 60 日反而跑赢，"衰竭"会让人联想到卖出
+  EXHAUST: '高成交·价格停滞',
   RETREAT: '撤离',
 }
 

@@ -57,9 +57,10 @@ export type AlertType =
   | 'NOTE_EXHAUST' | 'DATA_ANOMALY'
 
 export const TYPE_LABEL: Record<AlertType, string> = {
-  OPP_TREND: '资金趋势', OPP_ACCUM: '资金积累', OPP_NEW_DIRECTION: '市场新方向', OPP_CORE_SWITCH: '核心股切换',
-  RISK_OUTFLOW: '资金流失', RISK_LEVERAGE: '杠杆推涨', RISK_FADING: '积累减弱', RISK_RETREAT: '资金撤离',
-  RISK_DIVERGENCE: '高位背离', RISK_MIGRATION: '主线迁移', NOTE_EXHAUST: '放量滞涨', DATA_ANOMALY: '数据异常',
+  // 成交额没有方向：标签说"成交额"而不说"资金"，免得读成净流入 / 净流出
+  OPP_TREND: '成交额趋势', OPP_ACCUM: '成交额积累', OPP_NEW_DIRECTION: '市场新方向', OPP_CORE_SWITCH: '核心股切换',
+  RISK_OUTFLOW: '成交额萎缩', RISK_LEVERAGE: '杠杆推涨', RISK_FADING: '积累减弱', RISK_RETREAT: '撤离',
+  RISK_DIVERGENCE: '高位背离', RISK_MIGRATION: '份额迁移', NOTE_EXHAUST: '高成交·价格停滞', DATA_ANOMALY: '数据异常',
 }
 
 export type AlertCategory = 'RISK' | 'OPP' | 'NOTE' | 'DATA'
@@ -160,6 +161,8 @@ export interface RawAlert {
   peer?: string
   /** 核心股切换的新进股 */
   entrant?: string
+  /** 迁移类提醒的 A2 证据等级 */
+  confirmation?: 'CONFIRMED' | 'CONFLICT' | 'INFERRED'
 }
 
 export interface AlertContext {
@@ -248,7 +251,7 @@ export function alertsAt(ctx: AlertContext, t: number): RawAlert[] {
   for (const a of baskets) {
     for (const b of targets) {
       const r = checkMigration({ states: a.states, metrics: a.metrics }, { states: b.states, metrics: b.metrics }, t)
-      if (r.verdict === 'MIGRATION') push(a.id, 'RISK_MIGRATION', r.confirmation === 'CONFIRMED' ? 3 : 1, { peer: b.id })
+      if (r.verdict === 'MIGRATION') push(a.id, 'RISK_MIGRATION', r.confirmation === 'CONFIRMED' ? 3 : 1, { peer: b.id, confirmation: r.confirmation })
     }
   }
 
@@ -373,17 +376,17 @@ function titleOf(a: RawAlert, o: EvalObject, s: AlertSeries, t: number, names: M
   const run = s.run[t] ?? 0
   const pp = p === null ? '' : `${Math.round(p * 100)}%`
   switch (a.type) {
-    case 'OPP_TREND': return `资金趋势成立（${STATE_TEXT[o.states[t]!]}）`
-    case 'OPP_ACCUM': return `资金积累到自身历史 ${pp} 分位`
-    case 'OPP_NEW_DIRECTION': return `市场新方向：资金进入${STATE_TEXT[o.states[t]!]}`
+    case 'OPP_TREND': return `成交额份额趋势成立（${STATE_TEXT[o.states[t]!]}）`
+    case 'OPP_ACCUM': return `成交额积累到自身历史 ${pp} 分位`
+    case 'OPP_NEW_DIRECTION': return `市场新方向：成交额进入${STATE_TEXT[o.states[t]!]}`
     case 'OPP_CORE_SWITCH': return `${names.get(a.entrant ?? '') ?? a.entrant} 进入份额前二`
-    case 'RISK_OUTFLOW': return p !== null && p <= 0.005 ? '资金降到自身有记录以来最低' : `资金连续 ${-run} 日低于常态`
-    case 'RISK_LEVERAGE': return '资金在减、价格在涨、融资在加'
-    case 'RISK_FADING': return `资金仍高于常态，但积累降到自身历史 ${pp} 分位`
-    case 'RISK_RETREAT': return '资金撤离：跌破常态且融资或 ETF 流出'
+    case 'RISK_OUTFLOW': return p !== null && p <= 0.005 ? '成交额降到自身有记录以来最低' : `成交额连续 ${-run} 日低于常态`
+    case 'RISK_LEVERAGE': return '成交额在减、价格在涨、融资在加'
+    case 'RISK_FADING': return `成交额仍高于常态，但积累降到自身历史 ${pp} 分位`
+    case 'RISK_RETREAT': return '撤离：成交额跌破常态且融资或 ETF 流出'
     case 'RISK_DIVERGENCE': return '高位背离：四项全满足'
-    case 'RISK_MIGRATION': return `疑似主线迁移 → ${names.get(a.peer ?? '') ?? a.peer}`
-    case 'NOTE_EXHAUST': return '放量滞涨（历史上多为整理）'
+    case 'RISK_MIGRATION': return `成交额份额迁移 → ${names.get(a.peer ?? '') ?? a.peer}（${({ CONFIRMED: '两端融资方向一致', CONFLICT: '融资方向矛盾', INFERRED: '仅份额推断' } as const)[a.confirmation ?? 'INFERRED']}）`
+    case 'NOTE_EXHAUST': return '高成交·价格停滞（样本外 60 日反而跑赢，不是卖出信号）'
     case 'DATA_ANOMALY': return '数据异常'
   }
 }
@@ -396,7 +399,7 @@ function detailOf(o: EvalObject, s: AlertSeries, t: number): string {
   const lvl = m.amount20 === null ? null : m.amount20 / 1e8
   const base = m.baseLevel20 === null ? null : m.baseLevel20 / 1e8
   const parts = [
-    e === null ? '日均资金数据不足' : `日均比常态${e >= 0 ? '多' : '少'} ${yiS(e)}（常态 ${base === null ? '—' : base.toFixed(1)} 亿/日，现在 ${lvl === null ? '—' : lvl.toFixed(1)} 亿/日）`,
+    e === null ? '20 日均成交额数据不足' : `20 日均成交额比常态${e >= 0 ? '多' : '少'} ${yiS(e)}（常态 ${base === null ? '—' : base.toFixed(1)} 亿/日，现在 ${lvl === null ? '—' : lvl.toFixed(1)} 亿/日）`,
     run === 0 ? '' : `已连续 ${Math.abs(run)} 日${run > 0 ? '高于' : '低于'}常态`,
     p === null ? '' : `处于自身历史 ${Math.round(p * 100)}% 分位`,
     `价格 20 日 ${pctS(m.ret20)}`,

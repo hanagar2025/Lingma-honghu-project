@@ -85,16 +85,40 @@ export type MigrationVerdict = 'MIGRATION' | 'EBB' | 'DIFFUSION' | 'NONE'
 const OUT_STATES: MoneyState[] = ['EXHAUST', 'RETREAT']
 const IN_STATES: MoneyState[] = ['START', 'TREND', 'BURST']
 
+/**
+ * 迁移的证据等级（只看 A2 方向性数据：融资余额 10 日变化 + 主题 ETF 10 日净申赎，两者相加取净方向）：
+ *   CONFIRMED  出端净流出、进端净流入 —— 份额迁移得到两头方向性数据支持
+ *   CONFLICT   任一端的净方向与迁移相反（出端在加杠杆，或进端在减）—— 份额与方向数据打架
+ *   INFERRED   任一端没有 A2 数据 —— 只有成交额份额此消彼长，属于推断
+ * 迁移本身（verdict）只由份额与状态决定；这里只给证据等级，不改变是否判为迁移。
+ */
+export type MigrationConfirmation = 'CONFIRMED' | 'CONFLICT' | 'INFERRED'
+
 export interface MigrationCheck {
   verdict: MigrationVerdict
-  /** 份额此消彼长是推断；A2 两头同向才算确认 */
-  confirmation: 'CONFIRMED' | 'INFERRED'
+  confirmation: MigrationConfirmation
   days: number
+  /** 两端 A2 净方向（元）：融资 10 日变化 + ETF 10 日净申赎；null = 该端无 A2 数据 */
+  fromA2: number | null
+  toA2: number | null
+}
+
+/** 某日 A2 净方向（元）。融资与 ETF 都缺 → null */
+export function a2Net(m: DayMetrics | undefined): number | null {
+  if (!m) return null
+  const xs = [m.marginDelta10, m.etfNet10].filter((v): v is number => v !== null)
+  return xs.length ? xs.reduce((a, b) => a + b, 0) : null
+}
+
+export function migrationConfirmation(fromA2: number | null, toA2: number | null): MigrationConfirmation {
+  if (fromA2 === null || toA2 === null) return 'INFERRED'
+  if (fromA2 < 0 && toA2 > 0) return 'CONFIRMED'
+  return 'CONFLICT'
 }
 
 /**
- * 从 from 到 to 的迁移。一出一进同时成立、持续 N 日才叫迁移；
- * 只出不进叫退潮，只进不出叫扩散。
+ * 从 from 到 to 的成交额份额迁移。一出一进同时成立、持续 N 日才叫迁移；
+ * 只出不进叫退潮，只进不出叫扩散。成交额没有方向，所以"迁移"说的是份额结构，不是净资金流向。
  */
 export function checkMigration(
   from: { states: readonly MoneyState[]; metrics: readonly DayMetrics[] },
@@ -109,14 +133,16 @@ export function checkMigration(
   const out = (i: number) => OUT_STATES.includes(from.states[i]!)
   const inn = (i: number) => IN_STATES.includes(to.states[i]!)
   const both = run(i => out(i) && inn(i))
-  const confirmed = from.metrics[t]?.a2Outflow === true && to.metrics[t]?.a2Inflow === true
+  const fromA2 = a2Net(from.metrics[t])
+  const toA2 = a2Net(to.metrics[t])
+  const confirmation = migrationConfirmation(fromA2, toA2)
   const n = T.migrationPersistDays
-  if (both >= n) return { verdict: 'MIGRATION', confirmation: confirmed ? 'CONFIRMED' : 'INFERRED', days: both }
+  if (both >= n) return { verdict: 'MIGRATION', confirmation, days: both, fromA2, toA2 }
   const onlyOut = run(i => out(i) && !inn(i))
-  if (onlyOut >= n) return { verdict: 'EBB', confirmation: 'INFERRED', days: onlyOut }
+  if (onlyOut >= n) return { verdict: 'EBB', confirmation: 'INFERRED', days: onlyOut, fromA2, toA2 }
   const onlyIn = run(i => inn(i) && !out(i))
-  if (onlyIn >= n) return { verdict: 'DIFFUSION', confirmation: 'INFERRED', days: onlyIn }
-  return { verdict: 'NONE', confirmation: 'INFERRED', days: 0 }
+  if (onlyIn >= n) return { verdict: 'DIFFUSION', confirmation: 'INFERRED', days: onlyIn, fromA2, toA2 }
+  return { verdict: 'NONE', confirmation: 'INFERRED', days: 0, fromA2, toA2 }
 }
 
 // ─────────────────────────── 核心股切换 ───────────────────────────

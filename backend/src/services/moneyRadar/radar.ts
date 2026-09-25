@@ -16,7 +16,7 @@ import { computeMetrics, rawSeries, rollingMean, quantile, type DayMetrics, type
 import { PROVIDER_CANDIDATES, ROUTING, anyRealProviderWired } from './providers'
 import {
   checkDivergence, classifyNationalTeam, nationalTeamFlow, checkMigration,
-  type DivergenceVerdict, type MigrationVerdict,
+  type DivergenceVerdict, type MigrationConfirmation, type MigrationVerdict,
 } from './signals'
 import { runStateMachine, STATE_TEXT, type MoneyState, type Pending } from './stateMachine'
 import { ENTRY_TEXT, type DataSet, type EntryNo, type MoneyObject } from './types'
@@ -48,7 +48,7 @@ export const REVIEW_ORDER: readonly ReviewClass[] = [
 export const REVIEW_TEXT: Record<ReviewClass, string> = {
   DIVERGENCE: '高位背离（四项全满足）',
   RETREAT: '资金撤离',
-  EXHAUST: '资金衰竭（放量滞涨）',
+  EXHAUST: '高成交·价格停滞（样本外不支持卖出含义）',
   DIVERGENCE_PENDING_A2: '背离待 A2 确认',
   NEW_TRANSITION: '近 5 日发生状态跃迁',
   WATCH: '常规观察',
@@ -100,14 +100,26 @@ export interface ObjectView {
   state: MoneyState | null
   stateText: string
   stateSince: string | null
+  /** 当前状态已持续的交易日数（含起始日） */
+  stateDays: number | null
+  /** 此前同一状态最长的一段持续天数（不含当前这一段）；从未进入过 = 0 */
+  stateLongestDays: number | null
   pending: Pending
+  /**
+   * 5 日成交额份额连续高于自身水位（250 日中位数）的交易日数。与状态无关：
+   * 一只股票可以已经连续 130 日高于水位，而状态是 2 周前才切换到"趋势"的。
+   */
   persist: number | null
+  /** 此前历史上最长的连续高于水位天数（不含当前这一段）。当前 > 此前最长 = 创纪录 */
   maxPersistBefore: number | null
-  /** 当前资金量：20 日日均成交额，亿元/日 */
+  /** 20 日平均成交额，亿元/日（成交额没有方向，不是资金流入） */
   level20Yi: number | null
-  /** 原有资金量：水位对应的日均成交额，亿元/日 */
+  /** 水位对应的 20 日平均成交额，亿元/日 */
   base20Yi: number | null
-  /** 近 20 日日均超额成交额（相对水位），亿元/日。正 = 资金在积累 */
+  /**
+   * 近 20 日平均每日超出水位的成交额，亿元/日。数学上等于 level20Yi − base20Yi，
+   * 三者都按原始精度计算，只在展示时各自取整，所以显示值之间可能差 0.1。
+   */
   excessDailyYi: number | null
   dev5: number | null
   dev20: number | null
@@ -197,6 +209,21 @@ function chartOf(ms: readonly DayMetrics[], ds: DataSet): ChartSeries {
 
 interface Built { view: ObjectView; states: MoneyState[]; metrics: DayMetrics[] }
 
+/** 在 t 之前、与 t 日同一状态的各段里最长的一段（交易日数）。不含当前这一段 */
+export function longestPriorSegment(days: readonly { state: MoneyState; since: number }[], t: number): number {
+  const cur = days[t]
+  if (!cur) return 0
+  let best = 0
+  let i = cur.since - 1
+  while (i >= 0) {
+    const seg = days[i]!
+    const len = i - seg.since + 1
+    if (seg.state === cur.state && len > best) best = len
+    i = seg.since - 1
+  }
+  return best
+}
+
 function viewOf(
   obj: MoneyObject & { entry: EntryNo }, ds: DataSet | null, names: Record<string, string>, withSeries: boolean,
 ): Built {
@@ -204,7 +231,7 @@ function viewOf(
   const basket = obj.kind === 'STOCK' ? basketOf(obj.codes[0]!) : null
   const empty: ObjectView = {
     id: obj.id, name: obj.name, kind: obj.kind, entry: obj.entry, standing, basket,
-    dataStatus: 'NOT_WIRED', state: null, stateText: '数据源未接入', stateSince: null, pending: null,
+    dataStatus: 'NOT_WIRED', state: null, stateText: '数据源未接入', stateSince: null, stateDays: null, stateLongestDays: null, pending: null,
     persist: null, maxPersistBefore: null, level20Yi: null, base20Yi: null, excessDailyYi: null,
     dev5: null, dev20: null, ret20: null,
     a2: { marginDelta10Yi: null, etfNet10Yi: null, instNet10Yi: null },
@@ -243,6 +270,8 @@ function viewOf(
       state: d.state,
       stateText: STATE_TEXT[d.state] + (d.pending ? '（待 A2 确认）' : ''),
       stateSince: ds.dates[d.since] ?? null,
+      stateDays: t - d.since + 1,
+      stateLongestDays: longestPriorSegment(days, t),
       pending: d.pending,
       persist: m.persist,
       maxPersistBefore: m.maxPersistBefore,
@@ -329,7 +358,11 @@ export interface MoneyCockpitView {
   dataMode: 'NOT_WIRED' | 'FIXTURE' | 'LIVE'
   entries: EntryView[]
   reviewQueue: { id: string; name: string; entry: EntryNo; reviewClass: ReviewClass; text: string }[]
-  migrations: { from: string; to: string; verdict: MigrationVerdict; confirmation: string; days: number }[]
+  /**
+   * 成交额份额迁移（不是净资金流向）。confirmation 是 A2 证据等级：CONFIRMED / CONFLICT / INFERRED；
+   * fromA2Yi / toA2Yi 是两端 A2 净方向（融资 10 日变化 + ETF 10 日净申赎，亿元），null = 该端无 A2 数据
+   */
+  migrations: { from: string; to: string; verdict: MigrationVerdict; confirmation: MigrationConfirmation; days: number; fromA2Yi: number | null; toA2Yi: number | null }[]
   entryShares: EntryShareSeries | null
   market: MarketPanel | null
   nationalTeam: NationalTeamPanel
@@ -443,7 +476,7 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
   if (ds && ds.dates.length) {
     const t = ds.dates.length - 1
 
-    // 主线迁移：从持仓 / 观察仓篮子出发；目标只认处于趋势或爆发、且日均超额资金排在前 10 的篮子或行业。
+    // 成交额份额迁移：从持仓 / 观察仓篮子出发；目标只认处于趋势或爆发、且日均超额资金排在前 10 的篮子或行业。
     // 进入"启动"的方向每天都有一批，全算作迁移目标会把"一出一进"稀释成噪音
     const sources = [...entries[0]!.objects, ...entries[1]!.objects].filter(v => v.kind === 'BASKET')
     const targets = all
@@ -458,7 +491,13 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
         const B = built[b.id]
         if (!A?.states.length || !B?.states.length) continue
         const r = checkMigration({ states: A.states, metrics: A.metrics }, { states: B.states, metrics: B.metrics }, t)
-        if (r.verdict === 'MIGRATION') found.push({ from: a.name, to: b.name, ...r, strength: b.excessDailyYi ?? 0 })
+        if (r.verdict === 'MIGRATION') {
+          found.push({
+            from: a.name, to: b.name, verdict: r.verdict, confirmation: r.confirmation, days: r.days,
+            fromA2Yi: r.fromA2 === null ? null : r.fromA2 / 1e8, toA2Yi: r.toA2 === null ? null : r.toA2 / 1e8,
+            strength: b.excessDailyYi ?? 0,
+          })
+        }
       }
       found.sort((x, y) => y.strength - x.strength)
       for (const f of found.slice(0, 3)) {
@@ -610,7 +649,7 @@ export function renderMoneyCockpit(v: MoneyCockpitView, entry3Limit = 15): strin
       const stand = o.standing ? `　${o.standing}` : ''
       const lvl = o.level20Yi === null ? '—' : `${o.level20Yi.toFixed(1)}`
       const bl = o.base20Yi === null ? '—' : `${o.base20Yi.toFixed(1)}`
-      L.push(`  ${o.name.padEnd(12)}${o.stateText.padEnd(12)}日均资金 ${lvl}/水位 ${bl} 亿`.padEnd(46)
+      L.push(`  ${o.name.padEnd(12)}${o.stateText.padEnd(12)}20日均成交额 ${lvl}/水位 ${bl} 亿`.padEnd(46)
         + `日均超额 ${yi(o.excessDailyYi).padEnd(11)}持续 ${o.persist ?? '—'}/${o.maxPersistBefore ?? '—'}　`
         + `5日偏离 ${pct(o.dev5)}　20日涨幅 ${pct(o.ret20)}${stand}`)
       if (o.divergence && o.divergence !== 'NONE') {
@@ -624,9 +663,9 @@ export function renderMoneyCockpit(v: MoneyCockpitView, entry3Limit = 15): strin
     L.push('')
   }
 
-  L.push('  ── 主线迁移（一出一进持续 N 日）──')
+  L.push('  ── 成交额份额迁移（一出一进持续 N 日；证据等级看两端 A2 净方向）──')
   if (!v.migrations.length) L.push('  无。')
-  for (const m of v.migrations) L.push(`  ${m.from} → ${m.to}　${m.verdict}　${m.confirmation}　持续 ${m.days} 日`)
+  for (const m of v.migrations) L.push(`  ${m.from} → ${m.to}　${m.verdict}　${m.confirmation}（出端 A2 ${yi(m.fromA2Yi)}，进端 A2 ${yi(m.toA2Yi)}）　持续 ${m.days} 日`)
   L.push('')
 
   L.push('  ── 国家队温度计（背景层）──')

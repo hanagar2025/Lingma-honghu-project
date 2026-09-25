@@ -98,7 +98,7 @@ export const LeadLagCard: React.FC<{ l: any }> = ({ l }) => {
         ))}
         {(l.eventDelay ?? []).map((e: any) => (
           <div key={`${e.rule}${e.horizon}`} className="mc-note">
-            · 冻结规则 {e.rule === 'TREND' ? '趋势' : '衰竭'} {e.horizon} 日：T 日收盘起算 {pct(e.meanT0, 2)} → T+1 收盘起算 {pct(e.meanT1, 2)}（{e.verdictT1.split('（')[0]}）
+            · 冻结规则 {e.rule === 'TREND' ? '趋势' : '高成交·价格停滞'} {e.horizon} 日：T 日收盘起算 {pct(e.meanT0, 2)} → T+1 收盘起算 {pct(e.meanT1, 2)}（{e.verdictT1.split('（')[0]}）
           </div>
         ))}
         {(l.slow ?? []).map((s: string, i: number) => <div key={i} className="mc-note">· 慢钱｜{s}</div>)}
