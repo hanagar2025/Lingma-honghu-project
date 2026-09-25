@@ -6,6 +6,7 @@ import {
   DashboardOutlined,
   ThunderboltOutlined,
   WalletOutlined,
+  FundOutlined,
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
@@ -32,6 +33,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       key: '/',
       icon: <DashboardOutlined />,
       label: '每日驾驶舱',
+    },
+    {
+      key: '/money',
+      icon: <FundOutlined />,
+      label: '资金驾驶舱',
     },
     {
       key: '/daily',

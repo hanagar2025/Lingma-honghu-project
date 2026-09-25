@@ -14,7 +14,8 @@
     "build:offline": "VITE_OFFLINE=1 vite build",
     "serve:offline": "VITE_OFFLINE=1 vite preview --port 4173",
     "serve:lan": "VITE_OFFLINE=1 vite preview --port 4173 --host",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "dev:money": "VITE_OFFLINE=1 vite --open /money"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",

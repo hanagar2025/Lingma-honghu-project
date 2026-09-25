@@ -220,19 +220,6 @@
       "usable": true,
       "note": "基于1017个有效PE样本，取数自2025-12-31(公告2026-04-23)"
     },
-    "688292": {
-      "code": "688292",
-      "name": "英维克",
-      "peTtm": null,
-      "percentile3y": null,
-      "percentileAll": null,
-      "windowDays": 750,
-      "validSamples": 772,
-      "latestNoticeDate": "2026-04-29",
-      "basedOn": "2025-12-31(公告2026-04-29)",
-      "usable": false,
-      "note": "TTM每股收益-0.02（亏损或为零）→ PE无意义，分位不可用"
-    },
     "688313": {
       "code": "688313",
       "name": "仕佳光子",
@@ -375,6 +362,19 @@
       "basedOn": "2025-12-31(公告2026-04-29)",
       "usable": true,
       "note": "基于1200个有效PE样本，取数自2025-12-31(公告2026-04-29)"
+    },
+    "002837": {
+      "code": "002837",
+      "name": "英维克",
+      "peTtm": 117.78846153846153,
+      "percentile3y": 0.6813333333333333,
+      "percentileAll": 0.795,
+      "windowDays": 750,
+      "validSamples": 1200,
+      "latestNoticeDate": "2026-08-25",
+      "basedOn": "2026-06-30(公告2026-08-25)",
+      "usable": true,
+      "note": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-25)"
     }
   },
   "failures": {}

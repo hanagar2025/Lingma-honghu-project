@@ -115,7 +115,7 @@ export const MAINLINES: Mainline[] = [
       { code: '002028', name: '思源电气', tier: 1, node: '电网设备', evidence: 'A', note: '60日波动率62.7%、PE 39x、7/17–7/31逆势+6.4%，全样本唯一低波低估低相关位置' },
       { code: '002851', name: '麦格米特', tier: 2, node: 'AI服务器电源', evidence: 'B', note: 'PE 480x' },
       { code: '300870', name: '欧陆通', tier: 2, node: 'AI服务器电源', evidence: 'B', note: 'PE 182x' },
-      { code: '688292', name: '英维克', tier: 3, node: '液冷', evidence: 'B', note: 'PE 148x' },
+      { code: '002837', name: '英维克', tier: 3, node: '液冷', evidence: 'B', note: 'PE 148x' },
     ],
   },
 ]

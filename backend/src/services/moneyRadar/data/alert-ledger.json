@@ -1,0 +1,68 @@
+{
+ "startedOn": "2026-09-24",
+ "rulesHash": "9333dfac2090",
+ "events": [
+  {
+   "date": "2026-09-24",
+   "key": "basket:semi|RISK_MIGRATION|industry:016016",
+   "objectId": "basket:semi",
+   "type": "RISK_MIGRATION",
+   "event": "RESOLVED",
+   "level": 3,
+   "name": "半导体国产替代（主线篮子）"
+  },
+  {
+   "date": "2026-09-24",
+   "key": "industry:016044|OPP_NEW_DIRECTION",
+   "objectId": "industry:016044",
+   "type": "OPP_NEW_DIRECTION",
+   "event": "NEW",
+   "level": 2,
+   "name": "玻璃玻纤"
+  },
+  {
+   "date": "2026-09-24",
+   "key": "industry:016067|OPP_NEW_DIRECTION",
+   "objectId": "industry:016067",
+   "type": "OPP_NEW_DIRECTION",
+   "event": "NEW",
+   "level": 2,
+   "name": "非金属材料Ⅱ"
+  },
+  {
+   "date": "2026-09-24",
+   "key": "stock:002851|OPP_ACCUM",
+   "objectId": "stock:002851",
+   "type": "OPP_ACCUM",
+   "event": "NEW",
+   "level": 1,
+   "name": "麦格米特"
+  }
+ ],
+ "sourceFailures": {
+  "MARKET_AMOUNT": {
+   "lastDate": "2026-09-24",
+   "consecutive": 0
+  },
+  "SW_INDUSTRY": {
+   "lastDate": "2026-09-24",
+   "consecutive": 0
+  },
+  "STOCK_AMOUNT": {
+   "lastDate": "2026-09-24",
+   "consecutive": 0
+  },
+  "MARGIN": {
+   "lastDate": "2026-09-24",
+   "consecutive": 0
+  },
+  "TOP_INST": {
+   "lastDate": "2026-09-24",
+   "consecutive": 0
+  },
+  "ETF_SHARE": {
+   "lastDate": "2026-09-24",
+   "consecutive": 0
+  }
+ }
+}
