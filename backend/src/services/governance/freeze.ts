@@ -25,18 +25,29 @@ export function loadBaseline(file = BASELINE_FILE): FreezeBaseline | null {
   }
 }
 
+/**
+ * 重新生成基线。
+ *
+ * 冻结起始日默认沿用上一版：修 Bug、补数据属于冻结期允许的事，不应让 30 个交易日重新计时。
+ * 只有显式给出 FROZEN_AT 才会改起始日。
+ * 授权说明必须经 BASELINE_NOTE 给出 —— 没有说明的基线更新就是"偷偷漂移"。
+ */
 function writeBaseline(file = BASELINE_FILE): FreezeBaseline {
+  const note = process.env.BASELINE_NOTE?.trim()
+  if (!note) {
+    throw new Error('重新生成基线须以 BASELINE_NOTE 写明授权来源与变更内容')
+  }
+  const prev = loadBaseline(file)
   const f = fingerprint()
   const b: FreezeBaseline = {
-    frozenAt: process.env.FROZEN_AT ?? new Date().toISOString().slice(0, 10),
-    tradingDays: Number(process.env.TRADING_DAYS ?? 30),
+    frozenAt: process.env.FROZEN_AT ?? prev?.frozenAt ?? new Date().toISOString().slice(0, 10),
+    tradingDays: Number(process.env.TRADING_DAYS ?? prev?.tradingDays ?? 30),
     hash: f.hash,
     entryCount: f.entryCount,
     byDomain: f.byDomain,
     tierCounts: f.tierCounts,
-    note:
-      '委员会 2026-08-13 决议：冻结 30 个交易日，期间不新增决策规则，只修 Bug、补数据、记录结果。' +
-      '本文件即该承诺的可验证凭据。重新生成基线须在提交信息中写明授权来源。',
+    note,
+    ...(prev && prev.hash !== f.hash ? { supersedes: { hash: prev.hash, note: prev.note } } : {}),
   }
   writeFileSync(file, `${JSON.stringify(b, null, 2)}\n`, 'utf-8')
   return b

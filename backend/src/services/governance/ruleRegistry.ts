@@ -371,6 +371,8 @@ export interface FreezeBaseline {
   byDomain: Record<string, string>
   tierCounts: Record<string, number>
   note: string
+  /** 被本基线取代的上一版。只记最近一版，完整历史在 git 里 */
+  supersedes?: { hash: string; note: string }
 }
 
 export interface DriftResult {

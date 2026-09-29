@@ -488,9 +488,9 @@ ok('里程碑是 Decision Validation Phase',
 ok('规则 / 指标 / 生命线 / 页面架构 / 决策语义全部冻结',
   RULES_FROZEN && INDICATORS_FROZEN && LIFELINE_FROZEN
   && PAGE_ARCHITECTURE_FROZEN && SEMANTICS_FROZEN)
-ok('冻结指纹仍是 a401aaf3271e', FROZEN_RULE_FINGERPRINT === 'a401aaf3271e')
+ok('冻结指纹是 88ab0757a76c（2026-09-23 仅纠正英维克代码）', FROZEN_RULE_FINGERPRINT === '88ab0757a76c')
 ok('冻结基线完整，V5 不定义',
-  FREEZE_BASELINE.fingerprint === 'a401aaf3271e'
+  FREEZE_BASELINE.fingerprint === '88ab0757a76c'
   && FREEZE_BASELINE.v5 === null
   && V5_UNDEFINED === true)
 ok('不追求每天正确，追求每天可审计',

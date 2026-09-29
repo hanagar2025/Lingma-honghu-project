@@ -58,6 +58,8 @@ intervals = []
 for weekday in range(1, 6):
     intervals.append({"Weekday": weekday, "Hour": 9, "Minute": 20})
     intervals.append({"Weekday": weekday, "Hour": 15, "Minute": 10})
+    # 资金驾驶舱：科创板盘后固定价格交易到 15:30，16:35 当日成交额才齐全
+    intervals.append({"Weekday": weekday, "Hour": 16, "Minute": 35})
 payload = {
     "Label": label,
     "WorkingDirectory": root,

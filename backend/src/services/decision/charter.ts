@@ -43,7 +43,8 @@ export const INDICATORS_FROZEN = true
 export const LIFELINE_FROZEN = true
 export const PAGE_ARCHITECTURE_FROZEN = true
 export const SEMANTICS_FROZEN = true
-export const FROZEN_RULE_FINGERPRINT = 'a401aaf3271e'
+/** 2026-09-23 由 a401aaf3271e 更新：仅纠正股票池中英维克的代码（UNIVERSE 域），决策规则未变 */
+export const FROZEN_RULE_FINGERPRINT = '88ab0757a76c'
 export const V5_UNDEFINED = true
 
 export const FREEZE_BASELINE = {

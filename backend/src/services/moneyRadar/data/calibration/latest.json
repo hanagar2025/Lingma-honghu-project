@@ -1,0 +1,304 @@
+{
+  "id": "R-01-calibration",
+  "runOn": "2026-09-23",
+  "dataThrough": "2026-09-23",
+  "thresholdsHash": "0798bc2aa327",
+  "thresholdsRegisteredOn": "2026-09-23",
+  "criteria": {
+    "registeredOn": "2026-09-23",
+    "minMedianStateDays": 10,
+    "maxTransitionsPer20": 1,
+    "activeShareRange": [
+      0.15,
+      0.6
+    ],
+    "maxExhaustShare": 0.2,
+    "maxDivergenceRate": 0.01,
+    "maxFailedStartShare": 0.7
+  },
+  "hypotheses": {
+    "START": {
+      "sign": 1,
+      "text": "资金开始集中 → 之后跑赢"
+    },
+    "TREND": {
+      "sign": 1,
+      "text": "资金趋势成立 → 之后跑赢"
+    },
+    "BURST": {
+      "sign": -1,
+      "text": "资金爆发（拥挤）→ 之后跑输"
+    },
+    "EXHAUST": {
+      "sign": -1,
+      "text": "放量滞涨 → 之后跑输"
+    },
+    "RETREAT": {
+      "sign": -1,
+      "text": "资金撤离 → 之后跑输"
+    },
+    "FAILED_START": {
+      "sign": -1,
+      "text": "启动失败 → 之后跑输"
+    },
+    "DIVERGENCE": {
+      "sign": -1,
+      "text": "高位背离 → 之后跑输"
+    }
+  },
+  "split": {
+    "inSample": [
+      "2024-07-22",
+      "2025-08-21"
+    ],
+    "outOfSample": [
+      "2025-08-22",
+      "2026-09-23"
+    ]
+  },
+  "objects": {
+    "total": 145,
+    "industries": 126,
+    "baskets": 4,
+    "stocks": 15
+  },
+  "hygiene": [
+    {
+      "id": "H1",
+      "text": "已结束状态段停留天数中位数 ≥ 10",
+      "value": 11,
+      "pass": true
+    },
+    {
+      "id": "H2",
+      "text": "每对象每 20 日跃迁次数 ≤ 1",
+      "value": 0.7937540663630449,
+      "pass": true
+    },
+    {
+      "id": "H3",
+      "text": "非潜伏对象占比中位数在 15%–60%",
+      "value": 0.4896551724137931,
+      "pass": true
+    },
+    {
+      "id": "H4",
+      "text": "衰竭对象占比中位数 ≤ 20%",
+      "value": 0.0896551724137931,
+      "pass": true
+    },
+    {
+      "id": "H5",
+      "text": "背离新触发率 ≤ 1%",
+      "value": 0.00023422251138581653,
+      "pass": true
+    },
+    {
+      "id": "H6",
+      "text": "启动失败比例 ≤ 70%",
+      "value": 0.29705882352941176,
+      "pass": true
+    }
+  ],
+  "hygienePassed": true,
+  "decision": "CONFIRMED_NO_CHANGE",
+  "outOfSample": [
+    {
+      "rule": "START",
+      "hypothesis": "资金开始集中 → 之后跑赢",
+      "horizon": 20,
+      "n": 205,
+      "days": 129,
+      "mean": 0.007851746188286334,
+      "hitRate": 0.44390243902439025,
+      "ci": [
+        -0.005364032431414232,
+        0.02229697476797936
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "START",
+      "hypothesis": "资金开始集中 → 之后跑赢",
+      "horizon": 60,
+      "n": 172,
+      "days": 110,
+      "mean": 0.011451145838314265,
+      "hitRate": 0.42441860465116277,
+      "ci": [
+        -0.016522958442386035,
+        0.041851189407746875
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "TREND",
+      "hypothesis": "资金趋势成立 → 之后跑赢",
+      "horizon": 20,
+      "n": 357,
+      "days": 167,
+      "mean": 0.01707778698460634,
+      "hitRate": 0.49299719887955185,
+      "ci": [
+        0.0021197679447151354,
+        0.033484011297331015
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "rule": "TREND",
+      "hypothesis": "资金趋势成立 → 之后跑赢",
+      "horizon": 60,
+      "n": 323,
+      "days": 153,
+      "mean": 0.04706986450920051,
+      "hitRate": 0.5232198142414861,
+      "ci": [
+        0.020172197879675256,
+        0.07413256155645724
+      ],
+      "verdict": "SUPPORTS"
+    },
+    {
+      "rule": "BURST",
+      "hypothesis": "资金爆发（拥挤）→ 之后跑输",
+      "horizon": 20,
+      "n": 126,
+      "days": 79,
+      "mean": 0.025473129810889082,
+      "hitRate": 0.5238095238095238,
+      "ci": [
+        -0.007984410504230944,
+        0.059447031524883884
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "BURST",
+      "hypothesis": "资金爆发（拥挤）→ 之后跑输",
+      "horizon": 60,
+      "n": 122,
+      "days": 76,
+      "mean": 0.027947358581041824,
+      "hitRate": 0.5245901639344263,
+      "ci": [
+        -0.014329504171350694,
+        0.07643062985620602
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "EXHAUST",
+      "hypothesis": "放量滞涨 → 之后跑输",
+      "horizon": 20,
+      "n": 245,
+      "days": 113,
+      "mean": 0.015410253814796554,
+      "hitRate": 0.5469387755102041,
+      "ci": [
+        -0.006895423490650006,
+        0.03774007940157294
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "EXHAUST",
+      "hypothesis": "放量滞涨 → 之后跑输",
+      "horizon": 60,
+      "n": 200,
+      "days": 100,
+      "mean": 0.08798074643346279,
+      "hitRate": 0.41,
+      "ci": [
+        0.0543472816683005,
+        0.12370611435836272
+      ],
+      "verdict": "CONTRADICTS"
+    },
+    {
+      "rule": "RETREAT",
+      "hypothesis": "资金撤离 → 之后跑输",
+      "horizon": 20,
+      "n": 79,
+      "days": 63,
+      "mean": 0.008107636737607862,
+      "hitRate": 0.45569620253164556,
+      "ci": [
+        -0.012362229021458749,
+        0.02934062035877515
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "RETREAT",
+      "hypothesis": "资金撤离 → 之后跑输",
+      "horizon": 60,
+      "n": 68,
+      "days": 55,
+      "mean": 0.006511355575492893,
+      "hitRate": 0.5147058823529411,
+      "ci": [
+        -0.03430657382824855,
+        0.049805666180957886
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "FAILED_START",
+      "hypothesis": "启动失败 → 之后跑输",
+      "horizon": 20,
+      "n": 56,
+      "days": 46,
+      "mean": -0.00047646684183196404,
+      "hitRate": 0.5178571428571429,
+      "ci": [
+        -0.016920763319711367,
+        0.017286553790705345
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "FAILED_START",
+      "hypothesis": "启动失败 → 之后跑输",
+      "horizon": 60,
+      "n": 51,
+      "days": 42,
+      "mean": -0.01731976020050617,
+      "hitRate": 0.6666666666666666,
+      "ci": [
+        -0.05386234432603485,
+        0.021184611610596822
+      ],
+      "verdict": "NO_EFFECT"
+    },
+    {
+      "rule": "DIVERGENCE",
+      "hypothesis": "高位背离 → 之后跑输",
+      "horizon": 20,
+      "n": 7,
+      "days": 7,
+      "mean": 0.03583567209035386,
+      "hitRate": 0.42857142857142855,
+      "ci": [
+        -0.016486563018300204,
+        0.10873796207047556
+      ],
+      "verdict": "INSUFFICIENT_SAMPLE"
+    },
+    {
+      "rule": "DIVERGENCE",
+      "hypothesis": "高位背离 → 之后跑输",
+      "horizon": 60,
+      "n": 6,
+      "days": 6,
+      "mean": -0.03385654817388162,
+      "hitRate": 0.5,
+      "ci": [
+        -0.12037957744032508,
+        0.04635778734502183
+      ],
+      "verdict": "INSUFFICIENT_SAMPLE"
+    }
+  ],
+  "note": "样本外结果只作为证据登记。任何规则要进入法定理由，须由委员会裁定并有意变更规则指纹。"
+}

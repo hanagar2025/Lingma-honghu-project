@@ -1,0 +1,102 @@
+{
+ "startedOn": "2026-09-23",
+ "thresholdsHash": "0798bc2aa327",
+ "events": [
+  {
+   "key": "2026-09-23|industry:016045|TREND",
+   "date": "2026-09-23",
+   "rule": "TREND",
+   "objectId": "industry:016045",
+   "name": "装修装饰Ⅱ",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "EXHAUST→TREND：价格重新推进，份额仍高于 75% 分位",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-23|industry:016063|TREND",
+   "date": "2026-09-23",
+   "rule": "TREND",
+   "objectId": "industry:016063",
+   "name": "汽车服务",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "START→TREND：20 日份额高于 75% 分位，持续 21 日，A2 同向流入",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-23|industry:016086|BURST",
+   "date": "2026-09-23",
+   "rule": "BURST",
+   "objectId": "industry:016086",
+   "name": "房地产服务",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "TREND→BURST：5 日份额高于 95% 分位，20 日涨幅处于自身 90% 分位以上",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-23|industry:016106|BURST",
+   "date": "2026-09-23",
+   "rule": "BURST",
+   "objectId": "industry:016106",
+   "name": "出版",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "TREND→BURST：5 日份额高于 95% 分位，20 日涨幅处于自身 90% 分位以上",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-23|industry:016156|START",
+   "date": "2026-09-23",
+   "rule": "START",
+   "objectId": "industry:016156",
+   "name": "互联网电商",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "LATENT→START：5 日份额连续 3 日高于 75% 分位，且高于 20 日份额",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-23|stock:002851|EXHAUST",
+   "date": "2026-09-23",
+   "rule": "EXHAUST",
+   "objectId": "stock:002851",
+   "name": "麦格米特",
+   "entry": 2,
+   "kind": "STOCK",
+   "state": "TREND→EXHAUST：10 日份额仍高于 75% 分位，但 10 日价格不涨，连续 3 日",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-23|stock:600183|EXHAUST",
+   "date": "2026-09-23",
+   "rule": "EXHAUST",
+   "objectId": "stock:600183",
+   "name": "生益科技",
+   "entry": 2,
+   "kind": "STOCK",
+   "state": "TREND→EXHAUST：10 日份额仍高于 75% 分位，但 10 日价格不涨，连续 3 日",
+   "h20": null,
+   "h60": null
+  },
+  {
+   "key": "2026-09-24|industry:016016|EXHAUST",
+   "date": "2026-09-24",
+   "rule": "EXHAUST",
+   "objectId": "industry:016016",
+   "name": "航运港口",
+   "entry": 3,
+   "kind": "INDUSTRY",
+   "state": "TREND→EXHAUST：10 日份额仍高于 75% 分位，但 10 日价格不涨，连续 3 日",
+   "h20": null,
+   "h60": null
+  }
+ ]
+}
