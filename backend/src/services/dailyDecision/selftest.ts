@@ -5,7 +5,7 @@
  *   ③ 执行单不新增判定 —— 只排序驾驶舱动作与委员会已登记的指令；
  *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失。
  */
-import { buildCard, buildFailureCard } from './card'
+import { buildCard, buildFailureCard, SYSTEM_NAME } from './card'
 import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { CommitteeOrder } from './orders'
@@ -71,6 +71,7 @@ process.stdout.write('\n【核对通过：顺序与股数】\n')
   const v = verifyInput(input, sinaFor(input), 'POST_CLOSE')
   const card = buildCard(input, v, 'POST_CLOSE', { orders: ORDERS })
   ok(v.ok && card.ok, '两源一致 → 出执行单')
+  ok(card.title.startsWith(`${SYSTEM_NAME} `) && !card.title.includes('鸿鹄执行单'), '推送标题以系统名开头')
   ok(card.lines.map(l => l.code).join(',') === '688008,603986,688041', 'C 级清退在前、单票归位在后')
   ok(card.lines.filter(l => l.code === '688008').length === 1, '委员会已清仓的股票不再重复出单票归位指令')
   ok(card.lines[0]!.shares === 1300 && card.lines[0]!.all, 'C 级清退 = 账本全部股数')

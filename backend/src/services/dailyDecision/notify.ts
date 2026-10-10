@@ -7,6 +7,8 @@
  *   BARK_URL            Bark（iPhone），形如 https://api.day.app/<key>
  */
 
+import { SYSTEM_NAME } from './card'
+
 export interface PushResult { channel: string; ok: boolean; detail: string }
 
 type Env = Record<string, string | undefined>
@@ -66,7 +68,7 @@ export async function pushAll(title: string, markdown: string, env: Env = proces
   if (env.BARK_URL) {
     jobs.push({
       channel: 'Bark',
-      run: () => post(env.BARK_URL!.replace(/\/+$/, ''), { title, body: markdown.replace(/^#+\s*/gm, ''), group: '鸿鹄执行单' }),
+      run: () => post(env.BARK_URL!.replace(/\/+$/, ''), { title, body: markdown.replace(/^#+\s*/gm, ''), group: SYSTEM_NAME }),
       okWhen: r => r.status === 200,
     })
   }

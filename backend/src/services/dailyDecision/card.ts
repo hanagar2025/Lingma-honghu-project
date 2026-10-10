@@ -9,6 +9,9 @@ import { LIMITS } from '../cockpit/safety'
 import { COMMITTEE_ORDERS, type CommitteeOrder } from './orders'
 import type { DecisionInput, DecisionSession, Verification } from './types'
 
+/** 推送标题的前缀。资金哨兵看市场资金往哪走；本系统只管自己的账户按规则该做什么 */
+export const SYSTEM_NAME = '纪律执行官'
+
 export interface ExecLine {
   code: string
   name: string
@@ -114,7 +117,7 @@ export function buildCard(
   const body: string[] = []
 
   if (!ok) {
-    const title = `⛔ 鸿鹄执行单 ${label}：数据未通过核对，不下单`
+    const title = `⛔ ${SYSTEM_NAME} ${label}：数据未通过核对，不下单`
     head.push(`# ${title}`, '')
     body.push('## 今日动作', '', '不下单。数据核对恢复后重新出单。', '', '## 未通过的项目', '')
     problems.forEach(p => body.push(`- ${p}`))
@@ -126,8 +129,8 @@ export function buildCard(
 
   const lines = [...committee, ...limits.lines]
   const title = lines.length
-    ? `鸿鹄执行单 ${label}：卖出 ${lines.length} 笔，不买入`
-    : `鸿鹄执行单 ${label}：不交易`
+    ? `${SYSTEM_NAME} ${label}：卖出 ${lines.length} 笔，不买入`
+    : `${SYSTEM_NAME} ${label}：不交易`
   head.push(`# ${title}`, '')
   head.push(`执行时点：${when}`)
   head.push(`数据核对：✅ ${checked}/${v.checks.length} 只持仓收盘价两源一致（腾讯/新浪），账本 ${input.ledgerAsOf ?? '无日期'}`)
@@ -172,7 +175,7 @@ export function buildCard(
 
 /** 驾驶舱本身没跑完、拿不到决策输入时的执行单 */
 export function buildFailureCard(today: string, reason: string, url?: string): DecisionCard {
-  const title = `⛔ 鸿鹄执行单 ${md(today)}：数据采集失败，不下单`
+  const title = `⛔ ${SYSTEM_NAME} ${md(today)}：数据采集失败，不下单`
   const lines = [`# ${title}`, '', '## 今日动作', '', '不下单。采集恢复后重新出单。', '', '## 原因', '', `- ${reason}`]
   if (url) lines.push('', `执行单与完整驾驶舱：${url}`)
   const text = lines.join('\n')
