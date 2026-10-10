@@ -30,7 +30,7 @@ async function get(url: string, headers: Record<string, string>): Promise<ArrayB
       return await res.arrayBuffer()
     } catch (e) {
       last = e
-      await new Promise(r => setTimeout(r, 600 * 2 ** i))
+      await new Promise(r => setTimeout(r, 600 * Math.pow(2, i)))
     } finally {
       clearTimeout(timer)
     }

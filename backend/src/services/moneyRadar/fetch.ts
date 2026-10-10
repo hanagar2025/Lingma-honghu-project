@@ -54,7 +54,7 @@ async function httpText(url: string, headers: Record<string, string> = {}, retri
       return await res.text()
     } catch (e) {
       last = e
-      await sleep(500 * 2 ** i)
+      await sleep(500 * Math.pow(2, i))
     } finally {
       clearTimeout(timer)
     }
@@ -77,7 +77,7 @@ async function httpBuffer(url: string, headers: Record<string, string> = {}, ret
       return await res.arrayBuffer()
     } catch (e) {
       last = e
-      await sleep(500 * 2 ** i)
+      await sleep(500 * Math.pow(2, i))
     } finally {
       clearTimeout(timer)
     }

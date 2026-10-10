@@ -59,6 +59,8 @@ import { buildLookoutView, renderLookout, type LookoutView } from './lookout'
 import { renderDashboardHtml } from './renderHtml'
 import { buildObsidianVault, formatObsidianResult, resolveFreshness, resolveObsidianRoot, writeObsidianVault } from './renderObsidian'
 import { accountFreshness } from './accountFreshness'
+import { computeCircuit } from './safety'
+import type { DecisionInput } from '../dailyDecision/types'
 import { agentShareFile, buildWebSnapshot, saveAgentShare, saveWebSnapshot, webSnapshotFile } from './webSnapshot'
 import {
   snapshotOf, diffSnapshots, saveSnapshot, loadPrevSnapshot,
@@ -245,6 +247,29 @@ async function main(): Promise<void> {
     householdAnnualExpense: pf.householdAnnualExpense ?? undefined,
     marketAllows,
   })
+
+  if (process.env.DECISION_JSON) {
+    const holdings = pf.positions.map(p => {
+      const last = barsByCode[p.code]?.slice(-1)[0]
+      return { code: p.code, name: p.name, quantity: p.quantity, close: last?.close ?? null, barDate: last?.date ?? null }
+    })
+    const decisionInput: DecisionInput = {
+      date,
+      ledgerAsOf: pf.asOf ?? null,
+      account: { stale: account.stale, staleDays: account.staleDays, gaps: account.gaps },
+      snapshot,
+      circuit: computeCircuit(snapshot),
+      holdings,
+      priceFailed: failed,
+      actions: rep.actions.filter(a => a.kind === 'REDUCE' || a.kind === 'BUY'),
+      noNewEntry: rep.noNewEntry,
+      dataGaps: rep.dataGaps,
+    }
+    mkdirSync(dirname(process.env.DECISION_JSON), { recursive: true })
+    writeFileSync(process.env.DECISION_JSON, `${JSON.stringify(decisionInput, null, 2)}\n`, 'utf-8')
+    process.stdout.write(`决策输入已写出：${process.env.DECISION_JSON}\n`)
+    if (process.env.DECISION_ONLY === '1') return
+  }
 
   // ── 五层驾驶舱 ──
   // DASHBOARD=0 可退回六问旧版；SESSION=pre 出盘前简报。
