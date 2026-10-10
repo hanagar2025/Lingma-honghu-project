@@ -1,0 +1,81 @@
+name: Daily decision
+
+# 每个交易日两次，自动出执行单并推送到手机与电脑：
+#   北京 08:30 盘前（按上一交易日收盘核对）  → cron 30 0 * * 1-5（UTC）
+#   北京 15:40 收盘后（按当日收盘核对，供下一交易日开盘） → cron 40 7 * * 1-5
+# GitHub 定时任务常晚到 5–30 分钟，故盘前排在 08:30 而不是贴着开盘。
+# 定时任务只读默认分支上的本文件；执行单代码与持仓账本在 DECISION_BRANCH 上。
+on:
+  schedule:
+    - cron: '30 0 * * 1-5'
+    - cron: '40 7 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      session:
+        description: 'pre = 盘前，post = 收盘后'
+        required: true
+        default: post
+        type: choice
+        options: [pre, post]
+      force:
+        description: '周末/休市日也出单（测试推送用）'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-decision
+  cancel-in-progress: false
+
+jobs:
+  decision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DECISION_BRANCH: ${{ vars.DECISION_BRANCH || 'cursor/account-snapshot-1009-c819' }}
+      DECISION_SESSION: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 0 * * 1-5' && 'pre' || 'post') || inputs.session }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DECISION_BRANCH }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
+      - name: Install (workspaces)
+        run: |
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
+          npm install --workspaces --include-workspace-root --legacy-peer-deps
+      - name: Build and push decision card
+        id: card
+        env:
+          FORCE: ${{ inputs.force && '1' || '0' }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          BARK_URL: ${{ secrets.BARK_URL }}
+        run: npm -w backend run decision:daily
+      - name: Commit card
+        if: always()
+        run: |
+          set -euo pipefail
+          git config user.name 'hh-decision-bot'
+          git config user.email 'hh-decision-bot@users.noreply.github.com'
+          git add share/decision
+          if git diff --cached --quiet; then
+            echo '执行单无变化'
+            exit 0
+          fi
+          git commit -m "执行单 $(TZ=Asia/Shanghai date +%F) ${DECISION_SESSION:-}"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "${DECISION_BRANCH}" && git push origin "HEAD:${DECISION_BRANCH}" && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
