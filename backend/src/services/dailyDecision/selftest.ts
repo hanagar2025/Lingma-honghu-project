@@ -6,6 +6,7 @@
  *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失。
  */
 import { buildCard, buildFailureCard } from './card'
+import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { CommitteeOrder } from './orders'
 import type { DecisionInput } from './types'
@@ -172,6 +173,21 @@ process.stdout.write('\n【解析与推送】\n')
   ok(configuredChannels({}).length === 0, '未配置通道 → 无推送目标')
   const fc = buildFailureCard('2026-10-12', '驾驶舱运行失败')
   ok(!fc.ok && fc.title.includes('不下单'), '采集失败也出一张「不下单」')
+}
+
+process.stdout.write('\n【执行单网页】\n')
+{
+  const input = baseInput()
+  const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  const page = renderCardPage(card.markdown, { ok: card.ok, title: card.title, generatedAt: '2026-10-09 15:45', cockpitHref: 'cockpit.html' })
+  const firstItem = page.indexOf('<ol>')
+  ok(firstItem > 0 && firstItem < page.indexOf('核对明细'), '第一屏是执行清单，核对明细在后')
+  ok(page.includes('<li>卖出 澜起科技 688008') && page.includes('<table>'), '编号清单与核对表都渲染成 HTML')
+  ok(page.includes('href="cockpit.html"'), '完整驾驶舱在第二页')
+  ok(!/(src|href)="https?:\/\//.test(page.replace(/<a href="https?:[^"]*">/g, '')), '页面不加载任何外部资源')
+  ok(markdownToHtml('- a<b>').includes('a&lt;b&gt;'), '正文转义 HTML')
+  const bad = buildCard(input, verifyInput(input, null, 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(renderCardPage(bad.markdown, { ok: bad.ok, title: bad.title, generatedAt: '' }).includes('#cf222e'), '不下单时页面顶部标红')
 }
 
 void (async () => {

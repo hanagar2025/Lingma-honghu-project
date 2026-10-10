@@ -174,7 +174,7 @@ export function buildCard(
 export function buildFailureCard(today: string, reason: string, url?: string): DecisionCard {
   const title = `⛔ 鸿鹄执行单 ${md(today)}：数据采集失败，不下单`
   const lines = [`# ${title}`, '', '## 今日动作', '', '不下单。采集恢复后重新出单。', '', '## 原因', '', `- ${reason}`]
-  if (url) lines.push('', `上一份执行单：${url}`)
+  if (url) lines.push('', `执行单与完整驾驶舱：${url}`)
   const text = lines.join('\n')
   return { ok: false, title, push: text, markdown: `${text}\n`, lines: [] }
 }
@@ -182,7 +182,7 @@ export function buildFailureCard(today: string, reason: string, url?: string): D
 function finish(
   title: string, head: string[], body: string[], v: Verification, url: string | undefined, ok: boolean, lines: ExecLine[],
 ): DecisionCard {
-  const tail = url ? ['', `全文与核对明细：${url}`] : []
+  const tail = url ? ['', `执行单全文、核对明细与完整驾驶舱：${url}`] : []
   const push = [...head, ...body, ...tail].join('\n')
   const detail = ['', '---', '', '## 核对明细', '', '| 持仓 | 腾讯 | 新浪 | 结果 |', '|---|---|---|---|']
   for (const c of v.checks) {

@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beijingToday } from '../cockpit/renderObsidian'
 import { buildCard, buildFailureCard, type DecisionCard } from './card'
+import { renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { DecisionInput, DecisionSession } from './types'
 import { fetchSinaRaw, MARKET_INDEX, sinaSymbol, verifyInput, type SinaRaw } from './verify'
@@ -59,7 +60,13 @@ async function publish(card: DecisionCard, today: string, session: DecisionSessi
   const tag = session === 'PRE_OPEN' ? 'pre' : 'post'
   writeFileSync(join(DECISION_DIR, `${today}-${tag}.md`), card.markdown, 'utf-8')
   writeFileSync(join(DECISION_DIR, 'latest.md'), card.markdown, 'utf-8')
-  process.stdout.write(`\n${card.push}\n\n已写出 share/decision/${today}-${tag}.md 与 latest.md\n`)
+  const generatedAt = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 16).replace('T', ' ')
+  writeFileSync(
+    join(DECISION_DIR, 'latest.html'),
+    renderCardPage(card.markdown, { ok: card.ok, title: card.title, generatedAt, cockpitHref: 'cockpit.html' }),
+    'utf-8',
+  )
+  process.stdout.write(`\n${card.push}\n\n已写出 share/decision/${today}-${tag}.md、latest.md、latest.html\n`)
 
   if (process.env.NO_PUSH === '1') return
   if (!configuredChannels().length) {
