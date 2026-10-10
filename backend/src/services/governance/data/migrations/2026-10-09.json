@@ -10,17 +10,19 @@
       "ownership": "STRATEGIC_CORE",
       "evidenceTone": "STABLE",
       "newFamilies": [],
-      "independenceWhy": "当日没有新的独立证据族。维持是主动决策。系统有能力加仓，但证据没有达到资本迁移标准。不是系统无能。",
+      "independenceWhy": "当日没有新的独立证据族。动作来自组合硬约束，不是证据变化，更不是涨跌。",
       "unknowns": [
         "目标主线利润核验",
         "未来盈利证据",
         "现金流与利润质量",
         "市场预期与可证明增长"
       ],
-      "risks": [],
-      "exposurePct": 0.11580014150451391,
-      "exposure": "正常",
-      "action": "HOLD_CAPITAL",
+      "risks": [
+        "R1_PORTFOLIO"
+      ],
+      "exposurePct": 0.20030386568016645,
+      "exposure": "超限",
+      "action": "REDUCE_EXPOSURE",
       "triggerFamilies": [
         "MAINLINE",
         "COMPANY",
@@ -36,7 +38,7 @@
         "现金流与利润质量 UNKNOWN",
         "市场预期与可证明增长 UNKNOWN"
       ],
-      "why": "拥有资格成立，但资本向上迁移依据不足。维持是主动决策：系统有能力加仓，但证据没有达到资本迁移标准。不是因为涨了。",
+      "why": "组合超限，不是公司价值恶化。",
       "r4": "UNKNOWN",
       "legalMove": null,
       "legalQuestion": null,
@@ -55,17 +57,19 @@
       "ownership": "STRATEGIC_CORE",
       "evidenceTone": "STRENGTHENING",
       "newFamilies": [],
-      "independenceWhy": "当日没有新的独立证据族。维持是主动决策。系统有能力加仓，但证据没有达到资本迁移标准。不是系统无能。",
+      "independenceWhy": "当日没有新的独立证据族。动作来自组合硬约束，不是证据变化，更不是涨跌。",
       "unknowns": [
         "目标主线利润核验",
         "未来盈利证据",
         "现金流与利润质量",
         "市场预期与可证明增长"
       ],
-      "risks": [],
-      "exposurePct": 0.09812325702303522,
-      "exposure": "正常",
-      "action": "HOLD_CAPITAL",
+      "risks": [
+        "R1_PORTFOLIO"
+      ],
+      "exposurePct": 0.16972749289841202,
+      "exposure": "超限",
+      "action": "REDUCE_EXPOSURE",
       "triggerFamilies": [
         "MAINLINE",
         "COMPANY",
@@ -81,7 +85,7 @@
         "现金流与利润质量 UNKNOWN",
         "市场预期与可证明增长 UNKNOWN"
       ],
-      "why": "拥有资格成立，但资本向上迁移依据不足。维持是主动决策：系统有能力加仓，但证据没有达到资本迁移标准。不是因为涨了。",
+      "why": "组合超限，不是公司价值恶化。",
       "r4": "UNKNOWN",
       "legalMove": null,
       "legalQuestion": null,
@@ -100,17 +104,19 @@
       "ownership": "STRATEGIC_CORE",
       "evidenceTone": "STRENGTHENING",
       "newFamilies": [],
-      "independenceWhy": "当日没有新的独立证据族。维持是主动决策。系统有能力加仓，但证据没有达到资本迁移标准。不是系统无能。",
+      "independenceWhy": "当日没有新的独立证据族。动作来自组合硬约束，不是证据变化，更不是涨跌。",
       "unknowns": [
         "目标主线利润核验",
         "未来盈利证据",
         "现金流与利润质量",
         "市场预期与可证明增长"
       ],
-      "risks": [],
-      "exposurePct": 0.09839283684150193,
-      "exposure": "正常",
-      "action": "HOLD_CAPITAL",
+      "risks": [
+        "R1_PORTFOLIO"
+      ],
+      "exposurePct": 0.1701937952625256,
+      "exposure": "超限",
+      "action": "REDUCE_EXPOSURE",
       "triggerFamilies": [
         "MAINLINE",
         "COMPANY",
@@ -126,7 +132,7 @@
         "现金流与利润质量 UNKNOWN",
         "市场预期与可证明增长 UNKNOWN"
       ],
-      "why": "拥有资格成立，但资本向上迁移依据不足。维持是主动决策：系统有能力加仓，但证据没有达到资本迁移标准。不是因为涨了。",
+      "why": "组合超限，不是公司价值恶化。",
       "r4": "UNKNOWN",
       "legalMove": null,
       "legalQuestion": null,
@@ -155,7 +161,7 @@
         "市场预期与可证明增长"
       ],
       "risks": [],
-      "exposurePct": 0.054185965389461334,
+      "exposurePct": 0.09372750492448864,
       "exposure": "正常",
       "action": "EXIT",
       "triggerFamilies": [
@@ -199,7 +205,7 @@
         "市场预期与可证明增长"
       ],
       "risks": [],
-      "exposurePct": 0.03936118476204253,
+      "exposurePct": 0.06808452358653683,
       "exposure": "正常",
       "action": "HOLD_CAPITAL",
       "triggerFamilies": [
@@ -244,7 +250,7 @@
         "市场预期与可证明增长"
       ],
       "risks": [],
-      "exposurePct": 0.03759182989717644,
+      "exposurePct": 0.06502400384460827,
       "exposure": "正常",
       "action": "HOLD_CAPITAL",
       "triggerFamilies": [
@@ -289,7 +295,7 @@
         "市场预期与可证明增长"
       ],
       "risks": [],
-      "exposurePct": 0.023686320669505656,
+      "exposurePct": 0.04097112086566035,
       "exposure": "正常",
       "action": "HOLD_CAPITAL",
       "triggerFamilies": [
@@ -336,7 +342,7 @@
         "市场预期与可证明增长"
       ],
       "risks": [],
-      "exposurePct": 0.01377261776786324,
+      "exposurePct": 0.02382301561635671,
       "exposure": "正常",
       "action": "EXIT",
       "triggerFamilies": [
@@ -380,7 +386,7 @@
         "市场预期与可证明增长"
       ],
       "risks": [],
-      "exposurePct": 0.014649701402592998,
+      "exposurePct": 0.025340140209458645,
       "exposure": "正常",
       "action": "HOLD_CAPITAL",
       "triggerFamilies": [

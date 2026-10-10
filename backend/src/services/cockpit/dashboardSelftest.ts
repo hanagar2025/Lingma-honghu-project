@@ -1165,7 +1165,9 @@ console.log('\n【外发摘要脱敏】')
 
   // ── 峰值情形 B ──
   const pv1 = PEAK_HISTORY.find(r => r.basis === 'portfolio_basis_v1')
-  ok('组合口径峰值已认定为 630 万（情形 B）', pv1?.peak === 6_300_000)
+  ok('组合口径 v1 峰值 630 万（情形 B）留作历史', pv1?.peak === 6_300_000)
+  const pv2 = PEAK_HISTORY.find(r => r.basis === 'portfolio_basis_v2')
+  ok('组合口径 v2 峰值 430 万（2026-10-10：移出 200 万按出金扣减）', pv2?.peak === 4_300_000)
   const legacy = PEAK_HISTORY.find(r => r.basis === 'legacy_account_basis')
   ok('券商口径 430 万仍保留 —— 它是 7/17–8/14 全部判定的依据', legacy?.peak === 4_300_000)
 

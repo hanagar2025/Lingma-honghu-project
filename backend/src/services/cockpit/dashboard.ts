@@ -29,7 +29,7 @@ import type { MainlineHealth } from '../msr/health'
 import type { ValuationInjection } from '../msr/valuation'
 import type { ProfitMap, NodeProfit } from '../research/profitRadar'
 import { nodeOf } from './nodes'
-import { judgeCircuit } from '../governance/peakBasis'
+import { ACTIVE_PEAK_BASIS, judgeCircuit } from '../governance/peakBasis'
 import type { MomentumRow } from './momentum'
 import type { Action, EvidenceTier, Light, Metric } from './types'
 
@@ -730,8 +730,11 @@ export function buildDashboard(input: DashboardInput): Dashboard {
   // 后者意味着"已检查，没问题"，前者意味着"无法检查" —— 混淆两者
   // 等于在风控开关坏掉时亮一盏绿灯。
   const bd = input.assetBreakdown
+  // 状态与下方回撤数字必须同一个峰值，否则账本峰值与代码常量一旦不同，灯与数字互相矛盾。
   const circuit = bd?.peakBasis === 'PORTFOLIO'
-    ? judgeCircuit(portfolioTotal)
+    ? judgeCircuit(portfolioTotal, bd.peak
+      ? [{ basis: ACTIVE_PEAK_BASIS, peak: bd.peak, peakDate: null, reliableFrom: null, note: '' }]
+      : undefined)
     : {
       state: 'INCOMPARABLE' as const,
       reason: '净值峰值仍记于券商账户口径，与组合口径不可比 →'

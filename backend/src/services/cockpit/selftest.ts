@@ -436,16 +436,17 @@ console.log('\n【熔断口径】不可比必须与正常区分')
 {
   const { judgeCircuit, PEAK_HISTORY } = await import('../governance/peakBasis')
 
-  // 峰值已于 2026-08-15 按情形 B 认定为 630 万，故此处应真的算出一级熔断。
-  const cur = judgeCircuit(5_342_513)
-  ok('组合口径峰值已认定 → 一级熔断成立', cur.state === 'LEVEL1', cur.state)
-  ok('回撤约 15.2%',
-    cur.drawdown !== null && Math.abs(cur.drawdown - 0.152) < 0.002, String(cur.drawdown))
+  // 2026-10-10 起峰值为 v2 的 430 万（630 万 − 移出的 200 万），10/9 券商总资产 274.0 万 → 二级熔断。
+  const cur = judgeCircuit(2_739_991)
+  ok('组合口径 v2 峰值已认定 → 二级熔断成立', cur.state === 'LEVEL2', cur.state)
+  ok('回撤约 36.3%',
+    cur.drawdown !== null && Math.abs(cur.drawdown - 0.363) < 0.002, String(cur.drawdown))
 
   // 不可比的分支仍须存在 —— 它是守卫本身，不能因为当前口径已对齐就删掉
   const mismatch = judgeCircuit(5_342_513, [
     { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
-    { basis: 'portfolio_basis_v1', peak: null, peakDate: null, reliableFrom: null, note: '' },
+    { basis: 'portfolio_basis_v1', peak: 6_300_000, peakDate: null, reliableFrom: null, note: '' },
+    { basis: 'portfolio_basis_v2', peak: null, peakDate: null, reliableFrom: null, note: '' },
   ])
   ok('组合口径峰值缺失时仍判 INCOMPARABLE（守卫不得因当前已对齐而失效）',
     mismatch.state === 'INCOMPARABLE', mismatch.state)
@@ -459,22 +460,25 @@ console.log('\n【熔断口径】不可比必须与正常区分')
   ok('旧口径峰值 430 万仍在册（删掉会让那段历史无法复核）',
     legacy?.peak === 4_300_000, String(legacy?.peak))
   const v1 = PEAK_HISTORY.find(h => h.basis === 'portfolio_basis_v1')
-  ok('组合口径峰值为 630 万（情形 B：430 + 200），不是今天的 534 万',
+  ok('组合口径 v1 峰值 630 万仍在册（情形 B：430 + 200，只作历史）',
     v1?.peak === 6_300_000, String(v1?.peak))
-  ok('峰值不等于今日值 —— 取今日值等于把回撤时钟归零',
-    v1?.peak !== null && v1!.peak! > 5_400_000, String(v1?.peak))
+  const v2 = PEAK_HISTORY.find(h => h.basis === 'portfolio_basis_v2')
+  ok('组合口径 v2 峰值为 430 万（630 − 移出的 200 万），不是今天的 274 万',
+    v2?.peak === 4_300_000, String(v2?.peak))
+  ok('移出资金按出金扣减峰值，而不是取今日值 —— 取今日值等于把回撤时钟归零',
+    v2?.peak !== null && v2!.peak! > 2_739_991, String(v2?.peak))
 
   // 一旦峰值建立，判定必须真的能算出来
   const withPeak = judgeCircuit(5_335_000, [
     { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
-    { basis: 'portfolio_basis_v1', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
+    { basis: 'portfolio_basis_v2', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
   ])
   ok('峰值建立后可算出回撤（600万 → 533.5万 ≈ 11.1%）',
     withPeak.drawdown !== null && Math.abs(withPeak.drawdown - (1 - 5_335_000 / 6_000_000)) < 1e-9)
   ok('11.1% 回撤未触发熔断（一级线 15%）', withPeak.state === 'NORMAL')
   const deep = judgeCircuit(4_000_000, [
     { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
-    { basis: 'portfolio_basis_v1', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
+    { basis: 'portfolio_basis_v2', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
   ])
   ok('33% 回撤触发二级熔断', deep.state === 'LEVEL2', deep.state)
 }
