@@ -37,6 +37,11 @@ function cardUrl(): string | undefined {
   return repo && ref ? `https://github.com/${repo}/blob/${ref}/share/decision/latest.md` : undefined
 }
 
+/** 驾驶舱网页地址（GitHub Pages）。COCKPIT_URL 环境变量注入 */
+function cockpitUrl(): string | undefined {
+  return process.env.COCKPIT_URL || undefined
+}
+
 /** 驾驶舱在子进程里跑：它失败时仍要能推出一张「不下单」的执行单，而不是一声不响 */
 function exportDecisionInput(): { input: DecisionInput | null; error: string | null } {
   const given = process.env.DECISION_JSON
@@ -84,7 +89,7 @@ async function main(): Promise<void> {
 
   const { input, error } = exportDecisionInput()
   if (!input) {
-    await publish(buildFailureCard(today, error ?? '未知错误', cardUrl()), today, session)
+    await publish(buildFailureCard(today, error ?? '未知错误', cardUrl(), cockpitUrl()), today, session)
     process.exitCode = 1
     return
   }
@@ -102,7 +107,7 @@ async function main(): Promise<void> {
     return
   }
 
-  await publish(buildCard(input, v, session, { url: cardUrl(), today }), today, session)
+  await publish(buildCard(input, v, session, { url: cardUrl(), today, cockpitUrl: cockpitUrl() }), today, session)
 }
 
 main().catch(e => {
