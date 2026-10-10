@@ -1,0 +1,153 @@
+name: Daily decision
+
+# 每个交易日两次，自动出执行单并推送到手机与电脑：
+#   北京 08:30 盘前（按上一交易日收盘核对）  → cron 30 0 * * 1-5（UTC）
+#   北京 15:40 收盘后（按当日收盘核对，供下一交易日开盘） → cron 40 7 * * 1-5
+# GitHub 定时任务常晚到 5–30 分钟，故盘前排在 08:30 而不是贴着开盘。
+# 定时任务只读默认分支上的本文件；执行单代码与持仓账本在 DECISION_BRANCH 上。
+#
+# 网页：site job 把执行单（首页）与完整驾驶舱（cockpit.html）发布到 GitHub Pages，
+# 推送正文末尾附该地址。设了 TCB_SECRET_ID / TCB_SECRET_KEY / vars.TCB_ENV_ID 时
+# 同时发布到腾讯云 CloudBase 静态托管（国内访问稳定），此时把 vars.SITE_URL 设为 CloudBase 地址。
+on:
+  schedule:
+    - cron: '30 0 * * 1-5'
+    - cron: '40 7 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      session:
+        description: 'pre = 盘前，post = 收盘后'
+        required: true
+        default: post
+        type: choice
+        options: [pre, post]
+      force:
+        description: '周末/休市日也出单（测试推送用）'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-decision
+  cancel-in-progress: false
+
+jobs:
+  decision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DECISION_BRANCH: ${{ vars.DECISION_BRANCH || 'cursor/account-snapshot-1009-c819' }}
+      DECISION_SESSION: ${{ github.event_name == 'schedule' && (github.event.schedule == '30 0 * * 1-5' && 'pre' || 'post') || inputs.session }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DECISION_BRANCH }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
+      - name: Install (workspaces)
+        run: |
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
+          npm install --workspaces --include-workspace-root --legacy-peer-deps
+      - name: Build and push decision card
+        id: card
+        env:
+          FORCE: ${{ inputs.force && '1' || '0' }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          BARK_URL: ${{ secrets.BARK_URL }}
+          DECISION_URL: ${{ vars.SITE_URL || 'https://hanagar2025.github.io/Lingma-honghu-project/' }}
+        run: npm -w backend run decision:daily
+      - name: Commit card
+        if: always()
+        run: |
+          set -euo pipefail
+          git config user.name 'hh-decision-bot'
+          git config user.email 'hh-decision-bot@users.noreply.github.com'
+          git add share/decision
+          if git diff --cached --quiet; then
+            echo '执行单无变化'
+            exit 0
+          fi
+          git commit -m "执行单 $(TZ=Asia/Shanghai date +%F) ${DECISION_SESSION:-}"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "${DECISION_BRANCH}" && git push origin "HEAD:${DECISION_BRANCH}" && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
+
+  site:
+    needs: decision
+    if: always() && needs.decision.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      DECISION_BRANCH: ${{ vars.DECISION_BRANCH || 'cursor/account-snapshot-1009-c819' }}
+      TCB_SECRET_ID: ${{ secrets.TCB_SECRET_ID }}
+      TCB_SECRET_KEY: ${{ secrets.TCB_SECRET_KEY }}
+      TCB_ENV_ID: ${{ vars.TCB_ENV_ID }}
+      TCB_PATH: ${{ vars.TCB_PATH || '/tios' }}
+    steps:
+      # 在 decision job 提交执行单之后检出，拿到的就是刚生成的那一份
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DECISION_BRANCH }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
+      - name: Install (workspaces)
+        run: |
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
+          npm install --workspaces --include-workspace-root --legacy-peer-deps
+      - name: Build site
+        run: |
+          set -uo pipefail
+          mkdir -p site
+          HTML=1 ARCHIVE=0 npm -w backend run cockpit > /tmp/cockpit.log 2>&1 || echo '⚠ 驾驶舱运行失败'
+          tail -5 /tmp/cockpit.log
+          report=$(ls -t backend/src/services/cockpit/data/reports/*.html 2>/dev/null | head -1 || true)
+          if [ -n "${report}" ]; then
+            cp "${report}" site/cockpit.html
+          else
+            printf '%s' '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><p style="font:18px sans-serif;padding:24px">今日完整驾驶舱生成失败，执行单不受影响。<a href="./">返回执行单</a></p>' > site/cockpit.html
+          fi
+          if [ -f share/decision/latest.html ]; then
+            cp share/decision/latest.html site/index.html
+          else
+            cp site/cockpit.html site/index.html
+          fi
+          cp share/decision/latest.md site/latest.md 2>/dev/null || true
+          touch site/.nojekyll
+          ls -la site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Deploy to CloudBase（可选，国内访问）
+        if: env.TCB_SECRET_ID != '' && env.TCB_ENV_ID != ''
+        run: |
+          set -euo pipefail
+          npx -y -p @cloudbase/cli tcb login --apiKeyId "${TCB_SECRET_ID}" --apiKey "${TCB_SECRET_KEY}"
+          npx -y -p @cloudbase/cli tcb hosting deploy site "${TCB_PATH}" -e "${TCB_ENV_ID}"
