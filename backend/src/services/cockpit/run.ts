@@ -97,6 +97,8 @@ interface PortfolioFile {
   externalCashNote?: string
   /** 峰值所属口径。BROKER 表示尚未按组合口径重新认定，回撤将输出"不可比" */
   peakBasis?: 'BROKER' | 'PORTFOLIO'
+  /** false = 峰值待券商记录与资金流水核实；缺省视为已核实 */
+  peakVerified?: boolean
 }
 
 const LIGHT_DOT: Record<string, string> = { GREEN: '🟢', YELLOW: '🟡', RED: '🔴', UNKNOWN: '⚪' }
@@ -225,6 +227,7 @@ async function main(): Promise<void> {
       ? Math.max(pf.peakAssets, portfolioTotal)
       : pf.peakAssets,
     peakBasis,
+    peakVerified: pf.peakVerified !== false,
   }
 
   const pendingSellCount = Number(process.env.PENDING_SELLS ?? pf.pendingSells)
@@ -275,7 +278,7 @@ async function main(): Promise<void> {
       date, session, positions, portfolioTotal,
       assetBreakdown: {
         positionsValue, brokerCash: pf.cash, externalCash,
-        brokerTotal, peakBasis, peak: pf.peakAssets,
+        brokerTotal, peakBasis, peak: pf.peakAssets, peakVerified: pf.peakVerified !== false,
       },
       barsByCode, indexBarsByCode, marketBars: indexBarsByCode['sz399006'],
       valuationByCode,

@@ -536,5 +536,51 @@ console.log('\n【执行债务重审】')
   ok('重审层不含股数计算（撤销与执行属执行层）', !/quantity|股数\s*=/.test(reauditSrc))
 }
 
+// ── 卖回上限的股数必须向上取整（10/9 海光：向下取整 1000 股后仍为 12.02%）──
+console.log('\n【超限卖出股数】卖完必须真的不超限')
+{
+  const { sharesToClearExcess } = await import('./index')
+  const total = 2_739_990.96
+  const cap = total * 0.12
+  const cases: [string, string, number, number][] = [
+    ['688041', '海光信息', 2500, 219.59],
+    ['300308', '中际旭创', 600, 775.29],
+    ['300502', '新易盛', 1260, 370.2],
+  ]
+  for (const [code, name, qty, px] of cases) {
+    const n = sharesToClearExcess(code, qty * px - cap, px, qty)
+    ok(`${name} 卖 ${n} 股后 ≤ 12%`, (qty - n) * px <= cap, `${((qty - n) * px / total * 100).toFixed(2)}%`)
+  }
+  ok('海光为科创板，按 1 股递增：1003 股', sharesToClearExcess('688041', 2500 * 219.59 - cap, 219.59, 2500) === 1003)
+  ok('创业板按 100 股一手向上取整：中际 200 股、新易盛 400 股',
+    sharesToClearExcess('300308', 600 * 775.29 - cap, 775.29, 600) === 200
+    && sharesToClearExcess('300502', 1260 * 370.2 - cap, 370.2, 1260) === 400)
+  ok('科创板单笔不足 200 股按 200 股', sharesToClearExcess('688041', 10_000, 219.59, 2500) === 200)
+  ok('超过持仓时按清仓', sharesToClearExcess('300308', 1e9, 775.29, 600) === 600)
+}
+
+// ── 熔断触发待账本核验（委员会 2026-10-10）──
+console.log('\n【熔断待核验】不执行、不撤销，只卖不买照常')
+{
+  const pendingSnap: AccountSnapshot = {
+    date: '2026-10-09', brokerTotal: 2_740_000, cash: 391_000, positionsValue: 2_349_000,
+    externalCash: 0, portfolioTotal: 2_740_000, peakAssets: 4_300_000, peakBasis: 'PORTFOLIO',
+    peakVerified: false,
+  }
+  const base = { date: '2026-10-09', positions, barsByCode, indexBarsByCode, pendingSellCount: 0, marketAllows: true }
+  const pending = runCockpit({ ...base, snapshot: pendingSnap })
+  const verified = runCockpit({ ...base, snapshot: { ...pendingSnap, peakVerified: true } })
+  const circuitActs = (r: typeof pending) => r.actions.filter(a => a.reason === 'CIRCUIT_BREAKER')
+  ok('峰值已核实时出现组合层强制降仓', circuitActs(verified).length === 1)
+  ok('峰值待核验时组合层强制降仓不进入动作', circuitActs(pending).length === 0)
+  ok('待核验时只卖不买的买入封锁照常生效',
+    pending.noNewEntry.reasons.some(r => r.includes('只卖不买')), pending.noNewEntry.reasons.join(' / '))
+  ok('待核验写入数据缺口，且写明"不撤销"',
+    pending.dataGaps.some(g => g.includes('待账本核验') && g.includes('不撤销')))
+  const { peakVerified: _omit, ...legacySnap } = pendingSnap
+  ok('缺省（未标注）视为已核实 —— 取严',
+    circuitActs(runCockpit({ ...base, snapshot: legacySnap })).length === 1)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

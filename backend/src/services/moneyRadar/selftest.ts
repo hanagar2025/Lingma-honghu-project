@@ -260,7 +260,9 @@ console.log('\n【迁移 · 核心股 · 国家队】')
 console.log('\n【配置 · 数据源】')
 {
   const holdings = holdingCodes()
-  ok('入口① 持仓读自账本，共 8 只', holdings.length === 8)
+  const ledger = JSON.parse(readFileSync(new URL('../cockpit/data/portfolio.json', import.meta.url), 'utf-8'))
+  ok(`入口① 持仓读自账本，共 ${ledger.positions.length} 只`,
+    holdings.length === ledger.positions.length && holdings.length > 0)
   ok('入口② 观察仓起始 7 只', WATCHLIST.length === 7)
   ok('观察仓全部在册', WATCHLIST.every(w => basketOf(w.code) !== null))
   ok('英维克使用正确代码 002837', WATCHLIST.some(w => w.name === '英维克' && w.code === '002837'))
@@ -305,8 +307,13 @@ console.log('\n【配置 · 数据源】')
 console.log('\n【装配 · 渲染】')
 {
   const objs = entryObjects()
-  ok('入口① 含 8 只持仓与其主线篮子', objs[1].filter(o => o.kind === 'STOCK').length === 8 && objs[1].some(o => o.kind === 'BASKET'))
-  ok('入口② 含 7 只观察股', objs[2].filter(o => o.kind === 'STOCK').length === 7)
+  const held = new Set(holdingCodes().map(h => h.code))
+  ok('入口① 含全部持仓与其主线篮子',
+    objs[1].filter(o => o.kind === 'STOCK').length === held.size && objs[1].some(o => o.kind === 'BASKET'))
+  ok('入口② 只含未持有的观察股', objs[2].filter(o => o.kind === 'STOCK').length
+    === WATCHLIST.filter(w => !held.has(w.code)).length)
+  ok('同一只股票不在两个入口重复出现',
+    objs[2].filter(o => o.kind === 'STOCK').every(o => !objs[1].some(a => a.id === o.id)))
   ok('同一篮子不在两个入口重复出现',
     objs[2].filter(o => o.kind === 'BASKET').every(b => !objs[1].some(a => a.id === b.id)))
   ok('入口③ 在行业数据源接入前为空', objs[3].length === 0)

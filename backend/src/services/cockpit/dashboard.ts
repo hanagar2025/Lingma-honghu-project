@@ -381,6 +381,8 @@ export interface DashboardInput {
     peakBasis: 'BROKER' | 'PORTFOLIO'
     /** 组合口径峰值。peakBasis 非 PORTFOLIO 时忽略 */
     peak?: number
+    /** false = 峰值待账本核验，组合层降仓暂不进入必须执行 */
+    peakVerified?: boolean
   }
   barsByCode: Record<string, DailyBar[]>
   indexBarsByCode: Record<string, DailyBar[]>
@@ -785,7 +787,11 @@ export function buildDashboard(input: DashboardInput): Dashboard {
           : `${assets.circuitState === 'LEVEL1' ? '一级' : '二级'}成立`
             + `　回撤 ${assets.drawdown === null ? '?' : (assets.drawdown * 100).toFixed(1)}%`
             + `　股票占比须 ≤ ${equityCap === null ? '?' : (equityCap * 100).toFixed(0)}%`
-            + (circuitExcess ? `　须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万` : ''),
+            + (circuitExcess
+              ? (bd?.peakVerified === false
+                ? `　待账本核验：若峰值属实须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万（暂不执行、不撤销）`
+                : `　须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万`)
+              : ''),
       light: assets.circuitState === 'INCOMPARABLE' ? 'UNKNOWN'
         : assets.circuitState === 'NORMAL' ? 'GREEN' : 'RED',
       canGenerateActions: true,

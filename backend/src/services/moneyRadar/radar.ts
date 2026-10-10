@@ -305,14 +305,17 @@ export function entryObjects(industries: readonly EntryObj[] = []): Record<Entry
   const holdings = holdingCodes()
   const baskets = basketObjects()
   const heldBaskets = new Set(holdings.map(h => basketOf(h.code)).filter((x): x is string => x !== null))
-  const watchBaskets = new Set(WATCHLIST.map(w => basketOf(w.code)).filter((x): x is string => x !== null))
+  const heldCodes = new Set(holdings.map(h => h.code))
+  // 观察股一旦买入即归入口①，不在两个入口重复计入
+  const watching = WATCHLIST.filter(w => !heldCodes.has(w.code))
+  const watchBaskets = new Set(watching.map(w => basketOf(w.code)).filter((x): x is string => x !== null))
 
   const e1: EntryObj[] = [
     ...holdings.map(h => stockObject(h.code, h.name, 1) as EntryObj),
     ...baskets.filter(b => heldBaskets.has(b.id)).map(b => ({ ...b, entry: 1 as const })),
   ]
   const e2: EntryObj[] = [
-    ...WATCHLIST.map(w => stockObject(w.code, w.name, 2) as EntryObj),
+    ...watching.map(w => stockObject(w.code, w.name, 2) as EntryObj),
     ...baskets.filter(b => watchBaskets.has(b.id) && !heldBaskets.has(b.id)).map(b => ({ ...b, entry: 2 as const })),
   ]
   return { 1: e1, 2: e2, 3: [...industries] }
