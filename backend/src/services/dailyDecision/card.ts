@@ -96,7 +96,7 @@ export function buildCard(
   input: DecisionInput,
   v: Verification,
   session: DecisionSession,
-  opts: { url?: string; orders?: readonly CommitteeOrder[]; today?: string } = {},
+  opts: { url?: string; orders?: readonly CommitteeOrder[]; today?: string; cockpitUrl?: string } = {},
 ): DecisionCard {
   const orders = opts.orders ?? COMMITTEE_ORDERS
   const when = session === 'PRE_OPEN' ? `今日开盘（按 ${md(input.date)} 收盘核对）` : `下一交易日开盘（按 ${md(input.date)} 收盘核对）`
@@ -121,7 +121,7 @@ export function buildCard(
     const pending = [...committee, ...limits.lines].map(l => l.name)
     if (pending.length) body.push('', `核对恢复后待执行：${pending.join('、')}（股数以恢复当日为准）`)
     body.push('', '账本问题的处理：把最新持仓截图发给委员会，账本更新后自动恢复。')
-    return finish(title, head, body, v, opts.url, false, [])
+    return finish(title, head, body, v, opts.url, false, [], opts.cockpitUrl)
   }
 
   const lines = [...committee, ...limits.lines]
@@ -167,22 +167,26 @@ export function buildCard(
   body.push('- 卖出所得现金留在账户，不转出、不另作他用')
 
   body.push('', '## 成交后', '', '把持仓截图发给委员会。账本更新后，已完成的指令自动从执行单消失。')
-  return finish(title, head, body, v, opts.url, true, lines)
+  return finish(title, head, body, v, opts.url, true, lines, opts.cockpitUrl)
 }
 
 /** 驾驶舱本身没跑完、拿不到决策输入时的执行单 */
-export function buildFailureCard(today: string, reason: string, url?: string): DecisionCard {
+export function buildFailureCard(today: string, reason: string, url?: string, cockpitUrl?: string): DecisionCard {
   const title = `⛔ 鸿鹄执行单 ${md(today)}：数据采集失败，不下单`
   const lines = [`# ${title}`, '', '## 今日动作', '', '不下单。采集恢复后重新出单。', '', '## 原因', '', `- ${reason}`]
   if (url) lines.push('', `上一份执行单：${url}`)
+  if (cockpitUrl) lines.push('', `完整驾驶舱：${cockpitUrl}`)
   const text = lines.join('\n')
   return { ok: false, title, push: text, markdown: `${text}\n`, lines: [] }
 }
 
 function finish(
   title: string, head: string[], body: string[], v: Verification, url: string | undefined, ok: boolean, lines: ExecLine[],
+  cockpitUrl?: string,
 ): DecisionCard {
-  const tail = url ? ['', `全文与核对明细：${url}`] : []
+  const tail: string[] = []
+  if (url) tail.push('', `全文与核对明细：${url}`)
+  if (cockpitUrl) tail.push('', `完整驾驶舱（手机可看）：${cockpitUrl}`)
   const push = [...head, ...body, ...tail].join('\n')
   const detail = ['', '---', '', '## 核对明细', '', '| 持仓 | 腾讯 | 新浪 | 结果 |', '|---|---|---|---|']
   for (const c of v.checks) {
