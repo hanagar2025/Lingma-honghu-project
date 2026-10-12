@@ -165,11 +165,15 @@ jobs:
         run: |
           npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
           npm install --workspaces --include-workspace-root --legacy-peer-deps
+      # SHARE=1 让驾驶舱同时写出外发摘要（已脱敏），首页「一键复制给 Agent」与 agent.md 用它；
+      # 数据包合成失败时退回决策任务写好的 latest.html（数据包只含执行单），复制按钮不丢。
       - name: Build site
+        env:
+          DECISION_URL: ${{ vars.SITE_URL || 'https://hanagar2025.github.io/Lingma-honghu-project/' }}
         run: |
           set -uo pipefail
           mkdir -p site
-          HTML=1 ARCHIVE=0 npm -w backend run cockpit > /tmp/cockpit.log 2>&1 || echo '⚠ 驾驶舱运行失败'
+          HTML=1 ARCHIVE=0 SHARE=1 npm -w backend run cockpit > /tmp/cockpit.log 2>&1 || echo '⚠ 驾驶舱运行失败'
           tail -5 /tmp/cockpit.log
           report=$(ls -t backend/src/services/cockpit/data/reports/*.html 2>/dev/null | head -1 || true)
           if [ -n "${report}" ]; then
@@ -183,6 +187,9 @@ jobs:
             cp site/cockpit.html site/index.html
           fi
           cp share/decision/latest.md site/latest.md 2>/dev/null || true
+          if [ -f share/decision/latest.md ]; then
+            npm -w backend run decision:agentpack -- ../site || echo '⚠ 数据包合成失败，首页沿用 latest.html'
+          fi
           touch site/.nojekyll
           ls -la site
       - uses: actions/configure-pages@v5
