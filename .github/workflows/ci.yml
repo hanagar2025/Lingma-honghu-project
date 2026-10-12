@@ -29,6 +29,8 @@ jobs:
         run: npx --workspace backend tsc --noEmit -p backend/tsconfig.json
       - name: TIOS engine selftest
         run: npm -w backend run tios:selftest
+      - name: MSR radar selftest (执行债务闸门不变量)
+        run: npm -w backend run msr:selftest
       - name: Run backend tests
         run: npm -w backend run test -- --coverage
 
