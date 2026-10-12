@@ -50,6 +50,8 @@ jobs:
       DECISION_BRANCH: ${{ vars.DECISION_BRANCH || 'cursor/account-snapshot-1009-c819' }}
       DECISION_SESSION: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 23 * * 0-4' && 'pre' || github.event.schedule == '30 5 * * 1-5' && 'intra' || 'post') || inputs.session }}
     steps:
+      - name: Record start
+        run: echo "RUN_STARTED_AT=$(date -u +%s)" >> "${GITHUB_ENV}"
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.DECISION_BRANCH }}
@@ -76,12 +78,35 @@ jobs:
           DECISION_URL: ${{ vars.SITE_URL || 'https://hanagar2025.github.io/Lingma-honghu-project/' }}
           DECISION_PUSHED_MARKER: ${{ runner.temp }}/decision-pushed
         run: npm -w backend run decision:daily
+      # 每轮在 share/decision/run-log.csv 记一行：计划时刻、实际启动、延迟、执行单步骤结果、是否推出。
+      # 整轮被 GitHub 跳过的不会有这一行，由 npm -w backend run decision:runlog 对照应有轮次找出漏跑。
       - name: Commit card
         if: always()
+        env:
+          CRON: ${{ github.event.schedule }}
+          CARD_OUTCOME: ${{ steps.card.outcome }}
+          MARKER: ${{ runner.temp }}/decision-pushed
         run: |
           set -euo pipefail
           git config user.name 'hh-decision-bot'
           git config user.email 'hh-decision-bot@users.noreply.github.com'
+          started="${RUN_STARTED_AT}"
+          day=$(TZ=Asia/Shanghai date -d "@${started}" +%F)
+          planned=''; delay=''; trigger=manual
+          if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
+            trigger=schedule
+            read -r m h _ <<< "${CRON}"
+            p=$(date -u -d "$(date -u -d "@${started}" +%F) ${h}:${m}" +%s)
+            if [ "${p}" -gt "${started}" ]; then p=$((p - 86400)); fi
+            planned=$(TZ=Asia/Shanghai date -d "@${p}" +%H:%M)
+            day=$(TZ=Asia/Shanghai date -d "@${p}" +%F)
+            delay=$(( (started - p + 30) / 60 ))
+          fi
+          pushed=0; if [ -f "${MARKER}" ]; then pushed=1; fi
+          log=share/decision/run-log.csv
+          if [ ! -f "${log}" ]; then echo 'date,session,trigger,planned,started,delay_min,card_step,pushed,run_id' > "${log}"; fi
+          echo "${day},${DECISION_SESSION},${trigger},${planned},$(TZ=Asia/Shanghai date -d "@${started}" '+%F %T'),${delay},${CARD_OUTCOME:-skipped},${pushed},${GITHUB_RUN_ID}" >> "${log}"
+          tail -1 "${log}"
           git add share/decision
           if git diff --cached --quiet; then
             echo '执行单无变化'
