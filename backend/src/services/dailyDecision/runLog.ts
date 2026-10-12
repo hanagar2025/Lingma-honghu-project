@@ -61,16 +61,58 @@ export interface SessionStats {
   over60: number
 }
 
+/** gh run list --json databaseId,event,createdAt,conclusion 的一项 */
+export interface GithubRun {
+  databaseId: number
+  event: string
+  createdAt: string
+  conclusion: string
+}
+
+/**
+ * 台账里没有的那一轮，对照 GitHub 运行列表分三种：
+ * NOT_STARTED 整轮没启动（调度问题）；STARTED_NO_RECORD 启动了但没留下记录（留痕问题，附运行号）；
+ * UNCHECKED 没有提供运行列表，无法区分。
+ */
+export type MissingCause = 'NOT_STARTED' | 'STARTED_NO_RECORD' | 'UNCHECKED'
+
+export interface MissingSlot {
+  date: string
+  session: RunSessionKey
+  cause: MissingCause
+  run?: GithubRun
+}
+
 export interface RunLogSummary {
   stats: SessionStats[]
   expected: number
-  missing: { date: string; session: RunSessionKey }[]
+  missing: MissingSlot[]
   failures: RunRow[]
   notPushed: RunRow[]
   manual: number
 }
 
-export function summarize(rows: RunRow[], now = new Date()): RunLogSummary {
+/** 台账外的定时运行归到它之前最近的、且在 MISSING_AFTER_MIN 窗口内的那一轮（盘中 13:30 与收盘后 15:40 的窗口重叠）。 */
+function unloggedRunsBySlot(rows: RunRow[], runs: GithubRun[]): Map<string, GithubRun> {
+  const logged = new Set(rows.map(r => r.runId))
+  const out = new Map<string, GithubRun>()
+  for (const run of runs) {
+    if (run.event !== 'schedule' || logged.has(String(run.databaseId))) continue
+    const b = beijingParts(new Date(run.createdAt))
+    let best: { session: RunSessionKey; start: number } | null = null
+    for (const slot of SLOTS) {
+      const [h, m] = slot.planned.split(':').map(Number)
+      const start = h * 60 + m
+      if (b.date < slot.since || b.minutes < start || b.minutes >= start + MISSING_AFTER_MIN) continue
+      if (!best || start > best.start) best = { session: slot.session, start }
+    }
+    if (best) out.set(`${b.date}|${best.session}`, run)
+  }
+  return out
+}
+
+export function summarize(rows: RunRow[], now = new Date(), githubRuns?: GithubRun[]): RunLogSummary {
+  const unlogged = githubRuns ? unloggedRunsBySlot(rows, githubRuns) : new Map<string, GithubRun>()
   const scheduled = rows.filter(r => r.trigger === 'schedule')
   const stats = SLOTS.map(({ session }) => {
     const d = scheduled.filter(r => r.session === session && r.delayMin !== null).map(r => r.delayMin as number).sort((a, b) => a - b)
@@ -97,7 +139,13 @@ export function summarize(rows: RunRow[], now = new Date()): RunLogSummary {
       if (weekday === 0 || weekday === 6) continue
       if (date === today.date && today.minutes < h * 60 + m + MISSING_AFTER_MIN) continue
       expected++
-      if (!seen.has(`${date}|${slot.session}`)) missing.push({ date, session: slot.session })
+      const key = `${date}|${slot.session}`
+      if (seen.has(key)) continue
+      const run = unlogged.get(key)
+      missing.push({
+        date, session: slot.session, run,
+        cause: run ? 'STARTED_NO_RECORD' : githubRuns ? 'NOT_STARTED' : 'UNCHECKED',
+      })
     }
   }
 
@@ -110,6 +158,11 @@ export function summarize(rows: RunRow[], now = new Date()): RunLogSummary {
 }
 
 const LABEL: Record<RunSessionKey, string> = { pre: '盘前', intra: '盘中复核', post: '收盘后' }
+const CAUSE_LABEL: Record<MissingCause, string> = {
+  NOT_STARTED: 'GitHub 未启动（调度漏跑）',
+  STARTED_NO_RECORD: '已启动但未留痕（留痕失败）',
+  UNCHECKED: '未核对 GitHub 运行列表（无法区分）',
+}
 
 export function renderSummary(s: RunLogSummary): string {
   const fmt = (v: number | null) => (v === null ? '—' : `${v}`)
@@ -118,8 +171,12 @@ export function renderSummary(s: RunLogSummary): string {
     '|---|---|---|---|---|---|---|',
     ...s.stats.map(x => `| ${LABEL[x.session]} | ${x.runs} | ${fmt(x.median)} | ${fmt(x.p90)} | ${fmt(x.max)} | ${x.over30} | ${x.over60} |`),
     '',
-    `应有定时轮次 ${s.expected}，漏跑 ${s.missing.length}` +
-      (s.missing.length ? `：${s.missing.map(m => `${m.date} ${LABEL[m.session]}`).join('；')}` : ''),
+    `应有定时轮次 ${s.expected}，台账无记录 ${s.missing.length}`,
+    ...(['NOT_STARTED', 'STARTED_NO_RECORD', 'UNCHECKED'] as MissingCause[]).map(cause => {
+      const list = s.missing.filter(m => m.cause === cause)
+      const items = list.map(m => `${m.date} ${LABEL[m.session]}` + (m.run ? `（运行 ${m.run.databaseId}，结论 ${m.run.conclusion || '进行中'}）` : ''))
+      return `- ${CAUSE_LABEL[cause]} ${list.length}` + (items.length ? `：${items.join('；')}` : '')
+    }),
     `执行单步骤失败 ${s.failures.length}` + (s.failures.length ? `：${s.failures.map(r => `${r.date} ${r.session}（${r.cardStep}）`).join('；')}` : ''),
     `运行成功但未推送 ${s.notPushed.length}（休市跳过或盘中复核拖到收盘后不发）`,
     `手动运行 ${s.manual}`,

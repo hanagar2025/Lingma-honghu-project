@@ -261,6 +261,21 @@ process.stdout.write('\n【定时运行台账】\n')
   // 北京 10/16 周五 20:00：收盘后 10/12–16 共 5 轮，盘前、盘中 10/13–16 各 4 轮
   const empty = summarize(parseRunLog(RUN_LOG_HEADER), new Date('2026-10-16T12:00:00Z'))
   ok(empty.expected === 13 && empty.missing.length === 13, '空台账：应有轮次全部算漏跑')
+  ok(s.missing[0].cause === 'UNCHECKED', '不给 GitHub 运行列表时，无记录只记「未核对」')
+  // 10/13 盘中：GitHub 有一次 14:10 的定时运行但台账没有 → 留痕失败；收盘后已记录的运行 3 不影响
+  const gh = [
+    { databaseId: 9, event: 'schedule', createdAt: '2026-10-13T06:10:00Z', conclusion: 'failure' },
+    { databaseId: 3, event: 'schedule', createdAt: '2026-10-13T09:00:00Z', conclusion: 'success' },
+  ]
+  const withGh = summarize(rows, new Date('2026-10-13T09:00:00Z'), gh)
+  ok(withGh.missing.length === 1 && withGh.missing[0].cause === 'STARTED_NO_RECORD' && withGh.missing[0].run?.databaseId === 9,
+    '已启动但未留痕，与未启动分开')
+  ok(summarize(rows, new Date('2026-10-13T09:00:00Z'), []).missing[0].cause === 'NOT_STARTED', 'GitHub 也没有这次运行 → 调度漏跑')
+  // 16:00 的未留痕运行落在盘中（13:30）与收盘后（15:40）两个窗口里，归到更近的收盘后
+  const overlap = summarize(rows.filter(r => r.session !== 'post'), new Date('2026-10-13T12:00:00Z'),
+    [{ databaseId: 7, event: 'schedule', createdAt: '2026-10-13T08:00:00Z', conclusion: 'failure' }])
+  const on13 = (session: string) => overlap.missing.find(m => m.date === '2026-10-13' && m.session === session)?.cause
+  ok(on13('post') === 'STARTED_NO_RECORD' && on13('intra') === 'NOT_STARTED', '窗口重叠时归到之前最近的一轮')
   const weekend = summarize([], new Date('2026-10-18T12:00:00Z'))
   ok(weekend.missing.every(m => ![0, 6].includes(new Date(`${m.date}T00:00:00Z`).getUTCDay())), '周末不算应有轮次')
 }
