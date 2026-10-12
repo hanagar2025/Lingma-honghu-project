@@ -5,6 +5,8 @@ name: Daily decision
 #   北京 13:30 盘中复核（按实时价重算，查委托不重复下单） → cron 30 5 * * 1-5
 #   北京 15:40 收盘后（按当日收盘价，供下一交易日开盘）   → cron 40 7 * * 1-5
 # GitHub 定时任务会晚到，实测 10/12 盘前晚了 54 分钟（09:24 才发出），故盘前排在 07:00。
+# 执行单代码按实际运行时刻校正：盘前拖到开盘后改出盘中复核；盘中复核拖到收盘后不发（收盘后一轮会出）。
+# 三轮同属 concurrency 组 daily-decision，排队执行、不会并发。
 # 定时任务只读默认分支上的本文件；执行单代码与持仓账本在 DECISION_BRANCH 上。
 #
 # 网页：site job 把执行单（首页）与完整驾驶舱（cockpit.html）发布到 GitHub Pages，
@@ -70,6 +72,7 @@ jobs:
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           BARK_URL: ${{ secrets.BARK_URL }}
           DECISION_URL: ${{ vars.SITE_URL || 'https://hanagar2025.github.io/Lingma-honghu-project/' }}
+          DECISION_PUSHED_MARKER: ${{ runner.temp }}/decision-pushed
         run: npm -w backend run decision:daily
       - name: Commit card
         if: always()
@@ -89,6 +92,21 @@ jobs:
           done
           exit 1
 
+      # 任何一步失败且执行单没推出去（安装失败、驾驶舱崩溃等），补发一条告警，不让微信那头一声不响。
+      # 执行单已推出（包括「⛔ 不下单」那种）时不补发，免得重复。
+      - name: Alert on failure
+        if: failure()
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          MARKER: ${{ runner.temp }}/decision-pushed
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -f "${MARKER}" ] || [ -z "${PUSHPLUS_TOKEN}" ]; then exit 0; fi
+          jq -n --arg t "${PUSHPLUS_TOKEN}" --arg s "${DECISION_SESSION}" --arg u "${RUN_URL}" \
+            '{token:$t, template:"txt", title:("⛔ 纪律执行官运行失败（" + $s + "）：本轮没有执行单"),
+              content:("本轮没有生成执行单。不要凭记忆下单，以上一份执行单为准；已挂委托先核对成交。\n运行日志：" + $u)}' \
+            | curl -sS -X POST https://www.pushplus.plus/send -H 'Content-Type: application/json' --data @-
   site:
     needs: decision
     if: always() && needs.decision.result != 'cancelled'
