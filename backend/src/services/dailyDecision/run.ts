@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { beijingToday } from '../cockpit/renderObsidian'
 import { buildCard, buildFailureCard, type DecisionCard } from './card'
 import { beijingMinutes, resolveSession } from './schedule'
-import { renderCardPage } from './html'
+import { renderSitePage, type CardMeta } from './agentPack'
 import { configuredChannels, pushAll } from './notify'
 import type { DecisionInput, DecisionSession } from './types'
 import { fetchSinaRaw, MARKET_INDEX, sinaSymbol, verifyInput, type SinaRaw } from './verify'
@@ -59,12 +59,10 @@ async function publish(card: DecisionCard, today: string, session: DecisionSessi
   writeFileSync(join(DECISION_DIR, `${today}-${tag}.md`), card.markdown, 'utf-8')
   writeFileSync(join(DECISION_DIR, 'latest.md'), card.markdown, 'utf-8')
   const generatedAt = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 16).replace('T', ' ')
-  writeFileSync(
-    join(DECISION_DIR, 'latest.html'),
-    renderCardPage(card.markdown, { ok: card.ok, title: card.title, generatedAt, cockpitHref: 'cockpit.html' }),
-    'utf-8',
-  )
-  process.stdout.write(`\n${card.push}\n\n已写出 share/decision/${today}-${tag}.md、latest.md、latest.html\n`)
+  const meta: CardMeta = { title: card.title, ok: card.ok, generatedAt }
+  writeFileSync(join(DECISION_DIR, 'latest.json'), `${JSON.stringify(meta, null, 2)}\n`, 'utf-8')
+  writeFileSync(join(DECISION_DIR, 'latest.html'), renderSitePage(card.markdown, meta, null, process.env.DECISION_URL), 'utf-8')
+  process.stdout.write(`\n${card.push}\n\n已写出 share/decision/${today}-${tag}.md、latest.md、latest.html、latest.json\n`)
 
   if (process.env.NO_PUSH === '1') return
   if (!configuredChannels().length) {

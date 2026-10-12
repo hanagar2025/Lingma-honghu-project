@@ -62,11 +62,35 @@ export function markdownToHtml(md: string): string {
   return out.join('\n')
 }
 
+/**
+ * 微信内置浏览器常拦截 navigator.clipboard，所以依次试：clipboard → execCommand('copy') →
+ * 展开全文让人长按全选。三步都要有，任何一步失败都不能让按钮「看起来成功」。
+ */
+const COPY_SCRIPT = `<script>
+function copyAgent(){
+  var t=document.getElementById('agent'),s=document.getElementById('cs');
+  var done=function(){s.textContent='已复制 '+t.value.length+' 字，直接粘贴给 Agent 即可'};
+  var manual=function(){
+    t.className='show';t.focus();t.setSelectionRange(0,t.value.length);
+    var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+    if(ok){done()}else{s.textContent='浏览器拦截了自动复制：全文已在下方展开，长按 → 全选 → 拷贝'}
+  };
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t.value).then(done,manual)}else{manual()}
+}
+</script>`
+
 export function renderCardPage(
-  markdown: string, opts: { ok: boolean; title: string; generatedAt: string; cockpitHref?: string },
+  markdown: string,
+  opts: { ok: boolean; title: string; generatedAt: string; cockpitHref?: string; agentText?: string; agentHref?: string },
 ): string {
   const nav = opts.cockpitHref
     ? `<a class="btn" href="${esc(opts.cockpitHref)}">打开完整驾驶舱 →</a>`
+    : ''
+  const copy = opts.agentText
+    ? `<button class="btn copy" type="button" onclick="copyAgent()">一键复制给 Agent（执行单 + 核对明细 + 驾驶舱摘要）</button>
+<p id="cs" class="meta">${opts.agentHref ? `Agent 能联网时，也可以直接给它这个地址：<a href="${esc(opts.agentHref)}">${esc(opts.agentHref)}</a>` : ''}</p>
+<textarea id="agent" readonly>${esc(opts.agentText)}</textarea>
+${COPY_SCRIPT}`
     : ''
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
@@ -91,7 +115,11 @@ th{background:#f6f8fa}
 a{color:#0969da;word-break:break-all}
 .btn{display:block;margin:18px 0 6px;padding:14px;text-align:center;background:#0969da;color:#fff;border-radius:10px;text-decoration:none;font-weight:600}
 .meta{color:#656d76;font-size:13px;text-align:center;margin-top:10px}
+.copy{width:100%;border:0;font:inherit;font-weight:600;background:#1a7f37;margin:0 0 4px;cursor:pointer}
+#agent{position:absolute;left:-9999px;width:1px;height:1px}
+#agent.show{position:static;display:block;width:100%;height:260px;box-sizing:border-box;font:13px/1.5 monospace;margin:8px 0 16px}
 </style></head><body><main>
+${copy}
 <div class="card">
 ${markdownToHtml(markdown)}
 </div>

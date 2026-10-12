@@ -210,7 +210,7 @@ export function buildFailureCard(today: string, reason: string, url?: string): D
 function finish(
   title: string, head: string[], body: string[], v: Verification, url: string | undefined, ok: boolean, lines: ExecLine[],
 ): DecisionCard {
-  const tail = url ? ['', `执行单全文、核对明细与完整驾驶舱：${url}`] : []
+  const tail = url ? ['', `执行单全文、核对明细、完整驾驶舱与「一键复制给 Agent」：${url}`] : []
   const push = [...head, ...body, ...tail].join('\n')
   const detail = ['', '---', '', '## 核对明细', '', '| 持仓 | 腾讯 | 新浪 | 结果 |', '|---|---|---|---|']
   for (const c of v.checks) {

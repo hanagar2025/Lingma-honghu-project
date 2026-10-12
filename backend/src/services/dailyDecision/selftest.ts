@@ -5,6 +5,7 @@
  *   ③ 执行单不新增判定 —— 只排序驾驶舱动作与委员会已登记的指令；
  *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失。
  */
+import { buildAgentPack, demoteHeadings, renderSitePage } from './agentPack'
 import { buildCard, buildFailureCard, SYSTEM_NAME } from './card'
 import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
@@ -236,6 +237,27 @@ process.stdout.write('\n【执行单网页】\n')
   ok(markdownToHtml('- a<b>').includes('a&lt;b&gt;'), '正文转义 HTML')
   const bad = buildCard(input, verifyInput(input, null, 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
   ok(renderCardPage(bad.markdown, { ok: bad.ok, title: bad.title, generatedAt: '' }).includes('#cf222e'), '不下单时页面顶部标红')
+}
+
+process.stdout.write('\n【给 Agent 的数据包】\n')
+{
+  const input = baseInput()
+  const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  const brief = '# 驾驶舱摘要\n\n## 持仓\n\n| 名称 | 仓位 |\n|---|---|\n| 海光信息 | 12% |'
+  const pack = buildAgentPack({ card: card.markdown, brief, generatedAt: '2026-10-12 16:10', siteUrl: 'https://x.io/p' })
+  ok(pack.indexOf('读者须知') < pack.indexOf('第一部分') && pack.indexOf('第一部分') < pack.indexOf('第二部分'), '须知在最前，执行单在摘要之前')
+  ok(pack.includes('核对明细') && pack.includes('卖出 澜起科技 688008'), '数据包含执行单全文与核对明细')
+  ok(pack.includes('不是成交记录') && pack.includes('第一部分含股数、现金与总资产'), '须知写明计划≠成交，且如实说明哪部分未脱敏')
+  ok(!/^# /m.test(pack.split('\n').slice(1).join('\n')) && pack.includes('### 驾驶舱摘要'), '嵌入文档的标题下沉，不与分部标题同级')
+  ok(pack.includes('https://x.io/p/agent.md'), '写明纯文本地址')
+  ok(buildAgentPack({ card: card.markdown, brief: null, generatedAt: '' }).includes('驾驶舱摘要没有生成'), '摘要缺失照样出包并说明')
+  ok(demoteHeadings('```\n# 不是标题\n```\n# 是标题') === '```\n# 不是标题\n```\n### 是标题', '代码块里的 # 不动')
+  const page = renderSitePage(card.markdown, { title: card.title, ok: card.ok, generatedAt: '' }, brief, 'https://x.io/p/')
+  const embedded = /<textarea id="agent" readonly>([\s\S]*?)<\/textarea>/.exec(page)?.[1] ?? ''
+  ok(embedded.includes('第二部分') && !embedded.includes('<td>'), '首页嵌入完整数据包（转义后的纯文本）')
+  ok(page.indexOf('一键复制给 Agent') < page.indexOf('class="card"'), '复制按钮在第一屏')
+  ok(page.includes("execCommand('copy')") && page.includes('长按'), '剪贴板被拦截时有退路')
+  ok(!renderCardPage(card.markdown, { ok: true, title: 't', generatedAt: '' }).includes('copyAgent'), '没有数据包时不出按钮')
 }
 
 process.stdout.write('\n【定时运行台账】\n')
