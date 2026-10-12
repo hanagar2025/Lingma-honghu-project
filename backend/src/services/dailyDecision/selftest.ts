@@ -10,6 +10,7 @@ import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { CommitteeOrder } from './orders'
 import type { DecisionInput } from './types'
+import { parseRunLog, RUN_LOG_HEADER, summarize } from './runLog'
 import { resolveSession } from './schedule'
 import { parseSinaRaw, sinaSymbol, verifyInput, type SinaRaw } from './verify'
 import type { Action } from '../cockpit/types'
@@ -235,6 +236,33 @@ process.stdout.write('\n【执行单网页】\n')
   ok(markdownToHtml('- a<b>').includes('a&lt;b&gt;'), '正文转义 HTML')
   const bad = buildCard(input, verifyInput(input, null, 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
   ok(renderCardPage(bad.markdown, { ok: bad.ok, title: bad.title, generatedAt: '' }).includes('#cf222e'), '不下单时页面顶部标红')
+}
+
+process.stdout.write('\n【定时运行台账】\n')
+{
+  const csv = [
+    RUN_LOG_HEADER,
+    '2026-10-12,post,schedule,15:40,2026-10-12 16:08:59,29,success,1,1',
+    '2026-10-13,pre,schedule,07:00,2026-10-13 07:20:00,20,success,1,2',
+    '2026-10-13,post,schedule,15:40,2026-10-13 17:00:00,80,failure,0,3',
+    '2026-10-13,post,manual,,2026-10-13 17:05:00,,success,1,4',
+  ].join('\n')
+  const rows = parseRunLog(csv)
+  ok(rows.length === 4 && rows[3].delayMin === null && rows[3].trigger === 'manual', '台账解析：手动运行没有计划时刻')
+  // 北京 10/13 17:00：盘中 13:30 已过 3 小时仍无记录 → 漏跑；收盘后 15:40 有记录
+  const s = summarize(rows, new Date('2026-10-13T09:00:00Z'))
+  ok(s.missing.length === 1 && s.missing[0].session === 'intra' && s.missing[0].date === '2026-10-13', '没有记录的应有轮次算漏跑')
+  ok(s.expected === 3, '应有轮次只从各自启用日起算')
+  const post = s.stats.find(x => x.session === 'post')!
+  ok(post.runs === 2 && post.max === 80 && post.over60 === 1, '延迟分布只统计定时运行')
+  ok(s.failures.length === 1 && s.manual === 1, '失败与手动运行分开计数')
+  const early = summarize(rows, new Date('2026-10-13T06:00:00Z'))
+  ok(!early.missing.some(m => m.session === 'intra'), '计划时刻未过 3 小时不算漏跑')
+  // 北京 10/16 周五 20:00：收盘后 10/12–16 共 5 轮，盘前、盘中 10/13–16 各 4 轮
+  const empty = summarize(parseRunLog(RUN_LOG_HEADER), new Date('2026-10-16T12:00:00Z'))
+  ok(empty.expected === 13 && empty.missing.length === 13, '空台账：应有轮次全部算漏跑')
+  const weekend = summarize([], new Date('2026-10-18T12:00:00Z'))
+  ok(weekend.missing.every(m => ![0, 6].includes(new Date(`${m.date}T00:00:00Z`).getUTCDay())), '周末不算应有轮次')
 }
 
 void (async () => {
