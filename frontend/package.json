@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"No frontend tests (placeholder)\" && exit 0",
     "build": "vite build",
     "preview": "vite preview",

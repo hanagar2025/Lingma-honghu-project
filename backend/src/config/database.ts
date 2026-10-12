@@ -115,15 +115,23 @@ const initTables = async (): Promise<void> => {
     `)
 
     // 账户状态（现金、历史最高净值，用于组合熔断判定）
+    // household_annual_expense 默认 NULL：家庭安全垫在未填写前判为"数据缺失"而非 0，
+    // 缺省值 0 会让"现金 ÷ 0 年支出"算出无穷年安全垫，把一个未知项伪装成通过项。
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS account_state (
         user_id VARCHAR(36) PRIMARY KEY,
         cash DECIMAL(15,2) NOT NULL DEFAULT 0,
         peak_assets DECIMAL(15,2) NOT NULL DEFAULT 0,
+        household_annual_expense DECIMAL(15,2) NULL DEFAULT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `)
+    // 老库补列（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列）
+    await connection.execute(`
+      ALTER TABLE account_state
+      ADD COLUMN IF NOT EXISTS household_annual_expense DECIMAL(15,2) NULL DEFAULT NULL
+    `).catch(() => { /* MySQL 8.0 以下不支持 IF NOT EXISTS；列缺失时按数据缺失处理 */ })
 
     // 盘前四问决策报告（引擎输出留痕，闭环第③步）
     await connection.execute(`

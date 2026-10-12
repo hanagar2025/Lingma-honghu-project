@@ -66,27 +66,42 @@ router.put('/rule-cards/:code', authenticateToken, asyncHandler(async (req: Auth
 
 router.get('/account', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
   const conn = getConnection()
-  const [rows] = await conn.execute('SELECT cash, peak_assets as peakAssets FROM account_state WHERE user_id = ?', [req.user!.id])
-  const arr = rows as { cash: string; peakAssets: string }[]
+  const [rows] = await conn.execute(
+    `SELECT cash, peak_assets as peakAssets, household_annual_expense as householdAnnualExpense
+     FROM account_state WHERE user_id = ?`,
+    [req.user!.id]
+  )
+  const arr = rows as { cash: string; peakAssets: string; householdAnnualExpense: string | null }[]
   res.json({
     success: true,
     data: {
       cash: arr.length ? Number(arr[0].cash) : 0,
       peakAssets: arr.length ? Number(arr[0].peakAssets) : 0,
+      // null 表示未填写。前端须显示"未填写"，不得显示 0 —— 0 会让安全垫算出无穷年
+      householdAnnualExpense: arr.length && arr[0].householdAnnualExpense !== null
+        ? Number(arr[0].householdAnnualExpense) : null,
       stageIndexCode: STAGE_INDEX_CODE,
     },
   })
 }))
 
 router.put('/account', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { cash, peakAssets } = req.body ?? {}
+  const { cash, peakAssets, householdAnnualExpense } = req.body ?? {}
   if (cash !== undefined && !(typeof cash === 'number' && cash >= 0)) throw createError('cash 必须为非负数', 400)
   if (peakAssets !== undefined && !(typeof peakAssets === 'number' && peakAssets >= 0)) throw createError('peakAssets 必须为非负数', 400)
+  if (householdAnnualExpense !== undefined && !(typeof householdAnnualExpense === 'number' && householdAnnualExpense > 0)) {
+    throw createError('householdAnnualExpense 必须为正数（家庭年度刚性支出，用于安全垫判定）', 400)
+  }
   const conn = getConnection()
   await conn.execute(
-    `INSERT INTO account_state (user_id, cash, peak_assets) VALUES (?, COALESCE(?, 0), COALESCE(?, 0))
-     ON DUPLICATE KEY UPDATE cash = COALESCE(?, cash), peak_assets = COALESCE(?, peak_assets)`,
-    [req.user!.id, cash ?? null, peakAssets ?? null, cash ?? null, peakAssets ?? null]
+    `INSERT INTO account_state (user_id, cash, peak_assets, household_annual_expense)
+     VALUES (?, COALESCE(?, 0), COALESCE(?, 0), ?)
+     ON DUPLICATE KEY UPDATE cash = COALESCE(?, cash), peak_assets = COALESCE(?, peak_assets),
+       household_annual_expense = COALESCE(?, household_annual_expense)`,
+    [
+      req.user!.id, cash ?? null, peakAssets ?? null, householdAnnualExpense ?? null,
+      cash ?? null, peakAssets ?? null, householdAnnualExpense ?? null,
+    ]
   )
   res.json({ success: true, message: '账户状态已更新' })
 }))

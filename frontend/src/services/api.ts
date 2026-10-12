@@ -122,7 +122,8 @@ export const tiosAPI = {
 
   getAccount: () => apiClient.get<any>('/tios/account'),
 
-  updateAccount: (data: { cash?: number; peakAssets?: number }) => apiClient.put('/tios/account', data),
+  updateAccount: (data: { cash?: number; peakAssets?: number; householdAnnualExpense?: number }) =>
+    apiClient.put('/tios/account', data),
 
   getExecutions: () => apiClient.get<any[]>('/tios/executions'),
 
@@ -133,6 +134,22 @@ export const tiosAPI = {
 
   riskReward: (current: number, targetPrice: number, defensePrice: number) =>
     apiClient.post<any>('/tios/risk-reward', { current, targetPrice, defensePrice }),
+}
+
+// 每日驾驶舱（六问）
+export const cockpitAPI = {
+  /** live=true 直连行情源复跑（盘后用），否则优先读库 */
+  getToday: (live = false) => apiClient.get<any>('/cockpit/today', live ? { live: 1 } : undefined),
+
+  /** 阈值与口径说明，用于核对规则 */
+  getSpec: () => apiClient.get<any>('/cockpit/spec'),
+}
+
+// MSR 主线内部轮动雷达
+export const msrAPI = {
+  getUniverse: () => apiClient.get<any>('/msr/universe'),
+
+  scan: (live = false) => apiClient.post<any>('/msr/scan', { live }),
 }
 
 export default apiClient

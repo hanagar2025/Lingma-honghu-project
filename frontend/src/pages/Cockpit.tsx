@@ -1,0 +1,371 @@
+// 每日投资驾驶舱
+//
+// 首页只有一张表。其余一切都收在折叠面板里，需要时才展开。
+// 这个约束不是审美问题：一屏能看完的东西才会每天真的被看，
+// 摊开成十张卡片的东西只会在第三天被跳过。
+//
+// 页面本身不做任何判断 —— 灯色、阈值、法定理由全部由后端给出。
+// 前端若自行判断，规则就会分裂成两份，而分裂的规则等于没有规则。
+
+import React, { useCallback, useEffect, useState } from 'react'
+import {
+  Alert, Button, Card, Collapse, Descriptions, Empty, message, Popover,
+  Space, Table, Tag, Typography,
+} from 'antd'
+import { ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import { cockpitAPI } from '../services/api'
+
+const { Title, Text, Paragraph } = Typography
+
+const LIGHT_STYLE: Record<string, { dot: string; color: string; label: string }> = {
+  GREEN: { dot: '🟢', color: 'green', label: '正常' },
+  YELLOW: { dot: '🟡', color: 'orange', label: '风险升高' },
+  RED: { dot: '🔴', color: 'red', label: '必须处理' },
+  UNKNOWN: { dot: '⚪', color: 'default', label: '数据缺失' },
+}
+
+const TIER_STYLE: Record<string, { color: string; label: string }> = {
+  ACCOUNTING: { color: 'blue', label: '账务事实·可产生动作' },
+  VALIDATED: { color: 'green', label: '已样本外检验·可产生动作' },
+  OBSERVATION: { color: 'default', label: '观察指标·只触发复核' },
+}
+
+const ACTION_STYLE: Record<string, { color: string; label: string }> = {
+  BUY: { color: 'green', label: '买入' },
+  HOLD: { color: 'blue', label: '持有' },
+  REDUCE: { color: 'red', label: '减仓' },
+  NONE: { color: 'default', label: '不动作' },
+}
+
+interface Metric {
+  label: string
+  display: string
+  value: number | null
+  source: string
+  formula: string
+  asOf: string
+  tier: string
+  missingReason?: string
+}
+
+/** 指标追溯气泡 —— 任何数字都能点开看它是怎么算出来的 */
+const MetricTrace: React.FC<{ metrics?: Metric[] }> = ({ metrics }) => {
+  if (!metrics || metrics.length === 0) return null
+  return (
+    <Popover
+      trigger="click"
+      placement="left"
+      overlayStyle={{ maxWidth: 520 }}
+      title="数据来源与计算过程"
+      content={
+        <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+          {metrics.map((m, i) => (
+            <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <Text strong>{m.label}</Text>
+                <Text style={{ fontVariantNumeric: 'tabular-nums' }}>{m.display}</Text>
+              </div>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={TIER_STYLE[m.tier]?.color}>{TIER_STYLE[m.tier]?.label ?? m.tier}</Tag>
+              </div>
+              <div style={{ fontSize: 12, color: '#666', marginTop: 6, lineHeight: 1.7 }}>
+                <div>来源：{m.source}</div>
+                <div>算法：{m.formula}</div>
+                <div>截至：{m.asOf}</div>
+                {m.missingReason && <div style={{ color: '#ff3b30' }}>缺失原因：{m.missingReason}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      }
+    >
+      <Button type="link" size="small" icon={<InfoCircleOutlined />} style={{ paddingInline: 4 }}>
+        追溯
+      </Button>
+    </Popover>
+  )
+}
+
+const Light: React.FC<{ light: string }> = ({ light }) => {
+  const s = LIGHT_STYLE[light] ?? LIGHT_STYLE.UNKNOWN
+  return <span title={s.label} style={{ fontSize: 16 }}>{s.dot}</span>
+}
+
+const Cockpit: React.FC = () => {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+
+  const load = useCallback(async (live = false) => {
+    setLoading(true)
+    try {
+      setData(await cockpitAPI.getToday(live))
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message || err.message || '驾驶舱加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load(false) }, [load])
+
+  if (!data) {
+    return (
+      <Card loading={loading}>
+        {!loading && <Empty description="尚无驾驶舱数据">
+          <Button type="primary" onClick={() => load(false)}>加载</Button>
+        </Empty>}
+      </Card>
+    )
+  }
+
+  const answers: any[] = data.answers ?? []
+  const actions: any[] = data.actions ?? []
+
+  return (
+    <div>
+      {/* ── 能力披露：置顶且不可关闭 ── */}
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="本系统不预测涨跌"
+        description={
+          <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+            {data.disclosure?.headline}
+            <div style={{ marginTop: 8 }}>
+              {(data.disclosure?.items ?? []).map((it: any, i: number) => (
+                <div key={i} style={{ marginBottom: 4 }}>
+                  <Tag color={TIER_STYLE[it.tier]?.color}>{TIER_STYLE[it.tier]?.label ?? it.tier}</Tag>
+                  <Text strong>{it.model}</Text>
+                  <Text type="secondary"> —— {it.measured}</Text>
+                </div>
+              ))}
+            </div>
+          </div>
+        }
+      />
+
+      {/* ── 首页唯一的那张表 ── */}
+      <Card
+        title={<Space><Title level={5} style={{ margin: 0 }}>今日驾驶舱</Title><Text type="secondary">{data.date}</Text></Space>}
+        extra={
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={() => load(false)} loading={loading}>刷新</Button>
+            <Button onClick={() => load(true)} loading={loading}>盘后复跑（直连行情）</Button>
+          </Space>
+        }
+        style={{ marginBottom: 16 }}
+      >
+        <Table
+          dataSource={(data.table ?? []).map((r: any, i: number) => ({ ...r, key: i }))}
+          pagination={false}
+          size="middle"
+          columns={[
+            { title: '项目', dataIndex: 'item', width: 200 },
+            {
+              title: '今日状态', dataIndex: 'todayStatus',
+              render: (v: string, r: any) => <Space><Light light={r.light} /><Text>{v}</Text></Space>,
+            },
+            { title: '决策', dataIndex: 'decision', width: 300, render: (v: string) => <Text type="secondary">{v}</Text> },
+          ]}
+        />
+
+        {/* ── 最下面只有一句 ── */}
+        <div
+          style={{
+            marginTop: 20, padding: '18px 22px', borderRadius: 14,
+            background: '#f2f2f7', borderLeft: '4px solid #007aff',
+          }}
+        >
+          <Text type="secondary" style={{ fontSize: 13 }}>今日核心决策</Text>
+          <div style={{ fontSize: 18, fontWeight: 600, marginTop: 6, lineHeight: 1.6 }}>
+            {data.coreDecision}
+          </div>
+        </div>
+      </Card>
+
+      {/* ── 今日无新增建仓：显式结论 ── */}
+      {data.noNewEntry?.verdict && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={<Text strong style={{ fontSize: 16 }}>今日无新增建仓</Text>}
+          description={
+            <div style={{ fontSize: 13, lineHeight: 1.9 }}>
+              <div style={{ marginBottom: 6 }}>
+                不为了让系统"每天有输出"而强行找一只股票买。原因逐条如下：
+              </div>
+              <ol style={{ margin: 0, paddingLeft: 20 }}>
+                {(data.noNewEntry.reasons ?? []).map((r: string, i: number) => <li key={i}>{r}</li>)}
+              </ol>
+            </div>
+          }
+        />
+      )}
+
+      {/* ── 今日动作 ── */}
+      <Card title="今日动作（只有买入 / 持有 / 减仓 / 不动作四种）" style={{ marginBottom: 16 }}>
+        <Table
+          dataSource={actions.map((a: any, i: number) => ({ ...a, key: i }))}
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: '标的', dataIndex: 'name', width: 130,
+              render: (v: string, r: any) => <span>{v}<br /><Text type="secondary" style={{ fontSize: 12 }}>{r.code}</Text></span>,
+            },
+            {
+              title: '动作', dataIndex: 'kind', width: 90,
+              render: (v: string) => <Tag color={ACTION_STYLE[v]?.color}>{ACTION_STYLE[v]?.label ?? v}</Tag>,
+            },
+            {
+              title: '数量', width: 130,
+              render: (_: any, r: any) => (
+                <Popover content={r.size?.note} title="换算过程">
+                  <Text style={{ cursor: 'help' }}>{r.size?.display}</Text>
+                </Popover>
+              ),
+            },
+            {
+              title: '法定理由',
+              render: (_: any, r: any) => (
+                <div>
+                  <Tag color="blue">{data.legalReasonText?.[r.reason] ?? r.reason}</Tag>
+                  <div style={{ fontSize: 12, marginTop: 4 }}>{r.reasonDetail}</div>
+                </div>
+              ),
+            },
+            {
+              title: '非理由', width: 240,
+              render: (_: any, r: any) =>
+                (r.notReason ?? []).length === 0 ? <Text type="secondary">—</Text> : (
+                  <div style={{ fontSize: 12, color: '#8e8e93' }}>
+                    {r.notReason.map((n: string, i: number) => <div key={i}>· {n}</div>)}
+                  </div>
+                ),
+            },
+            {
+              title: '观察项（仅复核）', width: 220,
+              render: (_: any, r: any) =>
+                (r.reviewTriggers ?? []).length === 0 ? <Text type="secondary">—</Text> : (
+                  <Popover
+                    trigger="click"
+                    overlayStyle={{ maxWidth: 420 }}
+                    title="触发复核的观察项 —— 不构成动作理由"
+                    content={<ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {r.reviewTriggers.map((t: string, i: number) => <li key={i}>{t}</li>)}
+                    </ul>}
+                  >
+                    <Tag style={{ cursor: 'pointer' }}>{r.reviewTriggers.length} 项复核</Tag>
+                  </Popover>
+                ),
+            },
+            { title: '追溯', width: 90, render: (_: any, r: any) => <MetricTrace metrics={r.metrics} /> },
+          ]}
+        />
+      </Card>
+
+      {/* ── 六问详情 ── */}
+      <Card title="六问详情" style={{ marginBottom: 16 }}>
+        <Collapse
+          accordion
+          items={answers.map((a: any) => ({
+            key: String(a.no),
+            label: (
+              <Space>
+                <Light light={a.light} />
+                <Text strong>{['①', '②', '③', '④', '⑤', '⑥'][a.no - 1]} {a.question}</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>{a.headline}</Text>
+              </Space>
+            ),
+            children: (
+              <Table
+                dataSource={(a.rows ?? []).map((r: any, i: number) => ({ ...r, key: i }))}
+                pagination={false}
+                size="small"
+                columns={[
+                  { title: '项目', dataIndex: 'label', width: 200 },
+                  {
+                    title: '今日状态', dataIndex: 'status',
+                    render: (v: string, r: any) => <Space><Light light={r.light} /><Text>{v}</Text></Space>,
+                  },
+                  {
+                    title: '决策 / 含义', dataIndex: 'decision', width: 340,
+                    render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>,
+                  },
+                  {
+                    title: '观察项', width: 110,
+                    render: (_: any, r: any) =>
+                      (r.reviewTriggers ?? []).length === 0 ? <Text type="secondary">—</Text> : (
+                        <Popover
+                          trigger="click"
+                          overlayStyle={{ maxWidth: 460 }}
+                          title="观察项 —— 只触发复核，不构成动作理由"
+                          content={<ul style={{ margin: 0, paddingLeft: 18 }}>
+                            {r.reviewTriggers.map((t: string, i: number) => <li key={i}>{t}</li>)}
+                          </ul>}
+                        >
+                          <Tag style={{ cursor: 'pointer' }}>{r.reviewTriggers.length}</Tag>
+                        </Popover>
+                      ),
+                  },
+                  { title: '追溯', width: 90, render: (_: any, r: any) => <MetricTrace metrics={r.metrics} /> },
+                ]}
+              />
+            ),
+          }))}
+        />
+      </Card>
+
+      {/* ── 执行债务 ── */}
+      {(data.pendingSells ?? []).length > 0 && (
+        <Card title={`执行债务：${data.pendingSells.length} 条未执行卖出指令`} style={{ marginBottom: 16 }}>
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="执行债务未清零期间，系统锁死全部新增建仓输出"
+            description="这是硬闸门，不受任何评分或配置影响。清偿顺序优先于一切研究结论。"
+          />
+          <Table
+            dataSource={data.pendingSells.map((p: any) => ({ ...p, key: p.id }))}
+            pagination={false}
+            size="small"
+            columns={[
+              { title: '指令日期', dataIndex: 'reportDate', width: 120 },
+              { title: '标的', dataIndex: 'code', width: 100 },
+              { title: '触发条款', dataIndex: 'clause' },
+              { title: '应执行动作', dataIndex: 'requiredAction', width: 160 },
+            ]}
+          />
+        </Card>
+      )}
+
+      {/* ── 数据缺口 ── */}
+      <Card title="数据完整性">
+        <Paragraph type="secondary" style={{ fontSize: 13 }}>
+          缺什么就明说缺什么。缺失项一律显示"缺失"并按必须处理对待，不用默认值替代 ——
+          默认值会把一个未知项伪装成通过项。
+        </Paragraph>
+        <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
+          {(data.dataGaps ?? []).map((g: string, i: number) => <li key={i}><Text>{g}</Text></li>)}
+        </ul>
+        <Descriptions size="small" column={2} style={{ marginTop: 12 }}>
+          <Descriptions.Item label="市场阶段">{data.marketStage}</Descriptions.Item>
+          <Descriptions.Item label="PE分位可用">
+            {data.valuationUsable} / {data.valuationLoaded}
+          </Descriptions.Item>
+          <Descriptions.Item label="K线缺失">
+            {(data.missing ?? []).length === 0 ? '无' : data.missing.join('、')}
+          </Descriptions.Item>
+          <Descriptions.Item label="单票上限">
+            {((data.limits?.singleStock ?? 0) * 100).toFixed(0)}%
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+    </div>
+  )
+}
+
+export default Cockpit

@@ -123,7 +123,13 @@ export async function buildSnapshot(userId: string, date: string, positions: Pos
   return { date, totalAssets, cash, positionsValue, peakAssets: peak }
 }
 
-async function loadPrevConfirmedStage(userId: string): Promise<MarketStage> {
+/**
+ * 最近一次已确认的市场阶段。**尚无任何报告时返回 null**。
+ *
+ * 区分"无记录"与"震荡期"很重要：驾驶舱在阶段未确认时按"不允许建仓"从严处理，
+ * 若这里把无记录折叠成 'range'，未确认状态会被读成"允许建仓"。
+ */
+export async function getLatestConfirmedStage(userId: string): Promise<MarketStage | null> {
   const conn = getConnection()
   const [rows] = await conn.execute(
     'SELECT confirmed_stage FROM decision_reports WHERE user_id = ? ORDER BY report_date DESC LIMIT 1',
@@ -131,7 +137,13 @@ async function loadPrevConfirmedStage(userId: string): Promise<MarketStage> {
   )
   const arr = rows as { confirmed_stage: string }[]
   const stage = arr[0]?.confirmed_stage
-  return stage === 'uptrend' || stage === 'downtrend' ? stage : 'range'
+  if (stage === 'uptrend' || stage === 'downtrend' || stage === 'range') return stage
+  return null
+}
+
+/** 阶段递推需要一个具体阶段，无记录时退回震荡期 */
+async function loadPrevConfirmedStage(userId: string): Promise<MarketStage> {
+  return (await getLatestConfirmedStage(userId)) ?? 'range'
 }
 
 export interface RunResult {

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/Layout/AppLayout'
 import Login from './pages/Login'
+import Cockpit from './pages/Cockpit'
 import DailyReport from './pages/DailyReport'
 import Portfolio from './pages/Portfolio'
 import { useAppSelector } from './hooks/redux'
@@ -16,7 +17,8 @@ function App() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<DailyReport />} />
+        <Route path="/" element={<Cockpit />} />
+        <Route path="/daily" element={<DailyReport />} />
         <Route path="/portfolio" element={<Portfolio />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
