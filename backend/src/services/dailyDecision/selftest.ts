@@ -10,6 +10,7 @@ import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { CommitteeOrder } from './orders'
 import type { DecisionInput } from './types'
+import { resolveSession } from './schedule'
 import { parseSinaRaw, sinaSymbol, verifyInput, type SinaRaw } from './verify'
 import type { Action } from '../cockpit/types'
 
@@ -115,6 +116,16 @@ process.stdout.write('\n【盘中复核】\n')
   ok(card.push.includes('盘中市值，非收盘基准'), '盘中市值不当收盘基准')
   const stale = baseInput()
   ok(!verifyInput(stale, live(0), 'INTRADAY').ok, '盘中主数据源仍停在上一交易日 → 不通过')
+}
+
+process.stdout.write('\n【定时延迟校正】\n')
+{
+  const t = (h: number, m: number) => h * 60 + m
+  ok(resolveSession('pre', t(7, 5)) === 'PRE_OPEN', '07:00 盘前按时到 → 盘前单')
+  ok(resolveSession('pre', t(9, 40)) === 'INTRADAY', '盘前拖到开盘后 → 改按实时价出盘中复核')
+  ok(resolveSession('intra', t(14, 20)) === 'INTRADAY', '13:30 盘中复核延迟一小时仍在盘中 → 照常')
+  ok(resolveSession('intra', t(15, 10)) === null, '盘中复核拖到收盘后 → 不发，避免与收盘后重复')
+  ok(resolveSession('post', t(16, 30)) === 'POST_CLOSE', '收盘后一轮延迟 → 照常')
 }
 
 process.stdout.write('\n【已执行的指令自动消项】\n')

@@ -6,6 +6,7 @@
  *   DECISION_JSON=<路径>        用已有的决策输入，不重跑驾驶舱
  *   NO_PUSH=1                  只落盘不推送
  *   FORCE=1                    周末与休市日也出单（调试用）
+ *   DECISION_PUSHED_MARKER=<路径> 推送成功后写此文件，工作流据此判断是否还需补发失败告警
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -14,6 +15,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beijingToday } from '../cockpit/renderObsidian'
 import { buildCard, buildFailureCard, type DecisionCard } from './card'
+import { beijingMinutes, resolveSession } from './schedule'
 import { renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { DecisionInput, DecisionSession } from './types'
@@ -22,17 +24,6 @@ import { fetchSinaRaw, MARKET_INDEX, sinaSymbol, verifyInput, type SinaRaw } fro
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BACKEND_ROOT = join(HERE, '..', '..', '..')
 export const DECISION_DIR = join(BACKEND_ROOT, '..', 'share', 'decision')
-
-function resolveSession(): DecisionSession {
-  const s = process.env.DECISION_SESSION
-  if (s === 'pre') return 'PRE_OPEN'
-  if (s === 'post') return 'POST_CLOSE'
-  if (s === 'intra') return 'INTRADAY'
-  const now = new Date()
-  const minutes = ((now.getUTCHours() + 8) % 24) * 60 + now.getUTCMinutes()
-  if (minutes < 9 * 60 + 30) return 'PRE_OPEN'
-  return minutes < 15 * 60 ? 'INTRADAY' : 'POST_CLOSE'
-}
 
 function beijingClock(): string {
   return new Date(Date.now() + 8 * 3600_000).toISOString().slice(11, 16)
@@ -83,10 +74,16 @@ async function publish(card: DecisionCard, today: string, session: DecisionSessi
   const results = await pushAll(card.title, card.push)
   for (const r of results) process.stdout.write(`推送 ${r.channel}：${r.ok ? '成功' : `失败 ${r.detail}`}\n`)
   if (results.some(r => !r.ok)) process.exitCode = 1
+  if (results.some(r => r.ok) && process.env.DECISION_PUSHED_MARKER) writeFileSync(process.env.DECISION_PUSHED_MARKER, card.title, 'utf-8')
 }
 
 async function main(): Promise<void> {
-  const session = resolveSession()
+  const resolved = resolveSession(process.env.DECISION_SESSION, beijingMinutes())
+  if (!resolved && process.env.FORCE !== '1') {
+    process.stdout.write(`本轮（${process.env.DECISION_SESSION}）实际运行已过收盘，由收盘后那一轮出单，不重复推送\n`)
+    return
+  }
+  const session = resolved ?? 'POST_CLOSE'
   const today = beijingToday()
   const force = process.env.FORCE === '1'
 
