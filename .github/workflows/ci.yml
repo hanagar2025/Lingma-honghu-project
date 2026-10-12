@@ -26,7 +26,7 @@ jobs:
           npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
           npm install --workspaces --include-workspace-root --legacy-peer-deps
       - name: Typecheck
-        run: npx --workspace backend tsc --noEmit -p backend/tsconfig.json
+        run: npm -w backend exec -- tsc --noEmit
       - name: TIOS engine selftest
         run: npm -w backend run tios:selftest
       - name: Run backend tests
@@ -51,6 +51,6 @@ jobs:
           npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
           npm install --workspaces --include-workspace-root --legacy-peer-deps
       - name: Typecheck
-        run: npx --workspace frontend tsc --noEmit -p frontend/tsconfig.json
+        run: npm -w frontend exec -- tsc --noEmit
       - name: Build
         run: npm -w frontend run build
