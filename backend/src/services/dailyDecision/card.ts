@@ -21,6 +21,8 @@ export interface ExecLine {
   refPrice: number | null
   amount: number | null
   reason: string
+  /** 卖后最多持有的股数 */
+  keep: number
 }
 
 export interface DecisionCard {
@@ -44,7 +46,7 @@ function committeeLines(input: DecisionInput, orders: readonly CommitteeOrder[])
     if (!h || h.quantity <= 0) continue
     out.push({
       code: o.code, name: o.name, side: 'SELL', shares: h.quantity, all: true,
-      refPrice: h.close, amount: h.close === null ? null : h.close * h.quantity, reason: o.reason,
+      refPrice: h.close, amount: h.close === null ? null : h.close * h.quantity, reason: o.reason, keep: 0,
     })
   }
   return out
@@ -63,7 +65,7 @@ function limitLines(input: DecisionInput, cleared: Set<string>): { lines: ExecLi
     const shares = Math.min(a.size.value, h.quantity)
     lines.push({
       code: a.code, name: a.name, side: 'SELL', shares, all: shares >= h.quantity,
-      refPrice: h.close, amount: shares * h.close,
+      refPrice: h.close, amount: shares * h.close, keep: h.quantity - shares,
       reason: `单票超 ${pct(LIMITS.singleStock)} 上限，卖后回到上限以内`,
     })
   }
@@ -89,21 +91,37 @@ function projectAfter(input: DecisionInput, sells: ExecLine[]): After | null {
 
 function circuitText(input: DecisionInput): string {
   const c = input.circuit
-  if (c.level === 'LEVEL2') return `二级熔断（只卖不买，股票上限 ${pct(c.equityCap!)}）`
-  if (c.level === 'LEVEL1') return `一级熔断（股票上限 ${pct(c.equityCap!)}）`
-  if (c.level === 'NORMAL') return '未触发熔断'
-  return '熔断不可判定（峰值口径不可比）'
+  const dd = c.drawdown === null ? '' : `自峰值回撤 ${pct(c.drawdown)}，`
+  const pending = input.snapshot.peakVerified === false
+  if (c.level === 'LEVEL2') {
+    return pending
+      ? `${dd}按待核验峰值 ${wan(input.snapshot.peakAssets)} 计达二级线；只卖不买照常执行，降到股票上限 ${pct(c.equityCap!)} 的补足待账本核验`
+      : `${dd}二级熔断（只卖不买，股票上限 ${pct(c.equityCap!)}）`
+  }
+  if (c.level === 'LEVEL1') {
+    return pending
+      ? `${dd}按待核验峰值 ${wan(input.snapshot.peakAssets)} 计达一级线；降到股票上限 ${pct(c.equityCap!)} 的补足待账本核验`
+      : `${dd}一级熔断（股票上限 ${pct(c.equityCap!)}）`
+  }
+  if (c.level === 'NORMAL') return `${dd}未触发`
+  return '不可判定（峰值口径不可比）'
 }
 
 export function buildCard(
   input: DecisionInput,
   v: Verification,
   session: DecisionSession,
-  opts: { url?: string; orders?: readonly CommitteeOrder[]; today?: string } = {},
+  opts: { url?: string; orders?: readonly CommitteeOrder[]; today?: string; time?: string } = {},
 ): DecisionCard {
   const orders = opts.orders ?? COMMITTEE_ORDERS
-  const when = session === 'PRE_OPEN' ? `今日开盘（按 ${md(input.date)} 收盘核对）` : `下一交易日开盘（按 ${md(input.date)} 收盘核对）`
-  const label = session === 'PRE_OPEN' ? `${md(opts.today ?? input.date)} 开盘` : `${md(input.date)} 收盘后`
+  const today = md(opts.today ?? input.date)
+  const intra = session === 'INTRADAY'
+  const when = session === 'PRE_OPEN'
+    ? `今日开盘（按 ${md(input.date)} 收盘价计算）`
+    : intra
+      ? `今日盘中（按 ${opts.time ?? ''} 实时价计算）`
+      : `下一交易日开盘（按 ${md(input.date)} 收盘价计算）`
+  const label = session === 'PRE_OPEN' ? `${today} 开盘` : intra ? `${today} 盘中复核` : `${md(input.date)} 收盘后`
   const committee = committeeLines(input, orders)
   const cleared = new Set(committee.map(l => l.code))
   const limits = limitLines(input, cleared)
@@ -133,11 +151,12 @@ export function buildCard(
     : `${SYSTEM_NAME} ${label}：不交易`
   head.push(`# ${title}`, '')
   head.push(`执行时点：${when}`)
-  head.push(`数据核对：✅ ${checked}/${v.checks.length} 只持仓收盘价两源一致（腾讯/新浪），账本 ${input.ledgerAsOf ?? '无日期'}`)
+  head.push('性质：下单计划，不是成交记录。是否完成以券商成交回报为准。')
+  head.push(`数据核对：✅ ${checked}/${v.checks.length} 只持仓${intra ? '实时价' : '收盘价'}两源一致（腾讯/新浪），股数与现金取自账本 ${input.ledgerAsOf ?? '无日期'}`)
   head.push(
-    `账户：总资产 ${wan(total)}，股票 ${pct(s.positionsValue / total)}，现金 ${pct((s.cash + s.externalCash) / total)}，`
-    + `自峰值回撤 ${input.circuit.drawdown === null ? '不可判定' : pct(input.circuit.drawdown)}，${circuitText(input)}`,
+    `账户${intra ? '（盘中市值，非收盘基准）' : ''}：总资产 ${wan(total)}，股票 ${pct(s.positionsValue / total)}，现金 ${pct((s.cash + s.externalCash) / total)}`,
   )
+  head.push(`熔断：${circuitText(input)}`)
   head.push('')
 
   body.push('## 执行清单（按顺序）', '')
@@ -145,12 +164,16 @@ export function buildCard(
   lines.forEach((l, i) => {
     const qty = l.all ? `${l.shares} 股（全部）` : `${l.shares} 股`
     const ref = l.refPrice === null ? '' : `，参考价 ${l.refPrice.toFixed(2)}，约 ${wan(l.amount!)}`
-    body.push(`${i + 1}. 卖出 ${l.name} ${l.code}：${qty}${ref} —— ${l.reason}`)
+    const keep = l.all ? '' : `；卖后持有不超过 ${l.keep} 股`
+    body.push(`${i + 1}. 卖出 ${l.name} ${l.code}：${qty}${ref} —— ${l.reason}${keep}`)
   })
+  if (limits.lines.length) {
+    body.push('', `单票归位的股数按参考价算出。下单时按实时价重算：卖后市值不超过总资产的 ${pct(LIMITS.singleStock)}，宁多卖一股、不少卖一股。`)
+  }
 
   const after = projectAfter(input, lines)
   if (lines.length && after) {
-    body.push('', `执行后：股票 ${pct(after.stockPct)}，现金 ${pct(after.cashPct)}`
+    body.push('', `按参考价全部成交后：股票 ${pct(after.stockPct)}，现金 ${pct(after.cashPct)}`
       + (after.top ? `，单票最高 ${after.top.name} ${(after.top.pct * 100).toFixed(2)}%` : ''))
   }
 
@@ -159,17 +182,19 @@ export function buildCard(
   if (circuitAct) {
     body.push('', '## 熔断降仓（须委员会指派标的）', '', `- 组合股票须再降约 ${wan(circuitAct.size.value ?? 0)}；由哪只承担由委员会指派，指派后进入执行单`)
   } else if (capped && s.peakVerified === false) {
-    body.push('', '## 熔断补足', '', '- 待账本核验：今日不执行、不撤销（委员会 10/10 裁定）')
+    body.push('', '## 熔断补足（不是今日指令）', '', `- 降到股票上限 ${pct(input.circuit.equityCap!)} 所需的额外卖出：待账本核验，今日不执行、不撤销（委员会 10/10 裁定）`)
   }
 
   const buys = input.actions.filter(a => a.kind === 'BUY')
   body.push('', '## 不做', '')
-  if (input.circuit.sellOnly) body.push('- 不买入任何股票（二级熔断：只卖不买）')
+  if (input.circuit.sellOnly) body.push('- 不买入任何股票，不追跌、不抢反弹（只卖不买照常执行）')
   else if (input.noNewEntry.verdict || !buys.length) body.push('- 不新开仓、不加仓')
   else buys.forEach(b => body.push(`- 买入候选 ${b.name}：规模由委员会按仓位预算定，未定前不买`))
   body.push('- 卖出所得现金留在账户，不转出、不另作他用')
 
-  body.push('', '## 成交后', '', '把持仓截图发给委员会。账本更新后，已完成的指令自动从执行单消失。')
+  body.push('', '## 下单前与成交后', '')
+  body.push('- 下单前先查当日委托与成交：已成交的不再下，已挂未成交的改价，不重复挂单')
+  body.push('- 成交后把成交回报和持仓截图发给委员会；账本按真实成交更新后，已完成的指令自动消失')
   return finish(title, head, body, v, opts.url, true, lines)
 }
 

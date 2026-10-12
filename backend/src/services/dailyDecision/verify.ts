@@ -9,6 +9,8 @@ import type { DecisionInput, DecisionSession, PriceCheck, Verification } from '.
 
 export const MARKET_INDEX = 'sh000001'
 const PRICE_TOLERANCE = 0.002
+/** 盘中两源取价有几秒先后，放宽到 0.5% */
+const INTRADAY_TOLERANCE = 0.005
 
 export interface SinaRaw { prevClose: number; price: number; date: string }
 
@@ -52,8 +54,8 @@ export async function fetchSinaRaw(symbols: readonly string[]): Promise<Record<s
   throw new Error(`新浪行情请求失败：${String(last)}`)
 }
 
-function close(a: number, b: number): boolean {
-  return Math.abs(a - b) <= Math.max(0.011, PRICE_TOLERANCE * b)
+function close(a: number, b: number, tol: number): boolean {
+  return Math.abs(a - b) <= Math.max(0.011, tol * b)
 }
 
 export function verifyInput(
@@ -80,11 +82,12 @@ export function verifyInput(
     else if (h.barDate !== null && h.barDate < s.date && s.prevClose > 0) secondary = s.prevClose
     else note = `日期对不上（腾讯 ${h.barDate ?? '无'} / 新浪 ${s.date}）`
 
-    if (session === 'POST_CLOSE' && marketDate && h.barDate && h.barDate < marketDate && s?.date === marketDate) {
+    if (session !== 'PRE_OPEN' && marketDate && h.barDate && h.barDate < marketDate && s?.date === marketDate) {
       secondary = null
       note = `主数据源停在 ${h.barDate}，未更新到 ${marketDate}`
     }
-    const ok = h.close !== null && secondary !== null && close(h.close, secondary)
+    const tol = session === 'INTRADAY' ? INTRADAY_TOLERANCE : PRICE_TOLERANCE
+    const ok = h.close !== null && secondary !== null && close(h.close, secondary, tol)
     if (!ok && !note) note = `两源差 ${((h.close! / secondary! - 1) * 100).toFixed(2)}%`
     checks.push({ code: h.code, name: h.name, primary: h.close, secondary, ok, note })
   }

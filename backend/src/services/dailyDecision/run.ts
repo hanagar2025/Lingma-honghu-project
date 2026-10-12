@@ -2,7 +2,7 @@
  * 每日执行单：跑驾驶舱导出决策输入 → 两源核对 → 出执行单 → 落盘 share/decision → 推送。
  *
  * 运行：npm run decision:daily
- *   DECISION_SESSION=pre|post  盘前 / 收盘后；缺省按北京时间 12 点前为盘前
+ *   DECISION_SESSION=pre|intra|post  盘前 / 盘中复核 / 收盘后；缺省按北京时间判断
  *   DECISION_JSON=<路径>        用已有的决策输入，不重跑驾驶舱
  *   NO_PUSH=1                  只落盘不推送
  *   FORCE=1                    周末与休市日也出单（调试用）
@@ -27,8 +27,15 @@ function resolveSession(): DecisionSession {
   const s = process.env.DECISION_SESSION
   if (s === 'pre') return 'PRE_OPEN'
   if (s === 'post') return 'POST_CLOSE'
-  const hour = (new Date().getUTCHours() + 8) % 24
-  return hour < 12 ? 'PRE_OPEN' : 'POST_CLOSE'
+  if (s === 'intra') return 'INTRADAY'
+  const now = new Date()
+  const minutes = ((now.getUTCHours() + 8) % 24) * 60 + now.getUTCMinutes()
+  if (minutes < 9 * 60 + 30) return 'PRE_OPEN'
+  return minutes < 15 * 60 ? 'INTRADAY' : 'POST_CLOSE'
+}
+
+function beijingClock(): string {
+  return new Date(Date.now() + 8 * 3600_000).toISOString().slice(11, 16)
 }
 
 function cardUrl(): string | undefined {
@@ -57,7 +64,7 @@ function exportDecisionInput(): { input: DecisionInput | null; error: string | n
 
 async function publish(card: DecisionCard, today: string, session: DecisionSession): Promise<void> {
   mkdirSync(DECISION_DIR, { recursive: true })
-  const tag = session === 'PRE_OPEN' ? 'pre' : 'post'
+  const tag = session === 'PRE_OPEN' ? 'pre' : session === 'INTRADAY' ? 'intra' : 'post'
   writeFileSync(join(DECISION_DIR, `${today}-${tag}.md`), card.markdown, 'utf-8')
   writeFileSync(join(DECISION_DIR, 'latest.md'), card.markdown, 'utf-8')
   const generatedAt = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 16).replace('T', ' ')
@@ -104,12 +111,12 @@ async function main(): Promise<void> {
   }
   const v = verifyInput(input, sina, session)
 
-  if (!force && session === 'POST_CLOSE' && v.marketDate && v.marketDate !== today) {
+  if (!force && session !== 'PRE_OPEN' && v.marketDate && v.marketDate !== today) {
     process.stdout.write(`${today} 休市（上证指数行情停在 ${v.marketDate}），不出执行单\n`)
     return
   }
 
-  await publish(buildCard(input, v, session, { url: cardUrl(), today }), today, session)
+  await publish(buildCard(input, v, session, { url: cardUrl(), today, time: beijingClock() }), today, session)
 }
 
 main().catch(e => {

@@ -42,4 +42,5 @@ export interface Verification {
   problems: string[]
 }
 
-export type DecisionSession = 'PRE_OPEN' | 'POST_CLOSE'
+/** INTRADAY = 交易时段内按实时价复核，市值不是收盘基准 */
+export type DecisionSession = 'PRE_OPEN' | 'INTRADAY' | 'POST_CLOSE'

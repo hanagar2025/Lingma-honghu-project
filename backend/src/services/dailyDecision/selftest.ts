@@ -82,6 +82,41 @@ process.stdout.write('\n【核对通过：顺序与股数】\n')
   ok(card.markdown.includes('核对明细') && !card.push.includes('核对明细'), '核对明细只进存档，不进推送')
 }
 
+process.stdout.write('\n【委员会 10/12 修正：计划 ≠ 成交，熔断确认 ≠ 待核验】\n')
+{
+  const input = baseInput()
+  const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(card.push.includes('下单计划，不是成交记录'), '写明是下单计划，以成交回报为准')
+  ok(card.push.includes('待核验峰值') && !card.push.includes('二级熔断（只卖不买'), '峰值待核验时不把二级熔断写成已确认')
+  ok(card.push.includes('只卖不买照常执行'), '只卖不买仍照常执行（10/10 裁定）')
+  ok(card.push.includes('熔断补足（不是今日指令）'), '熔断补足与今日指令分开')
+  ok(card.push.includes('卖后持有不超过 1800 股'), '单票归位写出卖后最多持有股数，价格变了也能照做')
+  ok(card.push.includes('按实时价重算'), '提示按实时价重算，不照搬参考价股数')
+  ok(card.push.includes('不重复挂单'), '下单前先查委托与成交，不重复下单')
+  const verified = baseInput()
+  verified.snapshot.peakVerified = true
+  const vc = buildCard(verified, verifyInput(verified, sinaFor(verified), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(vc.push.includes('二级熔断（只卖不买'), '峰值已核实时才写二级熔断成立')
+}
+
+process.stdout.write('\n【盘中复核】\n')
+{
+  const input = baseInput()
+  input.holdings = input.holdings.map(h => ({ ...h, barDate: '2026-10-12' }))
+  const live = (bump: number) => sinaFor(input, x => {
+    x.sh000001 = { prevClose: 3000, price: 2990, date: '2026-10-12' }
+    for (const h of input.holdings) x[sinaSymbol(h.code)] = { prevClose: 1, price: h.close! * (1 + bump), date: '2026-10-12' }
+  })
+  ok(verifyInput(input, live(0.003), 'INTRADAY').ok, '盘中两源差 0.3% → 通过（取价有先后）')
+  ok(!verifyInput(input, live(0.003), 'POST_CLOSE').ok, '收盘后同样差 0.3% → 不通过')
+  ok(!verifyInput(input, live(0.01), 'INTRADAY').ok, '盘中两源差 1% → 不通过')
+  const card = buildCard(input, verifyInput(input, live(0), 'INTRADAY'), 'INTRADAY', { orders: ORDERS, today: '2026-10-12', time: '14:08' })
+  ok(card.title.includes('10/12 盘中复核') && card.push.includes('按 14:08 实时价计算'), '标题与时点写明盘中')
+  ok(card.push.includes('盘中市值，非收盘基准'), '盘中市值不当收盘基准')
+  const stale = baseInput()
+  ok(!verifyInput(stale, live(0), 'INTRADAY').ok, '盘中主数据源仍停在上一交易日 → 不通过')
+}
+
 process.stdout.write('\n【已执行的指令自动消项】\n')
 {
   const input = baseInput()
@@ -139,7 +174,7 @@ process.stdout.write('\n【盘前：新浪现价为 0，用昨收核对】\n')
   const v = verifyInput(input, s, 'PRE_OPEN')
   ok(v.ok, '盘前昨收与腾讯最新收盘一致 → 通过')
   const card = buildCard(input, v, 'PRE_OPEN', { orders: ORDERS, today: '2026-10-12' })
-  ok(card.title.includes('10/12 开盘') && card.push.includes('按 10/9 收盘核对'), '标题是执行日，正文写明数据日')
+  ok(card.title.includes('10/12 开盘') && card.push.includes('按 10/9 收盘价计算'), '标题是执行日，正文写明数据日')
 }
 
 process.stdout.write('\n【熔断已核实：降仓须委员会指派】\n')
