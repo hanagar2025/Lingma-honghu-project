@@ -2507,7 +2507,7 @@ console.log('\n【R-02】核心股预选 · 估值重定价数据审计')
 {
   const {
     singleQuarters, buildStockView, renderRerating, reratingProducesAction,
-    PRESELECT_POOL, SCENARIO_ASSUMPTIONS, DEDUCT_SHARE_FLOOR,
+    PRESELECT_POOL, NEXT_WAVE_POOL, SCENARIO_ASSUMPTIONS, DEDUCT_SHARE_FLOOR, RECEIVABLE_GAP,
   } = await import('./rerating')
   const { RESEARCH_MODULES } = await import('../governance/researchIsolation')
   const { fingerprint: fp12 } = await import('../governance/ruleRegistry')
@@ -2519,7 +2519,7 @@ console.log('\n【R-02】核心股预选 · 估值重定价数据审计')
   const Y = 1e8
   const rep = (reportDate: string, netProfit: number, extra: Partial<import('./rerating').ReportRow> = {}) => ({
     reportDate, revenue: netProfit * 4, revenueYoy: 50, netProfit, netProfitYoy: 50,
-    deductNetProfit: netProfit, grossMargin: 40, operatingCashFlow: netProfit, ...extra,
+    deductNetProfit: netProfit, deductNetProfitYoy: 50, grossMargin: 40, operatingCashFlow: netProfit, ...extra,
   })
   const reports = [
     rep('2026-06-30', 30 * Y), rep('2026-03-31', 12 * Y), rep('2025-12-31', 40 * Y),
@@ -2533,11 +2533,19 @@ console.log('\n【R-02】核心股预选 · 估值重定价数据审计')
     Math.abs(q[0]!.netProfitYoy! - (18 / 10 - 1)) < 1e-9 && Math.abs(q[1]!.netProfitYoy! - (12 / 8 - 1)) < 1e-9
     && q[2]!.netProfitYoy === null)
 
+  const reportsV = [
+    rep('2026-06-30', 20 * Y), rep('2026-03-31', 10 * Y), rep('2025-12-31', 28 * Y),
+    rep('2025-09-30', 20 * Y), rep('2025-06-30', 14 * Y), rep('2025-03-31', 7 * Y),
+  ]
   const bars = Array.from({ length: 300 }, (_, i) => ({ date: `d${i}`, close: 100 + i, high: 101 + i, volume: 1 + (i % 2) }))
   const bench = Array.from({ length: 300 }, (_, i) => ({ date: `d${i}`, close: 100, high: 100, volume: 1 }))
   const member = PRESELECT_POOL[0]!
   const base = {
-    member, price: 100, marketCapYi: 1000, floatCapYi: 900, peTtm: 40, reports,
+    member, price: 100, marketCapYi: 1000, floatCapYi: 900, peTtm: 40, reports: reportsV,
+    balance: [
+      { reportDate: '2026-06-30', inventory: 120, receivables: 150, contractLiab: 200, constructionInProgress: 50 },
+      { reportDate: '2025-06-30', inventory: 100, receivables: 100, contractLiab: 100, constructionInProgress: 100 },
+    ],
     forecast: { orgNum: 10, eps: [{ year: 2025, eps: 2, actual: true }, { year: 2026, eps: 4, actual: false }, { year: 2027, eps: 6, actual: false }, { year: 2028, eps: 9, actual: false }] },
     preview: null, bars, pePercentile3y: 0.3, peNote: null, errors: [],
   }
@@ -2552,11 +2560,46 @@ console.log('\n【R-02】核心股预选 · 估值重定价数据审计')
   ok('相对强弱 = 个股涨跌 − 沪深 300 涨跌', Math.abs(v.rs20! - v.ret20!) < 1e-12 && v.drawdown250! < 0)
   ok('数据完整时无缺口、无读数提示', v.dataGaps.length === 0 && v.caveats.length === 0, JSON.stringify([v.dataGaps, v.caveats]))
 
-  const lowDeduct = buildStockView({ ...base, reports: [rep('2026-06-30', 30 * Y, { deductNetProfit: 30 * Y * (DEDUCT_SHARE_FLOOR - 0.1) }), ...reports.slice(1)] }, bench, '2026-10-15')
+  const lowDeduct = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { deductNetProfit: 20 * Y * (DEDUCT_SHARE_FLOOR - 0.1) }), ...reportsV.slice(1)] }, bench, '2026-10-15')
   ok('扣非占比偏低时提示 PE 与分位失真', lowDeduct.caveats.some(c => c.includes('非经常性收益')))
-  const stale = buildStockView({ ...base, preview: { reportDate: '2026-09-30', noticeDate: '2026-10-15', type: '预增', netProfitLower: 38 * Y, netProfitUpper: 40 * Y, yoyLower: 100, yoyUpper: 110 } }, bench, '2026-10-15')
-  ok('三季报预告拆出第三季单季', stale.previewQ3Yi![0] === 8 && stale.previewQ3Yi![1] === 10)
+  const stale = buildStockView({ ...base, preview: { reportDate: '2026-09-30', noticeDate: '2026-10-15', type: '预增', netProfitLower: 48 * Y, netProfitUpper: 50 * Y, yoyLower: 100, yoyUpper: 110 } }, bench, '2026-10-15')
+  ok('三季报预告拆出第三季单季', stale.previewQ3Yi![0] === 28 && stale.previewQ3Yi![1] === 30)
   ok('一致预期没跟上预告时提示前瞻 PE 偏保守', stale.caveats.some(c => c.includes('还没计入这份预告')), JSON.stringify(stale.caveats))
+  ok('资产负债表四项同比对的是去年同一报告期',
+    v.balanceYoy?.reportDate === '2026-06-30' && Math.abs(v.balanceYoy.inventory! - 0.2) < 1e-12
+    && v.balanceYoy.contractLiab === 1 && v.balanceYoy.constructionInProgress === -0.5)
+  ok('单季毛利率由累计营收 × 累计毛利率相减得到', Math.abs(q[0]!.grossMargin! - 40) < 1e-9)
+  const split = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { netProfitYoy: 45, deductNetProfitYoy: -16 }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('归母增长而扣非下滑时提示增长来自非经常性收益', split.caveats.some(c => c.includes('主营利润在下滑')), JSON.stringify(split.caveats))
+  const arHeavy = buildStockView({ ...base, balance: [{ ...base.balance[0]!, receivables: 100 * (1.5 + RECEIVABLE_GAP + 0.1) }, base.balance[1]!] }, bench, '2026-10-15')
+  ok('应收比营收涨得快出阈值时提示收款质量', arHeavy.caveats.some(c => c.includes('收款质量')) && !v.caveats.some(c => c.includes('收款质量')))
+  ok('一致预期要求的剩余每季利润与最近单季同口径', v.consensusPace?.needPerQuarter === 10 && v.consensusPace.lastQuarter === 10)
+  const demanding = buildStockView({ ...base, forecast: { orgNum: 10, eps: [{ year: 2026, eps: 8, actual: false }, { year: 2028, eps: 12, actual: false }] } }, bench, '2026-10-15')
+  ok('一致预期要求利润明显加速时提示', demanding.caveats.some(c => c.includes('继续明显加速')), JSON.stringify(demanding.consensusPace))
+  const cashOut = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { operatingCashFlow: -5 * Y }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('账面盈利而经营现金流为负时提示', cashOut.caveats.some(c => c.includes('现金流量表附注')))
+  const thin = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { revenue: 2000 * Y, operatingCashFlow: -200 * Y }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('净利率过薄时不列现金流 / 净利', thin.cashConversion === null && thin.caveats.some(c => c.includes('没有意义')))
+  const oneOff = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { deductNetProfit: 8 * Y }), rep('2026-03-31', 10 * Y, { deductNetProfit: 4 * Y }), ...reportsV.slice(2)] }, bench, '2026-10-15')
+  ok('扣非占比偏低时，一致预期节奏改用扣非口径比', oneOff.consensusPace?.basis === '扣非' && oneOff.consensusPace.lastQuarter === 4 && oneOff.consensusPace.needPerQuarter === 16)
+  const noBalance = buildStockView({ ...base, balance: [] }, bench, '2026-10-15')
+  ok('缺资产负债表记为数据缺口', noBalance.dataGaps.some(g => g.includes('资产负债表')))
+  ok('第二批覆盖委员会四条线与对照组，代码不重复',
+    ['688676', '002851', '300870', '002335', '002837', '301086', '300499', '002600', '600183', '300476', '300604', '002156'].every(c => NEXT_WAVE_POOL.some(m => m.code === c))
+    && ['300308', '300502', '002371', '688012', '002463'].every(c => NEXT_WAVE_POOL.some(m => m.code === c))
+    && new Set(NEXT_WAVE_POOL.map(m => m.code)).size === NEXT_WAVE_POOL.length)
+  const g2 = renderRerating([v], '2026-10-15', 't', { subtitle: '下一轮价值承接候选', showGroup: true })
+  ok('第二批渲染带方向列与资产负债表旁证，表格列数对齐',
+    g2.includes('| 方向 | 公司 |') && g2.includes('资产负债表旁证')
+    && (() => {
+      const tables: string[][] = []
+      let cur: string[] = []
+      for (const l of [...g2.split('\n'), '']) {
+        if (l.startsWith('|')) cur.push(l)
+        else if (cur.length) { tables.push(cur); cur = [] }
+      }
+      return tables.length >= 6 && tables.every(t => t.every(r => r.split('|').length === t[0]!.split('|').length))
+    })())
   const noForecast = buildStockView({ ...base, forecast: null, errors: ['一致预期失败：x'] }, bench, '2026-10-15')
   ok('抓取失败与缺一致预期都记为数据缺口，不静默跳过',
     noForecast.dataGaps.includes('一致预期失败：x') && noForecast.dataGaps.includes('无机构一致预期'))

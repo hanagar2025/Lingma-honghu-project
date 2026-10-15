@@ -41,6 +41,31 @@ export const PRESELECT_POOL: readonly PoolMember[] = [
   { code: '300124', name: '汇川技术', group: '工业自动化', attributionVerified: null, note: '不在现有作战名单，主线归因未核验' },
 ]
 
+/**
+ * 委员会 10/15 第二批：下一轮价值承接候选（四条线）＋ 现有核心作对照。
+ * 方向顺序即委员会给的研究优先级，不是排名；对照组与候选用同一套口径，不加分不减分。
+ */
+export const NEXT_WAVE_POOL: readonly PoolMember[] = [
+  { code: '688676', name: '金盘科技', group: 'AIDC 供电', attributionVerified: null, note: '委员会第一轮信任票：订单兑现型' },
+  { code: '002851', name: '麦格米特', group: 'AIDC 供电', attributionVerified: null },
+  { code: '300870', name: '欧陆通', group: 'AIDC 供电', attributionVerified: null },
+  { code: '002335', name: '科华数据', group: 'AIDC 供电', attributionVerified: null },
+  { code: '002837', name: '英维克', group: '液冷', attributionVerified: null, note: '委员会第一轮信任票：系统能力型' },
+  { code: '301086', name: '鸿富瀚', group: '液冷', attributionVerified: null, note: '委员会第一轮信任票：高弹性成长型' },
+  { code: '300499', name: '高澜股份', group: '液冷', attributionVerified: null },
+  { code: '002600', name: '领益智造', group: '液冷', attributionVerified: null },
+  { code: '600183', name: '生益科技', group: 'PCB 材料与制造', attributionVerified: null },
+  { code: '300476', name: '胜宏科技', group: 'PCB 材料与制造', attributionVerified: null },
+  { code: '002463', name: '沪电股份', group: 'PCB 材料与制造', attributionVerified: true },
+  { code: '002916', name: '深南电路', group: 'PCB 材料与制造', attributionVerified: true },
+  { code: '300604', name: '长川科技', group: '先进封装与测试', attributionVerified: null },
+  { code: '002156', name: '通富微电', group: '先进封装与测试', attributionVerified: null },
+  { code: '300308', name: '中际旭创', group: '现有核心（对照）', attributionVerified: true },
+  { code: '300502', name: '新易盛', group: '现有核心（对照）', attributionVerified: true },
+  { code: '002371', name: '北方华创', group: '现有核心（对照）', attributionVerified: true },
+  { code: '688012', name: '中微公司', group: '现有核心（对照）', attributionVerified: true },
+]
+
 /** 情景格的假设。这些不是规则，改动不触发冻结指纹；数值由委员会定，这里给出初始值。 */
 export const SCENARIO_ASSUMPTIONS = {
   horizonEnd: '2028-12-31',
@@ -55,8 +80,20 @@ export interface ReportRow {
   netProfit: number | null
   netProfitYoy: number | null
   deductNetProfit: number | null
+  /** 扣非净利同比（%）；与归母同比背离时说明利润里有非经常性成分 */
+  deductNetProfitYoy: number | null
   grossMargin: number | null
   operatingCashFlow: number | null
+}
+
+/** 资产负债表里能旁证「订单 → 交付 → 收款」的四项（元） */
+export interface BalanceRow {
+  reportDate: string
+  inventory: number | null
+  /** 应收账款 + 应收票据及应收款项 + 合同资产，取接口能给到的口径 */
+  receivables: number | null
+  contractLiab: number | null
+  constructionInProgress: number | null
 }
 
 export interface Forecast {
@@ -90,6 +127,8 @@ export interface StockRaw {
   peTtm: number | null
   /** 年初至今累计口径，按报告期倒序 */
   reports: ReportRow[]
+  /** 最新一期与去年同期，用来算同比 */
+  balance: BalanceRow[]
   forecast: Forecast | null
   preview: Preview | null
   bars: Bar[]
@@ -115,6 +154,8 @@ export interface StockView {
   quarters: QuarterRow[]
   deductShare: number | null
   cashConversion: number | null
+  /** 资产负债表四项的同比；营收同比放在一起便于对照 */
+  balanceYoy: { reportDate: string; inventory: number | null; receivables: number | null; contractLiab: number | null; constructionInProgress: number | null } | null
   preview: Preview | null
   orgNum: number | null
   forwardPe: { year: number; pe: number | null }[]
@@ -127,6 +168,8 @@ export interface StockView {
   previewQ3Yi: [number, number] | null
   /** 前三季预告中值占一致预期 2026E 全年净利的比例 */
   previewCompletion: number | null
+  /** 一致预期 2026E 要求剩下每个季度赚多少，与最近一个单季比 */
+  consensusPace: { needPerQuarter: number; lastQuarter: number; ratio: number; basis: '归母' | '扣非' } | null
   /** 会让本表读数失真的情形，渲染时逐条写出 */
   caveats: string[]
   /** 利润 × 退出估值 → 到 horizonEnd 的年化收益 */
@@ -145,11 +188,58 @@ export interface QuarterRow {
   revenue: number | null
   netProfit: number | null
   netProfitYoy: number | null
+  deductNetProfit: number | null
+  /** 单季毛利率（%），由累计营收 × 累计毛利率相减得到 */
+  grossMargin: number | null
 }
 
 const YI = 1e8
 /** 扣非占比低于此值时提示 PE 失真。这是读数提示，不是门槛 */
 export const DEDUCT_SHARE_FLOOR = 0.8
+/** 应收或存货同比比营收同比快出这么多时提示。读数提示，不是门槛 */
+export const RECEIVABLE_GAP = 0.3
+
+/** 净利率低于此值时现金流 / 净利不列 */
+export const THIN_MARGIN = 0.02
+/** 一致预期要求的剩余每季利润 ÷ 最近单季：低于 PACE_STALE 提示预期偏旧，高于 PACE_DEMANDING 提示要求加速。读数提示，不是门槛 */
+export const PACE_STALE = 0.6
+export const PACE_DEMANDING = 1.5
+
+function consensusPaceOf(
+  p26: number | null, latest: ReportRow | null, quarters: readonly QuarterRow[],
+  preview: Preview | null, previewQ3Yi: [number, number] | null, useDeduct: boolean,
+): StockView['consensusPace'] {
+  if (!p26 || !latest || latest.netProfit === null || !latest.reportDate.startsWith('2026')) return null
+  if (useDeduct && latest.deductNetProfit === null) return null
+  const usePreview = !useDeduct && !!preview && !!previewQ3Yi && preview.reportDate > latest.reportDate
+    && preview.netProfitLower !== null && preview.netProfitUpper !== null
+  const ytd = usePreview ? (preview!.netProfitLower! + preview!.netProfitUpper!) / 2 / YI
+    : (useDeduct ? latest.deductNetProfit! : latest.netProfit) / YI
+  const asOfDate = usePreview ? preview!.reportDate : latest.reportDate
+  const q = { '03-31': 1, '06-30': 2, '09-30': 3, '12-31': 4 }[asOfDate.slice(5)] ?? 4
+  const left = 4 - q
+  if (left <= 0) return null
+  const lastQuarter = usePreview ? (previewQ3Yi![0] + previewQ3Yi![1]) / 2
+    : ((useDeduct ? quarters[0]?.deductNetProfit : quarters[0]?.netProfit) ?? 0) / YI
+  if (!(lastQuarter > 0)) return null
+  const needPerQuarter = (p26 - ytd) / left
+  return { needPerQuarter, lastQuarter, ratio: needPerQuarter / lastQuarter, basis: useDeduct ? '扣非' : '归母' }
+}
+
+function balanceChange(rows: readonly BalanceRow[]): StockView['balanceYoy'] {
+  const sorted = [...rows].sort((a, b) => b.reportDate.localeCompare(a.reportDate))
+  const now = sorted[0]
+  if (!now) return null
+  const ly = sorted.find(r => r.reportDate === `${+now.reportDate.slice(0, 4) - 1}${now.reportDate.slice(4)}`)
+  if (!ly) return null
+  const g = (k: 'inventory' | 'receivables' | 'contractLiab' | 'constructionInProgress') =>
+    now[k] !== null && ly[k] !== null && ly[k]! > 0 ? now[k]! / ly[k]! - 1 : null
+  return {
+    reportDate: now.reportDate,
+    inventory: g('inventory'), receivables: g('receivables'),
+    contractLiab: g('contractLiab'), constructionInProgress: g('constructionInProgress'),
+  }
+}
 
 /** 累计口径拆成单季：Q1 即累计，其余季 = 本期累计 − 同年上一期累计 */
 export function singleQuarters(reports: readonly ReportRow[]): QuarterRow[] {
@@ -159,13 +249,18 @@ export function singleQuarters(reports: readonly ReportRow[]): QuarterRow[] {
     const md = d.slice(5)
     return md === '06-30' ? `${y}-03-31` : md === '09-30' ? `${y}-06-30` : md === '12-31' ? `${y}-09-30` : null
   }
-  const single = (d: string, key: 'revenue' | 'netProfit'): number | null => {
+  const grossProfit = (r: ReportRow): number | null =>
+    r.revenue !== null && r.grossMargin !== null ? r.revenue * r.grossMargin / 100 : null
+  const pick = (r: ReportRow, key: 'revenue' | 'netProfit' | 'deductNetProfit' | 'grossProfit'): number | null =>
+    key === 'grossProfit' ? grossProfit(r) : r[key]
+  const single = (d: string, key: 'revenue' | 'netProfit' | 'deductNetProfit' | 'grossProfit'): number | null => {
     const r = byDate.get(d)
-    if (!r || r[key] === null) return null
+    if (!r || pick(r, key) === null) return null
     const pd = prevDate(d)
-    if (pd === null) return r[key]
+    if (pd === null) return pick(r, key)
     const p = byDate.get(pd)
-    return p && p[key] !== null ? r[key]! - p[key]! : null
+    const pv = p ? pick(p, key) : null
+    return pv !== null ? pick(r, key)! - pv : null
   }
   const lastYear = (d: string) => `${+d.slice(0, 4) - 1}${d.slice(4)}`
   return [...reports]
@@ -174,11 +269,15 @@ export function singleQuarters(reports: readonly ReportRow[]): QuarterRow[] {
     .map(r => {
       const np = single(r.reportDate, 'netProfit')
       const npLy = single(lastYear(r.reportDate), 'netProfit')
+      const rev = single(r.reportDate, 'revenue')
+      const gp = single(r.reportDate, 'grossProfit')
       return {
         reportDate: r.reportDate,
-        revenue: single(r.reportDate, 'revenue'),
+        revenue: rev,
         netProfit: np,
         netProfitYoy: np !== null && npLy !== null && npLy > 0 ? np / npLy - 1 : null,
+        deductNetProfit: single(r.reportDate, 'deductNetProfit'),
+        grossMargin: rev && gp !== null && rev > 0 ? (gp / rev) * 100 : null,
       }
     })
 }
@@ -211,9 +310,12 @@ export function buildStockView(raw: StockRaw, benchmark: readonly Bar[], asOf: s
   const latest = [...raw.reports].sort((a, b) => b.reportDate.localeCompare(a.reportDate))[0] ?? null
   const deductShare = latest?.netProfit && latest.deductNetProfit !== null && latest.netProfit > 0
     ? latest.deductNetProfit / latest.netProfit : null
-  const cashConversion = latest?.netProfit && latest.operatingCashFlow !== null && latest.netProfit > 0
+  const thinMargin = !!latest?.netProfit && !!latest.revenue && latest.revenue > 0 && latest.netProfit / latest.revenue < THIN_MARGIN
+  const cashConversion = !thinMargin && latest?.netProfit && latest.operatingCashFlow !== null && latest.netProfit > 0
     ? latest.operatingCashFlow / latest.netProfit : null
   if (latest && latest.operatingCashFlow === null) gaps.push('经营现金流缺失')
+  const balanceYoy = balanceChange(raw.balance)
+  if (!balanceYoy) gaps.push('资产负债表缺最新期或去年同期')
 
   const shares = raw.price && raw.marketCapYi ? (raw.marketCapYi * YI) / raw.price : null
   const est = (raw.forecast?.eps ?? []).filter(e => !e.actual)
@@ -233,6 +335,22 @@ export function buildStockView(raw: StockRaw, benchmark: readonly Bar[], asOf: s
   const p28 = shares && e28 ? (e28 * shares) / YI : null
   const p26 = shares && e26 ? (e26 * shares) / YI : null
   const caveats: string[] = []
+  if (thinMargin) caveats.push(`净利率不足 ${Math.round(THIN_MARGIN * 100)}%，经营现金流 / 净利没有意义，不列`)
+  if (latest?.netProfit && latest.netProfit > 0 && latest.operatingCashFlow !== null && latest.operatingCashFlow < 0) {
+    caveats.push(`账面盈利 ${(latest.netProfit / YI).toFixed(2)} 亿，经营现金流却是 ${(latest.operatingCashFlow / YI).toFixed(2)} 亿：钱流向了哪里（备货、预付、保证金还是其他往来），要读现金流量表附注`)
+  }
+  if (latest?.netProfitYoy != null && latest.deductNetProfitYoy != null && latest.netProfitYoy > 0 && latest.deductNetProfitYoy < 0) {
+    caveats.push(`归母净利同比 ${pct(latest.netProfitYoy / 100)}，扣非同比 ${pct(latest.deductNetProfitYoy / 100)}：增长来自非经常性收益，主营利润在下滑`)
+  }
+  if (balanceYoy && latest?.revenueYoy != null) {
+    const rev = latest.revenueYoy / 100
+    if (balanceYoy.receivables !== null && balanceYoy.receivables - rev > RECEIVABLE_GAP) {
+      caveats.push(`应收（含票据与合同资产）同比 ${pct(balanceYoy.receivables)}，比营收同比 ${pct(rev)} 快 ${Math.round((balanceYoy.receivables - rev) * 100)} 个百分点：收入的收款质量要追问`)
+    }
+    if (balanceYoy.inventory !== null && balanceYoy.inventory - rev > RECEIVABLE_GAP) {
+      caveats.push(`存货同比 ${pct(balanceYoy.inventory)}，比营收同比 ${pct(rev)} 快 ${Math.round((balanceYoy.inventory - rev) * 100)} 个百分点：可能是为在手订单备货，也可能是交付放缓，要看合同负债是否同步增加`)
+    }
+  }
   if (deductShare !== null && deductShare < DEDUCT_SHARE_FLOOR) {
     caveats.push(`扣非只占归母净利的 ${Math.round(deductShare * 100)}%，PE（TTM）与历史分位被非经常性收益压低，应以扣非口径复核`)
   }
@@ -242,12 +360,14 @@ export function buildStockView(raw: StockRaw, benchmark: readonly Bar[], asOf: s
     ? [(pv.netProfitLower - h1.netProfit) / YI, (pv.netProfitUpper - h1.netProfit) / YI] : null
   const previewCompletion = pv && p26 && pv.netProfitLower !== null && pv.netProfitUpper !== null
     ? (pv.netProfitLower + pv.netProfitUpper) / 2 / YI / p26 : null
-  if (previewQ3Yi && previewCompletion !== null && p26) {
-    const impliedQ4 = p26 * (1 - previewCompletion)
-    const q3Mid = (previewQ3Yi[0] + previewQ3Yi[1]) / 2
-    if (impliedQ4 < q3Mid * 0.6) {
-      caveats.push(`一致预期 2026E 全年 ${p26.toFixed(0)} 亿，扣掉前三季预告后第四季只剩约 ${impliedQ4.toFixed(0)} 亿，低于第三季单季约 ${q3Mid.toFixed(0)} 亿的六成 —— 一致预期大概率还没计入这份预告，本表的前瞻 PE 与情景格偏保守`)
-    }
+  const consensusPace = consensusPaceOf(p26, latest, singleQuarters(raw.reports), pv, previewQ3Yi,
+    deductShare !== null && deductShare < DEDUCT_SHARE_FLOOR)
+  if (consensusPace && consensusPace.ratio < PACE_STALE) {
+    caveats.push(pv && previewQ3Yi
+      ? `一致预期 2026E 全年 ${p26!.toFixed(0)} 亿，扣掉前三季预告后第四季只剩约 ${consensusPace.needPerQuarter.toFixed(0)} 亿，低于第三季单季约 ${consensusPace.lastQuarter.toFixed(0)} 亿的六成 —— 一致预期大概率还没计入这份预告，本表的前瞻 PE 与情景格偏保守`
+      : `一致预期 2026E 要求剩余每季约 ${consensusPace.needPerQuarter.toFixed(1)} 亿，只有最近单季${consensusPace.basis === '扣非' ? '扣非' : ''} ${consensusPace.lastQuarter.toFixed(1)} 亿的 ${consensusPace.ratio.toFixed(1)} 倍 —— 一致预期可能偏旧，前瞻 PE 偏保守`)
+  } else if (consensusPace && consensusPace.ratio > PACE_DEMANDING) {
+    caveats.push(`一致预期 2026E 要求剩余每季约 ${consensusPace.needPerQuarter.toFixed(1)} 亿，是最近单季${consensusPace.basis === '扣非' ? '扣非' : ''} ${consensusPace.lastQuarter.toFixed(1)} 亿的 ${consensusPace.ratio.toFixed(1)} 倍 —— 前瞻 PE 与情景格建立在利润继续明显加速上，要先看下一份季报能否接住`)
   }
   const p28Half = shares && e26 && consensusCagr !== null ? (e26 * Math.pow(1 + consensusCagr / 2, 2) * shares) / YI : null
   const annual = (profitYi: number | null, pe: number): number | null =>
@@ -272,10 +392,10 @@ export function buildStockView(raw: StockRaw, benchmark: readonly Bar[], asOf: s
     attributionVerified: raw.member.attributionVerified, note: raw.member.note,
     price: raw.price, marketCapYi: raw.marketCapYi, floatCapYi: raw.floatCapYi, peTtm: raw.peTtm,
     pePercentile3y: raw.pePercentile3y, peNote: raw.peNote,
-    latest, quarters: singleQuarters(raw.reports), deductShare, cashConversion, preview: raw.preview,
+    latest, quarters: singleQuarters(raw.reports), deductShare, cashConversion, balanceYoy, preview: raw.preview,
     orgNum: raw.forecast?.orgNum ?? null, forwardPe, consensusCagr,
     requiredProfit2028, consensusProfit2026Yi: p26, consensusProfit2028Yi: p28,
-    previewQ3Yi, previewCompletion, caveats, scenarios,
+    previewQ3Yi, previewCompletion, consensusPace, caveats, scenarios,
     ret20, ret60,
     rs20: ret20 !== null && b20 !== null ? ret20 - b20 : null,
     rs60: ret60 !== null && b60 !== null ? ret60 - b60 : null,
@@ -294,77 +414,101 @@ const num = (v: number | null | undefined, d = 1): string =>
 const yi = (v: number | null | undefined): string =>
   v === null || v === undefined ? '—' : (v / YI).toFixed(1)
 
-export function renderRerating(views: readonly StockView[], asOf: string, generatedAt: string): string {
+export interface RenderOptions {
+  /** 标题后缀，例如「下一轮价值承接候选」 */
+  subtitle?: string
+  /** 表头前加「方向」列 */
+  showGroup?: boolean
+  /** 写在表头下的额外说明 */
+  intro?: string[]
+}
+
+export function renderRerating(views: readonly StockView[], asOf: string, generatedAt: string, opts: RenderOptions = {}): string {
   const { horizonEnd, targetAnnualReturn, exitPe } = SCENARIO_ASSUMPTIONS
   const L: string[] = []
   const w = (s = '') => L.push(s)
-  w(`# ${RERATING_TITLE}（${asOf}）`)
+  const H = (cols: string) => {
+    const head = opts.showGroup ? `| 方向 | 公司 | ${cols} |` : `| 公司 | ${cols} |`
+    w(head)
+    w(`|${'---|'.repeat(head.split('|').length - 2)}`)
+  }
+  const R = (v: StockView, cells: string) => w(opts.showGroup ? `| ${v.group} | ${v.name} | ${cells} |` : `| ${v.name} | ${cells} |`)
+  const p100 = (v: number | null | undefined) => (v === null || v === undefined ? null : v / 100)
+
+  w(`# ${RERATING_TITLE}${opts.subtitle ? ` · ${opts.subtitle}` : ''}（${asOf}）`)
   w()
   w(`> 证据等级 ${EVIDENCE_LEVEL}：只是数据，不产生买卖动作，不是买入名单。不输出综合评分或排名。`)
   w(`> 生成于 ${generatedAt}（北京时间）。价格与市值取腾讯行情，财报、一致预期与业绩预告取东方财富数据中心；盘中生成时价格为实时价。`)
   w('> 一致预期是券商分析师预测的平均，不是事实，也会滞后于股价；本表只拿它回答「当前市值计入了多少」。')
+  for (const line of opts.intro ?? []) w(`> ${line}`)
   w()
   w('## 一、利润兑现（最近报告期，年初至今累计）')
   w()
-  w('| 公司 | 报告期 | 营收（亿） | 营收同比 | 归母净利（亿） | 净利同比 | 扣非占比 | 毛利率 | 经营现金流 / 净利 | 三季报预告 |')
-  w('|---|---|---|---|---|---|---|---|---|---|')
+  H('报告期 | 营收（亿） | 营收同比 | 归母净利（亿） | 归母同比 | 扣非同比 | 扣非占比 | 毛利率 | 经营现金流 / 净利 | 三季报预告')
   for (const v of views) {
     const r = v.latest
     const pv = v.preview
     const preview = pv
-      ? `${pv.type} ${num(pv.netProfitLower !== null ? pv.netProfitLower / YI : null)}–${num(pv.netProfitUpper !== null ? pv.netProfitUpper / YI : null)} 亿（${pct(pv.yoyLower !== null ? pv.yoyLower / 100 : null)}~${pct(pv.yoyUpper !== null ? pv.yoyUpper / 100 : null)}），${pv.noticeDate} 发布${v.previewQ3Yi ? `；第三季单季约 ${num(v.previewQ3Yi[0])}–${num(v.previewQ3Yi[1])} 亿` : ''}${v.previewCompletion !== null ? `；已完成一致预期 2026E 的 ${pctPlain(v.previewCompletion)}` : ''}`
-      : '未发布'
-    w(`| ${v.name} | ${r?.reportDate ?? '—'} | ${yi(r?.revenue)} | ${pct(r?.revenueYoy !== null && r?.revenueYoy !== undefined ? r.revenueYoy / 100 : null)} | ${yi(r?.netProfit)} | ${pct(r?.netProfitYoy !== null && r?.netProfitYoy !== undefined ? r.netProfitYoy / 100 : null)} | ${pctPlain(v.deductShare)} | ${num(r?.grossMargin)}% | ${num(v.cashConversion, 2)} | ${preview} |`)
-  }
-  w()
-  w('### 最近四个单季（由累计值相减得到）')
-  w()
-  w('| 公司 | 单季归母净利（亿），由近到远 | 单季同比，由近到远 |')
-  w('|---|---|---|')
-  for (const v of views) {
-    const q = v.quarters
-    w(`| ${v.name} | ${q.map(x => `${x.reportDate.slice(2, 7)} ${num(x.netProfit !== null ? x.netProfit / YI : null)}`).join(' / ') || '—'} | ${q.map(x => pct(x.netProfitYoy)).join(' / ') || '—'} |`)
+      ? `${pv.type} ${num(pv.netProfitLower !== null ? pv.netProfitLower / YI : null)}–${num(pv.netProfitUpper !== null ? pv.netProfitUpper / YI : null)} 亿（${pct(p100(pv.yoyLower))}~${pct(p100(pv.yoyUpper))}），${pv.noticeDate} 发布${v.previewQ3Yi ? `；第三季单季约 ${num(v.previewQ3Yi[0])}–${num(v.previewQ3Yi[1])} 亿` : ''}${v.previewCompletion !== null ? `；已完成一致预期 2026E 的 ${pctPlain(v.previewCompletion)}` : ''}`
+      : r?.reportDate.endsWith('09-30') ? '已出三季报' : '未发布'
+    R(v, `${r?.reportDate ?? '—'} | ${yi(r?.revenue)} | ${pct(p100(r?.revenueYoy))} | ${yi(r?.netProfit)} | ${pct(p100(r?.netProfitYoy))} | ${pct(p100(r?.deductNetProfitYoy))} | ${pctPlain(v.deductShare)} | ${num(r?.grossMargin)}% | ${num(v.cashConversion, 2)} | ${preview}`)
   }
   w()
   w('经营现金流 / 净利：1 左右表示利润基本收到了现金；明显低于 1 表示利润还压在应收或存货里，高速扩产期常见，但要追问。')
+  w()
+  w('### 最近四个单季（由累计值相减得到，由近到远）')
+  w()
+  H('单季归母净利（亿） | 单季归母同比 | 单季扣非净利（亿） | 单季毛利率')
+  for (const v of views) {
+    const q = v.quarters
+    const list = (f: (x: QuarterRow) => string) => q.map(x => `${x.reportDate.slice(2, 7)} ${f(x)}`).join(' / ') || '—'
+    R(v, `${list(x => num(x.netProfit !== null ? x.netProfit / YI : null))} | ${q.map(x => pct(x.netProfitYoy)).join(' / ') || '—'} | ${q.map(x => num(x.deductNetProfit !== null ? x.deductNetProfit / YI : null)).join(' / ') || '—'} | ${q.map(x => (x.grossMargin === null ? '—' : `${x.grossMargin.toFixed(1)}%`)).join(' / ') || '—'}`)
+  }
+  w()
+  w('### 资产负债表旁证：订单 → 交付 → 收款（最新期对去年同期）')
+  w()
+  H('报告期 | 营收同比 | 合同负债同比 | 存货同比 | 应收（含票据、合同资产）同比 | 在建工程同比')
+  for (const v of views) {
+    const b = v.balanceYoy
+    R(v, `${b?.reportDate ?? '—'} | ${pct(p100(v.latest?.revenueYoy))} | ${pct(b?.contractLiab)} | ${pct(b?.inventory)} | ${pct(b?.receivables)} | ${pct(b?.constructionInProgress)}`)
+  }
+  w()
+  w('读法：合同负债是客户预付的钱，跟着订单涨；存货涨而合同负债不涨，要分清是备货还是压货；应收比营收涨得快，说明收入的现金还没收回来；在建工程是产能扩张的前置。')
   w()
   w('## 二、当前市值计入了多少')
   w()
   const years = yearsBetween(asOf, horizonEnd)
   w(`假设（不是规则，数值请委员会定）：持有到 ${horizonEnd}（约 ${years.toFixed(1)} 年），目标年化 ${pctPlain(targetAnnualReturn)}，退出时市盈率 ${exitPe.join(' 或 ')} 倍。`)
   w()
-  w(`| 公司 | 现价 | 总市值 / 流通市值（亿） | PE（TTM） | 3 年 PE 分位 | 机构数 | 前瞻 PE 2026E / 2027E / 2028E | 一致预期 2026→2028 年化 | 一致预期 2028 净利（亿） | 2028 需要净利（亿，退出 ${exitPe[0]} / ${exitPe[1]} 倍） |`)
-  w('|---|---|---|---|---|---|---|---|---|---|')
+  H(`现价 | 总市值 / 流通市值（亿） | PE（TTM） | 3 年 PE 分位 | 机构数 | 前瞻 PE 2026E / 2027E / 2028E | 一致预期 2026→2028 年化 | 2026E 要求剩余每季 ÷ 最近单季 | 一致预期 2028 净利（亿） | 2028 需要净利（亿，退出 ${exitPe[0]} / ${exitPe[1]} 倍）`)
   for (const v of views) {
     const fpe = [2026, 2027, 2028].map(y => num(v.forwardPe.find(f => f.year === y)?.pe ?? null)).join(' / ')
     const req = v.requiredProfit2028 ? v.requiredProfit2028.map(r => num(r.yi, 0)).join(' / ') : '—'
-    w(`| ${v.name} | ${num(v.price, 2)} | ${num(v.marketCapYi, 0)} / ${num(v.floatCapYi, 0)} | ${num(v.peTtm)} | ${pctPlain(v.pePercentile3y)} | ${v.orgNum ?? '—'} | ${fpe} | ${pct(v.consensusCagr)} | ${num(v.consensusProfit2028Yi, 0)} | ${req} |`)
+    R(v, `${num(v.price, 2)} | ${num(v.marketCapYi, 0)} / ${num(v.floatCapYi, 0)} | ${num(v.peTtm)} | ${pctPlain(v.pePercentile3y)} | ${v.orgNum ?? '—'} | ${fpe} | ${pct(v.consensusCagr)} | ${v.consensusPace ? `${num(v.consensusPace.ratio, 2)} 倍${v.consensusPace.basis === '扣非' ? '（扣非口径）' : ''}` : '—'} | ${num(v.consensusProfit2028Yi, 0)} | ${req}`)
   }
   w()
-  w('读法：一致预期 2028 净利 ≥ 需要净利，说明按一致预期兑现、估值回落到退出倍数时仍能赚到目标年化；低于它，说明当前市值已经计入了比一致预期更多的东西，或者目标年化不可得。')
+  w(`读法：一致预期 2028 净利 ≥ 需要净利，说明按一致预期兑现、估值回落到退出倍数时仍能赚到目标年化；低于它，说明当前市值已经计入了比一致预期更多的东西，或者目标年化不可得。机构数少于 5 家时一致预期代表性弱。「要求剩余每季 ÷ 最近单季」高于 ${PACE_DEMANDING} 倍，说明一致预期假设利润还要明显加速；低于 ${PACE_STALE} 倍，说明一致预期可能还没跟上最新业绩。`)
   w()
   w(`### 情景格：到 ${horizonEnd} 的年化收益（不含分红）`)
   w()
-  w(`| 公司 | 一致预期 × ${exitPe[0]} 倍 | 一致预期 × ${exitPe[1]} 倍 | 增速减半 × ${exitPe[0]} 倍 | 增速减半 × ${exitPe[1]} 倍 |`)
-  w('|---|---|---|---|---|')
+  H(`一致预期 × ${exitPe[0]} 倍 | 一致预期 × ${exitPe[1]} 倍 | 增速减半 × ${exitPe[0]} 倍 | 增速减半 × ${exitPe[1]} 倍`)
   for (const v of views) {
     const cell = (p: '一致预期' | '增速减半', pe: number) => pct(v.scenarios.find(s => s.profit === p && s.exitPe === pe)?.annualReturn ?? null)
-    w(`| ${v.name} | ${cell('一致预期', exitPe[0])} | ${cell('一致预期', exitPe[1])} | ${cell('增速减半', exitPe[0])} | ${cell('增速减半', exitPe[1])} |`)
+    R(v, `${cell('一致预期', exitPe[0])} | ${cell('一致预期', exitPe[1])} | ${cell('增速减半', exitPe[0])} | ${cell('增速减半', exitPe[1])}`)
   }
   w()
   w('「增速减半」= 2026E 利润照一致预期，2027、2028 两年的年增速只有一致预期的一半。这是机械压力测试，不是对公司的悲观判断。')
   w()
   w('## 三、市场是否重新认可（前复权日线，相对沪深 300）')
   w()
-  w('| 公司 | 20 日涨跌 | 60 日涨跌 | 20 日相对强弱 | 60 日相对强弱 | 距 250 日高点 | 20 日上涨日 / 下跌日成交量 |')
-  w('|---|---|---|---|---|---|---|')
+  H('20 日涨跌 | 60 日涨跌 | 20 日相对强弱 | 60 日相对强弱 | 距 250 日高点 | 20 日上涨日 / 下跌日成交量')
   for (const v of views) {
-    w(`| ${v.name} | ${pct(v.ret20, 1)} | ${pct(v.ret60, 1)} | ${pct(v.rs20, 1)} | ${pct(v.rs60, 1)} | ${pct(v.drawdown250, 1)} | ${num(v.upDownVolume20, 2)} |`)
+    R(v, `${pct(v.ret20, 1)} | ${pct(v.ret60, 1)} | ${pct(v.rs20, 1)} | ${pct(v.rs60, 1)} | ${pct(v.drawdown250, 1)} | ${num(v.upDownVolume20, 2)}`)
   }
   w()
   w('这一节是观察项。8/13 回测里，价格类判据只有「10 日涨幅超过 50%」被证实有警示力，其余都没有被证明有效，不能单独据此买卖。')
   w()
-  w('## 四、主线归因与数据缺口')
+  w('## 四、主线归因、读数提示与数据缺口')
   w()
   for (const v of views) {
     const attr = v.attributionVerified === true ? '已核实（作战名单）' : v.attributionVerified === false ? '未通过' : '未核验'
@@ -375,7 +519,8 @@ export function renderRerating(views: readonly StockView[], asOf: string, genera
   w()
   w('## 五、本表答不了的问题')
   w()
-  w('- 订单、客户资本开支、产品迭代、竞争格局：要读财报附注与公告，本表不替代。')
+  w('- 新签订单、在手订单、客户资本开支、产品迭代、竞争格局：要读定期报告正文与公告，本表只能用合同负债、存货、在建工程做旁证。')
+  w('- 产能利用率：上市公司一般不按季披露，本表没有。')
   w('- 成交额占全市场的比重：本表没有接全市场成交额，20 日量比只看个股自身的上涨日与下跌日。')
   w('- 一致预期上修还是下修：本表每次生成都存档，从第二份起才能比较；单份快照看不出方向。')
   w('- 研究区、试仓区、核心配置区的价格：要等委员会定下情景假设与分层门槛后再算，本表不填。')

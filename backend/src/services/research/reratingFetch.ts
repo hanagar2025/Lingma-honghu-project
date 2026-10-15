@@ -2,6 +2,7 @@
 //
 // 用法：npm -w backend run research:rerating
 //   ASOF=2026-10-15  指定文件日期（默认北京时间今天）
+//   POOL=next        第二批：下一轮价值承接候选 ＋ 现有核心对照（默认第一批预选池）
 //
 // 不 import msr/valuationFetch.ts：那个文件在顶层执行 main()。
 
@@ -10,8 +11,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { summarizeValuation, type FinancialReport } from '../msr/valuation'
 import {
-  PRESELECT_POOL, SCENARIO_ASSUMPTIONS, buildStockView, renderRerating,
-  type Bar, type Forecast, type PoolMember, type Preview, type ReportRow, type StockRaw,
+  NEXT_WAVE_POOL, PRESELECT_POOL, SCENARIO_ASSUMPTIONS, buildStockView, renderRerating,
+  type BalanceRow, type Bar, type Forecast, type PoolMember, type Preview, type ReportRow, type StockRaw,
 } from './rerating'
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
@@ -66,10 +67,11 @@ async function fetchReportRows(code: string): Promise<{ rows: ReportRow[]; fin: 
   const [cpd, cash, inc] = await Promise.all([
     emGet('RPT_LICO_FN_CPD', 'SECURITY_CODE,REPORTDATE,NOTICE_DATE,BASIC_EPS,DEDUCT_BASIC_EPS,TOTAL_OPERATE_INCOME,YSTZ,PARENT_NETPROFIT,SJLTZ,XSMLL', code, 'REPORTDATE', 100),
     emGet('RPT_DMSK_FN_CASHFLOW', 'SECURITY_CODE,REPORT_DATE,NETCASH_OPERATE', code, 'REPORT_DATE', 12),
-    emGet('RPT_DMSK_FN_INCOME', 'SECURITY_CODE,REPORT_DATE,DEDUCT_PARENT_NETPROFIT', code, 'REPORT_DATE', 12),
+    emGet('RPT_DMSK_FN_INCOME', 'SECURITY_CODE,REPORT_DATE,DEDUCT_PARENT_NETPROFIT,DPN_RATIO', code, 'REPORT_DATE', 12),
   ])
   const cashBy = new Map(cash.map(r => [day(r.REPORT_DATE), r.NETCASH_OPERATE ?? null]))
   const dedBy = new Map(inc.map(r => [day(r.REPORT_DATE), r.DEDUCT_PARENT_NETPROFIT ?? null]))
+  const dedYoyBy = new Map(inc.map(r => [day(r.REPORT_DATE), r.DPN_RATIO ?? null]))
   const rows: ReportRow[] = cpd.slice(0, 9).map(r => {
     const d = day(r.REPORTDATE)
     return {
@@ -79,6 +81,7 @@ async function fetchReportRows(code: string): Promise<{ rows: ReportRow[]; fin: 
       netProfit: r.PARENT_NETPROFIT ?? null,
       netProfitYoy: r.SJLTZ ?? null,
       deductNetProfit: dedBy.get(d) ?? null,
+      deductNetProfitYoy: dedYoyBy.get(d) ?? null,
       grossMargin: r.XSMLL ?? null,
       operatingCashFlow: cashBy.get(d) ?? null,
     }
@@ -98,6 +101,29 @@ async function fetchReportRows(code: string): Promise<{ rows: ReportRow[]; fin: 
     }
   })
   return { rows, fin }
+}
+
+/** 东方财富 F10 资产负债表（一般工商业口径 companyType=4） */
+async function fetchBalance(code: string, latestReportDate: string): Promise<BalanceRow[]> {
+  const ly = `${+latestReportDate.slice(0, 4) - 1}${latestReportDate.slice(4)}`
+  const url = 'https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/zcfzbAjaxNew'
+    + `?companyType=4&reportDateType=0&reportType=1&dates=${latestReportDate},${ly}&code=${sym(code).toUpperCase()}`
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Referer: 'https://emweb.securities.eastmoney.com/' } })
+  if (!res.ok) throw new Error(`资产负债表 HTTP ${res.status}`)
+  const json = await res.json() as any
+  const rows: any[] = json?.data ?? []
+  const sum = (...xs: unknown[]) => {
+    const ns = xs.filter((x): x is number => typeof x === 'number')
+    return ns.length ? ns.reduce((a, b) => a + b, 0) : null
+  }
+  return rows.map(r => ({
+    reportDate: day(r.REPORT_DATE),
+    inventory: r.INVENTORY ?? null,
+    // NOTE_ACCOUNTS_RECE 是「应收票据及应收账款」合计，有它就不再加 ACCOUNTS_RECE
+    receivables: sum(r.NOTE_ACCOUNTS_RECE ?? r.ACCOUNTS_RECE, r.CONTRACT_ASSET),
+    contractLiab: sum(r.CONTRACT_LIAB, r.ADVANCE_RECEIVABLES),
+    constructionInProgress: r.CIP ?? null,
+  }))
 }
 
 async function fetchForecast(code: string): Promise<Forecast | null> {
@@ -144,6 +170,9 @@ async function collect(member: PoolMember, quote: Quote | undefined): Promise<St
   const errors: string[] = []
   if (!quote) errors.push('腾讯实时行情缺失')
   const { rows, fin } = await attempt('财报', errors, () => fetchReportRows(member.code), { rows: [], fin: [] })
+  const balance = rows[0]
+    ? await attempt('资产负债表', errors, () => fetchBalance(member.code, rows[0]!.reportDate), [] as BalanceRow[])
+    : []
   const forecast = await attempt('一致预期', errors, () => fetchForecast(member.code), null)
   const preview = await attempt('业绩预告', errors, () => fetchPreview(member.code, '2026-09-30'), null)
   const bars = await attempt('前复权日线', errors, () => fetchBars(member.code, 320, 'qfq'), [])
@@ -161,7 +190,7 @@ async function collect(member: PoolMember, quote: Quote | undefined): Promise<St
     marketCapYi: quote?.marketCapYi ?? null,
     floatCapYi: quote?.floatCapYi ?? null,
     peTtm: quote?.peTtm ?? null,
-    reports: rows, forecast, preview, bars, pePercentile3y, peNote, errors,
+    reports: rows, balance, forecast, preview, bars, pePercentile3y, peNote, errors,
   }
 }
 
@@ -173,22 +202,30 @@ function beijingNow(): { date: string; stamp: string } {
 async function main(): Promise<void> {
   const now = beijingNow()
   const asOf = process.env.ASOF ?? now.date
-  const quotes = await fetchQuotes(PRESELECT_POOL.map(m => m.code))
+  const next = process.env.POOL === 'next'
+  const pool = next ? NEXT_WAVE_POOL : PRESELECT_POOL
+  const quotes = await fetchQuotes(pool.map(m => m.code))
   const benchmark = await fetchBenchmark()
 
   const raws: StockRaw[] = []
-  for (const m of PRESELECT_POOL) {
+  for (const m of pool) {
     process.stdout.write(`  ${m.name}…\n`)
     raws.push(await collect(m, quotes.get(m.code)))
     await sleep(200)
   }
   const views = raws.map(r => buildStockView(r, benchmark, asOf))
-  const md = renderRerating(views, asOf, now.stamp)
+  const md = renderRerating(views, asOf, now.stamp, next ? {
+    subtitle: '下一轮价值承接候选',
+    showGroup: true,
+    intro: [
+      '委员会 10/15 第二批：AIDC 供电、液冷、PCB 材料与制造、先进封装与测试四条线，加现有核心作对照。方向顺序是委员会的研究优先级，不是排名；对照组与候选同一口径，不加分。',
+    ],
+  } : {})
 
   const here = dirname(fileURLToPath(import.meta.url))
   const repoRoot = join(here, '..', '..', '..', '..')
-  const docPath = join(repoRoot, '战略组合2026-2030', `核心股预选-数据审计-${asOf}.md`)
-  const snapPath = join(here, 'data', 'rerating', `${asOf}.json`)
+  const docPath = join(repoRoot, '战略组合2026-2030', next ? `下一轮价值承接候选-数据审计-${asOf}.md` : `核心股预选-数据审计-${asOf}.md`)
+  const snapPath = join(here, 'data', 'rerating', next ? `${asOf}-next.json` : `${asOf}.json`)
   mkdirSync(dirname(snapPath), { recursive: true })
   writeFileSync(docPath, `${md}\n`, 'utf8')
   writeFileSync(snapPath, `${JSON.stringify({
