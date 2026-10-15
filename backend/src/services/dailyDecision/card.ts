@@ -141,7 +141,10 @@ export function buildCard(
     problems.forEach(p => body.push(`- ${p}`))
     const pending = [...committee, ...limits.lines].map(l => l.name)
     if (pending.length) body.push('', `核对恢复后待执行：${pending.join('、')}（股数以恢复当日为准）`)
-    body.push('', '账本问题的处理：把最新持仓截图发给委员会，账本更新后自动恢复。')
+    const sourceDown = v.marketDate === null && v.checks.length > 0 && v.checks.every(c => c.secondary === null)
+    body.push('', sourceDown
+      ? '这是行情数据源取不到，不是账本问题，也不代表持仓有变化。下一轮会自动重试；需要立即出单时，在 Actions 手动运行一次。'
+      : '账本问题的处理：把最新持仓截图发给委员会，账本更新后自动恢复。')
     return finish(title, head, body, v, opts.url, false, [])
   }
 

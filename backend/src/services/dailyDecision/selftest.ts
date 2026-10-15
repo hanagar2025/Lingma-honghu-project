@@ -13,7 +13,7 @@ import type { CommitteeOrder } from './orders'
 import type { DecisionInput } from './types'
 import { parseRunLog, RUN_LOG_HEADER, summarize } from './runLog'
 import { resolveSession } from './schedule'
-import { parseSinaRaw, sinaSymbol, verifyInput, type SinaRaw } from './verify'
+import { fetchSinaRaw, parseSinaRaw, sinaSymbol, verifyInput, type SinaRaw } from './verify'
 import type { Action } from '../cockpit/types'
 
 let pass = 0
@@ -239,6 +239,38 @@ process.stdout.write('\n【执行单网页】\n')
   ok(renderCardPage(bad.markdown, { ok: bad.ok, title: bad.title, generatedAt: '' }).includes('#cf222e'), '不下单时页面顶部标红')
 }
 
+process.stdout.write('\n【新浪间歇拒绝】\n')
+{
+  const input = baseInput()
+  const down = buildCard(input, verifyInput(input, null, 'INTRADAY'), 'INTRADAY', { orders: ORDERS })
+  ok(down.markdown.includes('不是账本问题') && !down.markdown.includes('把最新持仓截图'), '数据源取不到时不误导成账本问题')
+  const sina = sinaFor(input)
+  delete sina[sinaSymbol('688041')]
+  const partial = buildCard(input, verifyInput(input, sina, 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(!partial.ok && !partial.markdown.includes('不是账本问题'), '只缺个别股票时不套用「数据源取不到」的说法')
+}
+
+async function sinaFetchTests(): Promise<void> {
+  const f = new Array(33).fill('0')
+  f[0] = '海光信息'; f[2] = '219.00'; f[3] = '219.59'; f[30] = '2026-10-15'
+  const body = new TextEncoder().encode(`var hq_str_sh688041="${f.join(',')}";`)
+  const urls: string[] = []
+  const flaky = (async (url: string) => {
+    urls.push(String(url))
+    return urls.length < 3 ? new Response('Forbidden', { status: 403 }) : new Response(body)
+  }) as typeof fetch
+  const got = await fetchSinaRaw(['sh688041'], { backoffMs: 1, fetchImpl: flaky })
+  ok(Boolean(got.sh688041) && urls.length === 3, '先 403 后成功：重试拿到行情')
+  ok(urls.some(u => u.startsWith('http://')) && urls.some(u => u.startsWith('https://')), '重试轮换 https/http 入口')
+  let calls = 0
+  const dead = (async () => { calls++; throw new TypeError('fetch failed') }) as typeof fetch
+  const err = await fetchSinaRaw(['sh688041'], { backoffMs: 1, fetchImpl: dead }).then(() => '', e => String(e))
+  ok(calls === 6 && err.includes('6 次'), '一直失败：试满 6 次后才判取不到，并记下每次原因')
+  const forbidden = (async () => new Response('Forbidden')) as typeof fetch
+  const err2 = await fetchSinaRaw(['sh688041'], { backoffMs: 1, fetchImpl: forbidden }).then(() => '', e => String(e))
+  ok(err2.includes('没有行情'), '返回 200 但正文不是行情也算失败')
+}
+
 process.stdout.write('\n【给 Agent 的数据包】\n')
 {
   const input = baseInput()
@@ -303,6 +335,8 @@ process.stdout.write('\n【定时运行台账】\n')
 }
 
 void (async () => {
+  process.stdout.write('\n【新浪重试】\n')
+  await sinaFetchTests()
   const r = await pushAll('t', 'x', {})
   ok(r.length === 0, '无通道时不发请求')
   process.stdout.write(`\n每日执行单自检：${pass} 通过，${fail} 失败\n`)

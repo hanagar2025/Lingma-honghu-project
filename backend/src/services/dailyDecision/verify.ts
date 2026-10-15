@@ -32,26 +32,47 @@ export function parseSinaRaw(text: string): Record<string, SinaRaw> {
   return out
 }
 
-export async function fetchSinaRaw(symbols: readonly string[]): Promise<Record<string, SinaRaw>> {
-  let last: unknown
-  for (let i = 0; i < 3; i++) {
+/**
+ * 新浪接口会间歇性拒绝（10/15 实测：同一请求先 403、两秒后 200；GitHub 运行机上则是连接失败），
+ * 所以轮换 https/http 两个入口与两种 Referer，退避共约 30 秒，仍失败才判「取不到」。
+ */
+const SINA_ATTEMPTS: readonly { base: string; referer: string }[] = [
+  { base: 'https://hq.sinajs.cn', referer: 'https://finance.sina.com.cn' },
+  { base: 'http://hq.sinajs.cn', referer: 'https://finance.sina.com.cn/' },
+  { base: 'https://hq.sinajs.cn', referer: 'https://finance.sina.com.cn/realstock/company/sh000001/nc.shtml' },
+  { base: 'http://hq.sinajs.cn', referer: 'https://finance.sina.com.cn/realstock/company/sh000001/nc.shtml' },
+  { base: 'https://hq.sinajs.cn', referer: 'https://finance.sina.com.cn' },
+  { base: 'http://hq.sinajs.cn', referer: 'https://finance.sina.com.cn/' },
+]
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+
+export async function fetchSinaRaw(
+  symbols: readonly string[], opts: { backoffMs?: number; fetchImpl?: typeof fetch } = {},
+): Promise<Record<string, SinaRaw>> {
+  const backoff = opts.backoffMs ?? 1000
+  const doFetch = opts.fetchImpl ?? fetch
+  const errors: string[] = []
+  for (let i = 0; i < SINA_ATTEMPTS.length; i++) {
+    const { base, referer } = SINA_ATTEMPTS[i]!
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 15_000)
     try {
-      const res = await fetch(`https://hq.sinajs.cn/list=${symbols.join(',')}`, {
-        headers: { Referer: 'https://finance.sina.com.cn', 'User-Agent': 'Mozilla/5.0' },
+      const res = await doFetch(`${base}/list=${symbols.join(',')}`, {
+        headers: { Referer: referer, 'User-Agent': BROWSER_UA },
         signal: ctrl.signal,
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return parseSinaRaw(new TextDecoder('gbk').decode(await res.arrayBuffer()))
+      const parsed = parseSinaRaw(new TextDecoder('gbk').decode(await res.arrayBuffer()))
+      if (!Object.keys(parsed).length) throw new Error('返回内容里没有行情')
+      return parsed
     } catch (e) {
-      last = e
-      await new Promise(r => setTimeout(r, 800 * Math.pow(2, i)))
+      errors.push(`${i + 1}:${e instanceof Error ? e.message : String(e)}`)
+      if (i < SINA_ATTEMPTS.length - 1) await new Promise(r => setTimeout(r, Math.min(backoff * Math.pow(2, i), 10 * backoff)))
     } finally {
       clearTimeout(timer)
     }
   }
-  throw new Error(`新浪行情请求失败：${String(last)}`)
+  throw new Error(`新浪行情请求失败（${SINA_ATTEMPTS.length} 次）：${errors.join('；')}`)
 }
 
 function close(a: number, b: number, tol: number): boolean {
