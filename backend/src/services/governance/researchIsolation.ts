@@ -57,6 +57,8 @@ export const RESEARCH_MODULES = [
   'research/capexLadder.ts',
   'research/macroRiskLights.ts',
   'research/marketStructureWatch.ts',
+  'research/rerating.ts',
+  'research/reratingFetch.ts',
   'moneyRadar/types.ts',
   'moneyRadar/config.ts',
   'moneyRadar/providers.ts',
@@ -109,6 +111,7 @@ export const RESEARCH_FIELD_NAMES = [
   'scenarioGroups', 'breadthQuality', 'contractGap', 'accountBasisAudit', 'finalStateLocks',
   'marketStructureWatch', 'sessionChecks', 'nextSessionPaths', 'aiBetaCore', 'hbqHypothesis',
   'moneyCockpit', 'reviewQueue', 'divergence', 'migrations', 'nationalTeam',
+  'rerating', 'preselectPool', 'requiredProfit2028',
 ] as const
 
 export interface IsolationFinding {
