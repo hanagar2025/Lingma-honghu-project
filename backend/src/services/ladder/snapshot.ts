@@ -93,9 +93,9 @@ export function buildSnapshot(baseCommit: string) {
         '自成本回撤 ≥ 25% → 全部退出（硬止损）',
         '单日跌幅 ≥ 12% → 次日开盘减 30%',
       ],
-      sources: [at(tiosDoc, '收盘价跌破60日均线'), at(tiosDoc, '收盘跌破60日线 → 减 40%'), at('backend/src/services/tios/executionEngine.ts', '均线条款')],
+      sources: [at(tiosDoc, '收盘价跌破60日均线'), at(tiosDoc, '收盘跌破60日线 → 减'), at('backend/src/services/tios/executionEngine.ts', '均线条款')],
       ambiguity: `「减到 40%」口径不一：${at(tiosDoc, '收盘价跌破60日均线')} 写「减持至原仓位的 40% 以下（即累计至少减 60%）」，`
-        + `${at(tiosDoc, '收盘跌破60日线 → 减 40%')} 的个股示例写「减 40%」；代码按前者（REDUCE_TO_40）。`
+        + `${at(tiosDoc, '收盘跌破60日线 → 减')} 的个股示例写「减 40%」；代码按前者（REDUCE_TO_40）。`
         + '两处都指该股票自身的持仓，不是组合总资产的 40%。',
       callSites: importersOf('executionEngine'),
     },
