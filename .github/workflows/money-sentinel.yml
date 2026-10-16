@@ -1,0 +1,129 @@
+name: Money sentinel
+
+# 资金哨兵（R-01）每个交易日收盘定稿后跑一次：
+#   北京 16:35 → cron 35 8 * * 1-5（UTC）
+# 当日成交额 16:30 定稿，融资余额 T+1 约 08:30 才发布，所以融资一项读的是上一交易日。
+# 只观察、不出动作，也不推送手机；执行单仍由 daily-decision 单独负责。
+#
+# 每轮做四件事：
+#   1. 恢复公开数据缓存（约 300MB，只补增量；缓存全空时首跑约 18 分钟，之后约 30 秒）
+#   2. npm -w backend run money：算三个入口、记影子台账与提醒台账
+#   3. npm -w backend run money:publish：收盘结果复制到 share/money/
+#   4. 台账、share/money/ 与运行日志 share/money/run-log.csv 一起提交回 DECISION_BRANCH
+# 网页：daily-decision 的 site job 把 share/money/ 一并发布到 GitHub Pages 的 money/ 目录，
+# 下一轮执行单（次日 07:00）发布时带上；公开仓库的 raw 地址提交后即可读。
+# 休市日数据日期不变：台账按键去重不会重复记，share/money/ 不重复发布。
+on:
+  schedule:
+    - cron: '35 8 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: money-sentinel
+  cancel-in-progress: false
+
+jobs:
+  money:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DECISION_BRANCH: ${{ vars.DECISION_BRANCH || 'cursor/account-snapshot-1009-c819' }}
+      CACHE_DIR: backend/src/services/moneyRadar/data/cache
+    steps:
+      - name: Record start
+        run: echo "RUN_STARTED_AT=$(date -u +%s)" >> "${GITHUB_ENV}"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DECISION_BRANCH }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
+      - name: Install (workspaces)
+        run: |
+          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
+          npm install --workspaces --include-workspace-root --legacy-peer-deps
+      # 缓存不可覆盖，每轮用新键保存；恢复时取最近一份。旧的由 GitHub 按最近最少使用自动清理。
+      - name: Restore data cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: money-cache-v1-${{ github.run_id }}
+          restore-keys: money-cache-v1-
+      - name: Run money sentinel
+        id: money
+        run: |
+          set -euo pipefail
+          prev=$(jq -r '.asOf // ""' share/money/latest.json 2>/dev/null || true)
+          echo "PREV_AS_OF=${prev}" >> "${GITHUB_ENV}"
+          npm -w backend run money > /tmp/money.out
+          tail -40 /tmp/money.out
+      - name: Save data cache
+        if: always() && steps.money.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: money-cache-v1-${{ github.run_id }}
+      - name: Publish to share/money
+        id: publish
+        run: |
+          set -euo pipefail
+          asof=$(jq -r '.asOf' frontend/public/data/money.json)
+          if [ "${asof}" = "${PREV_AS_OF:-}" ]; then
+            echo "数据日期 ${asof} 与上次发布相同（休市日或重跑），不重复发布"
+            exit 0
+          fi
+          npm -w backend run money:publish
+      - name: Commit ledgers and run log
+        if: always()
+        env:
+          CRON: ${{ github.event.schedule }}
+          MONEY_OUTCOME: ${{ steps.money.outcome }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
+        run: |
+          set -euo pipefail
+          git config user.name 'hh-money-bot'
+          git config user.email 'hh-money-bot@users.noreply.github.com'
+          started="${RUN_STARTED_AT}"
+          day=$(TZ=Asia/Shanghai date -d "@${started}" +%F)
+          planned=''; delay=''; trigger=manual
+          if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
+            trigger=schedule
+            read -r m h _ <<< "${CRON}"
+            p=$(date -u -d "$(date -u -d "@${started}" +%F) ${h}:${m}" +%s)
+            if [ "${p}" -gt "${started}" ]; then p=$((p - 86400)); fi
+            planned=$(TZ=Asia/Shanghai date -d "@${p}" +%H:%M)
+            day=$(TZ=Asia/Shanghai date -d "@${p}" +%F)
+            delay=$(( (started - p + 30) / 60 ))
+          fi
+          snap=frontend/public/data/money.json
+          asof=''; alerts=''; cross=''
+          if [ "${MONEY_OUTCOME}" = success ] && [ -f "${snap}" ]; then
+            asof=$(jq -r '.asOf // ""' "${snap}")
+            alerts=$(jq -r '(.alerts.cards // []) | length' "${snap}")
+            cross=$(jq -r '.crossCheck.status // ""' "${snap}")
+          fi
+          events=$(jq -r '.events | length' backend/src/services/moneyRadar/data/shadow-ledger.json 2>/dev/null || echo '')
+          log=share/money/run-log.csv
+          mkdir -p share/money
+          if [ ! -f "${log}" ]; then echo 'date,trigger,planned,started,delay_min,money_step,publish_step,as_of,cross_check,alerts,shadow_events,run_id' > "${log}"; fi
+          echo "${day},${trigger},${planned},$(TZ=Asia/Shanghai date -d "@${started}" '+%F %T'),${delay},${MONEY_OUTCOME:-skipped},${PUBLISH_OUTCOME:-skipped},${asof},${cross},${alerts},${events},${GITHUB_RUN_ID}" >> "${log}"
+          tail -1 "${log}"
+          git add share/money backend/src/services/moneyRadar/data/shadow-ledger.json backend/src/services/moneyRadar/data/alert-ledger.json
+          if git diff --cached --quiet; then
+            echo '无变化'
+            exit 0
+          fi
+          git commit -m "资金哨兵 ${asof:-${day}} 收盘定稿"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "${DECISION_BRANCH}" && git push origin "HEAD:${DECISION_BRANCH}" && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
