@@ -48,32 +48,39 @@ export const WATCHLIST_CONFIRMED_ON = '2026-09-23'
  * 不并入 msr/universe.ts —— 那是选股候选池，进去就会被 MSR 当作候选打分。
  * 每个方向另建一个方向篮子，看"钱是否在往这个方向走"，和个股状态分开读。
  */
-export const LEFT_RADAR: readonly { id: string; name: string; members: readonly { code: string; name: string }[] }[] = [
-  { id: 'ai-software', name: 'AI软件/Agent', members: [
+export type RadarScope = 'NON_MAINLINE' | 'RESEARCH_ONLY' | 'MAINLINE_ADJACENT'
+
+export const LEFT_RADAR: readonly {
+  id: string
+  name: string
+  scope: RadarScope
+  members: readonly { code: string; name: string }[]
+}[] = [
+  { id: 'ai-software', name: 'AI软件/Agent', scope: 'NON_MAINLINE', members: [
     { code: '688111', name: '金山办公' },
     { code: '300033', name: '同花顺' },
     { code: '600570', name: '恒生电子' },
     { code: '002230', name: '科大讯飞' },
   ] },
-  { id: 'embodied', name: '具身智能', members: [
+  { id: 'embodied', name: '具身智能', scope: 'NON_MAINLINE', members: [
     { code: '300124', name: '汇川技术' },
     { code: '601689', name: '拓普集团' },
     { code: '002050', name: '三花智控' },
     { code: '688017', name: '绿的谐波' },
     { code: '002747', name: '埃斯顿' },
   ] },
-  { id: 'ai-power', name: 'AI电力', members: [
+  { id: 'ai-power', name: 'AI电力', scope: 'RESEARCH_ONLY', members: [
     { code: '600406', name: '国电南瑞' },
     { code: '002028', name: '思源电气' },
     { code: '688676', name: '金盘科技' },
     { code: '002851', name: '麦格米特' },
   ] },
-  { id: 'ai-inference', name: 'AI推理', members: [
+  { id: 'ai-inference', name: 'AI推理', scope: 'MAINLINE_ADJACENT', members: [
     { code: '688256', name: '寒武纪' },
     { code: '603019', name: '中科曙光' },
     { code: '688521', name: '芯原股份' },
   ] },
-  { id: 'industrial-ai', name: '工业AI', members: [
+  { id: 'industrial-ai', name: '工业AI', scope: 'NON_MAINLINE', members: [
     { code: '688777', name: '中控技术' },
     { code: '002415', name: '海康威视' },
     { code: '600845', name: '宝信软件' },
@@ -81,6 +88,39 @@ export const LEFT_RADAR: readonly { id: string; name: string; members: readonly 
 ]
 
 export const LEFT_RADAR_CONFIRMED_ON = '2026-10-16'
+
+/**
+ * 左侧雷达权限锁（委员会 2026-10-16 裁定三）。
+ *
+ * 资金强度、趋势启动或状态升级只改变研究优先级，不改变主线归属和买入权限。
+ * 雷达即使判定为「爆发」，也只能输出观察状态或复核提示，
+ * 不能进入备选池、建仓申请或实盘执行单。
+ *
+ * 解除只能来自正式战略评审或冻结令规定的变更流程，不能由雷达信号自动解除：
+ * releasedBy 是字面量 null，没有任何函数能改它，要解除只能改这一行代码并留下评审记录。
+ */
+export const LEFT_RADAR_LOCK = {
+  label: '只观察，不具备建仓权限',
+  freeze: '战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件',
+  signalEffect: '资金强度、趋势启动或状态升级：只改变研究优先级，不改变主线归属和买入权限',
+  releasedBy: null,
+} as const
+
+export const RADAR_SCOPE_TEXT: Record<RadarScope, string> = {
+  NON_MAINLINE: '非当前作战主线，只观察、研究',
+  RESEARCH_ONLY: '仅研究，仓位为零',
+  MAINLINE_ADJACENT: '属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令',
+}
+
+/** 某只股票所在的左侧雷达方向；不在雷达里返回空数组 */
+export function radarGroupsOf(code: string): typeof LEFT_RADAR[number][] {
+  return LEFT_RADAR.filter(g => g.members.some(m => m.code === code))
+}
+
+/** 左侧雷达锁的完整文字（页面、导出报告与个股卡片共用同一份） */
+export function radarLockText(scope: RadarScope): string {
+  return `${LEFT_RADAR_LOCK.label}｜${RADAR_SCOPE_TEXT[scope]}｜${LEFT_RADAR_LOCK.freeze}`
+}
 
 /** 入口② 全部观察股：起始 7 只 + 左侧雷达，按代码去重（重复的以起始名单为准） */
 export function watchlistAll(): { code: string; name: string; radar: string | null }[] {

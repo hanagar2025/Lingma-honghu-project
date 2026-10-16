@@ -1,0 +1,3652 @@
+{
+ "id": "L-01",
+ "asOf": "2026-10-16",
+ "generatedAt": "2026-10-16T12:58:31.235Z",
+ "entries": [
+  {
+   "code": "002371",
+   "name": "北方华创",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 设备平台",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "半导体设备",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L6 平台型设备",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "设备平台",
+   "evidence": "S",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 S（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002463",
+   "name": "沪电股份",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI算力 · 互连PCB",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "PCB 材料与制造",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L4 PCB",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI算力",
+   "node": "互连PCB",
+   "evidence": "S",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 S（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300308",
+   "name": "中际旭创",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光模块",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L3 光模块",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光模块",
+   "evidence": "S",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 S（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300502",
+   "name": "新易盛",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光模块",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L3 光模块",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光模块",
+   "evidence": "S",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 S（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688012",
+   "name": "中微公司",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 刻蚀/MOCVD",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "半导体设备",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L6 刻蚀",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "刻蚀/MOCVD",
+   "evidence": "S",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 S（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688041",
+   "name": "海光信息",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI算力 · CPU/DCU",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L1 国产GPU/AI芯片",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI算力",
+   "node": "CPU/DCU",
+   "evidence": "S",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 S（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002916",
+   "name": "深南电路",
+   "level": 6,
+   "sources": [
+    {
+     "source": "HOLDING",
+     "group": null,
+     "since": "2026-10-12",
+     "by": "账本"
+    },
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI算力 · 互连PCB",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "PCB 材料与制造",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI算力",
+   "node": "互连PCB",
+   "evidence": "A",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 A（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "",
+   "entryReason": "账本持仓",
+   "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "EXECUTION_CARD",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "603019",
+   "name": "中科曙光",
+   "level": 4,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI算力 · 系统集成",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_RADAR",
+     "group": "AI推理",
+     "since": "2026-10-16",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L1 CPU/服务器芯片",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI算力",
+   "node": "系统集成",
+   "evidence": "A",
+   "champion": true,
+   "retiredC": false,
+   "researchQuestion": "持续跟踪：竞争力是否连续两季下降（冠军替换四步第①步）",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 A（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": true,
+     "detail": "扣非利润、现金流、毛利率已核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": true,
+     "detail": "已核验"
+    }
+   ],
+   "ceiling": "买入权限关闭，第四级闸门不评估：生产买入权限未批准（须单独提交委员会审批）；交易所日历未接入（买入逻辑离开模拟的前提）；峰值 430 万待核验：熔断按待核验峰值计，只卖不买照常；名单治理上线不恢复买入；执行债务 3 条未清：锁死全部建仓",
+   "entryReason": "产业证据、盈利核验、主线收入归因三道条件分别通过",
+   "exitCondition": "盈利证据失效、主线归因不成立或复核不通过",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI推理：只观察，不具备建仓权限｜属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "002028",
+   "name": "思源电气",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI电力基础设施 · 电网设备",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_RADAR",
+     "group": "AI电力",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "RESEARCH_ONLY",
+   "mainline": "AI电力基础设施",
+   "node": "电网设备",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 A（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "所在主线只研究、仓位为零",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件",
+    "所在主线只研究、仓位为零（CTC 冻结令）"
+   ],
+   "flags": []
+  },
+  {
+   "code": "300394",
+   "name": "天孚通信",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光器件/光引擎",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "AI 算力",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L3 光器件",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光器件/光引擎",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": true,
+     "detail": "证据 A（门槛 B 及以上）；产业档案已建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未过：盈利核验、主线收入归因",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-23",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "600183",
+   "name": "生益科技",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI算力 · CCL材料",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "PCB 材料与制造",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L4 覆铜板",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI算力",
+   "node": "CCL材料",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 A（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未过：产业证据、盈利核验、主线收入归因",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-23",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688072",
+   "name": "拓荆科技",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 薄膜沉积",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "半导体设备",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L6 薄膜沉积",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "薄膜沉积",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 A（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未过：产业证据、盈利核验、主线收入归因",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002384",
+   "name": "东山精密",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI算力 · PCB/精密制造",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI算力",
+   "node": "PCB/精密制造",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 B（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "只有资金异动观察：资金信号只改变研究优先级，须先有盈利或产业验证观察",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-10-23",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002837",
+   "name": "英维克",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI电力基础设施 · 液冷",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "液冷",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "RESEARCH_ONLY",
+   "mainline": "AI电力基础设施",
+   "node": "液冷",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 B（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "所在主线只研究、仓位为零",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-23",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "所在主线只研究、仓位为零（CTC 冻结令）"
+   ],
+   "flags": []
+  },
+  {
+   "code": "002851",
+   "name": "麦格米特",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI电力基础设施 · AI服务器电源",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    },
+    {
+     "source": "R01_RADAR",
+     "group": "AI电力",
+     "since": "2026-10-16",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "AIDC 供电",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "RESEARCH_ONLY",
+   "mainline": "AI电力基础设施",
+   "node": "AI服务器电源",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 B（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "所在主线只研究、仓位为零",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-23",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件",
+    "所在主线只研究、仓位为零（CTC 冻结令）"
+   ],
+   "flags": []
+  },
+  {
+   "code": "300870",
+   "name": "欧陆通",
+   "level": 3,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI电力基础设施 · AI服务器电源",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "R01_WATCH",
+     "group": null,
+     "since": "2026-09-23",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "AIDC 供电",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "RESEARCH_ONLY",
+   "mainline": "AI电力基础设施",
+   "node": "AI服务器电源",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_WATCH",
+     "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-10-23",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "证据 B（门槛 B 及以上）；产业档案未建"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "所在主线只研究、仓位为零",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-23",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "所在主线只研究、仓位为零（CTC 冻结令）"
+   ],
+   "flags": []
+  },
+  {
+   "code": "002050",
+   "name": "三花智控",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "具身智能",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "具身智能",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "002156",
+   "name": "通富微电",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "先进封装与测试",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L5 先进封装",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "先进封装与测试",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002230",
+   "name": "科大讯飞",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI软件/Agent",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI软件/Agent",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "002335",
+   "name": "科华数据",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "AIDC 供电",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AIDC 供电",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002415",
+   "name": "海康威视",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "工业AI",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "工业AI",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·工业AI：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "002600",
+   "name": "领益智造",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "液冷",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "液冷",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002747",
+   "name": "埃斯顿",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "具身智能",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "具身智能",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "300033",
+   "name": "同花顺",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI软件/Agent",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI软件/Agent",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "300124",
+   "name": "汇川技术",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "具身智能",
+     "since": "2026-10-16",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_PRESELECT",
+     "group": "工业自动化",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "工控/伺服（机器人主线未认定前仅建档）",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "具身智能",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_PRESELECT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "300476",
+   "name": "胜宏科技",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "PCB 材料与制造",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L4 PCB",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "PCB 材料与制造",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300499",
+   "name": "高澜股份",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "液冷",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "液冷",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300604",
+   "name": "长川科技",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "先进封装与测试",
+     "since": "2026-10-15",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L6 测试设备",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "先进封装与测试",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "301086",
+   "name": "鸿富瀚",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R02_NEXT",
+     "group": "液冷",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "液冷",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：盈利验证",
+   "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "600406",
+   "name": "国电南瑞",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI电力",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI电力",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "600570",
+   "name": "恒生电子",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI软件/Agent",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI软件/Agent",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "600845",
+   "name": "宝信软件",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "工业AI",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "工业AI",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·工业AI：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "601689",
+   "name": "拓普集团",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "具身智能",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "具身智能",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688017",
+   "name": "绿的谐波",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "具身智能",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "具身智能",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688111",
+   "name": "金山办公",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI软件/Agent",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI软件/Agent",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688256",
+   "name": "寒武纪",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI推理",
+     "since": "2026-10-16",
+     "by": "委员会"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L1 国产GPU/AI芯片",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI推理",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI推理：只观察，不具备建仓权限｜属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688521",
+   "name": "芯原股份",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI推理",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI推理",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI推理：只观察，不具备建仓权限｜属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688676",
+   "name": "金盘科技",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "AI电力",
+     "since": "2026-10-16",
+     "by": "委员会"
+    },
+    {
+     "source": "R02_NEXT",
+     "group": "AIDC 供电",
+     "since": "2026-10-15",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "AI电力",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "利润兑现、市值计入了多少、市场是否重新认可（R-02）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    },
+    {
+     "purpose": "EARNINGS",
+     "source": "R02_NEXT",
+     "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
+     "reviewBy": "2026-10-31",
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动、盈利验证",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+   "reviewBy": "2026-10-31",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688777",
+   "name": "中控技术",
+   "level": 3,
+   "sources": [
+    {
+     "source": "R01_RADAR",
+     "group": "工业AI",
+     "since": "2026-10-16",
+     "by": "委员会"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "工业AI",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "资金是否持续流向该方向（R-01）；未进股票池，须先建产业档案",
+   "plans": [
+    {
+     "purpose": "MONEY",
+     "source": "R01_RADAR",
+     "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
+     "reviewBy": "2026-11-15",
+     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+    }
+   ],
+   "gates": [
+    {
+     "id": "INDUSTRY",
+     "label": "产业证据",
+     "pass": false,
+     "detail": "未进股票池，没有产业档案"
+    },
+    {
+     "id": "EARNINGS",
+     "label": "盈利核验",
+     "pass": false,
+     "detail": "未核验"
+    },
+    {
+     "id": "ATTRIBUTION",
+     "label": "主线收入归因",
+     "pass": false,
+     "detail": "未核验"
+    }
+   ],
+   "ceiling": "未进股票池：先建产业档案，挂到作战主线的节点下",
+   "entryReason": "观察计划：资金异动",
+   "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+   "reviewBy": "2026-11-15",
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "左侧雷达·工业AI：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
+   ],
+   "flags": []
+  },
+  {
+   "code": "000400",
+   "name": "许继电气",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI电力基础设施 · 电网升级",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "RESEARCH_ONLY",
+   "mainline": "AI电力基础设施",
+   "node": "电网升级",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「AI电力基础设施 · 电网升级」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "所在主线只研究、仓位为零（CTC 冻结令）"
+   ],
+   "flags": []
+  },
+  {
+   "code": "600312",
+   "name": "平高电气",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI电力基础设施 · 电网升级",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "RESEARCH_ONLY",
+   "mainline": "AI电力基础设施",
+   "node": "电网升级",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「AI电力基础设施 · 电网升级」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [
+    "所在主线只研究、仓位为零（CTC 冻结令）"
+   ],
+   "flags": []
+  },
+  {
+   "code": "688120",
+   "name": "华海清科",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · CMP",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "CMP",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「半导体国产替代 · CMP」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688498",
+   "name": "源杰科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光芯片/CW激光器",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光芯片/CW激光器",
+   "evidence": "A",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「AI光通信 · 光芯片/CW激光器」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "002281",
+   "name": "光迅科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光模块/光器件",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光模块/光器件",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「AI光通信 · 光模块/光器件」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300567",
+   "name": "精测电子",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 量测/检测",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "量测/检测",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「半导体国产替代 · 量测/检测」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300620",
+   "name": "光库科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光器件/调制器",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光器件/调制器",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「AI光通信 · 光器件/调制器」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688313",
+   "name": "仕佳光子",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "AI光通信 · 光芯片/AWG/FAU",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "AI光通信",
+   "node": "光芯片/AWG/FAU",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「AI光通信 · 光芯片/AWG/FAU」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688361",
+   "name": "中科飞测",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 量测/检测",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "量测/检测",
+   "evidence": "B",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「半导体国产替代 · 量测/检测」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "603986",
+   "name": "兆易创新",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 存储",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L2 存储",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "存储",
+   "evidence": "C",
+   "champion": false,
+   "retiredC": true,
+   "researchQuestion": "只能走冠军替换四步重新申请；在此之前只保留研究记录",
+   "plans": [],
+   "gates": [],
+   "ceiling": "C 级清退：只能走冠军替换四步重新申请，不进观察池",
+   "entryReason": "MSR 股票池节点「半导体国产替代 · 存储」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688003",
+   "name": "天准科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 检测装备",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "检测装备",
+   "evidence": "C",
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "产业验证：客户、产品、订单、竞争格局建档；盈利验证：扣非利润、现金流、毛利率核验；主线收入归因核验",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "MSR 股票池节点「半导体国产替代 · 检测装备」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688008",
+   "name": "澜起科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MSR_UNIVERSE",
+     "group": "半导体国产替代 · 互连芯片",
+     "since": "2026-07-26",
+     "by": "研究档案"
+    },
+    {
+     "source": "MAP_V1",
+     "group": "L2 内存接口/HBM生态",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "COMBAT",
+   "mainline": "半导体国产替代",
+   "node": "互连芯片",
+   "evidence": "C",
+   "champion": false,
+   "retiredC": true,
+   "researchQuestion": "只能走冠军替换四步重新申请；在此之前只保留研究记录",
+   "plans": [],
+   "gates": [],
+   "ceiling": "C 级清退：只能走冠军替换四步重新申请，不进观察池",
+   "entryReason": "MSR 股票池节点「半导体国产替代 · 互连芯片」",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "000977",
+   "name": "浪潮信息",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L4 AI服务器",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L4 AI服务器",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L4 AI服务器",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300054",
+   "name": "鼎龙股份",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L8 抛光材料",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L8 抛光材料",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L8 抛光材料",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300346",
+   "name": "南大光电",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L8 光刻胶",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L8 光刻胶",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L8 光刻胶",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300475",
+   "name": "香农芯创",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L2 HBM相关",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L2 HBM相关",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L2 HBM相关",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "300570",
+   "name": "太辰光",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L3 光引擎/CPO",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L3 光引擎/CPO",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L3 光引擎/CPO",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "301269",
+   "name": "华大九天",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L7 国产EDA",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L7 国产EDA",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L7 国产EDA",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "600584",
+   "name": "长电科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L5 先进封装",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L5 先进封装",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L5 先进封装",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "601138",
+   "name": "工业富联",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L4 AI服务器/代工",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L4 AI服务器/代工",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L4 AI服务器/代工",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "603650",
+   "name": "彤程新材",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L8 光刻胶",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L8 光刻胶",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L8 光刻胶",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688019",
+   "name": "安集科技",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L8 抛光材料",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L8 抛光材料",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L8 抛光材料",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688123",
+   "name": "聚辰股份",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L2 EEPROM/接口",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L2 EEPROM/接口",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L2 EEPROM/接口",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688126",
+   "name": "沪硅产业",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L8 硅片",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L8 硅片",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L8 硅片",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688200",
+   "name": "华峰测控",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L6 测试设备",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L6 测试设备",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L6 测试设备",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688206",
+   "name": "概伦电子",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L7 国产EDA",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L7 国产EDA",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L7 国产EDA",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688268",
+   "name": "华特气体",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L8 电子特气",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L8 电子特气",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L8 电子特气",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688525",
+   "name": "佰维存储",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L2 HBM相关",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L2 HBM相关",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L2 HBM相关",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688702",
+   "name": "盛科通信",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L1 交换芯片",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L1 交换芯片",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L1 交换芯片",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  },
+  {
+   "code": "688981",
+   "name": "中芯国际",
+   "level": 2,
+   "sources": [
+    {
+     "source": "MAP_V1",
+     "group": "L5 晶圆代工",
+     "since": "2026-07-19",
+     "by": "总纲初稿"
+    }
+   ],
+   "scope": "OUT_OF_UNIVERSE",
+   "mainline": null,
+   "node": "L5 晶圆代工",
+   "evidence": null,
+   "champion": false,
+   "retiredC": false,
+   "researchQuestion": "是否值得建立公司档案（全景图初稿名单）",
+   "plans": [],
+   "gates": [],
+   "ceiling": "没有观察计划（监测指标、观察周期、退出条件）",
+   "entryReason": "来源：L5 晶圆代工",
+   "exitCondition": "研究价值消失或产业节点不再相关",
+   "reviewBy": null,
+   "reviewOverdue": false,
+   "buyPermission": "NONE",
+   "locks": [],
+   "flags": []
+  }
+ ],
+ "buyPermission": {
+  "open": false,
+  "reasons": [
+   "生产买入权限未批准（须单独提交委员会审批）",
+   "交易所日历未接入（买入逻辑离开模拟的前提）",
+   "峰值 430 万待核验：熔断按待核验峰值计，只卖不买照常；名单治理上线不恢复买入",
+   "执行债务 3 条未清：锁死全部建仓"
+  ]
+ },
+ "counts": {
+  "1": 0,
+  "2": 30,
+  "3": 31,
+  "4": 1,
+  "5": 0,
+  "6": 7
+ },
+ "marketCount": null,
+ "notes": [
+  "全市场（第 1 级）由资金哨兵入口③ 申万二级行业覆盖，不逐只列出；本表只列至少有一个来源的股票",
+  "观察期限 为预登记值，待委员会确认：资金异动 自加入或上次续留起 30 个自然日（约 20 个交易日）；盈利验证 下一个定期报告法定披露截止日（4/30、8/31、10/31）；产业验证 自加入或上次续留起 90 个自然日（约一个季度）",
+  "层级由条件逐级计算，名单来源不授予层级；委员会点名只能触发研究，不能直接指定买入资格"
+ ],
+ "risk": {
+  "pricedAt": "2026-10-16 16:14",
+  "sectors": [
+   {
+    "label": "电子",
+    "pct": 0.32133472933452245,
+    "limit": 0.3
+   },
+   {
+    "label": "通信",
+    "pct": 0.20860355621246798,
+    "limit": 0.3
+   }
+  ],
+  "themes": [
+   {
+    "label": "AI",
+    "pct": 0.3906368574580405,
+    "limit": 0.45
+   },
+   {
+    "label": "半导体",
+    "pct": 0.13930142808894996,
+    "limit": 0.45
+   }
+  ],
+  "note": "按账本 2026-10-12 股数 × 最新价计算，分母为总资产（现金 + 持仓市值）。板块 30%、主题 45% 上限目前只显示，不自动生成卖单；熔断与单票归位以执行单为准。"
+ }
+}
