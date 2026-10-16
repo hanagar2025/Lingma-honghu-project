@@ -177,6 +177,13 @@ jobs:
           else
             printf '%s' '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><p style="font:18px sans-serif;padding:24px">今日完整驾驶舱生成失败，执行单不受影响。<a href="./">返回执行单</a></p>' > site/cockpit.html
           fi
+          # 资金哨兵（R-01）：money-sentinel 工作流提交的最近一次收盘定稿结果，只观察、不出动作
+          if [ -f share/money/latest.agent.md ]; then
+            mkdir -p site/money
+            cp share/money/latest.agent.md site/money/latest.md
+            cp share/money/latest.json site/money/latest.json 2>/dev/null || true
+            cp share/money/run-log.csv site/money/run-log.csv 2>/dev/null || true
+          fi
           if [ -f share/decision/latest.html ]; then
             cp share/decision/latest.html site/index.html
           else
