@@ -1,7 +1,7 @@
 {
  "id": "L-01",
  "asOf": "2026-10-16",
- "generatedAt": "2026-10-16T13:20:33.588Z",
+ "generatedAt": "2026-10-16T13:57:32.073Z",
  "entries": [
   {
    "code": "002371",
@@ -46,8 +46,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -75,6 +78,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -128,8 +134,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -157,6 +166,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -204,8 +216,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -233,6 +248,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -280,8 +298,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -309,6 +330,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -356,8 +380,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -385,6 +412,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -432,8 +462,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -461,6 +494,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -514,16 +550,22 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -551,6 +593,9 @@
    "exitCondition": "触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "EXECUTION_CARD",
    "locks": [],
    "flags": []
@@ -598,16 +643,22 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -635,6 +686,9 @@
    "exitCondition": "盈利证据失效、主线归因不成立或复核不通过",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI推理：只观察，不具备建仓权限｜属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -672,8 +726,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -701,6 +758,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件",
@@ -751,16 +811,22 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -788,6 +854,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-23",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -835,16 +904,22 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -872,6 +947,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-23",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -913,8 +991,11 @@
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -942,6 +1023,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -977,8 +1061,11 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1006,6 +1093,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-10-23",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -1047,16 +1137,22 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1084,6 +1180,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-23",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "所在主线只研究、仓位为零（CTC 冻结令）"
@@ -1133,16 +1232,22 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1170,6 +1275,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-23",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件",
@@ -1214,16 +1322,22 @@
      "source": "R01_WATCH",
      "metrics": "资金哨兵 R-01：七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-10-23",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1251,6 +1365,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-23",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "所在主线只研究、仓位为零（CTC 冻结令）"
@@ -1282,8 +1399,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1311,6 +1431,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -1348,8 +1471,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1377,6 +1503,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -1406,8 +1535,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1435,6 +1567,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -1466,8 +1601,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1495,6 +1633,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -1524,8 +1665,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1553,6 +1697,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·工业AI：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -1584,8 +1731,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1613,6 +1763,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -1642,8 +1795,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1671,6 +1827,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -1702,8 +1861,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1731,6 +1893,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -1774,16 +1939,22 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_PRESELECT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1811,6 +1982,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -1848,8 +2022,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1877,6 +2054,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -1906,8 +2086,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1935,6 +2118,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -1970,8 +2156,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -1999,6 +2188,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2028,8 +2220,11 @@
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2057,6 +2252,9 @@
    "exitCondition": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2086,8 +2284,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2115,6 +2316,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2146,8 +2350,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2175,6 +2382,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2206,8 +2416,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2235,6 +2448,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·工业AI：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2266,8 +2482,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2295,6 +2514,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2326,8 +2548,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2355,6 +2580,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·具身智能：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2386,8 +2614,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2415,6 +2646,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI软件/Agent：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2452,8 +2686,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2481,6 +2718,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI推理：只观察，不具备建仓权限｜属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2512,8 +2752,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2541,6 +2784,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI推理：只观察，不具备建仓权限｜属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2578,16 +2824,22 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     },
     {
      "purpose": "EARNINGS",
      "source": "R02_NEXT",
      "metrics": "R-02：扣非与单季利润、经营现金流、合同负债 / 存货 / 应收、一致预期节奏",
      "reviewBy": "2026-10-31",
-     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）",
-     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算"
+     "periodRule": "下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限",
+     "exitWhen": "定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
+     "todo": "WAITING_DISCLOSURE",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2615,6 +2867,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级；定期报告披露后扣非利润或经营现金流证伪 → 降回研究池；核验通过 → 由研究档案更新盈利核验标记，再按第 4 级条件重算",
    "reviewBy": "2026-10-31",
    "reviewOverdue": false,
+   "reviewTodo": "WAITING_DISCLOSURE",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·AI电力：只观察，不具备建仓权限｜仅研究，仓位为零｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2646,8 +2901,11 @@
      "source": "R01_RADAR",
      "metrics": "资金哨兵 R-01：个股与方向篮子的七状态、成交额份额水位、背离与撤离提醒",
      "reviewBy": "2026-11-15",
-     "periodRule": "自加入或上次续留起 30 个自然日（约 20 个交易日）",
-     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级"
+     "periodRule": "自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限",
+     "exitWhen": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
+     "todo": "OBSERVING",
+     "owner": "投资委员会（具体责任人待指派）",
+     "upgradeApplied": false
     }
    ],
    "gates": [
@@ -2675,6 +2933,9 @@
    "exitCondition": "到期时没有出现启动、趋势或爆发等有效状态，或方向逻辑失效 → 降回研究池或移出；资金信号本身不能升级层级",
    "reviewBy": "2026-11-15",
    "reviewOverdue": false,
+   "reviewTodo": "OBSERVING",
+   "reviewOwner": "投资委员会（具体责任人待指派）",
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "左侧雷达·工业AI：只观察，不具备建仓权限｜非当前作战主线，只观察、研究｜战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件"
@@ -2707,6 +2968,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "所在主线只研究、仓位为零（CTC 冻结令）"
@@ -2739,6 +3003,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [
     "所在主线只研究、仓位为零（CTC 冻结令）"
@@ -2771,6 +3038,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2801,6 +3071,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2831,6 +3104,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2861,6 +3137,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2891,6 +3170,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2921,6 +3203,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2951,6 +3236,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -2987,6 +3275,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3017,6 +3308,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3053,6 +3347,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3083,6 +3380,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3113,6 +3413,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3143,6 +3446,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3173,6 +3479,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3203,6 +3512,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3233,6 +3545,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3263,6 +3578,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3293,6 +3611,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3323,6 +3644,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3353,6 +3677,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3383,6 +3710,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3413,6 +3743,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3443,6 +3776,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3473,6 +3809,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3503,6 +3842,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3533,6 +3875,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3563,6 +3908,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3593,6 +3941,9 @@
    "exitCondition": "研究价值消失或产业节点不再相关",
    "reviewBy": null,
    "reviewOverdue": false,
+   "reviewTodo": null,
+   "reviewOwner": null,
+   "lastReview": null,
    "buyPermission": "NONE",
    "locks": [],
    "flags": []
@@ -3616,9 +3967,11 @@
   "6": 7
  },
  "marketCount": null,
+ "invalidDecisions": [],
  "notes": [
   "全市场（第 1 级）由资金哨兵入口③ 申万二级行业覆盖，不逐只列出；本表只列至少有一个来源的股票",
-  "观察期限 为预登记值，待委员会确认：资金异动 自加入或上次续留起 30 个自然日（约 20 个交易日）；盈利验证 下一个定期报告法定披露截止日（4/30、8/31、10/31）；产业验证 自加入或上次续留起 90 个自然日（约一个季度）",
+  "观察期限为投资委员会 2026-10-16 批准的预登记试行参数：资金异动 自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限；盈利验证 下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限；产业验证 自加入起 90 个自然日（约一个季度）；续留须写明新期限",
+  "到期必须产生一条明确的复核结论：不自动续期，不因到期自动升级；到期未复核标「逾期未复核」，不得静默续留",
   "层级由条件逐级计算，名单来源不授予层级；委员会点名只能触发研究，不能直接指定买入资格"
  ],
  "risk": {
@@ -3627,24 +3980,102 @@
    {
     "label": "电子",
     "pct": 0.32133472933452245,
-    "limit": 0.3
+    "limit": 0.3,
+    "holdings": [
+     {
+      "code": "688041",
+      "name": "海光信息",
+      "pct": 0.11325807158464629
+     },
+     {
+      "code": "002371",
+      "name": "北方华创",
+      "pct": 0.0698383598574775
+     },
+     {
+      "code": "688012",
+      "name": "中微公司",
+      "pct": 0.0694630682314725
+     },
+     {
+      "code": "002463",
+      "name": "沪电股份",
+      "pct": 0.04446244990224437
+     },
+     {
+      "code": "002916",
+      "name": "深南电路",
+      "pct": 0.024312779758681836
+     }
+    ]
    },
    {
     "label": "通信",
     "pct": 0.20860355621246798,
-    "limit": 0.3
+    "limit": 0.3,
+    "holdings": [
+     {
+      "code": "300308",
+      "name": "中际旭创",
+      "pct": 0.10509734145176831
+     },
+     {
+      "code": "300502",
+      "name": "新易盛",
+      "pct": 0.10350621476069966
+     }
+    ]
    }
   ],
   "themes": [
    {
     "label": "AI",
     "pct": 0.3906368574580405,
-    "limit": 0.45
+    "limit": 0.45,
+    "holdings": [
+     {
+      "code": "688041",
+      "name": "海光信息",
+      "pct": 0.11325807158464629
+     },
+     {
+      "code": "300308",
+      "name": "中际旭创",
+      "pct": 0.10509734145176831
+     },
+     {
+      "code": "300502",
+      "name": "新易盛",
+      "pct": 0.10350621476069966
+     },
+     {
+      "code": "002463",
+      "name": "沪电股份",
+      "pct": 0.04446244990224437
+     },
+     {
+      "code": "002916",
+      "name": "深南电路",
+      "pct": 0.024312779758681836
+     }
+    ]
    },
    {
     "label": "半导体",
     "pct": 0.13930142808894996,
-    "limit": 0.45
+    "limit": 0.45,
+    "holdings": [
+     {
+      "code": "002371",
+      "name": "北方华创",
+      "pct": 0.0698383598574775
+     },
+     {
+      "code": "688012",
+      "name": "中微公司",
+      "pct": 0.0694630682314725
+     }
+    ]
    }
   ],
   "note": "按账本 2026-10-12 股数 × 最新价计算，分母为总资产（现金 + 持仓市值）。板块 30%、主题 45% 上限目前只显示，不自动生成卖单；熔断与单票归位以执行单为准。"

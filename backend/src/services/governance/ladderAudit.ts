@@ -209,6 +209,13 @@ export function runAudit({ portfolio, view, asOf }: AuditInput): AuditCheck[] {
   const f = openAll.entries.find(e => e.code === '000000')
   add('NO_SKIP', 'BEHAVIOR', '委员会点名 + 雷达 + 观察名单 + 全景图同时命中、且买入权限强制打开：未进股票池的股票仍停在第 3 级',
     !!f && f.level <= 3 && f.buyPermission === 'NONE', f ? `第 ${f.level} 级` : '未出现')
+  const farLate = buildLadder({ asOf: '2027-12-31', generatedAt: asOf, portfolio, decisions: [], buyPermission: view.buyPermission })
+  const lvl = new Map(E.map(e => [e.code, e.level]))
+  const watchedLate = farLate.entries.filter(e => e.level === 3 || e.level === 4)
+  add('NO_SKIP', 'BEHAVIOR', '观察期全部过期、无复核结论：层级不变，不自动续期、不自动升级，全部标「逾期未复核」',
+    watchedLate.length > 0 && farLate.entries.every(e => e.level === lvl.get(e.code))
+    && watchedLate.every(e => e.reviewTodo === 'OVERDUE' && !!e.reviewBy && e.reviewBy <= '2027-04-30'),
+    `${watchedLate.length} 只逾期`)
 
   // ── 三、没有隐藏买入权限 ──
   add('NO_HIDDEN_BUY', 'DATA', '账户买入权限关闭（生产买入未批准、交易所日历未接入、峰值待核验、执行债务）',
@@ -282,8 +289,10 @@ export function runAudit({ portfolio, view, asOf }: AuditInput): AuditCheck[] {
     asOf,
   })
   add('UNTOUCHED', 'BEHAVIOR', '板块 90%、主题 90% 但单票都不超 12%：风控闸门不生成减仓（上限只显示）', conc.length === 0)
-  const riskMd = renderLadder(view, { pricedAt: 'x', sectors: [{ label: '电子', pct: 0.35, limit: 0.3 }], themes: [{ label: 'AI', pct: 0.5, limit: 0.45 }], note: '' })
-  add('UNTOUCHED', 'BEHAVIOR', '独立风险提示保留：超限照常标出「超限（只显示，不自动出卖单）」', (riskMd.match(/超限（只显示，不自动出卖单）/g) ?? []).length === 2)
+  const riskMd = renderLadder(view, { pricedAt: 'x', sectors: [{ label: '电子', pct: 0.35, limit: 0.3, holdings: [] }], themes: [{ label: 'AI', pct: 0.5, limit: 0.45, holdings: [] }], note: '' })
+  add('UNTOUCHED', 'BEHAVIOR', '独立风险提示保留：超限照常标出「超限（只显示，不自动出卖单）」，并写明不是豁免、单票归位不等于板块主题风险解决',
+    (riskMd.match(/超限（只显示，不自动出卖单）/g) ?? []).length === 2
+    && (riskMd.match(/这不是对 \S+ 上限的豁免/g) ?? []).length === 2 && riskMd.includes('不等于板块风险已解决') && riskMd.includes('不等于主题风险已解决'))
   const champs = MAINLINES.flatMap(m => m.members.filter(x => x.champion).map(x => x.code)).sort()
   const expected = ['002371', '002463', '002916', '300308', '300502', '603019', '688012', '688041']
   add('UNTOUCHED', 'DATA', '冻结冠军 8 只不变', champs.join() === expected.join(), champs.join('、'))

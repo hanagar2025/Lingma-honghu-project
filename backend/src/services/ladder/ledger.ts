@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { REVIEW_ACTION_TEXT, type ReviewDecision } from './registry'
+import { REVIEW_ACTION_TEXT, REVIEW_FINDING_TEXT, validateDecision, type ReviewDecision } from './registry'
 import { LEVEL_NAME, type LadderLevel, type LadderView } from './types'
 
 const DATA = new URL('./data/', import.meta.url)
@@ -71,7 +71,8 @@ export function appendLadderEvents(
 
   const seenReview = new Set(ledger.events.filter(e => e.kind === 'REVIEW').map(e => `${e.date}|${e.code}|${e.rule}`))
   for (const d of decisions) {
-    const rule = `${REVIEW_ACTION_TEXT[d.action]}：${d.note}`
+    if (validateDecision(d)) continue
+    const rule = `${REVIEW_FINDING_TEXT[d.finding]} → ${REVIEW_ACTION_TEXT[d.action]}${d.newDeadline ? `，新期限 ${d.newDeadline}` : ''}：${d.note}`
     const key = `${d.date}|${d.code}|${rule}`
     if (seenReview.has(key)) continue
     seenReview.add(key)

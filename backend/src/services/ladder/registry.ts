@@ -19,29 +19,41 @@ import { COMBAT_MAINLINE_IDS, MIN_EVIDENCE_FOR_CANDIDATE, RESEARCH_ONLY_MAINLINE
 import { radarGroupsOf, radarLockText } from '../moneyRadar/config'
 import { collectSources, type PortfolioLite, type SourcedName } from './sources'
 import {
-  LEVEL_NAME, type BuyPermissionState, type GateCheck, type LadderEntry, type LadderLevel,
-  type LadderView, type ObservePlan, type ObservePurpose, type SourceId, type SourceTag, type StrategyScope,
+  LEVEL_NAME, TODO_RANK, type BuyPermissionState, type GateCheck, type LadderEntry, type LadderLevel,
+  type LadderView, type ObservePlan, type ObservePurpose, type ReviewRecord, type ReviewTodo, type SourceId,
+  type SourceTag, type StrategyScope,
 } from './types'
 
 export const LADDER_ID = 'L-01'
 
 /**
- * 观察期限（2026-10-16 预登记，待委员会确认）。
+ * 观察期限（2026-10-16 预登记；委员会同日批准为预登记试行参数）。
  *
  * 委员会要求按观察目的分别设定，不先拍一个统一数字。三个目的的口径：
  *   资金异动：30 个自然日，约 20 个交易日，与资金哨兵 20 日成交额份额窗口一致。
  *             交易所日历接入前按自然日计；接入后改按交易日。
  *   盈利验证：到下一个定期报告的法定披露截止日（一季报与年报 4/30、中报 8/31、三季报 10/31）。
- *             利润只能在报告披露后核验，提前复核没有新证据。
+ *             利润只能在报告披露后核验；披露前是「等待披露」，不等于「证据已失效」。
  *   产业验证：90 个自然日，约一个季度，覆盖一次送样 → 认证的节点。
- * 期限届满必须作出续留、降级或移出的决定，不能无限期挂名。
+ *
+ * 到期硬规则（委员会 2026-10-16）：到期必须产生一条明确的复核结论。
+ *   不自动续期，不因到期自动升级；到期未复核标「逾期未复核」，不得静默续留。
  */
 export const OBSERVE_PERIODS = {
-  status: 'PRE_REGISTERED' as const,
+  status: 'TRIAL' as const,
   registeredOn: '2026-10-16',
-  MONEY: { days: 30, rule: '自加入或上次续留起 30 个自然日（约 20 个交易日）' },
-  EARNINGS: { days: null, rule: '下一个定期报告法定披露截止日（4/30、8/31、10/31）' },
-  INDUSTRY: { days: 90, rule: '自加入或上次续留起 90 个自然日（约一个季度）' },
+  approvedOn: '2026-10-16',
+  approver: '投资委员会',
+  MONEY: { days: 30, rule: '自加入起 30 个自然日（约 20 个交易日）；续留须写明新期限' },
+  EARNINGS: { days: null, rule: '下一个定期报告法定披露截止日（4/30、8/31、10/31）；续留须写明新期限' },
+  INDUSTRY: { days: 90, rule: '自加入起 90 个自然日（约一个季度）；续留须写明新期限' },
+}
+
+/** 复核责任人。委员会尚未指派到人，先记委员会；指派后改这里 */
+export const REVIEW_OWNER: Record<ObservePurpose, string> = {
+  MONEY: '投资委员会（具体责任人待指派）',
+  EARNINGS: '投资委员会（具体责任人待指派）',
+  INDUSTRY: '投资委员会（具体责任人待指派）',
 }
 
 /** 来源提供的观察计划。没有列在这里的来源（股票池、全景图、委员会点名）只到研究池 */
@@ -68,23 +80,73 @@ const PLAN_OF: Partial<Record<SourceId, { purpose: ObservePurpose; metrics: stri
   },
 }
 
-/** 观察期满后的决定。没有「升级」：升级只能由条件满足自动发生，不能由决定指定 */
-export type ReviewAction = 'KEEP' | 'DOWN' | 'REMOVE'
+/**
+ * 复核结论。四种，一一对应委员会 2026-10-16 列出的结论：
+ *   证据增强且满足条件 → 申请升级（APPLY_UP）：只是申请，层级仍由本级条件计算，条件不满足就不升
+ *   证据不足但仍有研究价值 → 续留（KEEP）：写明理由与新期限
+ *   证据失效或研究价值消失 → 降级（DOWN）或移出（REMOVE）
+ * 到期未复核不是一种结论，由 reviewTodo = OVERDUE 标出。
+ */
+export type ReviewAction = 'APPLY_UP' | 'KEEP' | 'DOWN' | 'REMOVE'
+
+/** 复核发现：结论必须与发现对应 */
+export type ReviewFinding = 'STRONGER' | 'INSUFFICIENT' | 'INVALID' | 'NO_VALUE'
 
 export const REVIEW_ACTION_TEXT: Record<ReviewAction, string> = {
+  APPLY_UP: '申请升级（按本级条件重算，条件不满足不升）',
   KEEP: '续留',
   DOWN: '降级（降回研究池）',
   REMOVE: '移出（离开名单主表；股票池成员须另改研究档案）',
+}
+
+export const REVIEW_FINDING_TEXT: Record<ReviewFinding, string> = {
+  STRONGER: '证据增强',
+  INSUFFICIENT: '证据不足，仍有研究价值',
+  INVALID: '证据已失效',
+  NO_VALUE: '研究价值消失',
+}
+
+const FINDINGS_FOR: Record<ReviewAction, readonly ReviewFinding[]> = {
+  APPLY_UP: ['STRONGER'],
+  KEEP: ['INSUFFICIENT'],
+  DOWN: ['INVALID', 'NO_VALUE'],
+  REMOVE: ['INVALID', 'NO_VALUE'],
 }
 
 export interface ReviewDecision {
   date: string
   code: string
   action: ReviewAction
+  finding: ReviewFinding
   /** 只针对某一类观察计划；不填 = 全部 */
   purpose?: ObservePurpose
   approver: string
+  /** 理由；续留必须写明 */
   note: string
+  /** 续留与申请升级必填：下一次复核期限，须晚于决定日。不自动续期 */
+  newDeadline?: string
+}
+
+/** 复核记录是否有效。无效记录不计入，相关观察计划按未复核处理 */
+export function validateDecision(d: ReviewDecision): string | null {
+  if (!REVIEW_ACTION_TEXT[d.action]) return `未知结论 ${String(d.action)}`
+  if (!FINDINGS_FOR[d.action].includes(d.finding)) {
+    return `结论「${REVIEW_ACTION_TEXT[d.action]}」须对应发现：${FINDINGS_FOR[d.action].map(f => REVIEW_FINDING_TEXT[f]).join(' 或 ')}`
+  }
+  if (!d.approver?.trim()) return '缺审批人'
+  if (!d.note?.trim()) return '缺理由'
+  if (d.action === 'KEEP' || d.action === 'APPLY_UP') {
+    if (!d.newDeadline || !/^\d{4}-\d{2}-\d{2}$/.test(d.newDeadline)) return '续留与申请升级须写明新期限（YYYY-MM-DD）'
+    if (d.newDeadline <= d.date) return `新期限 ${d.newDeadline} 不晚于决定日 ${d.date}`
+  }
+  return null
+}
+
+/** 观察计划的待办状态 */
+export function reviewTodoOf(purpose: ObservePurpose, reviewBy: string, asOf: string): ReviewTodo {
+  if (reviewBy < asOf) return 'OVERDUE'
+  if (reviewBy === asOf) return 'DUE_TODAY'
+  return purpose === 'EARNINGS' ? 'WAITING_DISCLOSURE' : 'OBSERVING'
 }
 
 export function addDays(iso: string, n: number): string {
@@ -155,7 +217,13 @@ function researchQuestion(e: { inUniverse: boolean; industryVerified?: boolean; 
 }
 
 export function buildLadder(input: LadderInput): LadderView {
-  const { asOf, portfolio, decisions, buyPermission } = input
+  const { asOf, portfolio, buyPermission } = input
+  const invalidDecisions: LadderView['invalidDecisions'] = []
+  const decisions = input.decisions.filter(d => {
+    const why = validateDecision(d)
+    if (why) invalidDecisions.push({ date: d.date, code: d.code, action: String(d.action), reason: why })
+    return !why
+  })
   const held = new Set(portfolio.positions.map(p => p.code))
   const byCode = new Map<string, { name: string; tags: SourceTag[] }>()
   for (const s of (input.collect ?? collectSources)(portfolio)) {
@@ -177,21 +245,28 @@ export function buildLadder(input: LadderInput): LadderView {
     const mine = decisions.filter(d => d.code === code).sort((a, b) => a.date.localeCompare(b.date))
     const removed = mine.some(d => d.action === 'REMOVE')
 
-    // 观察计划：来源给出，续留的从续留日重算期限，降级 / 移出的作废
+    // 观察计划：来源给出期限；续留 / 申请升级用决定里写明的新期限，降级 / 移出的作废
     const plans: ObservePlan[] = []
+    let lastReview: ReviewRecord | null = null
     for (const t of tags) {
       const spec = PLAN_OF[t.source]
       if (!spec) continue
       const after = mine.filter(d => d.date >= t.since && (!d.purpose || d.purpose === spec.purpose))
       const last = after.at(-1)
-      if (last && last.action !== 'KEEP') continue
+      if (last && (!lastReview || last.date >= lastReview.date)) {
+        lastReview = { date: last.date, purpose: last.purpose ?? null, action: last.action, finding: last.finding, approver: last.approver, note: last.note }
+      }
+      if (last && (last.action === 'DOWN' || last.action === 'REMOVE')) continue
       if (plans.some(p => p.purpose === spec.purpose)) continue
-      const from = last?.date ?? t.since
+      const reviewBy = last?.newDeadline ?? reviewDeadline(spec.purpose, t.since)
       plans.push({
         purpose: spec.purpose, source: t.source, metrics: spec.metrics,
-        reviewBy: reviewDeadline(spec.purpose, from),
+        reviewBy,
         periodRule: OBSERVE_PERIODS[spec.purpose].rule,
         exitWhen: spec.exitWhen,
+        todo: reviewTodoOf(spec.purpose, reviewBy, asOf),
+        owner: REVIEW_OWNER[spec.purpose],
+        upgradeApplied: last?.action === 'APPLY_UP',
       })
     }
 
@@ -272,7 +347,15 @@ export function buildLadder(input: LadderInput): LadderView {
       if (!champion) flags.push('持仓不在冻结冠军池：持仓资格不符，须按清退或正式裁定处理（本表不出动作）')
     }
 
-    const reviewBy = level === 3 || level === 4 ? plans.map(p => p.reviewBy).sort()[0] ?? null : null
+    const watched = level === 3 || level === 4
+    const first = watched
+      ? [...plans].sort((a, b) => a.reviewBy.localeCompare(b.reviewBy) || TODO_RANK[b.todo] - TODO_RANK[a.todo])[0] ?? null
+      : null
+    const reviewBy = first?.reviewBy ?? null
+    const reviewTodo: ReviewTodo | null = first?.todo ?? null
+    if (watched && level === 3 && plans.some(p => p.upgradeApplied)) {
+      flags.push(`已申请升级，但备选池条件未满足，层级不变：${ceiling}`)
+    }
     const exitCondition = level === 6
       ? '触发 C 级清退、单票归位、熔断降仓，或正式批准的退出规则（均由执行单执行）'
       : level === 5 ? '任一闸门失效、价格窗口关闭或风险权限关闭'
@@ -286,7 +369,9 @@ export function buildLadder(input: LadderInput): LadderView {
       mainline: hit?.mainline.name ?? null, node: m?.node ?? tags.find(t => t.group)?.group ?? null,
       evidence: m?.evidence ?? null, champion, retiredC,
       researchQuestion: question, plans, gates, ceiling, entryReason, exitCondition,
-      reviewBy, reviewOverdue: !!reviewBy && reviewBy < asOf,
+      reviewBy, reviewOverdue: reviewTodo === 'OVERDUE', reviewTodo,
+      reviewOwner: watched && plans.length ? [...new Set(plans.map(p => p.owner))].join('；') : null,
+      lastReview,
       buyPermission: level === 6 ? 'EXECUTION_CARD' : level === 5 ? 'APPLY_ONLY' : 'NONE',
       locks, flags,
     })
@@ -299,9 +384,11 @@ export function buildLadder(input: LadderInput): LadderView {
   return {
     id: LADDER_ID, asOf, generatedAt: input.generatedAt, entries, buyPermission, counts,
     marketCount: null,
+    invalidDecisions,
     notes: [
       '全市场（第 1 级）由资金哨兵入口③ 申万二级行业覆盖，不逐只列出；本表只列至少有一个来源的股票',
-      `观察期限 ${OBSERVE_PERIODS.status === 'PRE_REGISTERED' ? '为预登记值，待委员会确认' : '已确认'}：${(['MONEY', 'EARNINGS', 'INDUSTRY'] as const).map(p => `${{ MONEY: '资金异动', EARNINGS: '盈利验证', INDUSTRY: '产业验证' }[p]} ${OBSERVE_PERIODS[p].rule}`).join('；')}`,
+      `观察期限为${OBSERVE_PERIODS.approver} ${OBSERVE_PERIODS.approvedOn} 批准的预登记试行参数：${(['MONEY', 'EARNINGS', 'INDUSTRY'] as const).map(p => `${{ MONEY: '资金异动', EARNINGS: '盈利验证', INDUSTRY: '产业验证' }[p]} ${OBSERVE_PERIODS[p].rule}`).join('；')}`,
+      '到期必须产生一条明确的复核结论：不自动续期，不因到期自动升级；到期未复核标「逾期未复核」，不得静默续留',
       '层级由条件逐级计算，名单来源不授予层级；委员会点名只能触发研究，不能直接指定买入资格',
     ],
   }

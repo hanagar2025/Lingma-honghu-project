@@ -9,7 +9,7 @@ import { LEFT_RADAR, LEFT_RADAR_LOCK } from '../moneyRadar/config'
 import { findMember } from '../msr/universe'
 import { appendLadderEvents } from './ledger'
 import {
-  OBSERVE_PERIODS, addDays, buildLadder, buyPermissionOf, ladderProducesAction, nextReportDeadline,
+  OBSERVE_PERIODS, addDays, buildLadder, buyPermissionOf, ladderProducesAction, nextReportDeadline, validateDecision,
   type LadderInput, type ReviewDecision,
 } from './registry'
 import { renderLadder } from './render'
@@ -121,20 +121,55 @@ console.log('\n【六、左侧雷达权限锁】')
 
 console.log('\n【七、观察期限与到期决定】')
 {
-  ok('观察期限为预登记值（待委员会确认）', OBSERVE_PERIODS.status === 'PRE_REGISTERED')
+  ok('观察期限为委员会 10/16 批准的预登记试行参数', OBSERVE_PERIODS.status === 'TRIAL' && OBSERVE_PERIODS.approvedOn === '2026-10-16')
   ok('盈利验证期限 = 下一个定期报告法定截止日',
     nextReportDeadline('2026-10-15') === '2026-10-31' && nextReportDeadline('2026-11-01') === '2027-04-30'
     && nextReportDeadline('2026-05-01') === '2026-08-31' && nextReportDeadline('2026-04-30') === '2026-04-30')
   ok('资金异动期限 = 30 个自然日', by(v, '300394')!.plans.find(p => p.purpose === 'MONEY')!.reviewBy === addDays('2026-09-23', 30))
   ok('观察池每只都有复核期限', v.entries.filter(e => e.level === 3 || e.level === 4).every(e => !!e.reviewBy))
+  const tf = by(v, '300394')!
+  ok('观察池每份计划都写明责任人与待办状态', v.entries.filter(e => e.level === 3 || e.level === 4).every(e => e.plans.every(p => !!p.owner && !!p.todo) && !!e.reviewOwner && !!e.reviewTodo))
+  ok('未到期：资金异动「观察中」，盈利验证「等待披露」',
+    tf.plans.find(p => p.purpose === 'MONEY')!.todo === 'OBSERVING' && tf.plans.find(p => p.purpose === 'EARNINGS')!.todo === 'WAITING_DISCLOSURE')
+  ok('条目待办取最早到期的那份计划（10/23 资金异动，不是 10/31 等待披露）', tf.reviewBy === '2026-10-23' && tf.reviewTodo === 'OBSERVING')
+  ok('到期当日 → 「今日到期，待复核」', by(base({ asOf: '2026-10-23' }), '300394')!.reviewTodo === 'DUE_TODAY')
+  ok('六只起始名单股票 10/23 到期', v.entries.filter(e => e.reviewBy === '2026-10-23').map(e => e.code).sort().join(',') === '002384,002837,002851,300394,300870,600183')
+
   const late = base({ asOf: '2026-10-24' })
-  ok('期限届满 → 标「已到期待决定」，不自动移出', by(late, '300394')!.reviewOverdue && by(late, '300394')!.level === 3)
-  const keep: ReviewDecision[] = [{ date: '2026-10-24', code: '300394', action: 'KEEP', purpose: 'MONEY', approver: '委员会', note: '测试' }]
+  const lt = by(late, '300394')!
+  ok('到期未复核 → 「逾期未复核」，层级不变（不自动续期、不静默续留、不自动升降）',
+    lt.reviewOverdue && lt.reviewTodo === 'OVERDUE' && lt.level === 3 && lt.reviewBy === '2026-10-23')
+  ok('逾期不自动续期：再过一个月仍是原期限、仍逾期', by(base({ asOf: '2026-11-30' }), '300394')!.reviewBy === '2026-10-23')
+  ok('到期不自动升级：到期前后层级相同', late.entries.every(e => e.level === by(v, e.code)?.level))
+  const lateMd = renderLadder(late, null)
+  ok('逾期在复核待办里列出', lateMd.includes('逾期未复核 ') && lateMd.includes('| 2026-10-23 | 300394 | 天孚通信 |') && lateMd.includes('逾期未复核 |'))
+
+  const keep: ReviewDecision[] = [{ date: '2026-10-24', code: '300394', action: 'KEEP', finding: 'INSUFFICIENT', purpose: 'MONEY', approver: '委员会', note: '资金未形成趋势，方向逻辑未变', newDeadline: '2026-11-20' }]
   const vk = base({ asOf: '2026-10-24', decisions: keep })
-  ok('续留 → 从续留日重算期限', by(vk, '300394')!.plans.find(p => p.purpose === 'MONEY')!.reviewBy === '2026-11-23')
-  const down: ReviewDecision[] = [{ date: '2026-10-24', code: '002384', action: 'DOWN', approver: '委员会', note: '测试' }]
-  ok('降级 → 观察计划作废，回研究池', by(base({ asOf: '2026-10-24', decisions: down }), '002384')!.level === 2)
-  const rm: ReviewDecision[] = [{ date: '2026-10-24', code: '688521', action: 'REMOVE', approver: '委员会', note: '测试' }]
+  ok('续留 → 采用决定写明的新期限，不按周期自动重算', by(vk, '300394')!.plans.find(p => p.purpose === 'MONEY')!.reviewBy === '2026-11-20' && !by(vk, '300394')!.reviewOverdue)
+  const keepNoDate: ReviewDecision[] = [{ date: '2026-10-24', code: '300394', action: 'KEEP', finding: 'INSUFFICIENT', purpose: 'MONEY', approver: '委员会', note: '测试' }]
+  const vnd = base({ asOf: '2026-10-24', decisions: keepNoDate })
+  ok('续留没写新期限 → 记录无效，仍按逾期未复核', by(vnd, '300394')!.reviewOverdue && vnd.invalidDecisions.length === 1)
+  const keepNoNote: ReviewDecision[] = [{ ...keep[0]!, note: ' ' }]
+  ok('续留没写理由 → 记录无效', base({ asOf: '2026-10-24', decisions: keepNoNote }).invalidDecisions.length === 1)
+  const mismatch: ReviewDecision[] = [{ date: '2026-10-24', code: '300394', action: 'KEEP', finding: 'INVALID', approver: '委员会', note: '测试', newDeadline: '2026-11-20' }]
+  ok('结论与发现不对应（证据已失效却续留）→ 记录无效', validateDecision(mismatch[0]!) !== null && base({ asOf: '2026-10-24', decisions: mismatch }).invalidDecisions.length === 1)
+  ok('新期限不晚于决定日 → 记录无效', validateDecision({ ...keep[0]!, newDeadline: '2026-10-24' }) !== null)
+
+  const up: ReviewDecision[] = [{ date: '2026-10-24', code: '300394', action: 'APPLY_UP', finding: 'STRONGER', purpose: 'MONEY', approver: '委员会', note: '测试', newDeadline: '2026-11-20' }]
+  const vu = by(base({ asOf: '2026-10-24', decisions: up }), '300394')!
+  ok('申请升级但盈利核验、主线归因未过 → 层级不变，并提示申请不成立', vu.level === 3 && vu.flags.some(f => f.includes('已申请升级')))
+  ok('申请升级不能写成「证据不足」', validateDecision({ ...up[0]!, finding: 'INSUFFICIENT' }) !== null)
+
+  const down: ReviewDecision[] = [{ date: '2026-10-24', code: '002384', action: 'DOWN', finding: 'NO_VALUE', approver: '委员会', note: '测试' }]
+  const vd = base({ asOf: '2026-10-24', decisions: down })
+  ok('降级 → 观察计划作废，回研究池，保留复核结论', by(vd, '002384')!.level === 2 && by(vd, '002384')!.lastReview?.action === 'DOWN')
+  ok('已复核离开观察池的写进报告', renderLadder(vd, null).includes('002384 东山精密：2026-10-24'))
+  const invalidE: ReviewDecision[] = [{ date: '2026-11-01', code: '688072', action: 'DOWN', finding: 'INVALID', purpose: 'EARNINGS', approver: '委员会', note: '三季报扣非下滑' }]
+  const ve = by(base({ asOf: '2026-11-01', decisions: invalidE }), '688072')!
+  ok('盈利证据已失效只能由复核结论写明：降回研究池，记「证据已失效」', ve.level === 2 && ve.lastReview?.finding === 'INVALID')
+  ok('盈利验证到披露截止日未复核 → 逾期，不推断为失效', (() => { const x = by(base({ asOf: '2026-11-01' }), '688072')!; return x.level === 3 && x.reviewTodo === 'OVERDUE' && x.lastReview === null })())
+  const rm: ReviewDecision[] = [{ date: '2026-10-24', code: '688521', action: 'REMOVE', finding: 'NO_VALUE', approver: '委员会', note: '测试' }]
   ok('移出（未进股票池的股票）→ 回到全市场', by(base({ asOf: '2026-10-24', decisions: rm }), '688521')!.level === 1)
 }
 
@@ -146,7 +181,7 @@ console.log('\n【八、留痕台账】')
   ok('进入事件记录来源与日期', first.added.every(e => e.sources.length > 0 && /\d{4}-\d{2}-\d{2}/.test(e.sources[0]!)))
   const again = appendLadderEvents(JSON.parse(JSON.stringify(first.ledger)), v, [])
   ok('同一结果重跑不重复记账', again.added.length === 0)
-  const down: ReviewDecision[] = [{ date: '2026-10-24', code: '002384', action: 'DOWN', approver: '委员会', note: '测试' }]
+  const down: ReviewDecision[] = [{ date: '2026-10-24', code: '002384', action: 'DOWN', finding: 'NO_VALUE', approver: '委员会', note: '测试' }]
   const v3 = base({ asOf: '2026-10-24', decisions: down })
   const moved = appendLadderEvents(JSON.parse(JSON.stringify(first.ledger)), v3, down)
   ok('降级记一条 DOWN（原层级 3 → 2）和一条委员会决定，审批人照录',
@@ -158,9 +193,18 @@ console.log('\n【八、留痕台账】')
 
 console.log('\n【九、渲染】')
 {
-  const md = renderLadder(v, { pricedAt: 'test', sectors: [{ label: '电子', pct: 0.32, limit: 0.3 }], themes: [{ label: 'AI', pct: 0.41, limit: 0.45 }], note: '' })
+  const md = renderLadder(v, {
+    pricedAt: 'test',
+    sectors: [{ label: '电子', pct: 0.321, limit: 0.3, holdings: [{ code: '688041', name: '海光信息', pct: 0.12 }, { code: '002371', name: '北方华创', pct: 0.11 }] }],
+    themes: [{ label: 'AI', pct: 0.41, limit: 0.45, holdings: [] }],
+    note: '',
+  })
   ok('报告写明买入权限关闭及原因', md.includes('买入权限：关闭') && closed.reasons.every(r => md.includes(r)))
   ok('持仓风险提示独立保留：板块超限写明「只显示，不自动出卖单」', md.includes('只显示，不自动出卖单'))
+  ok('板块超限写明超限幅度', md.includes('超出 2.1 个百分点'))
+  ok('板块超限列出涉及持仓', md.includes('涉及持仓：688041 海光信息 12.0%；002371 北方华创 11.0%'))
+  ok('板块超限写明不是豁免、单票归位不等于板块风险解决', md.includes('不是对 30.0% 上限的豁免') && md.includes('单票归位只处理单只股票的占比，不等于板块风险已解决'))
+  ok('未超限的主题不出超限说明', !md.includes('主题「AI」超限'))
   ok('报告不出现买入、卖出指令字样', !/(建议买入|立即买入|建议卖出|卖出 \d+ 股)/.test(md))
   let bad = 0
   let cols = -1

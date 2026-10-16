@@ -54,8 +54,12 @@ function riskOf(p: PortfolioLite, prices: { at: string; px: Record<string, numbe
   const sum = (key: 'sector' | 'theme') => {
     const m = new Map<string, number>()
     for (const x of p.positions) m.set(x[key], (m.get(x[key]) ?? 0) + mv(x.code, x.quantity))
-    return [...m].map(([label, v]) => ({ label, pct: v / total, limit: key === 'sector' ? SECTOR_LIMIT : THEME_LIMIT }))
-      .sort((a, b) => b.pct - a.pct)
+    return [...m].map(([label, v]) => ({
+      label, pct: v / total, limit: key === 'sector' ? SECTOR_LIMIT : THEME_LIMIT,
+      holdings: p.positions.filter(x => x[key] === label)
+        .map(x => ({ code: x.code, name: x.name, pct: mv(x.code, x.quantity) / total }))
+        .sort((a, b) => b.pct - a.pct),
+    })).sort((a, b) => b.pct - a.pct)
   }
   const at = prices.at.length >= 12 ? `${prices.at.slice(0, 4)}-${prices.at.slice(4, 6)}-${prices.at.slice(6, 8)} ${prices.at.slice(8, 10)}:${prices.at.slice(10, 12)}` : prices.at
   return {

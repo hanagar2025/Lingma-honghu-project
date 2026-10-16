@@ -1,7 +1,7 @@
 {
  "id": "AUD-1016",
  "asOf": "2026-10-16",
- "commit": "da0c7ae0",
+ "commit": "6b9d2aef",
  "checks": [
   {
    "group": "DEDUP",
@@ -100,6 +100,13 @@
    "name": "委员会点名 + 雷达 + 观察名单 + 全景图同时命中、且买入权限强制打开：未进股票池的股票仍停在第 3 级",
    "pass": true,
    "detail": "第 3 级"
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "BEHAVIOR",
+   "name": "观察期全部过期、无复核结论：层级不变，不自动续期、不自动升级，全部标「逾期未复核」",
+   "pass": true,
+   "detail": "32 只逾期"
   },
   {
    "group": "NO_HIDDEN_BUY",
@@ -230,7 +237,7 @@
   {
    "group": "UNTOUCHED",
    "how": "BEHAVIOR",
-   "name": "独立风险提示保留：超限照常标出「超限（只显示，不自动出卖单）」",
+   "name": "独立风险提示保留：超限照常标出「超限（只显示，不自动出卖单）」，并写明不是豁免、单票归位不等于板块主题风险解决",
    "pass": true,
    "detail": ""
   },

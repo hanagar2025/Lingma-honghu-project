@@ -84,6 +84,38 @@ export interface ObservePlan {
   periodRule: string
   /** 退出条件 */
   exitWhen: string
+  todo: ReviewTodo
+  /** 复核责任人 */
+  owner: string
+  /** 最近一次复核结论是申请升级 */
+  upgradeApplied: boolean
+}
+
+/**
+ * 复核待办状态。
+ * 盈利验证在法定披露截止日前是「等待披露」：期内没有新财报，不等于证据已失效。
+ * 证据失效只能由复核结论写明（发现 = 证据已失效），不能由时间推断。
+ */
+export type ReviewTodo = 'OBSERVING' | 'WAITING_DISCLOSURE' | 'DUE_TODAY' | 'OVERDUE'
+
+export const TODO_TEXT: Record<ReviewTodo, string> = {
+  OBSERVING: '观察中，未到期',
+  WAITING_DISCLOSURE: '等待披露（不视为证据失效）',
+  DUE_TODAY: '今日到期，待复核',
+  OVERDUE: '逾期未复核',
+}
+
+/** 多份计划时取最紧的一项 */
+export const TODO_RANK: Record<ReviewTodo, number> = { OBSERVING: 0, WAITING_DISCLOSURE: 1, DUE_TODAY: 2, OVERDUE: 3 }
+
+/** 最近一次复核结论 */
+export interface ReviewRecord {
+  date: string
+  purpose: ObservePurpose | null
+  action: 'APPLY_UP' | 'KEEP' | 'DOWN' | 'REMOVE'
+  finding: 'STRONGER' | 'INSUFFICIENT' | 'INVALID' | 'NO_VALUE'
+  approver: string
+  note: string
 }
 
 /** 一道条件的检查结果。每道单独列出，不合并成「研究通过」 */
@@ -119,8 +151,11 @@ export interface LadderEntry {
   exitCondition: string
   /** 最近一次复核期限；null = 不需要定期复核 */
   reviewBy: string | null
-  /** 复核期限已过、尚未作出续留 / 升级 / 降级 / 移出决定 */
+  /** 复核期限已过、尚未作出复核结论 */
   reviewOverdue: boolean
+  reviewTodo: ReviewTodo | null
+  reviewOwner: string | null
+  lastReview: ReviewRecord | null
   buyPermission: BuyPermission
   /** 权限锁（如左侧雷达只观察）；可以有多把 */
   locks: string[]
@@ -143,5 +178,7 @@ export interface LadderView {
   counts: Record<LadderLevel, number>
   /** 全市场只计数，不逐只列出 */
   marketCount: number | null
+  /** 不合规的复核记录：不计入，相关计划按未复核处理 */
+  invalidDecisions: { date: string; code: string; action: string; reason: string }[]
   notes: string[]
 }
