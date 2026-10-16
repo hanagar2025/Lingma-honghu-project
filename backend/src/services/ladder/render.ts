@@ -31,7 +31,7 @@ function table(entries: LadderEntry[], level: LadderLevel): string[] {
   if (level === 6) {
     L.push('| 代码 | 名称 | 主线 · 节点 | 证据 | 冠军池 | 来源 | 退出条件 | 提示 |', '|---|---|---|---|---|---|---|---|')
     for (const e of entries) {
-      L.push(`| ${e.code} | ${e.name} | ${cell(e.mainline)} · ${cell(e.node)} | ${cell(e.evidence)} | ${e.champion ? '是' : '**否**'} | ${cell(sourceText(e))} | ${cell(e.exitCondition)} | ${cell([...e.flags, ...e.locks].join('；') || '—')} |`)
+      L.push(`| ${e.code} | ${e.name} | ${cell(e.mainline)} · ${cell(e.node)} | ${cell(e.evidence)} | ${e.champion ? '是' : '否'} | ${cell(sourceText(e))} | ${cell(e.exitCondition)} | ${cell([...e.flags, ...e.locks].join('；') || '—')} |`)
     }
   } else if (level === 3 || level === 4) {
     L.push('| 代码 | 名称 | 战略归属 | 证据 | 观察计划 | 复核期限 | 产业证据 / 盈利核验 / 主线归因 | 停在本级的原因 | 权限锁 | 来源 |', '|---|---|---|---|---|---|---|---|---|---|')
@@ -41,7 +41,7 @@ function table(entries: LadderEntry[], level: LadderLevel): string[] {
         const x = e.gates.find(gg => gg.id === id)
         return x ? (x.pass ? '✓' : '✗') : '—'
       }).join(' / ')
-      const due = e.reviewBy ? (e.reviewOverdue ? `**${e.reviewBy} 已到期**` : e.reviewBy) : '—'
+      const due = e.reviewBy ? (e.reviewOverdue ? `${e.reviewBy}（已到期）` : e.reviewBy) : '—'
       L.push(`| ${e.code} | ${e.name} | ${SCOPE_TEXT[e.scope]} | ${cell(e.evidence)} | ${cell(plans)} | ${due} | ${g} | ${cell(e.ceiling)} | ${cell(e.locks.join('；') || '—')} | ${cell(sourceText(e))} |`)
     }
   } else {
@@ -61,7 +61,7 @@ export function renderLadder(v: LadderView, risk: RiskBlock | null): string {
   L.push('> 每只股票只有一个当前层级；层级由条件逐级计算，名单来源不授予层级。', '')
 
   L.push('## 一、买入权限', '')
-  L.push(v.buyPermission.open ? '买入权限：开放（第 5 级只能申请，不代表批准）' : '**买入权限：关闭。第 5 级为空，第四级闸门不评估。**')
+  L.push(v.buyPermission.open ? '买入权限：开放（第 5 级只能申请，不代表批准）' : '买入权限：关闭。第 5 级为空，第四级闸门不评估。')
   for (const r of v.buyPermission.reasons) L.push(`- ${r}`)
   L.push('')
 
@@ -69,8 +69,8 @@ export function renderLadder(v: LadderView, risk: RiskBlock | null): string {
   if (risk) {
     L.push(`价格时点：${risk.pricedAt ?? '取价失败'}。${risk.note}`, '')
     L.push('| 口径 | 名称 | 占总资产 | 上限 | 状态 |', '|---|---|---|---|---|')
-    for (const r of risk.sectors) L.push(`| 板块 | ${r.label} | ${pct(r.pct)} | ${pct(r.limit)} | ${r.pct > r.limit ? '**超限（只显示，不自动出卖单）**' : '未超'} |`)
-    for (const r of risk.themes) L.push(`| 主题 | ${r.label} | ${pct(r.pct)} | ${pct(r.limit)} | ${r.pct > r.limit ? '**超限（只显示，不自动出卖单）**' : r.limit - r.pct < 0.05 ? `余量 ${pct(r.limit - r.pct)}` : '未超'} |`)
+    for (const r of risk.sectors) L.push(`| 板块 | ${r.label} | ${pct(r.pct)} | ${pct(r.limit)} | ${r.pct > r.limit ? '超限（只显示，不自动出卖单）' : '未超'} |`)
+    for (const r of risk.themes) L.push(`| 主题 | ${r.label} | ${pct(r.pct)} | ${pct(r.limit)} | ${r.pct > r.limit ? '超限（只显示，不自动出卖单）' : r.limit - r.pct < 0.05 ? `余量 ${pct(r.limit - r.pct)}` : '未超'} |`)
     L.push('')
   } else {
     L.push('本次未取价，占比见驾驶舱。板块 30%、主题 45% 上限目前只显示，不自动生成卖单。', '')

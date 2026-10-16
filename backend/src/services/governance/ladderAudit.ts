@@ -321,12 +321,12 @@ export function renderAudit(checks: AuditCheck[], asOf: string, commit: string):
   L.push(`# 全链路审计 ${AUDIT_ID}（${asOf}）`, '')
   L.push(`> 委员会 2026-10-16 裁定执行顺序第 5 步。由 \`npm -w backend run ladder:audit\` 生成，代码版本 \`${commit}\`。`)
   L.push('> 静态检查看 import 关系（含传递依赖）；行为检查把最想越权的输入喂给执行单与名单主表，看输出是否变化。', '')
-  L.push(`**结论：${failed.length ? `${failed.length} 项未通过` : '全部通过'}**（共 ${checks.length} 项，通过 ${checks.filter(c => c.pass === true).length}${skipped.length ? `，未能核对 ${skipped.length}` : ''}）`, '')
+  L.push(`结论：${failed.length ? `${failed.length} 项未通过` : '全部通过'}（共 ${checks.length} 项，通过 ${checks.filter(c => c.pass === true).length}${skipped.length ? `，未能核对 ${skipped.length}` : ''}）`, '')
   for (const g of Object.keys(GROUP_TEXT) as Group[]) {
     L.push(`## ${GROUP_TEXT[g]}`, '')
     L.push('| 结果 | 检查 | 方式 | 说明 |', '|---|---|---|---|')
     for (const c of checks.filter(x => x.group === g)) {
-      const r = c.pass === true ? '通过' : c.pass === false ? '**未通过**' : '未核对'
+      const r = c.pass === true ? '通过' : c.pass === false ? '未通过' : '未核对'
       const how = { STATIC: '静态', BEHAVIOR: '行为', DATA: '数据' }[c.how]
       L.push(`| ${r} | ${c.name} | ${how} | ${(c.detail || '—').replace(/\|/g, '/')} |`)
     }

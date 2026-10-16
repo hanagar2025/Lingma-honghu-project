@@ -39,7 +39,7 @@ async function fetchRange(s: string, start: string, end: string): Promise<Bar[]>
       return rows.map(r => ({ date: r[0]!, open: +r[1]!, close: +r[2]!, high: +r[3]!, low: +r[4]! }))
     } catch (e) {
       if (attempt === 3) throw e
-      await new Promise(r => setTimeout(r, 1000 * 2 ** attempt))
+      await new Promise(r => setTimeout(r, 1000 * (1 << attempt)))
     }
   }
   return []
@@ -179,7 +179,7 @@ export function renderReport(r: Ma60Report): string {
   L.push('')
   L.push('## 一、口径')
   L.push('')
-  L.push(`- 「减到 40%」指**该股票自身持仓**的 40%（卖出 ${pct(1 - KEEP_FRACTION, 0)}），不是组合总资产的 40%。`)
+  L.push(`- 「减到 40%」指「该股票自身持仓」的 40%（卖出 ${pct(1 - KEEP_FRACTION, 0)}），不是组合总资产的 40%。`)
   L.push('- V1.0 文档两处写法不一致：第 49 行「减持至原仓位的 40% 以下（即累计至少减 60%）」，第 65 行个股示例写「减 40%」。代码 `tios/executionEngine.ts` 按前者实现；本模拟按前者计算；以哪处为准待委员会确认。')
   L.push('- 三种方案：')
   for (const v of VARIANTS) L.push(`  - ${v.name}：${v.confirmDays === 1 ? '收盘跌破当日触发' : '连续两日收盘低于 MA60 触发'}；${v.trades ? `次日开盘减到该股持仓的 ${pct(KEEP_FRACTION, 0)}` : '只记录、不交易'}。${v.note}`)
@@ -193,7 +193,7 @@ export function renderReport(r: Ma60Report): string {
   L.push(`- 交易成本：卖出 = 佣金 ${pct(r.costs.commission, 3)} + 滑点 ${pct(r.costs.slippage, 2)} + 印花税（2023-08-28 前 ${pct(r.costs.stampBefore20230828, 2)}，之后 ${pct(r.costs.stampFrom20230828, 2)}）；买回 = 佣金 + 滑点 ${pct(r.costs.buy, 3)}。`)
   L.push('- 跌停开盘无法卖出：顺延到第一个非跌停开盘日成交（科创板 20%；创业板 2020-08-24 起 20%；其余 10%；未处理 ST）。')
   L.push(`- 「卖错率」：成交后 H 个交易日个股收益仍高于卖出成本的信号占比（卖掉的部分本可以赚回来）。「来回打脸」：信号后 ${WHIPSAW_DAYS} 个交易日内收盘重新站上 MA60。`)
-  L.push('- 路径回撤需要回补假设才能比较：减仓后收盘连续两日站上 MA60，次日开盘买回满仓。**回补只是计算假设，不是规则建议**；V1.0 与委员会都没有裁定回补条款。')
+  L.push('- 路径回撤需要回补假设才能比较：减仓后收盘连续两日站上 MA60，次日开盘买回满仓。「回补只是计算假设，不是规则建议」；V1.0 与委员会都没有裁定回补条款。')
   L.push('')
   L.push('## 三、信号统计（逐次信号，事件研究）')
   L.push('')

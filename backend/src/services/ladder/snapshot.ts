@@ -153,7 +153,7 @@ function renderSnapshot(s: ReturnType<typeof buildSnapshot>): string {
   L.push('| 名单 | 确认日期 | 数量 | 文件 |', '|---|---|---|---|')
   for (const l of s.lists) L.push(`| ${l.label} | ${l.confirmedOn} | ${l.members.length} | \`${l.file}\` |`)
   L.push('')
-  for (const l of s.lists) L.push(`- **${l.label}**：${l.members.map(m => `${m.name}（${m.code}）`).join('、')}`)
+  for (const l of s.lists) L.push(`- ${l.label}：${l.members.map(m => `${m.name}（${m.code}）`).join('、')}`)
   L.push('', '## 二、三套卖出规则', '')
   for (const r of s.sellRules) {
     L.push(`### ${r.label}`, '', `状态：${r.status}`, '')
