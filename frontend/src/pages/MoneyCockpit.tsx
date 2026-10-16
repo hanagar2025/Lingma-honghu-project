@@ -6,7 +6,7 @@ import AlertsPanel from '../components/money/AlertsPanel'
 import { CrossCheckCard, LeadLagCard, SlowMoneyCard, SlowStockBlock } from '../components/money/SlowPanels'
 
 /**
- * 资金驾驶舱（R-01）
+ * 资金哨兵（R-01）
  *
  * 读 CLI 盘后落下的 /data/money.json（npm run money 生成），只渲染、不重算。
  * 三块：入口① 持仓、入口② 观察仓、入口③ 市场自选方向，全部以资金池变化衡量。
@@ -124,7 +124,7 @@ const MoneyCockpit: React.FC = () => {
         if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) throw new Error('not found')
         setData(await r.json())
       })
-      .catch(() => setErr(`未找到资金驾驶舱快照（${SNAPSHOT_URL}）。先在 backend 目录跑一次 npm run money 生成它。`))
+      .catch(() => setErr(`未找到资金哨兵快照（${SNAPSHOT_URL}）。先在 backend 目录跑一次 npm run money 生成它。`))
   }, [])
 
   const byId = useMemo(() => {
@@ -202,7 +202,7 @@ const MoneyCockpit: React.FC = () => {
         <style>{CSS}</style>
         <div className="mc-hdr">
           <div>
-            <h1>鸿鹄 · 资金驾驶舱</h1>
+            <h1>鸿鹄 · 资金哨兵</h1>
             <div className="mc-sub">
               截至 {data.asOf}　|　{data.dataMode === 'LIVE' ? '真实数据' : data.dataMode === 'FIXTURE' ? '合成数据（示意）' : '数据源未接入'}
               　|　{data.provenance.map((p: any) => `${p.kind} ${p.status === 'OK' ? '✓' : p.status === 'PENDING' ? '⏳' : '✗'}`).join('　')}

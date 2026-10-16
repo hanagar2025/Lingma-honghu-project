@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 装配层
+ * 资金哨兵（R-01）· 装配层
  *
  * 把三个入口的对象、指标、状态、背离、迁移和国家队温度计装成一份视图，
  * 供 CLI / 网页渲染。视图的最高输出是"复核顺序"：按类别排，不打分。
@@ -9,8 +9,9 @@
 import type { EvidenceTier } from '../cockpit/types'
 import { findMember } from '../msr/universe'
 import {
-  THRESHOLDS, WATCHLIST, NATIONAL_TEAM_ETFS, NATIONAL_TEAM_VERIFIED, INDUSTRY_TAXONOMY,
-  basketObjects, basketOf, holdingCodes, stockObject,
+  THRESHOLDS, WATCHLIST, LEFT_RADAR, LEFT_RADAR_CONFIRMED_ON, WATCHLIST_CONFIRMED_ON,
+  NATIONAL_TEAM_ETFS, NATIONAL_TEAM_VERIFIED, INDUSTRY_TAXONOMY,
+  basketObjects, basketOf, holdingCodes, radarBasketObjects, stockObject, watchlistAll,
 } from './config'
 import { computeMetrics, rawSeries, rollingMean, quantile, type DayMetrics, type Num } from './metrics'
 import { PROVIDER_CANDIDATES, ROUTING, anyRealProviderWired } from './providers'
@@ -24,7 +25,7 @@ import { ENTRY_TEXT, type DataSet, type EntryNo, type MoneyObject } from './type
 const TIER: EvidenceTier = 'OBSERVATION'
 
 export const MONEY_COCKPIT_ID = 'R-01'
-export const MONEY_COCKPIT_TITLE = '鸿鹄·资金驾驶舱'
+export const MONEY_COCKPIT_TITLE = '鸿鹄·资金哨兵'
 
 export function moneyGrantsPermission(): false { return false }
 export function moneyProducesAction(): false { return false }
@@ -307,7 +308,7 @@ export function entryObjects(industries: readonly EntryObj[] = []): Record<Entry
   const heldBaskets = new Set(holdings.map(h => basketOf(h.code)).filter((x): x is string => x !== null))
   const heldCodes = new Set(holdings.map(h => h.code))
   // 观察股一旦买入即归入口①，不在两个入口重复计入
-  const watching = WATCHLIST.filter(w => !heldCodes.has(w.code))
+  const watching = watchlistAll().filter(w => !heldCodes.has(w.code))
   const watchBaskets = new Set(watching.map(w => basketOf(w.code)).filter((x): x is string => x !== null))
 
   const e1: EntryObj[] = [
@@ -317,6 +318,7 @@ export function entryObjects(industries: readonly EntryObj[] = []): Record<Entry
   const e2: EntryObj[] = [
     ...watching.map(w => stockObject(w.code, w.name, 2) as EntryObj),
     ...baskets.filter(b => watchBaskets.has(b.id) && !heldBaskets.has(b.id)).map(b => ({ ...b, entry: 2 as const })),
+    ...radarBasketObjects(2).map(b => ({ ...b, entry: 2 as const })),
   ]
   return { 1: e1, 2: e2, 3: [...industries] }
 }
@@ -392,7 +394,7 @@ export interface MoneyCockpitView {
 }
 
 export const R01_DOES_NOT_IMPLY = [
-  '不意味着资金驾驶舱可以直接产生买卖动作',
+  '不意味着资金哨兵可以直接产生买卖动作',
   '不意味着 C 级估算数据（主力净流入）可以进入判定',
   '不意味着"爆发"是买点，也不意味着"背离"已经是卖出令',
   '不意味着国家队资金是一条主线',
@@ -455,7 +457,9 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
       objects: views,
       note: e === 3
         ? `行业骨架：${INDUSTRY_TAXONOMY.standard} 二级（官方 ${INDUSTRY_TAXONOMY.expectedCount} 个，可得 ${views.length} 个）。按超额资金排序，只排序不打分`
-        : e === 2 ? '观察仓 7 只（委员会 2026-09-23 确认）+ 所在主线篮子' : '持仓 8 只（读自账本）+ 所在主线篮子',
+        : e === 2
+          ? `观察仓 ${WATCHLIST.length} 只（委员会 ${WATCHLIST_CONFIRMED_ON} 确认）+ 左侧雷达 ${LEFT_RADAR.length} 个方向 ${LEFT_RADAR.reduce((n, g) => n + g.members.length, 0)} 只（${LEFT_RADAR_CONFIRMED_ON} 确认，重复的只算一次），已持有的归入口①；另含所在主线篮子与左侧雷达方向篮子`
+          : `持仓 ${holdingCodes().length} 只（读自账本）+ 所在主线篮子`,
     }
   })
 

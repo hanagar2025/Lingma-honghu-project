@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 自检
+ * 资金哨兵（R-01）· 自检
  *
  *   npm run money:selftest
  *
@@ -14,8 +14,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { findMember } from '../msr/universe'
 import {
-  THRESHOLDS, WATCHLIST, NATIONAL_TEAM_ETFS,
-  holdingCodes, basketOf, thresholdTransitionAllowed,
+  THRESHOLDS, WATCHLIST, NATIONAL_TEAM_ETFS, LEFT_RADAR, LEFT_RADAR_CONFIRMED_ON, radarBasketObjects, watchlistAll,
+  holdingCodes, basketObjects, basketOf, thresholdTransitionAllowed,
 } from './config'
 import { dm, synthDataSet, wobble, SYNTH_MARKET_TOTAL } from './fixtures'
 import { computeMetrics, rawSeries, quantile, rollingMean, type DayMetrics } from './metrics'
@@ -38,7 +38,7 @@ function ok(name: string, cond: boolean, detail = '') {
 const ENTRY_TEXT_1 = '入口① 持仓主线'
 const one = (code: string): MoneyObject => ({ id: `stock:${code}`, name: code, kind: 'STOCK', entry: 1, codes: [code], themeEtfs: [] })
 
-console.log('\n═══ 资金驾驶舱 R-01 自检 ═══\n')
+console.log('\n═══ 资金哨兵 R-01 自检 ═══\n')
 
 // ─────────────────────────── ① 指标层 ───────────────────────────
 console.log('【指标层】')
@@ -270,12 +270,29 @@ console.log('\n【配置 · 数据源】')
     findMember('002837')?.member.name === '英维克' && findMember('688292') === null)
   ok('观察仓名称与股票池登记一致', WATCHLIST.every(w => findMember(w.code)?.member.name === w.name))
 
+  const radarCodes = LEFT_RADAR.flatMap(g => g.members.map(m => m.code))
+  ok('左侧雷达 5 个方向 19 只，代码为 6 位且不重复（委员会 2026-10-16 确认）',
+    LEFT_RADAR.length === 5 && radarCodes.length === 19
+    && radarCodes.every(c => /^\d{6}$/.test(c)) && new Set(radarCodes).size === 19
+    && LEFT_RADAR_CONFIRMED_ON === '2026-10-16')
+  ok('左侧雷达不并入 MSR 股票池：只有原本就在册的思源、麦格米特、中科曙光能在股票池里找到',
+    radarCodes.filter(c => findMember(c) !== null).sort().join(',') === '002028,002851,603019')
+  const all2 = watchlistAll()
+  ok('入口② 全部观察股 = 起始 7 只 + 左侧雷达 19 只，去重后 25 只（麦格米特只算一次，归起始名单）',
+    all2.length === 25 && new Set(all2.map(w => w.code)).size === 25
+    && all2.find(w => w.code === '002851')?.radar === null)
+  const rb = radarBasketObjects()
+  ok('左侧雷达每个方向一个方向篮子，归入口②，成分与名单一致',
+    rb.length === 5 && rb.every(b => b.kind === 'BASKET' && b.entry === 2 && b.id.startsWith('radar:'))
+    && rb.every((b, i) => b.codes.join() === LEFT_RADAR[i]!.members.map(m => m.code).join()))
+  ok('左侧雷达方向篮子与主线篮子 id 不冲突', rb.every(b => !basketObjects().some(m => m.id === b.id)))
+
   ok('国家队观察名单 18 只，代码为 6 位且不重复',
     NATIONAL_TEAM_ETFS.length === 18
     && NATIONAL_TEAM_ETFS.every(e => /^\d{6}$/.test(e.code))
     && new Set(NATIONAL_TEAM_ETFS.map(e => e.code)).size === 18)
   ok('国家队名单与持仓、观察仓不重叠',
-    NATIONAL_TEAM_ETFS.every(e => !holdings.some(h => h.code === e.code) && !WATCHLIST.some(w => w.code === e.code)))
+    NATIONAL_TEAM_ETFS.every(e => !holdings.some(h => h.code === e.code) && !watchlistAll().some(w => w.code === e.code)))
 
   ok('阈值 2026-09-23 登记、同日校准后冻结', THRESHOLDS.status === 'FROZEN' && THRESHOLDS.registeredOn === '2026-09-23')
   ok('阈值状态只能向前：预登记 → 校准 → 冻结',
@@ -311,7 +328,8 @@ console.log('\n【装配 · 渲染】')
   ok('入口① 含全部持仓与其主线篮子',
     objs[1].filter(o => o.kind === 'STOCK').length === held.size && objs[1].some(o => o.kind === 'BASKET'))
   ok('入口② 只含未持有的观察股', objs[2].filter(o => o.kind === 'STOCK').length
-    === WATCHLIST.filter(w => !held.has(w.code)).length)
+    === watchlistAll().filter(w => !held.has(w.code)).length)
+  ok('入口② 含左侧雷达 5 个方向篮子', objs[2].filter(o => o.id.startsWith('radar:')).length === 5)
   ok('同一只股票不在两个入口重复出现',
     objs[2].filter(o => o.kind === 'STOCK').every(o => !objs[1].some(a => a.id === o.id)))
   ok('同一篮子不在两个入口重复出现',
@@ -745,7 +763,7 @@ console.log('\n【治理边界】')
     const imports = readFileSync(new URL(f, dir), 'utf-8').split('\n').filter(l => l.trimStart().startsWith('import')).join('\n')
     return banned.some(b => imports.includes(b))
   })
-  ok('资金驾驶舱全部模块不 import 动作构造器与风控闸门', leaks.length === 0, leaks.join(','))
+  ok('资金哨兵全部模块不 import 动作构造器与风控闸门', leaks.length === 0, leaks.join(','))
   ok('模块中不出现 C 级字段（主力 / 大单净流入）',
     files.every(f => !/mainNetInflow|bigOrder|superLarge/i.test(readFileSync(new URL(f, dir), 'utf-8'))))
 
@@ -753,7 +771,7 @@ console.log('\n【治理边界】')
   const { loadBaseline } = await import('../governance/freeze')
   const base = loadBaseline()
   const fp = fingerprint()
-  ok('当前规则与冻结基线一致（资金驾驶舱不新增决策规则）', !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
+  ok('当前规则与冻结基线一致（资金哨兵不新增决策规则）', !!base && fp.hash === base.hash, `${base?.hash} → ${fp.hash}`)
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
