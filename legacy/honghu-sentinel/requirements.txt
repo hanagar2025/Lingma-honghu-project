@@ -1,8 +1,0 @@
-# 资金哨兵核心程序：零第三方依赖，仅使用 Python 标准库（json/urllib/pathlib/...）
-# 要求 Python >= 3.9
-#
-# 以下为可选适配器所需的外部命令（非 pip 包，需自行安装）：
-#   - tcb       腾讯云 CloudBase CLI，仅 publish_web.py 上传静态网页时使用
-#               （迁阿里云后该适配器移除，此依赖一并删除）
-#
-# 阿里云目标架构若引入 Web 框架，届时在本文件补充（如 flask/fastapi/gunicorn）
