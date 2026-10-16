@@ -1,0 +1,273 @@
+{
+ "id": "AUD-1016",
+ "asOf": "2026-10-16",
+ "commit": "6820d766",
+ "checks": [
+  {
+   "group": "DEDUP",
+   "how": "DATA",
+   "name": "名单主表每只股票只出现一行（一个当前层级）",
+   "pass": true,
+   "detail": "69 行，69 只"
+  },
+  {
+   "group": "DEDUP",
+   "how": "DATA",
+   "name": "六份名单与账本持仓的每只股票都在主表里",
+   "pass": true,
+   "detail": "69 只全覆盖"
+  },
+  {
+   "group": "DEDUP",
+   "how": "DATA",
+   "name": "合并重复时保留全部来源标签（不丢来源）",
+   "pass": true,
+   "detail": "24 只多来源股票逐一保留"
+  },
+  {
+   "group": "DEDUP",
+   "how": "DATA",
+   "name": "层级取值唯一且在 1–6 之间",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "DEDUP",
+   "how": "DATA",
+   "name": "留痕台账覆盖主表每只股票，每条记录有规则、日期、来源、批准人",
+   "pass": true,
+   "detail": "台账 69 条"
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "第 4 级（备选池）每只：作战主线、产业证据 / 盈利核验 / 主线归因三道分开且全过、有非资金观察计划",
+   "pass": true,
+   "detail": "中科曙光"
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "三道闸门分开判定：产业证据、盈利核验、主线归因各有一项（不合并成「研究通过」）",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "买入权限关闭时第 5 级为空",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "未进股票池的股票最高到第 3 级",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "只研究主线（AI电力）的股票最高到第 3 级、仓位为零",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "C 级清退的股票最高到第 2 级",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "只来自左侧雷达（无股票池档案）的股票全部停在第 3 级以内",
+   "pass": true,
+   "detail": "16 只"
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "DATA",
+   "name": "雷达股票若在第 4 级，资格来自股票池核验，不来自雷达",
+   "pass": true,
+   "detail": "中科曙光"
+  },
+  {
+   "group": "NO_SKIP",
+   "how": "BEHAVIOR",
+   "name": "委员会点名 + 雷达 + 观察名单 + 全景图同时命中、且买入权限强制打开：未进股票池的股票仍停在第 3 级",
+   "pass": true,
+   "detail": "第 3 级"
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "DATA",
+   "name": "账户买入权限关闭（生产买入未批准、交易所日历未接入、峰值待核验、执行债务）",
+   "pass": true,
+   "detail": "生产买入权限未批准（须单独提交委员会审批）；交易所日历未接入（买入逻辑离开模拟的前提）；峰值 430 万待核验；执行债务 3 条未清"
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "DATA",
+   "name": "第 1–4 级买入权限全部为「无」；只有持仓按执行单管理",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "BEHAVIOR",
+   "name": "买入权限强制打开、第四级闸门全部假设通过时：第 5 级只给「只能申请」，且全部是作战主线、三道条件全过的股票池成员，没有雷达独有股",
+   "pass": true,
+   "detail": "中科曙光"
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "STATIC",
+   "name": "执行单调用链（dailyDecision/run.ts 与 cockpit/run.ts 的全部传递依赖）不含名单主表、模拟层、资金哨兵",
+   "pass": true,
+   "detail": "调用链 74 个模块；其中 19 个研究模块是驾驶舱的阅读区，由 8/16 研究层隔离的行为证明覆盖（audit:selftest）"
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "STATIC",
+   "name": "执行单、驾驶舱、决策层、交易操作系统、MSR 都不 import 名单主表与模拟层",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "BEHAVIOR",
+   "name": "即使驾驶舱给出买入动作且买入未锁，执行单也不出买入行（只写「规模由委员会定，未定前不买」）",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "DATA",
+   "name": "最近一次执行单输出不含名单主表、模拟层、雷达锁的字样",
+   "pass": true,
+   "detail": "2 个文件"
+  },
+  {
+   "group": "NO_HIDDEN_BUY",
+   "how": "STATIC",
+   "name": "隔离表已登记名单主表与模拟层的字样，执行单出现即判泄漏",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "BEHAVIOR",
+   "name": "把板块超限、主题超限、跌破 MA60、硬止损动作喂给执行单：只出单票归位一笔",
+   "pass": true,
+   "detail": "海光信息:单票超 12.0% 上限，卖后回到上限以内"
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "DATA",
+   "name": "委员会登记的执行单指令只有 C 级清退",
+   "pass": true,
+   "detail": "澜起科技:C 级清退；兆易创新:C 级清退（硬止损 439.75 自 7/28 击穿）"
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "STATIC",
+   "name": "V1.0 均线卖出（tios/executionEngine.ts）不在执行单调用链里",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "STATIC",
+   "name": "V1.0 均线卖出只被交易操作系统日报与自检引用",
+   "pass": true,
+   "detail": "tios/dailyReport.ts、tios/selftest.ts"
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "STATIC",
+   "name": "MA60 模拟层没有被任何业务模块引用",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "STATIC",
+   "name": "模拟层、名单主表声明不产生动作",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "NO_AUTO_SELL",
+   "how": "STATIC",
+   "name": "8/13 裁定仍生效：持仓势能模块不 import 动作构造器",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "DATA",
+   "name": "峰值仍待核验、执行债务未清（熔断降仓未标记完成）",
+   "pass": true,
+   "detail": "peakVerified=false，pendingSells=3"
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "BEHAVIOR",
+   "name": "二级熔断 + 峰值待核验：执行单写「今日不执行、不撤销」，不出熔断卖出行，不恢复买入",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "BEHAVIOR",
+   "name": "板块 90%、主题 90% 但单票都不超 12%：风控闸门不生成减仓（上限只显示）",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "BEHAVIOR",
+   "name": "独立风险提示保留：超限照常标出「超限（只显示，不自动出卖单）」",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "DATA",
+   "name": "冻结冠军 8 只不变",
+   "pass": true,
+   "detail": "002371、002463、002916、300308、300502、603019、688012、688041"
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "DATA",
+   "name": "作战主线与只研究主线不变",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "DATA",
+   "name": "股票池与左侧雷达名单与 10/16 规则快照一致（没有借名单治理增删股票）",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "STATIC",
+   "name": "决策规则指纹与冻结基线一致",
+   "pass": true,
+   "detail": "fbd2c753e958 → fbd2c753e958"
+  },
+  {
+   "group": "UNTOUCHED",
+   "how": "STATIC",
+   "name": "规则快照回滚标签存在",
+   "pass": true,
+   "detail": "rules-snapshot-2026-10-16 → 29ec7891"
+  }
+ ]
+}
