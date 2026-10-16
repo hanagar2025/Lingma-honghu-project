@@ -754,6 +754,71 @@ console.log('\n【第二数据源交叉核对】')
 }
 
 // ─────────────────────────── ⑩ 治理边界 ───────────────────────────
+console.log('\n【左侧雷达权限锁（10/16 裁定三）】')
+{
+  const { LEFT_RADAR_LOCK, radarLockOf } = await import('./config')
+  const al = await import('./alerts')
+  const bt = await import('./backtest')
+  const { buildMoneyAgentShare } = await import('./agentShare')
+  const objs = entryObjects()
+  const radarCodes = new Set(LEFT_RADAR.flatMap(g => g.members.map(m => m.code)))
+  const all = [...new Set(Object.values(objs).flat().flatMap(o => o.codes))]
+  // 左侧雷达个股最后 30 日成交额份额升到常态 4 倍、价格上涨、融资增加：资金状态尽量推到「爆发」
+  const n = 420
+  const hot = (t: number) => t >= n - 30
+  const ds = synthDataSet(n, all.map(code => radarCodes.has(code)
+    ? { code, share: (t: number) => (hot(t) ? 0.006 + (t - n + 30) * 0.0004 : 0.003 + wobble(t + code.length, 0.0001)), price: (t: number) => 10 + (hot(t) ? (t - n + 30) * 0.2 : 0), margin: (t: number) => 1e9 + (hot(t) ? (t - n + 30) * 2e7 : 0) }
+    : { code, share: (t: number) => 0.002 + wobble(t + code.length, 0.0001), price: () => 10, margin: () => 1e9 }))
+  ds.market.forEach((m, t) => { m.close = 100 + t * 0.01 })
+  const v = buildMoneyCockpitView(ds, 'FIXTURE')
+  const e2 = v.entries[1]!.objects
+  const radarStocks = e2.filter(o => o.kind === 'STOCK' && radarCodes.has(o.id.replace('stock:', '')))
+  const hotStates = radarStocks.filter(o => o.state === 'BURST' || o.state === 'TREND' || o.state === 'START')
+  ok('合成样本：左侧雷达个股资金状态被推到启动 / 趋势 / 爆发', hotStates.length === radarStocks.length && radarStocks.length > 0,
+    radarStocks.map(o => `${o.name}:${o.state}`).join(','))
+  ok('至少一只左侧雷达个股判为「爆发」', radarStocks.some(o => o.state === 'BURST'), radarStocks.map(o => o.state).join(','))
+  ok('即使「爆发」：每只未持有的左侧雷达个股都带「只观察，不具备建仓权限」与战略冻结期',
+    radarStocks.every(o => !!o.permissionLock && o.permissionLock.includes(LEFT_RADAR_LOCK.label) && o.permissionLock.includes(LEFT_RADAR_LOCK.freeze)))
+  ok('AI软件 / 具身智能 / 工业AI 写「非当前作战主线，只观察、研究」，AI电力 写「仅研究，仓位为零」',
+    radarStocks.filter(o => ['688111', '300124', '688777'].includes(o.id.replace('stock:', ''))).every(o => o.permissionLock!.includes('非当前作战主线，只观察、研究'))
+    && radarStocks.filter(o => ['600406', '688676'].includes(o.id.replace('stock:', ''))).every(o => o.permissionLock!.includes('仅研究，仓位为零')))
+  ok('左侧雷达 5 个方向篮子都带锁', e2.filter(o => o.id.startsWith('radar:')).length === 5 && e2.filter(o => o.id.startsWith('radar:')).every(o => !!o.permissionLock))
+  ok('非雷达对象不带锁（锁只针对左侧雷达）', v.entries.flatMap(e => e.objects).filter(o => !o.id.startsWith('radar:') && !radarCodes.has(o.id.replace('stock:', ''))).every(o => o.permissionLock === null))
+  ok('持仓（入口①）即使在雷达名单里也不挂建仓锁', radarLockOf({ id: 'stock:603019', kind: 'STOCK', codes: ['603019'], entry: 1 }) === null
+    && radarLockOf({ id: 'stock:603019', kind: 'STOCK', codes: ['603019'], entry: 2 }) !== null)
+  ok('视图否定式 flag：radarGrantsBuild = false', v.flags.radarGrantsBuild === false)
+  ok('视图带权限锁原文，releasedBy 为 null（雷达信号不能解除）',
+    v.radarLock.label === LEFT_RADAR_LOCK.label && v.radarLock.freeze === LEFT_RADAR_LOCK.freeze && v.radarLock.releasedBy === null && v.radarLock.groups.length === 5)
+  const rq = v.reviewQueue.filter(r => radarCodes.has(r.id.replace('stock:', '')))
+  ok('复核顺序里的左侧雷达个股带锁', rq.every(r => !!r.permissionLock))
+  ok('不意味着：写明雷达「爆发」不进备选、建仓申请或执行单', v.doesNotImply.some(x => x.includes('左侧雷达') && x.includes('爆发') && x.includes('执行单')))
+  const txt = renderMoneyCockpit(v)
+  ok('文字版（导出报告）写明权限锁与战略冻结期', txt.includes(`左侧雷达权限锁：${LEFT_RADAR_LOCK.label}`) && txt.includes(LEFT_RADAR_LOCK.freeze) && txt.includes('不进备选池、建仓申请或执行单'))
+  const md = buildMoneyAgentShare(v)
+  ok('Agent 文件约束写明权限锁、冻结期，并禁止把爆发写成买点',
+    md.indexOf(LEFT_RADAR_LOCK.label) < md.indexOf('# 数据口径') && md.includes(LEFT_RADAR_LOCK.freeze) && md.includes('不要写成买点'))
+  ok('Agent 文件数据表有「权限」列，雷达个股标「只观察，不具备建仓权限」', md.includes('| 背离 | 在册 | 权限 |') && md.includes('| 只观察，不具备建仓权限 |'))
+  const eo = bt.replayObjects(ds, objs[2])
+  const { view: av } = al.buildAlerts(al.buildAlertContext(ds, eo), new Map())
+  const radarCards = av.cards.filter(c => c.objectId.startsWith('radar:') || radarCodes.has(c.objectId.replace('stock:', '')))
+  ok('合成样本：左侧雷达出了提醒卡片', radarCards.length > 0)
+  ok('个股卡片（提醒）全部带锁，一行文字版写明「资金信号只改变研究优先级」',
+    radarCards.every(c => !!c.permissionLock && al.cardLine(c).includes(LEFT_RADAR_LOCK.label) && al.cardLine(c).includes('只改变研究优先级')))
+
+  // 程序检查：资金状态没有任何通道流向备选池、建仓申请或执行单
+  const SERVICES = new URL('../', import.meta.url)
+  const walk = (rel: string): string[] => {
+    const base = new URL(rel.endsWith('/') ? rel : `${rel}/`, SERVICES)
+    return readdirSync(base, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(`${rel}/${e.name}`) : e.name.endsWith('.ts') ? [`${rel}/${e.name}`] : [])
+  }
+  const importsOf = (rel: string) => readFileSync(new URL(rel, SERVICES), 'utf-8').split('\n').filter(l => /^\s*(import|export)\b.*from\s+['"]/.test(l)).join('\n')
+  const consumers = ['dailyDecision', 'cockpit', 'tios', 'msr', 'ladder', 'simulation'].flatMap(walk)
+    .filter(f => /moneyRadar\/(radar|stateMachine|signals|alerts|metrics|backtest|live|run|shadow)['"]/.test(importsOf(f)))
+  ok('执行单、驾驶舱、交易操作系统、MSR 选股、名单主表、模拟层都不读资金状态（只允许读 moneyRadar/config 的名单与锁）', consumers.length === 0, consumers.join(','))
+  const ladderReg = readFileSync(new URL('ladder/registry.ts', SERVICES), 'utf-8')
+  ok('名单主表只从 moneyRadar/config 读名单与锁文字，不读状态', /from '\.\.\/moneyRadar\/config'/.test(ladderReg) && !/\b(BURST|TREND|START)\b/.test(ladderReg))
+}
+
 console.log('\n【治理边界】')
 {
   const dir = new URL('./', import.meta.url)

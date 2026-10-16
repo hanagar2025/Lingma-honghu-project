@@ -101,6 +101,7 @@ const CSS = `
 .mc-card h3 small { color:#8b96a5; font-weight:normal; font-size:11px; }
 .mc-kpi { font-size:22px; color:#fff; font-weight:700; }
 .mc-note { color:#8b96a5; font-size:11px; line-height:1.7; }
+.mc-lock { background:#2b2410; border:1px solid #5c4a12; color:#f0b429; border-radius:6px; padding:8px 10px; font-size:12px; line-height:1.7; margin-bottom:8px; }
 .mc-chip { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; white-space:nowrap; }
 .mc-up { color:#ff7b72; } .mc-dn { color:#3fb950; }
 .mc-warn { color:#ff7b72; font-weight:700; }
@@ -193,7 +194,10 @@ const MoneyCockpit: React.FC = () => {
         title: '份额前三', dataIndex: 'leaders',
         render: (ls: any[]) => <span className="mc-note">{(ls ?? []).map(l => `${l.name} ${(l.share20 * 100).toFixed(0)}%`).join(' · ')}</span>,
       }
-      : { title: '在册', dataIndex: 'standing', width: 110, render: (v: string | null) => <span className="mc-note">{v ?? '—'}</span> },
+      : {
+        title: '在册 / 权限', dataIndex: 'standing', width: 150,
+        render: (v: string | null, r: any) => <span className="mc-note">{v ?? '—'}{r.permissionLock && <Tooltip title={r.permissionLock}><span className="mc-chip" style={{ background: '#2b2410', color: '#f0b429', marginLeft: 4 }}>只观察</span></Tooltip>}</span>,
+      },
   ]
 
   return (
@@ -262,6 +266,7 @@ const MoneyCockpit: React.FC = () => {
               <div key={r.id} className="mc-alert" style={{ borderLeftColor: REVIEW_COLOR[r.reviewClass] ?? '#58a6ff' }}
                 onClick={() => setDetail(byId.get(r.id))}>
                 <b>{r.name}</b>　{r.text}<span className="mc-note">　入口{['', '①', '②', '③'][r.entry]}</span>
+                {r.permissionLock && <span style={{ color: '#f0b429', fontSize: 11 }}>　只观察，不具备建仓权限</span>}
               </div>
             ))}
             {data.reviewQueue.length > 6 && <div className="mc-note">另有 {data.reviewQueue.length - 6} 项，见下方各入口</div>}
@@ -309,7 +314,7 @@ const MoneyCockpit: React.FC = () => {
         <div className="mc-card" style={{ marginTop: 12 }}>
           <Tabs activeKey={tab} onChange={setTab} items={[
             { key: '1', label: `入口① 持仓 · ${e1.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e1.note}。点击任一行看资金卡</div><Table size="small" rowKey="id" pagination={false} dataSource={e1.objects} columns={columns(1)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
-            { key: '2', label: `入口② 观察仓 · ${e2.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e2.note}</div><Table size="small" rowKey="id" pagination={false} dataSource={e2.objects} columns={columns(2)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
+            { key: '2', label: `入口② 观察仓 · ${e2.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e2.note}</div>{data.radarLock && <RadarLockBanner lock={data.radarLock} />}<Table size="small" rowKey="id" pagination={false} dataSource={e2.objects} columns={columns(2)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
             { key: '3', label: `入口③ 市场自选 · ${e3.objects.length}`, children: <><div className="mc-note" style={{ marginBottom: 6 }}>{e3.note}。不在册股票只显示、不进候选</div><Table size="small" rowKey="id" pagination={{ pageSize: 20, size: 'small' }} dataSource={e3.objects} columns={columns(3)} onRow={r => ({ onClick: () => setDetail(r) })} /></> },
           ]} />
         </div>
@@ -343,6 +348,14 @@ const MoneyCockpit: React.FC = () => {
     </ConfigProvider>
   )
 }
+
+const RadarLockBanner: React.FC<{ lock: any }> = ({ lock }) => (
+  <div className="mc-lock">
+    <b>左侧雷达权限锁：{lock.label}</b>　{lock.freeze}<br />
+    {lock.groups.map((g: any) => `${g.name}：${g.scope}`).join('　·　')}<br />
+    {lock.signalEffect}；即使「爆发」也只出观察状态或复核提示，不进备选池、建仓申请或执行单。解除只能来自正式战略评审，雷达信号不能解除。
+  </div>
+)
 
 const VERDICT_STYLE: Record<string, { text: string; color: string }> = {
   INSUFFICIENT_SAMPLE: { text: '样本不足', color: '#8b96a5' },
@@ -446,6 +459,7 @@ const DetailCard: React.FC<{ o: any; slow?: any }> = ({ o, slow }) => {
         {o.standing && <span className="mc-note">· {o.standing}</span>}
         {div && div !== 'NONE' && <span className="mc-chip" style={{ background: '#4b1d1d', color: '#ff7b72' }}>{DIVERGENCE_TEXT[div]}</span>}
       </div>
+      {o.permissionLock && <div className="mc-lock">{o.permissionLock}<br />资金强度、趋势启动或状态升级只改变研究优先级；即使「爆发」也不进备选池、建仓申请或执行单</div>}
       <div className="mc-grid" style={{ gridTemplateColumns: '2.2fr 1fr' }}>
         <div className="mc-card">
           <h3>资金波形图 <small>近 250 日 · 同一时间轴：水位带 / 成交额份额 / 价格</small></h3>

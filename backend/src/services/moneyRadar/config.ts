@@ -11,7 +11,7 @@
 
 import { readFileSync } from 'node:fs'
 import { MAINLINES, findMember } from '../msr/universe'
-import type { EntryNo, MoneyObject } from './types'
+import type { EntryNo, MoneyObject, ObjectKind } from './types'
 
 // ─────────────────────────── 三个入口 ───────────────────────────
 
@@ -120,6 +120,18 @@ export function radarGroupsOf(code: string): typeof LEFT_RADAR[number][] {
 /** 左侧雷达锁的完整文字（页面、导出报告与个股卡片共用同一份） */
 export function radarLockText(scope: RadarScope): string {
   return `${LEFT_RADAR_LOCK.label}｜${RADAR_SCOPE_TEXT[scope]}｜${LEFT_RADAR_LOCK.freeze}`
+}
+
+/**
+ * 资金对象的权限锁：左侧雷达方向篮子、以及未持有的左侧雷达个股带锁，其余为 null。
+ * 资金视图、提醒卡片、文字版与 Agent 文件都读这一个函数，不各写一份。
+ */
+export function radarLockOf(o: { id: string; kind: ObjectKind; codes: readonly string[]; entry: EntryNo | null }): string | null {
+  const groups = o.id.startsWith('radar:')
+    ? LEFT_RADAR.filter(g => `radar:${g.id}` === o.id)
+    : o.kind === 'STOCK' && o.entry !== 1 ? radarGroupsOf(o.codes[0] ?? '') : []
+  if (!groups.length) return null
+  return groups.map(g => `左侧雷达·${g.name}：${radarLockText(g.scope)}`).join('；')
 }
 
 /** 入口② 全部观察股：起始 7 只 + 左侧雷达，按代码去重（重复的以起始名单为准） */
