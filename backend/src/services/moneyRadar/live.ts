@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 真实数据装载
+ * 资金哨兵（R-01）· 真实数据装载
  *
  * 把公开来源拼成一份按交易日对齐的 DataSet：
  *
@@ -17,7 +17,7 @@
  */
 
 import { MAINLINES } from '../msr/universe'
-import { NATIONAL_TEAM_ETFS, WATCHLIST, holdingCodes } from './config'
+import { NATIONAL_TEAM_ETFS, holdingCodes, watchlistAll } from './config'
 import {
   fetchKline, fetchMarginByDate, fetchMarginTotal, fetchQuoteEtfShares, fetchSseEtfShares,
   fetchSwMembership, fetchTopInstByDate, inShSzUniverse, exchangeOf, runPool, stockKlineCached,
@@ -126,11 +126,11 @@ export async function loadLiveDataSet(opt: LiveOptions): Promise<LiveResult> {
   // ── 需要抓 K 线的股票 ──
   const holdings = holdingCodes()
   for (const h of holdings) names[h.code] = h.name
-  for (const w of WATCHLIST) names[w.code] = w.name
+  for (const w of watchlistAll()) names[w.code] = w.name
   for (const ml of MAINLINES) for (const m of ml.members) names[m.code] = m.name
   const wanted = [...new Set([
     ...members.map(m => m.code),
-    ...holdings.map(h => h.code), ...WATCHLIST.map(w => w.code),
+    ...holdings.map(h => h.code), ...watchlistAll().map(w => w.code),
     ...MAINLINES.flatMap(ml => ml.members.map(m => m.code)),
   ])].filter(inShSzUniverse)
 
