@@ -49,7 +49,7 @@
     "ladder": "tsx src/services/ladder/run.ts",
     "ladder:selftest": "tsx src/services/ladder/selftest.ts",
     "ladder:snapshot": "tsx src/services/ladder/snapshot.ts",
-    "ladder:audit": "tsx src/services/ladder/audit.ts",
+    "ladder:audit": "tsx src/services/governance/ladderAudit.ts",
     "sim:ma60": "tsx src/services/simulation/ma60Run.ts",
     "sim:selftest": "tsx src/services/simulation/selftest.ts"
   },

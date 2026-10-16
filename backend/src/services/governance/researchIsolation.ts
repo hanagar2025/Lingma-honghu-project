@@ -83,6 +83,15 @@ export const RESEARCH_MODULES = [
   'moneyRadar/leadlagRun.ts',
   'moneyRadar/slowMoney.ts',
   'moneyRadar/crossCheck.ts',
+  'ladder/types.ts',
+  'ladder/sources.ts',
+  'ladder/registry.ts',
+  'ladder/ledger.ts',
+  'ladder/render.ts',
+  'ladder/run.ts',
+  'ladder/snapshot.ts',
+  'simulation/ma60.ts',
+  'simulation/ma60Run.ts',
 ] as const
 
 /**
@@ -112,6 +121,8 @@ export const RESEARCH_FIELD_NAMES = [
   'marketStructureWatch', 'sessionChecks', 'nextSessionPaths', 'aiBetaCore', 'hbqHypothesis',
   'moneyCockpit', 'reviewQueue', 'divergence', 'migrations', 'nationalTeam',
   'rerating', 'preselectPool', 'requiredProfit2028',
+  'ladder', 'ladderView', 'ladderLevel', 'ladderEntries', 'observePlans',
+  'ma60Sim', 'ma60Report', 'simulation', 'permissionLock', 'radarLock',
 ] as const
 
 export interface IsolationFinding {
@@ -229,6 +240,9 @@ export const RESEARCH_TEXT_MARKERS = [
   'M-01', 'H-MR', '宏观风险三灯', '换挡方向冲突',
   'B-01', 'H-BQ', '市场结构观察', '价格推进效率',
   'R-01', '资金驾驶舱', '资金哨兵', '左侧雷达', '高位背离', '国家队温度计',
+  'L-01', '名单主表', '观察池', '备选池', '可申请建仓',
+  'SIM-MA60', 'MA60 模拟对照', '单日确认即减仓', '连续两日确认后减仓',
+  '只观察，不具备建仓权限', '战略冻结期',
 ] as const
 
 /**
