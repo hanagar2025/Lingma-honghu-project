@@ -1,0 +1,10 @@
+{
+  "_说明": "复制本文件为 config/settings.json 后填入真实值；settings.json 已被 .gitignore 排除，不会上传 GitHub",
+
+  "cloudbase_env_id": "your-cloudbase-env-id",
+  "site_token": "your-random-site-path-token",
+
+  "_pushplus_token_说明": "PushPlus 微信推送 token 不写在本文件；请放到 $HONGHU_VAULT/98_自动化/web_site/.pushplus_token（文件权限 600）。迁阿里云后建议改为服务端配置表或环境变量 PUSHPLUS_TOKEN",
+
+  "_适配器路线": "cloudbase(网页托管) 与 pushplus(微信) 都是当前过渡适配器；目标架构为阿里云+自有域名，届时由 Web 服务直接提供页面与数据接口，这两项可移除"
+}

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- =========================================================
+        本 plist 为模板，含占位符，config/install.sh 安装时自动替换：
+        __VAULT_DIR__   → 研究库根目录（环境变量 HONGHU_VAULT 或默认路径）
+        __SNAPSHOT_PY__ → honghu_snapshot.py 的绝对路径（包内 src/）
+        __HOME__        → 当前用户家目录
+       ========================================================= -->
+  <key>Label</key>
+  <string>com.honghu.daily-snapshot</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>__SNAPSHOT_PY__</string>
+    <string>--vault-dir</string>
+    <string>__VAULT_DIR__</string>
+  </array>
+
+  <!-- 触发时间：周一至周五 15:35（A股收盘后5分钟） -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>15</integer><key>Minute</key><integer>35</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>15</integer><key>Minute</key><integer>35</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>15</integer><key>Minute</key><integer>35</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>15</integer><key>Minute</key><integer>35</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>15</integer><key>Minute</key><integer>35</integer></dict>
+  </array>
+
+  <!-- RunAtLoad=true：加载时跑一次；睡眠错过15:35时StartCalendarInterval会在唤醒后补跑 -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- KeepAlive: 仅异常退出(非0)才重试；正常退出(0)不重启，避免全天忙循环刷数据API -->
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <!-- 工作目录：Vault根 -->
+  <key>WorkingDirectory</key>
+  <string>__VAULT_DIR__</string>
+
+  <!-- 环境变量：数据根目录 + 确保 shell 工具可用 -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key>
+    <string>zh_CN.UTF-8</string>
+    <key>HONGHU_VAULT</key>
+    <string>__VAULT_DIR__</string>
+  </dict>
+
+  <!-- 日志：stdout + stderr 分开（写到包目录 logs/） -->
+  <key>StandardOutPath</key>
+  <string>__LOG_DIR__/snapshot.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG_DIR__/snapshot.err.log</string>
+
+  <!-- 重试：失败最多2次（间隔60s） -->
+  <key>ThrottleInterval</key>
+  <integer>60</integer>
+</dict>
+</plist>
