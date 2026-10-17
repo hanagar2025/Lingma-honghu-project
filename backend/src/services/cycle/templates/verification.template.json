@@ -1,0 +1,24 @@
+{
+  "id": "V-YYYY-MM-DD-01",
+  "kind": "VERIFICATION",
+  "version": "V1.0",
+  "recordedAt": "落档时自动取当前时刻，此处填什么都会被覆盖",
+  "recordedBy": "投资委员会（验证人）",
+  "judgment": {
+    "id": "J-YYYY-MM-DD-01",
+    "file": "share/cycle/judgments/J-YYYY-MM-DD-01.json",
+    "sha256": "从 share/cycle/index.json 抄原研判的 sha256"
+  },
+  "packages": [
+    { "file": "share/cycle/packages/YYYY-MM-DD.json", "sha256": "验证时依据的新证据包（须晚于原研判）" }
+  ],
+  "outcome": "SUPPORTED | PARTLY_SUPPORTED | FALSIFIED | UNDETERMINABLE",
+  "nodes": [
+    { "node": "OPTICAL", "outcome": "UNDETERMINABLE", "observed": "该节点后续实际发生了什么" }
+  ],
+  "observed": "后续结果总体是否支持原判断",
+  "errorSources": ["DATA | LOGIC | EXECUTION；结论不是 SUPPORTED 时必填"],
+  "errorNote": "错误具体来自哪里",
+  "lessons": "对登记表、数据源或研判方法的修正建议（修正要另走裁定，不在此生效）",
+  "producesAction": false
+}
