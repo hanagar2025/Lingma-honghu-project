@@ -92,6 +92,18 @@ export const RESEARCH_MODULES = [
   'ladder/snapshot.ts',
   'simulation/ma60.ts',
   'simulation/ma60Run.ts',
+  'simulation/cycleLeadLag.ts',
+  'simulation/cycleLeadLagRun.ts',
+  'cycle/types.ts',
+  'cycle/nodes.ts',
+  'cycle/registry.ts',
+  'cycle/collect.ts',
+  'cycle/package.ts',
+  'cycle/judgment.ts',
+  'cycle/archive.ts',
+  'cycle/render.ts',
+  'cycle/docPaths.ts',
+  'cycle/run.ts',
 ] as const
 
 /**
@@ -123,6 +135,7 @@ export const RESEARCH_FIELD_NAMES = [
   'rerating', 'preselectPool', 'requiredProfit2028',
   'ladder', 'ladderView', 'ladderLevel', 'ladderEntries', 'observePlans',
   'ma60Sim', 'ma60Report', 'simulation', 'permissionLock', 'radarLock',
+  'cycleMonitor', 'cyclePackage', 'evidencePackage', 'cycleState', 'judgmentRecord', 'cycleLeadLag',
 ] as const
 
 export interface IsolationFinding {
@@ -243,6 +256,7 @@ export const RESEARCH_TEXT_MARKERS = [
   'L-01', '名单主表', '观察池', '备选池', '可申请建仓',
   'SIM-MA60', 'MA60 模拟对照', '单日确认即减仓', '连续两日确认后减仓',
   '只观察，不具备建仓权限', '战略冻结期',
+  'CY-01', 'AI 基建周期', '周期拐点', '研判记录', 'SIM-LEADLAG', '领先期检验',
 ] as const
 
 /**
