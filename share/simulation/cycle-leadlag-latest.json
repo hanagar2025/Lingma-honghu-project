@@ -1,0 +1,1719 @@
+{
+  "id": "SIM-LEADLAG",
+  "generatedAt": "2026-10-17T11:29:50.762Z",
+  "range": {
+    "from": "2019-01-01",
+    "to": "2026-10-17",
+    "outOfSampleFrom": "2024-01-01"
+  },
+  "params": {
+    "maDays": 60,
+    "rsDays": 60,
+    "resetDays": 20,
+    "windowDays": 250,
+    "minTurnsPerNode": 20,
+    "minEdge": 0.05,
+    "sensitivityWindows": [
+      60,
+      120
+    ]
+  },
+  "nodes": [
+    {
+      "node": "OPTICAL",
+      "stocks": 7,
+      "turns": 17,
+      "hits": 16,
+      "hitRate": 0.9411764705882353,
+      "baseline": 0.9496722138174483,
+      "medianLeadToNotice": 42,
+      "medianLeadToPeriodEnd": -3.5,
+      "signals": 93,
+      "falseAlarms": 42,
+      "pendingSignals": 18,
+      "falseAlarmRate": 0.56,
+      "misses": [
+        {
+          "code": "688498",
+          "name": "源杰科技",
+          "reportDate": "2024-09-30",
+          "noticeDate": "2024-10-30",
+          "hit": false,
+          "signalDate": null,
+          "leadToNotice": null,
+          "leadToPeriodEnd": null
+        }
+      ],
+      "bySplit": [
+        {
+          "label": "样本内（2024-01-01 前公告）",
+          "turns": 13,
+          "hits": 13
+        },
+        {
+          "label": "样本外（2024-01-01 起公告）",
+          "turns": 4,
+          "hits": 3
+        }
+      ],
+      "verdict": "样本不足（17 次拐点，少于 20 次），不能判断是否领先"
+    },
+    {
+      "node": "PCB",
+      "stocks": 5,
+      "turns": 15,
+      "hits": 13,
+      "hitRate": 0.8666666666666667,
+      "baseline": 0.9503556394251705,
+      "medianLeadToNotice": 57,
+      "medianLeadToPeriodEnd": -4,
+      "signals": 57,
+      "falseAlarms": 23,
+      "pendingSignals": 9,
+      "falseAlarmRate": 0.4791666666666667,
+      "misses": [
+        {
+          "code": "002463",
+          "name": "沪电股份",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-27",
+          "hit": false,
+          "signalDate": null,
+          "leadToNotice": null,
+          "leadToPeriodEnd": null
+        },
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-28",
+          "hit": false,
+          "signalDate": null,
+          "leadToNotice": null,
+          "leadToPeriodEnd": null
+        }
+      ],
+      "bySplit": [
+        {
+          "label": "样本内（2024-01-01 前公告）",
+          "turns": 10,
+          "hits": 8
+        },
+        {
+          "label": "样本外（2024-01-01 起公告）",
+          "turns": 5,
+          "hits": 5
+        }
+      ],
+      "verdict": "样本不足（15 次拐点，少于 20 次），不能判断是否领先"
+    },
+    {
+      "node": "COMPUTE",
+      "stocks": 2,
+      "turns": 1,
+      "hits": 1,
+      "hitRate": 1,
+      "baseline": 1,
+      "medianLeadToNotice": 102,
+      "medianLeadToPeriodEnd": 86,
+      "signals": 20,
+      "falseAlarms": 11,
+      "pendingSignals": 6,
+      "falseAlarmRate": 0.7857142857142857,
+      "misses": [],
+      "bySplit": [
+        {
+          "label": "样本内（2024-01-01 前公告）",
+          "turns": 0,
+          "hits": 0
+        },
+        {
+          "label": "样本外（2024-01-01 起公告）",
+          "turns": 1,
+          "hits": 1
+        }
+      ],
+      "verdict": "样本不足（1 次拐点，少于 20 次），不能判断是否领先"
+    },
+    {
+      "node": "SEMI_EQUIP",
+      "stocks": 8,
+      "turns": 22,
+      "hits": 22,
+      "hitRate": 1,
+      "baseline": 0.9725050916496945,
+      "medianLeadToNotice": 39,
+      "medianLeadToPeriodEnd": 7.5,
+      "signals": 95,
+      "falseAlarms": 39,
+      "pendingSignals": 10,
+      "falseAlarmRate": 0.4588235294117647,
+      "misses": [],
+      "bySplit": [
+        {
+          "label": "样本内（2024-01-01 前公告）",
+          "turns": 8,
+          "hits": 8
+        },
+        {
+          "label": "样本外（2024-01-01 起公告）",
+          "turns": 14,
+          "hits": 14
+        }
+      ],
+      "verdict": "命中率 100.0% 与随机基准 97.3% 相差不到 5 个百分点：价格信号没有表现出可区分的领先信息"
+    },
+    {
+      "node": "STORAGE",
+      "stocks": 2,
+      "turns": 2,
+      "hits": 2,
+      "hitRate": 1,
+      "baseline": 0.9942900647126,
+      "medianLeadToNotice": 79,
+      "medianLeadToPeriodEnd": 32.5,
+      "signals": 26,
+      "falseAlarms": 16,
+      "pendingSignals": 3,
+      "falseAlarmRate": 0.6956521739130435,
+      "misses": [],
+      "bySplit": [
+        {
+          "label": "样本内（2024-01-01 前公告）",
+          "turns": 2,
+          "hits": 2
+        },
+        {
+          "label": "样本外（2024-01-01 起公告）",
+          "turns": 0,
+          "hits": 0
+        }
+      ],
+      "verdict": "样本不足（2 次拐点，少于 20 次），不能判断是否领先"
+    },
+    {
+      "node": "POWER",
+      "stocks": 11,
+      "turns": 43,
+      "hits": 43,
+      "hitRate": 1,
+      "baseline": 0.9600024766268342,
+      "medianLeadToNotice": 54,
+      "medianLeadToPeriodEnd": 20,
+      "signals": 131,
+      "falseAlarms": 41,
+      "pendingSignals": 13,
+      "falseAlarmRate": 0.3474576271186441,
+      "misses": [],
+      "bySplit": [
+        {
+          "label": "样本内（2024-01-01 前公告）",
+          "turns": 26,
+          "hits": 26
+        },
+        {
+          "label": "样本外（2024-01-01 起公告）",
+          "turns": 17,
+          "hits": 17
+        }
+      ],
+      "verdict": "命中率 100.0% 与随机基准 96.0% 相差不到 5 个百分点：价格信号没有表现出可区分的领先信息"
+    }
+  ],
+  "sensitivity": [
+    {
+      "windowDays": 60,
+      "nodes": [
+        {
+          "node": "OPTICAL",
+          "turns": 21,
+          "hits": 12,
+          "hitRate": 0.5714285714285714,
+          "baseline": 0.4498888394842152,
+          "medianLeadToNotice": 23.5
+        },
+        {
+          "node": "PCB",
+          "turns": 19,
+          "hits": 7,
+          "hitRate": 0.3684210526315789,
+          "baseline": 0.4047710167113152,
+          "medianLeadToNotice": 15
+        },
+        {
+          "node": "COMPUTE",
+          "turns": 2,
+          "hits": 1,
+          "hitRate": 0.5,
+          "baseline": 0.4415639609009775,
+          "medianLeadToNotice": 30
+        },
+        {
+          "node": "SEMI_EQUIP",
+          "turns": 25,
+          "hits": 17,
+          "hitRate": 0.68,
+          "baseline": 0.4883182081482912,
+          "medianLeadToNotice": 22
+        },
+        {
+          "node": "STORAGE",
+          "turns": 4,
+          "hits": 1,
+          "hitRate": 0.25,
+          "baseline": 0.476554705686731,
+          "medianLeadToNotice": 54
+        },
+        {
+          "node": "POWER",
+          "turns": 49,
+          "hits": 25,
+          "hitRate": 0.5102040816326531,
+          "baseline": 0.4234965188312044,
+          "medianLeadToNotice": 28
+        }
+      ]
+    },
+    {
+      "windowDays": 120,
+      "nodes": [
+        {
+          "node": "OPTICAL",
+          "turns": 18,
+          "hits": 15,
+          "hitRate": 0.8333333333333334,
+          "baseline": 0.7270207852193995,
+          "medianLeadToNotice": 32
+        },
+        {
+          "node": "PCB",
+          "turns": 16,
+          "hits": 9,
+          "hitRate": 0.5625,
+          "baseline": 0.6764822920811778,
+          "medianLeadToNotice": 33
+        },
+        {
+          "node": "COMPUTE",
+          "turns": 1,
+          "hits": 1,
+          "hitRate": 1,
+          "baseline": 0.755038065382893,
+          "medianLeadToNotice": 102
+        },
+        {
+          "node": "SEMI_EQUIP",
+          "turns": 24,
+          "hits": 23,
+          "hitRate": 0.9583333333333334,
+          "baseline": 0.7809273132212998,
+          "medianLeadToNotice": 32
+        },
+        {
+          "node": "STORAGE",
+          "turns": 3,
+          "hits": 3,
+          "hitRate": 1,
+          "baseline": 0.7547627294769657,
+          "medianLeadToNotice": 62
+        },
+        {
+          "node": "POWER",
+          "turns": 47,
+          "hits": 33,
+          "hitRate": 0.7021276595744681,
+          "baseline": 0.7292531710369149,
+          "medianLeadToNotice": 36
+        }
+      ]
+    }
+  ],
+  "stocks": [
+    {
+      "code": "300308",
+      "name": "中际旭创",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "300308",
+          "name": "中际旭创",
+          "reportDate": "2021-03-31",
+          "noticeDate": "2021-04-27",
+          "hit": true,
+          "signalDate": "2020-07-16",
+          "leadToNotice": 190,
+          "leadToPeriodEnd": 172
+        },
+        {
+          "code": "300308",
+          "name": "中际旭创",
+          "reportDate": "2021-12-31",
+          "noticeDate": "2022-04-25",
+          "hit": true,
+          "signalDate": "2022-03-17",
+          "leadToNotice": 25,
+          "leadToPeriodEnd": -48
+        }
+      ],
+      "skippedTurns": 3,
+      "coverage": 0.8984709480122324,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "300502",
+      "name": "新易盛",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "300502",
+          "name": "新易盛",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-28",
+          "hit": true,
+          "signalDate": "2021-10-15",
+          "leadToNotice": 9,
+          "leadToPeriodEnd": -6
+        },
+        {
+          "code": "300502",
+          "name": "新易盛",
+          "reportDate": "2022-12-31",
+          "noticeDate": "2023-04-27",
+          "hit": true,
+          "signalDate": "2023-01-31",
+          "leadToNotice": 61,
+          "leadToPeriodEnd": -15
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.998776758409786,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "300394",
+      "name": "天孚通信",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "300394",
+          "name": "天孚通信",
+          "reportDate": "2019-12-31",
+          "noticeDate": "2020-04-28",
+          "hit": true,
+          "signalDate": "2020-02-03",
+          "leadToNotice": 60,
+          "leadToPeriodEnd": -17
+        },
+        {
+          "code": "300394",
+          "name": "天孚通信",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-24",
+          "hit": true,
+          "signalDate": "2021-07-01",
+          "leadToNotice": 38,
+          "leadToPeriodEnd": -1
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 1,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "300620",
+      "name": "光库科技",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "300620",
+          "name": "光库科技",
+          "reportDate": "2019-12-31",
+          "noticeDate": "2020-02-28",
+          "hit": true,
+          "signalDate": "2020-02-03",
+          "leadToNotice": 19,
+          "leadToPeriodEnd": -17
+        },
+        {
+          "code": "300620",
+          "name": "光库科技",
+          "reportDate": "2020-06-30",
+          "noticeDate": "2020-08-17",
+          "hit": true,
+          "signalDate": "2020-02-03",
+          "leadToNotice": 134,
+          "leadToPeriodEnd": 100
+        },
+        {
+          "code": "300620",
+          "name": "光库科技",
+          "reportDate": "2022-03-31",
+          "noticeDate": "2022-04-26",
+          "hit": true,
+          "signalDate": "2022-02-17",
+          "leadToNotice": 46,
+          "leadToPeriodEnd": 30
+        },
+        {
+          "code": "300620",
+          "name": "光库科技",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-03-29",
+          "hit": true,
+          "signalDate": "2025-02-28",
+          "leadToNotice": 21,
+          "leadToPeriodEnd": -36
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.9852307692307692,
+      "evaluableDays": 1625
+    },
+    {
+      "code": "002281",
+      "name": "光迅科技",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "002281",
+          "name": "光迅科技",
+          "reportDate": "2020-03-31",
+          "noticeDate": "2020-04-30",
+          "hit": true,
+          "signalDate": "2020-03-16",
+          "leadToNotice": 32,
+          "leadToPeriodEnd": 11
+        },
+        {
+          "code": "002281",
+          "name": "光迅科技",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-26",
+          "hit": true,
+          "signalDate": "2021-08-26",
+          "leadToNotice": 0,
+          "leadToPeriodEnd": -41
+        },
+        {
+          "code": "002281",
+          "name": "光迅科技",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-26",
+          "hit": true,
+          "signalDate": "2022-12-19",
+          "leadToNotice": 85,
+          "leadToPeriodEnd": 68
+        },
+        {
+          "code": "002281",
+          "name": "光迅科技",
+          "reportDate": "2024-03-31",
+          "noticeDate": "2024-04-26",
+          "hit": true,
+          "signalDate": "2023-12-25",
+          "leadToNotice": 80,
+          "leadToPeriodEnd": 63
+        },
+        {
+          "code": "002281",
+          "name": "光迅科技",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-24",
+          "hit": true,
+          "signalDate": "2025-03-24",
+          "leadToNotice": 22,
+          "leadToPeriodEnd": -52
+        }
+      ],
+      "skippedTurns": 9,
+      "coverage": 1,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "688313",
+      "name": "仕佳光子",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "688313",
+          "name": "仕佳光子",
+          "reportDate": "2022-12-31",
+          "noticeDate": "2023-04-22",
+          "hit": true,
+          "signalDate": "2022-11-30",
+          "leadToNotice": 96,
+          "leadToPeriodEnd": 23
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.9515989628349178,
+      "evaluableDays": 1157
+    },
+    {
+      "code": "688498",
+      "name": "源杰科技",
+      "node": "OPTICAL",
+      "benchmark": "sz399006",
+      "turns": [
+        {
+          "code": "688498",
+          "name": "源杰科技",
+          "reportDate": "2024-09-30",
+          "noticeDate": "2024-10-30",
+          "hit": false,
+          "signalDate": null,
+          "leadToNotice": null,
+          "leadToPeriodEnd": null
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.5767284991568297,
+      "evaluableDays": 593
+    },
+    {
+      "code": "002371",
+      "name": "北方华创",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "002371",
+          "name": "北方华创",
+          "reportDate": "2025-12-31",
+          "noticeDate": "2026-04-18",
+          "hit": true,
+          "signalDate": "2026-02-27",
+          "leadToNotice": 35,
+          "leadToPeriodEnd": -34
+        }
+      ],
+      "skippedTurns": 6,
+      "coverage": 0.9726027397260274,
+      "evaluableDays": 1314
+    },
+    {
+      "code": "688012",
+      "name": "中微公司",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "688012",
+          "name": "中微公司",
+          "reportDate": "2024-06-30",
+          "noticeDate": "2024-08-23",
+          "hit": true,
+          "signalDate": "2024-05-30",
+          "leadToNotice": 60,
+          "leadToPeriodEnd": 21
+        }
+      ],
+      "skippedTurns": 3,
+      "coverage": 0.9662835249042145,
+      "evaluableDays": 1305
+    },
+    {
+      "code": "688072",
+      "name": "拓荆科技",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "688072",
+          "name": "拓荆科技",
+          "reportDate": "2023-06-30",
+          "noticeDate": "2023-08-29",
+          "hit": true,
+          "signalDate": "2023-07-14",
+          "leadToNotice": 32,
+          "leadToPeriodEnd": -10
+        },
+        {
+          "code": "688072",
+          "name": "拓荆科技",
+          "reportDate": "2024-03-31",
+          "noticeDate": "2024-04-30",
+          "hit": true,
+          "signalDate": "2024-01-02",
+          "leadToNotice": 77,
+          "leadToPeriodEnd": 58
+        },
+        {
+          "code": "688072",
+          "name": "拓荆科技",
+          "reportDate": "2024-09-30",
+          "noticeDate": "2024-10-29",
+          "hit": true,
+          "signalDate": "2024-08-20",
+          "leadToNotice": 43,
+          "leadToPeriodEnd": 27
+        },
+        {
+          "code": "688072",
+          "name": "拓荆科技",
+          "reportDate": "2025-03-31",
+          "noticeDate": "2025-04-30",
+          "hit": true,
+          "signalDate": "2025-03-28",
+          "leadToNotice": 22,
+          "leadToPeriodEnd": 1
+        },
+        {
+          "code": "688072",
+          "name": "拓荆科技",
+          "reportDate": "2025-12-31",
+          "noticeDate": "2026-04-28",
+          "hit": true,
+          "signalDate": "2026-02-02",
+          "leadToNotice": 54,
+          "leadToPeriodEnd": -21
+        }
+      ],
+      "skippedTurns": 0,
+      "coverage": 1,
+      "evaluableDays": 748
+    },
+    {
+      "code": "688120",
+      "name": "华海清科",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [],
+      "skippedTurns": 0,
+      "coverage": 1,
+      "evaluableDays": 727
+    },
+    {
+      "code": "300567",
+      "name": "精测电子",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "300567",
+          "name": "精测电子",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-29",
+          "hit": true,
+          "signalDate": "2021-10-11",
+          "leadToNotice": 14,
+          "leadToPeriodEnd": -2
+        },
+        {
+          "code": "300567",
+          "name": "精测电子",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-24",
+          "hit": true,
+          "signalDate": "2022-08-02",
+          "leadToNotice": 176,
+          "leadToPeriodEnd": 161
+        },
+        {
+          "code": "300567",
+          "name": "精测电子",
+          "reportDate": "2024-03-31",
+          "noticeDate": "2024-04-23",
+          "hit": true,
+          "signalDate": "2024-01-03",
+          "leadToNotice": 71,
+          "leadToPeriodEnd": 57
+        },
+        {
+          "code": "300567",
+          "name": "精测电子",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-25",
+          "hit": true,
+          "signalDate": "2025-04-07",
+          "leadToNotice": 14,
+          "leadToPeriodEnd": -61
+        },
+        {
+          "code": "300567",
+          "name": "精测电子",
+          "reportDate": "2025-06-30",
+          "noticeDate": "2025-08-27",
+          "hit": true,
+          "signalDate": "2025-04-07",
+          "leadToNotice": 98,
+          "leadToPeriodEnd": 56
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 1,
+      "evaluableDays": 1309
+    },
+    {
+      "code": "688361",
+      "name": "中科飞测",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "688361",
+          "name": "中科飞测",
+          "reportDate": "2025-09-30",
+          "noticeDate": "2025-10-31",
+          "hit": true,
+          "signalDate": "2025-09-10",
+          "leadToNotice": 31,
+          "leadToPeriodEnd": 14
+        },
+        {
+          "code": "688361",
+          "name": "中科飞测",
+          "reportDate": "2026-03-31",
+          "noticeDate": "2026-04-29",
+          "hit": true,
+          "signalDate": "2026-04-13",
+          "leadToNotice": 12,
+          "leadToPeriodEnd": -8
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 1,
+      "evaluableDays": 496
+    },
+    {
+      "code": "688003",
+      "name": "天准科技",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-29",
+          "hit": true,
+          "signalDate": "2021-10-27",
+          "leadToNotice": 2,
+          "leadToPeriodEnd": -14
+        },
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2022-03-31",
+          "noticeDate": "2022-04-30",
+          "hit": true,
+          "signalDate": "2022-02-14",
+          "leadToNotice": 53,
+          "leadToPeriodEnd": 33
+        },
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2022-12-31",
+          "noticeDate": "2023-04-29",
+          "hit": true,
+          "signalDate": "2023-04-25",
+          "leadToNotice": 4,
+          "leadToPeriodEnd": -74
+        },
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2023-06-30",
+          "noticeDate": "2023-08-26",
+          "hit": true,
+          "signalDate": "2023-04-25",
+          "leadToNotice": 84,
+          "leadToPeriodEnd": 43
+        },
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2024-06-30",
+          "noticeDate": "2024-08-29",
+          "hit": true,
+          "signalDate": "2024-05-27",
+          "leadToNotice": 67,
+          "leadToPeriodEnd": 24
+        },
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2025-09-30",
+          "noticeDate": "2025-10-31",
+          "hit": true,
+          "signalDate": "2025-10-14",
+          "leadToNotice": 13,
+          "leadToPeriodEnd": -4
+        },
+        {
+          "code": "688003",
+          "name": "天准科技",
+          "reportDate": "2026-06-30",
+          "noticeDate": "2026-08-20",
+          "hit": true,
+          "signalDate": "2026-07-13",
+          "leadToNotice": 28,
+          "leadToPeriodEnd": -9
+        }
+      ],
+      "skippedTurns": 3,
+      "coverage": 1,
+      "evaluableDays": 1314
+    },
+    {
+      "code": "603986",
+      "name": "兆易创新",
+      "node": "STORAGE",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "603986",
+          "name": "兆易创新",
+          "reportDate": "2022-09-30",
+          "noticeDate": "2022-10-29",
+          "hit": true,
+          "signalDate": "2022-06-09",
+          "leadToNotice": 96,
+          "leadToPeriodEnd": 80
+        }
+      ],
+      "skippedTurns": 2,
+      "coverage": 0.9977151561309977,
+      "evaluableDays": 1313
+    },
+    {
+      "code": "688008",
+      "name": "澜起科技",
+      "node": "STORAGE",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "688008",
+          "name": "澜起科技",
+          "reportDate": "2022-12-31",
+          "noticeDate": "2023-04-28",
+          "hit": true,
+          "signalDate": "2023-01-31",
+          "leadToNotice": 62,
+          "leadToPeriodEnd": -15
+        }
+      ],
+      "skippedTurns": 2,
+      "coverage": 0.9908675799086758,
+      "evaluableDays": 1314
+    },
+    {
+      "code": "688041",
+      "name": "海光信息",
+      "node": "COMPUTE",
+      "benchmark": "sh000688",
+      "turns": [],
+      "skippedTurns": 0,
+      "coverage": 1,
+      "evaluableDays": 670
+    },
+    {
+      "code": "603019",
+      "name": "中科曙光",
+      "node": "COMPUTE",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "603019",
+          "name": "中科曙光",
+          "reportDate": "2024-09-30",
+          "noticeDate": "2024-10-29",
+          "hit": true,
+          "signalDate": "2024-05-28",
+          "leadToNotice": 102,
+          "leadToPeriodEnd": 86
+        }
+      ],
+      "skippedTurns": 4,
+      "coverage": 1,
+      "evaluableDays": 1303
+    },
+    {
+      "code": "002463",
+      "name": "沪电股份",
+      "node": "PCB",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "002463",
+          "name": "沪电股份",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-27",
+          "hit": false,
+          "signalDate": null,
+          "leadToNotice": null,
+          "leadToPeriodEnd": null
+        },
+        {
+          "code": "002463",
+          "name": "沪电股份",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-26",
+          "hit": true,
+          "signalDate": "2022-07-15",
+          "leadToNotice": 190,
+          "leadToPeriodEnd": 173
+        }
+      ],
+      "skippedTurns": 2,
+      "coverage": 0.84996191926885,
+      "evaluableDays": 1313
+    },
+    {
+      "code": "002916",
+      "name": "深南电路",
+      "node": "PCB",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "002916",
+          "name": "深南电路",
+          "reportDate": "2022-09-30",
+          "noticeDate": "2022-10-28",
+          "hit": true,
+          "signalDate": "2022-03-25",
+          "leadToNotice": 143,
+          "leadToPeriodEnd": 128
+        },
+        {
+          "code": "002916",
+          "name": "深南电路",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-27",
+          "hit": true,
+          "signalDate": "2023-04-27",
+          "leadToNotice": 0,
+          "leadToPeriodEnd": -18
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.9421172886519421,
+      "evaluableDays": 1313
+    },
+    {
+      "code": "600183",
+      "name": "生益科技",
+      "node": "PCB",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "600183",
+          "name": "生益科技",
+          "reportDate": "2022-03-31",
+          "noticeDate": "2022-04-30",
+          "hit": true,
+          "signalDate": "2022-01-21",
+          "leadToNotice": 64,
+          "leadToPeriodEnd": 44
+        },
+        {
+          "code": "600183",
+          "name": "生益科技",
+          "reportDate": "2023-12-31",
+          "noticeDate": "2024-03-29",
+          "hit": true,
+          "signalDate": "2024-02-05",
+          "leadToNotice": 33,
+          "leadToPeriodEnd": -24
+        }
+      ],
+      "skippedTurns": 9,
+      "coverage": 1,
+      "evaluableDays": 1313
+    },
+    {
+      "code": "002384",
+      "name": "东山精密",
+      "node": "PCB",
+      "benchmark": "sh000688",
+      "turns": [
+        {
+          "code": "002384",
+          "name": "东山精密",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-25",
+          "hit": true,
+          "signalDate": "2023-04-12",
+          "leadToNotice": 9,
+          "leadToPeriodEnd": -7
+        },
+        {
+          "code": "002384",
+          "name": "东山精密",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-25",
+          "hit": true,
+          "signalDate": "2025-04-03",
+          "leadToNotice": 15,
+          "leadToPeriodEnd": -60
+        },
+        {
+          "code": "002384",
+          "name": "东山精密",
+          "reportDate": "2025-09-30",
+          "noticeDate": "2025-10-22",
+          "hit": true,
+          "signalDate": "2025-10-14",
+          "leadToNotice": 6,
+          "leadToPeriodEnd": -4
+        }
+      ],
+      "skippedTurns": 11,
+      "coverage": 0.9916286149162862,
+      "evaluableDays": 1314
+    },
+    {
+      "code": "000400",
+      "name": "许继电气",
+      "node": "POWER",
+      "benchmark": "sh000001",
+      "turns": [
+        {
+          "code": "000400",
+          "name": "许继电气",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-30",
+          "hit": true,
+          "signalDate": "2021-04-20",
+          "leadToNotice": 128,
+          "leadToPeriodEnd": 111
+        },
+        {
+          "code": "000400",
+          "name": "许继电气",
+          "reportDate": "2022-12-31",
+          "noticeDate": "2023-04-08",
+          "hit": true,
+          "signalDate": "2023-04-10",
+          "leadToNotice": 0,
+          "leadToPeriodEnd": -63
+        },
+        {
+          "code": "000400",
+          "name": "许继电气",
+          "reportDate": "2025-03-31",
+          "noticeDate": "2025-04-11",
+          "hit": true,
+          "signalDate": "2024-08-27",
+          "leadToNotice": 148,
+          "leadToPeriodEnd": 140
+        },
+        {
+          "code": "000400",
+          "name": "许继电气",
+          "reportDate": "2026-03-31",
+          "noticeDate": "2026-04-11",
+          "hit": true,
+          "signalDate": "2026-04-13",
+          "leadToNotice": 0,
+          "leadToPeriodEnd": -8
+        }
+      ],
+      "skippedTurns": 11,
+      "coverage": 0.9272616136919315,
+      "evaluableDays": 1636
+    },
+    {
+      "code": "600312",
+      "name": "平高电气",
+      "node": "POWER",
+      "benchmark": "sh000001",
+      "turns": [
+        {
+          "code": "600312",
+          "name": "平高电气",
+          "reportDate": "2020-06-30",
+          "noticeDate": "2020-08-21",
+          "hit": true,
+          "signalDate": "2020-06-04",
+          "leadToNotice": 54,
+          "leadToPeriodEnd": 16
+        },
+        {
+          "code": "600312",
+          "name": "平高电气",
+          "reportDate": "2021-12-31",
+          "noticeDate": "2022-04-15",
+          "hit": true,
+          "signalDate": "2022-02-25",
+          "leadToNotice": 33,
+          "leadToPeriodEnd": -34
+        },
+        {
+          "code": "600312",
+          "name": "平高电气",
+          "reportDate": "2022-06-30",
+          "noticeDate": "2022-08-25",
+          "hit": true,
+          "signalDate": "2022-02-25",
+          "leadToNotice": 123,
+          "leadToPeriodEnd": 83
+        },
+        {
+          "code": "600312",
+          "name": "平高电气",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-11",
+          "hit": true,
+          "signalDate": "2024-10-23",
+          "leadToNotice": 114,
+          "leadToPeriodEnd": 49
+        },
+        {
+          "code": "600312",
+          "name": "平高电气",
+          "reportDate": "2025-09-30",
+          "noticeDate": "2025-10-22",
+          "hit": true,
+          "signalDate": "2025-09-02",
+          "leadToNotice": 30,
+          "leadToPeriodEnd": 20
+        }
+      ],
+      "skippedTurns": 11,
+      "coverage": 0.9033639143730887,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "002028",
+      "name": "思源电气",
+      "node": "POWER",
+      "benchmark": "sh000001",
+      "turns": [
+        {
+          "code": "002028",
+          "name": "思源电气",
+          "reportDate": "2020-12-31",
+          "noticeDate": "2021-04-17",
+          "hit": true,
+          "signalDate": "2020-10-13",
+          "leadToNotice": 127,
+          "leadToPeriodEnd": 57
+        },
+        {
+          "code": "002028",
+          "name": "思源电气",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-14",
+          "hit": true,
+          "signalDate": "2021-06-03",
+          "leadToNotice": 51,
+          "leadToPeriodEnd": 18
+        },
+        {
+          "code": "002028",
+          "name": "思源电气",
+          "reportDate": "2022-03-31",
+          "noticeDate": "2022-04-23",
+          "hit": true,
+          "signalDate": "2022-02-16",
+          "leadToNotice": 46,
+          "leadToPeriodEnd": 31
+        },
+        {
+          "code": "002028",
+          "name": "思源电气",
+          "reportDate": "2023-12-31",
+          "noticeDate": "2024-04-20",
+          "hit": true,
+          "signalDate": "2023-10-12",
+          "leadToNotice": 128,
+          "leadToPeriodEnd": 57
+        }
+      ],
+      "skippedTurns": 8,
+      "coverage": 0.9412844036697248,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "002851",
+      "name": "麦格米特",
+      "node": "POWER",
+      "benchmark": "sh000001",
+      "turns": [
+        {
+          "code": "002851",
+          "name": "麦格米特",
+          "reportDate": "2019-12-31",
+          "noticeDate": "2020-04-28",
+          "hit": true,
+          "signalDate": "2020-04-21",
+          "leadToNotice": 5,
+          "leadToPeriodEnd": -72
+        },
+        {
+          "code": "002851",
+          "name": "麦格米特",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-26",
+          "hit": true,
+          "signalDate": "2021-08-31",
+          "leadToNotice": 33,
+          "leadToPeriodEnd": 20
+        },
+        {
+          "code": "002851",
+          "name": "麦格米特",
+          "reportDate": "2022-09-30",
+          "noticeDate": "2022-10-29",
+          "hit": true,
+          "signalDate": "2022-10-17",
+          "leadToNotice": 10,
+          "leadToPeriodEnd": -6
+        },
+        {
+          "code": "002851",
+          "name": "麦格米特",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-29",
+          "hit": true,
+          "signalDate": "2025-03-26",
+          "leadToNotice": 23,
+          "leadToPeriodEnd": -54
+        }
+      ],
+      "skippedTurns": 0,
+      "coverage": 1,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "300870",
+      "name": "欧陆通",
+      "node": "POWER",
+      "benchmark": "sh000001",
+      "turns": [
+        {
+          "code": "300870",
+          "name": "欧陆通",
+          "reportDate": "2023-09-30",
+          "noticeDate": "2023-10-25",
+          "hit": true,
+          "signalDate": "2023-06-26",
+          "leadToNotice": 81,
+          "leadToPeriodEnd": 69
+        },
+        {
+          "code": "300870",
+          "name": "欧陆通",
+          "reportDate": "2025-12-31",
+          "noticeDate": "2026-04-22",
+          "hit": true,
+          "signalDate": "2025-11-13",
+          "leadToNotice": 105,
+          "leadToPeriodEnd": 34
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 1,
+      "evaluableDays": 1158
+    },
+    {
+      "code": "002837",
+      "name": "英维克",
+      "node": "POWER",
+      "benchmark": "sh000001",
+      "turns": [
+        {
+          "code": "002837",
+          "name": "英维克",
+          "reportDate": "2020-09-30",
+          "noticeDate": "2020-10-27",
+          "hit": true,
+          "signalDate": "2020-07-21",
+          "leadToNotice": 64,
+          "leadToPeriodEnd": 51
+        },
+        {
+          "code": "002837",
+          "name": "英维克",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-26",
+          "hit": true,
+          "signalDate": "2021-07-01",
+          "leadToNotice": 76,
+          "leadToPeriodEnd": 63
+        },
+        {
+          "code": "002837",
+          "name": "英维克",
+          "reportDate": "2023-12-31",
+          "noticeDate": "2024-04-16",
+          "hit": true,
+          "signalDate": "2023-07-20",
+          "leadToNotice": 178,
+          "leadToPeriodEnd": 111
+        },
+        {
+          "code": "002837",
+          "name": "英维克",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-22",
+          "hit": true,
+          "signalDate": "2025-03-31",
+          "leadToNotice": 15,
+          "leadToPeriodEnd": -57
+        },
+        {
+          "code": "002837",
+          "name": "英维克",
+          "reportDate": "2026-03-31",
+          "noticeDate": "2026-04-21",
+          "hit": true,
+          "signalDate": "2026-03-27",
+          "leadToNotice": 16,
+          "leadToPeriodEnd": 2
+        }
+      ],
+      "skippedTurns": 3,
+      "coverage": 1,
+      "evaluableDays": 1635
+    },
+    {
+      "code": "300476",
+      "name": "胜宏科技",
+      "node": "PCB",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2020-12-31",
+          "noticeDate": "2021-03-31",
+          "hit": true,
+          "signalDate": "2020-12-25",
+          "leadToNotice": 62,
+          "leadToPeriodEnd": 4
+        },
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2021-12-31",
+          "noticeDate": "2022-04-28",
+          "hit": true,
+          "signalDate": "2022-01-28",
+          "leadToNotice": 57,
+          "leadToPeriodEnd": -19
+        },
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2022-09-30",
+          "noticeDate": "2022-10-27",
+          "hit": true,
+          "signalDate": "2022-01-28",
+          "leadToNotice": 177,
+          "leadToPeriodEnd": 163
+        },
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-28",
+          "hit": false,
+          "signalDate": null,
+          "leadToNotice": null,
+          "leadToPeriodEnd": null
+        },
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2023-12-31",
+          "noticeDate": "2024-04-19",
+          "hit": true,
+          "signalDate": "2023-08-22",
+          "leadToNotice": 158,
+          "leadToPeriodEnd": 88
+        },
+        {
+          "code": "300476",
+          "name": "胜宏科技",
+          "reportDate": "2026-06-30",
+          "noticeDate": "2026-08-28",
+          "hit": true,
+          "signalDate": "2026-07-07",
+          "leadToNotice": 38,
+          "leadToPeriodEnd": -5
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.9645476772616137,
+      "evaluableDays": 1636
+    },
+    {
+      "code": "300604",
+      "name": "长川科技",
+      "node": "SEMI_EQUIP",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "300604",
+          "name": "长川科技",
+          "reportDate": "2023-03-31",
+          "noticeDate": "2023-04-28",
+          "hit": true,
+          "signalDate": "2022-11-10",
+          "leadToNotice": 114,
+          "leadToPeriodEnd": 95
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.8996923076923077,
+      "evaluableDays": 1625
+    },
+    {
+      "code": "688676",
+      "name": "金盘科技",
+      "node": "POWER",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "688676",
+          "name": "金盘科技",
+          "reportDate": "2024-06-30",
+          "noticeDate": "2024-08-10",
+          "hit": true,
+          "signalDate": "2024-07-10",
+          "leadToNotice": 23,
+          "leadToPeriodEnd": -7
+        },
+        {
+          "code": "688676",
+          "name": "金盘科技",
+          "reportDate": "2025-03-31",
+          "noticeDate": "2025-04-24",
+          "hit": true,
+          "signalDate": "2025-03-28",
+          "leadToNotice": 18,
+          "leadToPeriodEnd": 1
+        },
+        {
+          "code": "688676",
+          "name": "金盘科技",
+          "reportDate": "2025-12-31",
+          "noticeDate": "2026-03-21",
+          "hit": true,
+          "signalDate": "2026-03-19",
+          "leadToNotice": 2,
+          "leadToPeriodEnd": -48
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 1,
+      "evaluableDays": 1029
+    },
+    {
+      "code": "002335",
+      "name": "科华数据",
+      "node": "POWER",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "002335",
+          "name": "科华数据",
+          "reportDate": "2020-03-31",
+          "noticeDate": "2020-04-30",
+          "hit": true,
+          "signalDate": "2019-10-17",
+          "leadToNotice": 132,
+          "leadToPeriodEnd": 111
+        },
+        {
+          "code": "002335",
+          "name": "科华数据",
+          "reportDate": "2021-09-30",
+          "noticeDate": "2021-10-30",
+          "hit": true,
+          "signalDate": "2021-01-26",
+          "leadToNotice": 182,
+          "leadToPeriodEnd": 165
+        },
+        {
+          "code": "002335",
+          "name": "科华数据",
+          "reportDate": "2022-12-31",
+          "noticeDate": "2023-04-29",
+          "hit": true,
+          "signalDate": "2023-01-19",
+          "leadToNotice": 66,
+          "leadToPeriodEnd": -12
+        },
+        {
+          "code": "002335",
+          "name": "科华数据",
+          "reportDate": "2024-03-31",
+          "noticeDate": "2024-04-26",
+          "hit": true,
+          "signalDate": "2024-04-25",
+          "leadToNotice": 1,
+          "leadToPeriodEnd": -16
+        }
+      ],
+      "skippedTurns": 9,
+      "coverage": 0.96760391198044,
+      "evaluableDays": 1636
+    },
+    {
+      "code": "301086",
+      "name": "鸿富瀚",
+      "node": "POWER",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "301086",
+          "name": "鸿富瀚",
+          "reportDate": "2023-06-30",
+          "noticeDate": "2023-08-30",
+          "hit": true,
+          "signalDate": "2023-08-15",
+          "leadToNotice": 11,
+          "leadToPeriodEnd": -32
+        },
+        {
+          "code": "301086",
+          "name": "鸿富瀚",
+          "reportDate": "2024-12-31",
+          "noticeDate": "2025-04-29",
+          "hit": true,
+          "signalDate": "2025-01-17",
+          "leadToNotice": 65,
+          "leadToPeriodEnd": -12
+        }
+      ],
+      "skippedTurns": 1,
+      "coverage": 0.875,
+      "evaluableDays": 880
+    },
+    {
+      "code": "300499",
+      "name": "高澜股份",
+      "node": "POWER",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "300499",
+          "name": "高澜股份",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-07",
+          "hit": true,
+          "signalDate": "2020-08-07",
+          "leadToNotice": 244,
+          "leadToPeriodEnd": 216
+        },
+        {
+          "code": "300499",
+          "name": "高澜股份",
+          "reportDate": "2021-12-31",
+          "noticeDate": "2022-04-21",
+          "hit": true,
+          "signalDate": "2022-01-18",
+          "leadToNotice": 60,
+          "leadToPeriodEnd": -11
+        },
+        {
+          "code": "300499",
+          "name": "高澜股份",
+          "reportDate": "2022-06-30",
+          "noticeDate": "2022-08-27",
+          "hit": true,
+          "signalDate": "2022-01-18",
+          "leadToNotice": 148,
+          "leadToPeriodEnd": 106
+        },
+        {
+          "code": "300499",
+          "name": "高澜股份",
+          "reportDate": "2024-06-30",
+          "noticeDate": "2024-08-23",
+          "hit": true,
+          "signalDate": "2024-05-31",
+          "leadToNotice": 59,
+          "leadToPeriodEnd": 20
+        }
+      ],
+      "skippedTurns": 4,
+      "coverage": 0.9382640586797066,
+      "evaluableDays": 1636
+    },
+    {
+      "code": "002600",
+      "name": "领益智造",
+      "node": "POWER",
+      "benchmark": "sh000300",
+      "turns": [
+        {
+          "code": "002600",
+          "name": "领益智造",
+          "reportDate": "2019-12-31",
+          "noticeDate": "2020-04-30",
+          "hit": true,
+          "signalDate": "2020-03-09",
+          "leadToNotice": 37,
+          "leadToPeriodEnd": -42
+        },
+        {
+          "code": "002600",
+          "name": "领益智造",
+          "reportDate": "2020-06-30",
+          "noticeDate": "2020-07-31",
+          "hit": true,
+          "signalDate": "2020-03-09",
+          "leadToNotice": 98,
+          "leadToPeriodEnd": 75
+        },
+        {
+          "code": "002600",
+          "name": "领益智造",
+          "reportDate": "2021-06-30",
+          "noticeDate": "2021-08-27",
+          "hit": true,
+          "signalDate": "2020-12-30",
+          "leadToNotice": 161,
+          "leadToPeriodEnd": 119
+        },
+        {
+          "code": "002600",
+          "name": "领益智造",
+          "reportDate": "2021-12-31",
+          "noticeDate": "2022-04-08",
+          "hit": true,
+          "signalDate": "2022-01-25",
+          "leadToNotice": 46,
+          "leadToPeriodEnd": -16
+        },
+        {
+          "code": "002600",
+          "name": "领益智造",
+          "reportDate": "2023-09-30",
+          "noticeDate": "2023-10-28",
+          "hit": true,
+          "signalDate": "2023-08-14",
+          "leadToNotice": 49,
+          "leadToPeriodEnd": 34
+        },
+        {
+          "code": "002600",
+          "name": "领益智造",
+          "reportDate": "2025-12-31",
+          "noticeDate": "2026-03-28",
+          "hit": true,
+          "signalDate": "2026-01-29",
+          "leadToNotice": 36,
+          "leadToPeriodEnd": -19
+        }
+      ],
+      "skippedTurns": 3,
+      "coverage": 0.9944987775061125,
+      "evaluableDays": 1636
+    }
+  ],
+  "skipped": [],
+  "declaresRule": false,
+  "producesAction": false
+}
