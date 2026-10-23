@@ -37,7 +37,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     {
       key: '/money',
       icon: <FundOutlined />,
-      label: '资金驾驶舱',
+      label: '资金哨兵',
     },
     {
       key: '/daily',
