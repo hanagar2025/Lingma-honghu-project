@@ -28,3 +28,4 @@ date,session,trigger,planned,started,delay_min,card_step,pushed,run_id
 2026-10-22,intra,schedule,13:30,2026-10-22 13:37:51,8,success,1,39729112988
 2026-10-22,post,schedule,15:40,2026-10-22 15:49:59,10,success,1,39743269761
 2026-10-23,pre,schedule,07:00,2026-10-23 07:11:22,11,success,1,39870120854
+2026-10-23,intra,schedule,13:30,2026-10-23 13:37:39,8,success,1,39906795879
