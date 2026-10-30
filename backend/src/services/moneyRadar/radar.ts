@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 装配层
+ * 资金哨兵（R-01）· 装配层
  *
  * 把三个入口的对象、指标、状态、背离、迁移和国家队温度计装成一份视图，
  * 供 CLI / 网页渲染。视图的最高输出是"复核顺序"：按类别排，不打分。
@@ -9,8 +9,10 @@
 import type { EvidenceTier } from '../cockpit/types'
 import { findMember } from '../msr/universe'
 import {
-  THRESHOLDS, WATCHLIST, NATIONAL_TEAM_ETFS, NATIONAL_TEAM_VERIFIED, INDUSTRY_TAXONOMY,
-  basketObjects, basketOf, holdingCodes, stockObject,
+  THRESHOLDS, WATCHLIST, LEFT_RADAR, LEFT_RADAR_CONFIRMED_ON, WATCHLIST_CONFIRMED_ON,
+  NATIONAL_TEAM_ETFS, NATIONAL_TEAM_VERIFIED, INDUSTRY_TAXONOMY,
+  LEFT_RADAR_LOCK, RADAR_SCOPE_TEXT,
+  basketObjects, basketOf, holdingCodes, radarBasketObjects, radarLockOf, stockObject, watchlistAll,
 } from './config'
 import { computeMetrics, rawSeries, rollingMean, quantile, type DayMetrics, type Num } from './metrics'
 import { PROVIDER_CANDIDATES, ROUTING, anyRealProviderWired } from './providers'
@@ -24,13 +26,15 @@ import { ENTRY_TEXT, type DataSet, type EntryNo, type MoneyObject } from './type
 const TIER: EvidenceTier = 'OBSERVATION'
 
 export const MONEY_COCKPIT_ID = 'R-01'
-export const MONEY_COCKPIT_TITLE = '鸿鹄·资金驾驶舱'
+export const MONEY_COCKPIT_TITLE = '鸿鹄·资金哨兵'
 
 export function moneyGrantsPermission(): false { return false }
 export function moneyProducesAction(): false { return false }
 export function usesEstimatedMoneyFlow(): false { return false }
 export function nationalTeamIsMainline(): false { return false }
 export function divergenceIsSellOrder(): false { return false }
+/** 左侧雷达只观察：任何资金状态（含「爆发」）都不能让它进入备选、建仓申请或执行单 */
+export function radarGrantsBuild(): false { return false }
 
 /** 复核顺序的类别。按固定顺序排，不打分 */
 export type ReviewClass =
@@ -96,6 +100,8 @@ export interface ObjectView {
   entry: EntryNo
   standing: Standing | null
   basket: string | null
+  /** 权限锁（左侧雷达个股与方向篮子）：只观察，不具备建仓权限 + 战略冻结期。null = 无锁 */
+  permissionLock: string | null
   dataStatus: 'OK' | 'NOT_WIRED' | 'INSUFFICIENT'
   state: MoneyState | null
   stateText: string
@@ -230,7 +236,7 @@ function viewOf(
   const standing = obj.kind === 'STOCK' ? standingOf(obj.codes[0]!) : null
   const basket = obj.kind === 'STOCK' ? basketOf(obj.codes[0]!) : null
   const empty: ObjectView = {
-    id: obj.id, name: obj.name, kind: obj.kind, entry: obj.entry, standing, basket,
+    id: obj.id, name: obj.name, kind: obj.kind, entry: obj.entry, standing, basket, permissionLock: radarLockOf(obj),
     dataStatus: 'NOT_WIRED', state: null, stateText: '数据源未接入', stateSince: null, stateDays: null, stateLongestDays: null, pending: null,
     persist: null, maxPersistBefore: null, level20Yi: null, base20Yi: null, excessDailyYi: null,
     dev5: null, dev20: null, ret20: null,
@@ -305,15 +311,19 @@ export function entryObjects(industries: readonly EntryObj[] = []): Record<Entry
   const holdings = holdingCodes()
   const baskets = basketObjects()
   const heldBaskets = new Set(holdings.map(h => basketOf(h.code)).filter((x): x is string => x !== null))
-  const watchBaskets = new Set(WATCHLIST.map(w => basketOf(w.code)).filter((x): x is string => x !== null))
+  const heldCodes = new Set(holdings.map(h => h.code))
+  // 观察股一旦买入即归入口①，不在两个入口重复计入
+  const watching = watchlistAll().filter(w => !heldCodes.has(w.code))
+  const watchBaskets = new Set(watching.map(w => basketOf(w.code)).filter((x): x is string => x !== null))
 
   const e1: EntryObj[] = [
     ...holdings.map(h => stockObject(h.code, h.name, 1) as EntryObj),
     ...baskets.filter(b => heldBaskets.has(b.id)).map(b => ({ ...b, entry: 1 as const })),
   ]
   const e2: EntryObj[] = [
-    ...WATCHLIST.map(w => stockObject(w.code, w.name, 2) as EntryObj),
+    ...watching.map(w => stockObject(w.code, w.name, 2) as EntryObj),
     ...baskets.filter(b => watchBaskets.has(b.id) && !heldBaskets.has(b.id)).map(b => ({ ...b, entry: 2 as const })),
+    ...radarBasketObjects(2).map(b => ({ ...b, entry: 2 as const })),
   ]
   return { 1: e1, 2: e2, 3: [...industries] }
 }
@@ -357,7 +367,15 @@ export interface MoneyCockpitView {
   asOf: string | null
   dataMode: 'NOT_WIRED' | 'FIXTURE' | 'LIVE'
   entries: EntryView[]
-  reviewQueue: { id: string; name: string; entry: EntryNo; reviewClass: ReviewClass; text: string }[]
+  reviewQueue: { id: string; name: string; entry: EntryNo; reviewClass: ReviewClass; text: string; permissionLock: string | null }[]
+  /** 左侧雷达权限锁（委员会 2026-10-16 裁定三）。releasedBy 恒为 null：解除只能来自正式战略评审 */
+  radarLock: {
+    label: typeof LEFT_RADAR_LOCK.label
+    freeze: typeof LEFT_RADAR_LOCK.freeze
+    signalEffect: typeof LEFT_RADAR_LOCK.signalEffect
+    releasedBy: null
+    groups: { name: string; scope: string; codes: string[] }[]
+  }
   /**
    * 成交额份额迁移（不是净资金流向）。confirmation 是 A2 证据等级：CONFIRMED / CONFLICT / INFERRED；
    * fromA2Yi / toA2Yi 是两端 A2 净方向（融资 10 日变化 + ETF 10 日净申赎，亿元），null = 该端无 A2 数据
@@ -389,11 +407,12 @@ export interface MoneyCockpitView {
 }
 
 export const R01_DOES_NOT_IMPLY = [
-  '不意味着资金驾驶舱可以直接产生买卖动作',
+  '不意味着资金哨兵可以直接产生买卖动作',
   '不意味着 C 级估算数据（主力净流入）可以进入判定',
   '不意味着"爆发"是买点，也不意味着"背离"已经是卖出令',
   '不意味着国家队资金是一条主线',
   '不意味着不在册股票可以因为资金集中而进入候选',
+  '不意味着左侧雷达个股可以因为任何资金状态（含「爆发」）进入备选池、建仓申请或执行单；资金信号只改变研究优先级',
   '不意味着 Capital Permission 会因为资金信号而打开',
   '不改 V4.x，不改决策规则。本层不发令',
 ] as const
@@ -452,7 +471,9 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
       objects: views,
       note: e === 3
         ? `行业骨架：${INDUSTRY_TAXONOMY.standard} 二级（官方 ${INDUSTRY_TAXONOMY.expectedCount} 个，可得 ${views.length} 个）。按超额资金排序，只排序不打分`
-        : e === 2 ? '观察仓 7 只（委员会 2026-09-23 确认）+ 所在主线篮子' : '持仓 8 只（读自账本）+ 所在主线篮子',
+        : e === 2
+          ? `观察仓 ${WATCHLIST.length} 只（委员会 ${WATCHLIST_CONFIRMED_ON} 确认）+ 左侧雷达 ${LEFT_RADAR.length} 个方向 ${LEFT_RADAR.reduce((n, g) => n + g.members.length, 0)} 只（${LEFT_RADAR_CONFIRMED_ON} 确认，重复的只算一次），已持有的归入口①；另含所在主线篮子与左侧雷达方向篮子`
+          : `持仓 ${holdingCodes().length} 只（读自账本）+ 所在主线篮子`,
     }
   })
 
@@ -462,7 +483,7 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
   const e3Serious = all.filter(v => v.entry === 3 && (v.reviewClass === 'DIVERGENCE' || v.reviewClass === 'RETREAT')).slice(0, 5)
   const reviewQueue = [...all.filter(v => v.entry !== 3 && v.reviewClass !== 'WATCH'), ...e3Serious]
     .sort((a, b) => REVIEW_ORDER.indexOf(a.reviewClass) - REVIEW_ORDER.indexOf(b.reviewClass) || a.entry - b.entry)
-    .map(v => ({ id: v.id, name: v.name, entry: v.entry, reviewClass: v.reviewClass, text: REVIEW_TEXT[v.reviewClass] }))
+    .map(v => ({ id: v.id, name: v.name, entry: v.entry, reviewClass: v.reviewClass, text: REVIEW_TEXT[v.reviewClass], permissionLock: v.permissionLock }))
 
   const migrations: MoneyCockpitView['migrations'] = []
   let entryShares: EntryShareSeries | null = null
@@ -586,6 +607,13 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
     dataMode: ds ? mode : 'NOT_WIRED',
     entries,
     reviewQueue,
+    radarLock: {
+      label: LEFT_RADAR_LOCK.label,
+      freeze: LEFT_RADAR_LOCK.freeze,
+      signalEffect: LEFT_RADAR_LOCK.signalEffect,
+      releasedBy: LEFT_RADAR_LOCK.releasedBy,
+      groups: LEFT_RADAR.map(g => ({ name: g.name, scope: RADAR_SCOPE_TEXT[g.scope], codes: g.members.map(m => m.code) })),
+    },
     migrations,
     entryShares,
     market,
@@ -612,6 +640,7 @@ export function buildMoneyCockpitView(ds: DataSet | null, mode: 'FIXTURE' | 'LIV
       usesEstimatedMoneyFlow: usesEstimatedMoneyFlow(),
       nationalTeamIsMainline: nationalTeamIsMainline(),
       divergenceIsSellOrder: divergenceIsSellOrder(),
+      radarGrantsBuild: radarGrantsBuild(),
       realProviderWired: mode === 'LIVE' && !!ds ? true : anyRealProviderWired(),
       thresholdsFrozen: THRESHOLDS.status === 'FROZEN',
     },
@@ -639,12 +668,16 @@ export function renderMoneyCockpit(v: MoneyCockpitView, entry3Limit = 15): strin
 
   L.push('  ── 复核顺序（按类别，不打分）──')
   if (!v.reviewQueue.length) L.push(v.dataMode === 'NOT_WIRED' ? '  数据源未接入，无复核项。' : '  无需优先复核的对象。')
-  v.reviewQueue.slice(0, 20).forEach((r, i) => L.push(`  ${i + 1}. [${ENTRY_TEXT[r.entry]}] ${r.name}　${r.text}`))
+  v.reviewQueue.slice(0, 20).forEach((r, i) => L.push(`  ${i + 1}. [${ENTRY_TEXT[r.entry]}] ${r.name}　${r.text}${r.permissionLock ? `　【${v.radarLock.label}】` : ''}`))
   L.push('')
 
   for (const e of v.entries) {
     const rows = e.entry === 3 ? e.objects.slice(0, entry3Limit) : e.objects
     L.push(`  ── ${e.title}（${e.objects.length}）── ${e.note}`)
+    if (e.objects.some(o => o.permissionLock)) {
+      L.push(`  左侧雷达权限锁：${v.radarLock.label}｜${v.radarLock.freeze}`)
+      L.push(`  ${v.radarLock.signalEffect}；即使「爆发」也只出观察状态或复核提示，不进备选池、建仓申请或执行单`)
+    }
     for (const o of rows) {
       const stand = o.standing ? `　${o.standing}` : ''
       const lvl = o.level20Yi === null ? '—' : `${o.level20Yi.toFixed(1)}`
@@ -652,6 +685,7 @@ export function renderMoneyCockpit(v: MoneyCockpitView, entry3Limit = 15): strin
       L.push(`  ${o.name.padEnd(12)}${o.stateText.padEnd(12)}20日均成交额 ${lvl}/水位 ${bl} 亿`.padEnd(46)
         + `日均超额 ${yi(o.excessDailyYi).padEnd(11)}持续 ${o.persist ?? '—'}/${o.maxPersistBefore ?? '—'}　`
         + `5日偏离 ${pct(o.dev5)}　20日涨幅 ${pct(o.ret20)}${stand}`)
+      if (o.permissionLock) L.push(`      权限：${o.permissionLock}`)
       if (o.divergence && o.divergence !== 'NONE') {
         L.push(`      背离判定：${o.divergence}　${o.divergenceDetail.join('；')}`)
       }

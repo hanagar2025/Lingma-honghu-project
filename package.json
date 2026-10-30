@@ -28,6 +28,7 @@
     "web:status": "node scripts/check-live.mjs",
     "ship": "./scripts/ship.sh",
     "reaudit": "cd backend && npx tsx reaudit.ts",
+    "decision": "cd backend && npm run decision:daily",
     "money": "cd backend && npm run money",
     "money:web": "npm run money && npm run dev:money --workspace frontend",
     "money:publish": "cd backend && npm run money:publish -- --push"

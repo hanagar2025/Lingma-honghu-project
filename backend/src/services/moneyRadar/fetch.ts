@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 公开数据抓取
+ * 资金哨兵（R-01）· 公开数据抓取
  *
  * 2026-09-23 在本系统运行环境实测可用的来源：
  *
@@ -54,7 +54,7 @@ async function httpText(url: string, headers: Record<string, string> = {}, retri
       return await res.text()
     } catch (e) {
       last = e
-      await sleep(500 * 2 ** i)
+      await sleep(500 * Math.pow(2, i))
     } finally {
       clearTimeout(timer)
     }
@@ -77,7 +77,7 @@ async function httpBuffer(url: string, headers: Record<string, string> = {}, ret
       return await res.arrayBuffer()
     } catch (e) {
       last = e
-      await sleep(500 * 2 ** i)
+      await sleep(500 * Math.pow(2, i))
     } finally {
       clearTimeout(timer)
     }

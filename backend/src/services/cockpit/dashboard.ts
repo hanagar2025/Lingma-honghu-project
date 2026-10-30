@@ -29,7 +29,7 @@ import type { MainlineHealth } from '../msr/health'
 import type { ValuationInjection } from '../msr/valuation'
 import type { ProfitMap, NodeProfit } from '../research/profitRadar'
 import { nodeOf } from './nodes'
-import { judgeCircuit } from '../governance/peakBasis'
+import { ACTIVE_PEAK_BASIS, judgeCircuit } from '../governance/peakBasis'
 import type { MomentumRow } from './momentum'
 import type { Action, EvidenceTier, Light, Metric } from './types'
 
@@ -381,6 +381,8 @@ export interface DashboardInput {
     peakBasis: 'BROKER' | 'PORTFOLIO'
     /** 组合口径峰值。peakBasis 非 PORTFOLIO 时忽略 */
     peak?: number
+    /** false = 峰值待账本核验，组合层降仓暂不进入必须执行 */
+    peakVerified?: boolean
   }
   barsByCode: Record<string, DailyBar[]>
   indexBarsByCode: Record<string, DailyBar[]>
@@ -730,8 +732,11 @@ export function buildDashboard(input: DashboardInput): Dashboard {
   // 后者意味着"已检查，没问题"，前者意味着"无法检查" —— 混淆两者
   // 等于在风控开关坏掉时亮一盏绿灯。
   const bd = input.assetBreakdown
+  // 状态与下方回撤数字必须同一个峰值，否则账本峰值与代码常量一旦不同，灯与数字互相矛盾。
   const circuit = bd?.peakBasis === 'PORTFOLIO'
-    ? judgeCircuit(portfolioTotal)
+    ? judgeCircuit(portfolioTotal, bd.peak
+      ? [{ basis: ACTIVE_PEAK_BASIS, peak: bd.peak, peakDate: null, reliableFrom: null, note: '' }]
+      : undefined)
     : {
       state: 'INCOMPARABLE' as const,
       reason: '净值峰值仍记于券商账户口径，与组合口径不可比 →'
@@ -782,7 +787,11 @@ export function buildDashboard(input: DashboardInput): Dashboard {
           : `${assets.circuitState === 'LEVEL1' ? '一级' : '二级'}成立`
             + `　回撤 ${assets.drawdown === null ? '?' : (assets.drawdown * 100).toFixed(1)}%`
             + `　股票占比须 ≤ ${equityCap === null ? '?' : (equityCap * 100).toFixed(0)}%`
-            + (circuitExcess ? `　须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万` : ''),
+            + (circuitExcess
+              ? (bd?.peakVerified === false
+                ? `　待账本核验：若峰值属实须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万（暂不执行、不撤销）`
+                : `　须降敞口约 ${(circuitExcess / 10000).toFixed(1)}万`)
+              : ''),
       light: assets.circuitState === 'INCOMPARABLE' ? 'UNKNOWN'
         : assets.circuitState === 'NORMAL' ? 'GREEN' : 'RED',
       canGenerateActions: true,
