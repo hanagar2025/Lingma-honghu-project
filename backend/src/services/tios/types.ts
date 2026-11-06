@@ -72,6 +72,12 @@ export interface AccountSnapshot {
   peakAssets: number
   /** 峰值所属口径。'BROKER' 表示尚未按组合口径重新认定 */
   peakBasis: 'BROKER' | 'PORTFOLIO'
+  /**
+   * 峰值是否已由券商资产记录与资金流水核实。缺省视为已核实（取严）。
+   * false 时熔断级别与只卖不买照常生效，但组合层强制降仓不进入"必须执行"，
+   * 记为"熔断触发待账本核验"（委员会 2026-10-10）：不执行，也不撤销。
+   */
+  peakVerified?: boolean
 }
 
 export interface RuleCard {

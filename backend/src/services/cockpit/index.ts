@@ -141,6 +141,18 @@ function evaluateNewCores(msr: MsrReport, asOf: string): { answer: Answer; top: 
   }
 }
 
+/**
+ * 卖回上限所需股数。必须向上取整：向下取整会让卖完仍超限
+ * （海光 10/9：超出 1002.7 股，取 1000 股后仍为 12.02%）。
+ * 科创板单笔不少于 200 股、其上可按 1 股递增；其余板块按 100 股一手；卖出量超过持仓时清仓（零股可一次卖出）。
+ */
+export function sharesToClearExcess(code: string, excessValue: number, px: number, held: number | null): number {
+  const raw = Math.ceil(excessValue / px - 1e-9)
+  const star = code.startsWith('688') || code.startsWith('689')
+  const lot = star ? Math.max(raw, 200) : Math.ceil(raw / 100) * 100
+  return held !== null && lot > held ? held : lot
+}
+
 /** 第⑤问：今天有没有真正可以执行的动作？ */
 function evaluateActions(
   input: CockpitInput, momentumRows: MomentumRow[], msr: MsrReport, asOf: string
@@ -155,7 +167,9 @@ function evaluateActions(
   // ── 减仓：只由账务事实产生 ──
   for (const b of breaches) {
     const px = input.barsByCode[b.code]?.slice(-1)[0]?.close ?? null
-    const shares = px && px > 0 ? Math.floor(b.excessValue / px / 100) * 100 : null
+    const mv = input.positions.find(p => p.code === b.code)?.marketValue ?? null
+    const held = px && px > 0 && mv !== null ? Math.round(mv / px) : null
+    const shares = px && px > 0 ? sharesToClearExcess(b.code, b.excessValue, px, held) : null
     actions.push(makeAction({
       code: b.code, name: b.name, kind: 'REDUCE', reason: 'POSITION_LIMIT',
       reasonDetail:
@@ -172,7 +186,7 @@ function evaluateActions(
         value: shares,
         note: shares === null
           ? '缺当前价，无法换算股数'
-          : `${wanStr(b.excessValue)} ÷ ${px!.toFixed(2)}元 ≈ ${shares}股（向下取整至100股）`,
+          : `${wanStr(b.excessValue)} ÷ ${px!.toFixed(2)}元 → ${shares}股（向上取整至可成交数量，卖后不再超限；下单前按成交价重算）`,
       },
       metrics: [{
         label: '当前仓位占比', value: b.currentPct, display: pctStr(b.currentPct),
@@ -192,7 +206,7 @@ function evaluateActions(
   const dd = circuit.drawdown
   const capByDd = circuit.equityCap
   const posPct = total > 0 ? input.snapshot.positionsValue / total : null
-  if (capByDd !== null && posPct !== null && posPct > capByDd) {
+  if (capByDd !== null && posPct !== null && posPct > capByDd && input.snapshot.peakVerified !== false) {
     const need = (posPct - capByDd) * total
     actions.push(makeAction({
       code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER',
@@ -362,6 +376,15 @@ export function runCockpit(input: CockpitInput): CockpitReport {
     dataGaps.push('家庭年度刚性支出未提供 → 安全垫无法判定')
   }
   if (input.snapshot.peakAssets <= 0) dataGaps.push('account_state.peak_assets 缺失 → 回撤与熔断线无法判定')
+  else if (input.snapshot.peakVerified === false) {
+    const c = computeCircuit(input.snapshot)
+    if (c.equityCap !== null) {
+      dataGaps.push(
+        `熔断触发待账本核验：按峰值 ${wanStr(input.snapshot.peakAssets)} 回撤 ${pctStr(c.drawdown)}，`
+        + `股票上限 ${pctStr(c.equityCap)}${c.sellOnly ? '、只卖不买' : ''}。`
+        + '组合层强制降仓暂不执行、也不撤销；峰值经券商资产记录与资金流水核实后按同一公式重算')
+    }
+  }
 
   // 第②问
   const momentum = evaluateMomentum({

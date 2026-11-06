@@ -309,7 +309,10 @@ export function evaluateSafety(input: SafetyInput): Answer {
     label: '组合回撤/熔断', status: dd === null ? '数据缺失'
       : `${pctStr(dd)}${capByDd !== null ? ` → 仓位上限${pctStr(capByDd)}${dd >= LIMITS.circuitLevel2 ? '且只卖不买' : ''}` : ''}`,
     light: ddLight,
-    decision: capByDd !== null ? '强制降仓（法定理由：熔断风险预算）'
+    decision: capByDd !== null
+      ? (snapshot.peakVerified === false
+        ? '熔断触发待账本核验：只卖不买等约束照常，组合层强制降仓暂不执行、不撤销'
+        : '强制降仓（法定理由：熔断风险预算）')
       : ddLight === 'YELLOW' ? '不再扩仓' : '正常',
     metrics: [mDd],
   })
@@ -326,7 +329,10 @@ export function evaluateSafety(input: SafetyInput): Answer {
     label: '仓位是否超熔断上限', status: capByDd === null ? `无熔断上限约束（当前${pctStr(posPct)}）`
       : `${pctStr(posPct)} vs 上限${pctStr(capByDd)}${capOver ? ' → 超限' : ''}`,
     light: capOver ? 'RED' : 'GREEN',
-    decision: capOver ? `须卖出约 ${wanStr((posPct! - capByDd!) * portfolioTotal)}（法定理由：熔断风险预算）` : '正常',
+    decision: !capOver ? '正常'
+      : snapshot.peakVerified === false
+        ? `待账本核验：若峰值属实须卖出约 ${wanStr((posPct! - capByDd!) * portfolioTotal)}`
+        : `须卖出约 ${wanStr((posPct! - capByDd!) * portfolioTotal)}（法定理由：熔断风险预算）`,
     metrics: [mPos],
   })
 
