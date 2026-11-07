@@ -1,0 +1,39 @@
+{
+  "id": "J-YYYY-MM-DD-01",
+  "kind": "JUDGMENT",
+  "version": "V1.0",
+  "recordedAt": "落档时自动取当前时刻，此处填什么都会被覆盖",
+  "recordedBy": "投资委员会（研判人）",
+  "package": {
+    "file": "share/cycle/packages/YYYY-MM-DD.json",
+    "sha256": "从 share/cycle/index.json 抄该证据包的 sha256",
+    "asOf": "YYYY-MM-DD"
+  },
+  "currentJudgment": "一、当前判断：市场或具体产业节点正在发生什么变化",
+  "evidence": {
+    "supporting": [{ "evidenceId": "例如 L3-04:300308", "reading": "这条证据为什么支持当前判断" }],
+    "opposing": [{ "evidenceId": "例如 L4-02:300308:60", "reading": "这条证据为什么反驳当前判断" }],
+    "noise": [{ "evidenceId": "例如 F-20261017-03", "reading": "为什么判为噪声或不适用本节点" }],
+    "missingConsidered": ["例如 L3-10:OPTICAL"]
+  },
+  "nodes": [
+    { "node": "OPTICAL", "state": "UNDETERMINABLE", "reason": "理由；给出 C0–C3 时必须引用证据编号", "evidenceIds": [] },
+    { "node": "PCB", "state": "UNDETERMINABLE", "reason": "", "evidenceIds": [] },
+    { "node": "COMPUTE", "state": "UNDETERMINABLE", "reason": "", "evidenceIds": [] },
+    { "node": "SEMI_EQUIP", "state": "UNDETERMINABLE", "reason": "", "evidenceIds": [] },
+    { "node": "STORAGE", "state": "UNDETERMINABLE", "reason": "", "evidenceIds": [] },
+    { "node": "POWER", "state": "UNDETERMINABLE", "reason": "", "evidenceIds": [] }
+  ],
+  "confidence": { "level": "LOW", "reason": "四、置信度为什么是高、中、低或无法判断" },
+  "scenarios": [
+    { "name": "判断成立", "ifHolds": "接下来应该看到什么", "earliestFalsifier": "最早会出现什么反证" },
+    { "name": "判断错误", "ifHolds": "如果判断错了，接下来会看到什么", "earliestFalsifier": "最早什么数据能确认判断错了" }
+  ],
+  "review": { "conditions": ["六、哪些新数据会改变结论"], "date": "YYYY-MM-DD（必须晚于落档日）" },
+  "decisions": [
+    { "scope": "RESEARCH_ONLY", "rule": null, "text": "七、只供研究的建议，例如补哪项证据、提高哪个节点的复核优先级" },
+    { "scope": "EXISTING_AUTHORIZED_PROCESS", "rule": "单票归位", "text": "只限 C级清退、单票归位、熔断；写明交由执行单按现行规则处理，不写股数，不写买入" }
+  ],
+  "verification": { "status": "PENDING", "due": "YYYY-MM-DD（不早于复核日期）" },
+  "producesAction": false
+}

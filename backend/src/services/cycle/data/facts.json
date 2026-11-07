@@ -1,0 +1,66 @@
+{
+  "id": "CY-01-FACTS",
+  "note": "委员会核实的事实与市场解读台账。只增不改：更正以新条目追加，并在 supersedes 写明被更正的编号。事实栏只写已核实的原始口径；报道里的「市场担忧」「分析师认为」写在解读栏，不进入任何经营或供需字段。",
+  "entries": [
+    {
+      "id": "F-20261017-01",
+      "recordedOn": "2026-10-17",
+      "recordedBy": "投资委员会 10/17 事实核验",
+      "eventDate": "2026-10-14",
+      "source": "ASML 2026 年三季度信息",
+      "sourceDate": "2026-10-14",
+      "url": null,
+      "layer": "L2",
+      "nodes": ["SEMI_EQUIP"],
+      "fact": "ASML 在 2026 年 10 月 14 日公布的三季度信息中表示，按现有规划，2027、2028 年产能可能仍无法完全满足客户需求。",
+      "interpretation": "AI 芯片相关设备需求可能持续超过供给至 2028 年（委员会转述的展望口径）。",
+      "cannotInfer": "不能推出所有 AI 硬件环节都供不应求，也不能证明供应商利润会持续增长。",
+      "status": "VERIFIED_FACT"
+    },
+    {
+      "id": "F-20261017-02",
+      "recordedOn": "2026-10-17",
+      "recordedBy": "投资委员会 10/17 事实核验",
+      "eventDate": "2026-10-16",
+      "source": "Reuters 报道（施耐德电气）",
+      "sourceDate": "2026-10-16",
+      "url": null,
+      "layer": "L2",
+      "nodes": ["POWER"],
+      "fact": "Reuters 于 10 月 16 日报道，施耐德上调 2026 年收入与调整后 EBITDA 增长目标，数据中心需求是重要驱动因素。",
+      "interpretation": null,
+      "cannotInfer": "不能直接外推至所有电力设备企业，更不能据此改变当前作战主线。",
+      "status": "VERIFIED_FACT"
+    },
+    {
+      "id": "F-20261017-03",
+      "recordedOn": "2026-10-17",
+      "recordedBy": "投资委员会 10/17 事实核验",
+      "eventDate": "2026-10-13",
+      "source": "公开报道（韩国股市）",
+      "sourceDate": "2026-10-13",
+      "url": null,
+      "layer": "L4",
+      "nodes": ["STORAGE"],
+      "fact": "10 月 13 日韩国股市出现显著下跌，存储芯片股承压。",
+      "interpretation": "报道提到中国长鑫存储的技术进展、竞争担忧和 AI 投资可持续性等因素（市场解读，不是已兑现的经营事实）。",
+      "cannotInfer": "不能据此确认中国存储技术已经大规模量产，也不能确认全球存储价格和利润已经见顶；不外推到光连接、PCB、设备或算力节点。",
+      "status": "VERIFIED_FACT"
+    },
+    {
+      "id": "F-20261017-04",
+      "recordedOn": "2026-10-17",
+      "recordedBy": "投资委员会 10/17 事实核验",
+      "eventDate": "2026-10-17",
+      "source": "两段视频观点（委员会 10/17 转述）",
+      "sourceDate": "2026-10-17",
+      "url": null,
+      "layer": "L4",
+      "nodes": null,
+      "fact": "当前检索结果不能证明「价格领先盈利约八个月」是稳定规律。",
+      "interpretation": "资本市场领先基本面约 8 个月。",
+      "cannotInfer": "不能据此倒推某个具体月份就是顶部；继续作为待检验假设，由模拟层领先期检验逐节点积累样本，不录入为既定事实。",
+      "status": "HYPOTHESIS"
+    }
+  ]
+}
