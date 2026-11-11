@@ -1,9 +1,9 @@
 /**
- * 每日执行单：跑驾驶舱导出决策输入 → 两源核对 → 出执行单 → 落盘 share/decision → 推送。
+ * 每日执行单：读账本、取持仓价格算出决策输入 → 两源核对 → 出执行单 → 落盘 share/decision → 推送。
  *
  * 运行：npm run decision:daily
  *   DECISION_SESSION=pre|intra|post  盘前 / 盘中复核 / 收盘后；缺省按北京时间判断
- *   DECISION_JSON=<路径>        用已有的决策输入，不重跑驾驶舱
+ *   DECISION_JSON=<路径>        用已有的决策输入，不读账本、不取行情
  *   NO_PUSH=1                  只落盘不推送
  *   FORCE=1                    周末与休市日也出单（调试用）
  *   DECISION_PUSHED_MARKER=<路径> 推送成功后写此文件，工作流据此判断是否还需补发失败告警
@@ -57,7 +57,7 @@ async function publish(card: DecisionCard, today: string, session: DecisionSessi
   const generatedAt = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 16).replace('T', ' ')
   const meta: CardMeta = { title: card.title, ok: card.ok, generatedAt }
   writeFileSync(join(DECISION_DIR, 'latest.json'), `${JSON.stringify(meta, null, 2)}\n`, 'utf-8')
-  writeFileSync(join(DECISION_DIR, 'latest.html'), renderSitePage(card.markdown, meta, null, process.env.DECISION_URL), 'utf-8')
+  writeFileSync(join(DECISION_DIR, 'latest.html'), renderSitePage(card.markdown, meta, process.env.DECISION_URL), 'utf-8')
   process.stdout.write(`\n${card.push}\n\n已写出 share/decision/${today}-${tag}.md、latest.md、latest.html、latest.json\n`)
 
   if (process.env.NO_PUSH === '1') return

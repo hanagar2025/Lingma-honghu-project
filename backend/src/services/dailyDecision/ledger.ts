@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-export const DEFAULT_LEDGER_FILE = join(HERE, '..', 'cockpit', 'data', 'portfolio.json')
+export const DEFAULT_LEDGER_FILE = join(HERE, 'data', 'portfolio.json')
 
 export interface LedgerPosition {
   code: string

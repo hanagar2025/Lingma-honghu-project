@@ -30,11 +30,23 @@ export async function fetchLastBar(code: string, doFetch: typeof fetch = fetch):
   return { date: last[0]!, close: Number(last[2]) }
 }
 
-export async function fetchLastBars(codes: readonly string[]): Promise<{ bars: Record<string, LastBar>; failed: string[] }> {
+/** 行情源偶尔会拒掉并发请求中的一两个。每只最多试 3 次，仍取不到才记为失败 */
+export async function fetchLastBars(
+  codes: readonly string[], opts: { doFetch?: typeof fetch; backoffMs?: number } = {},
+): Promise<{ bars: Record<string, LastBar>; failed: string[] }> {
   const bars: Record<string, LastBar> = {}
   const failed: string[] = []
+  const backoff = opts.backoffMs ?? 400
   await Promise.all(codes.map(async c => {
-    try { bars[c] = await fetchLastBar(c) } catch { failed.push(c) }
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        bars[c] = await fetchLastBar(c, opts.doFetch)
+        return
+      } catch {
+        if (attempt < 3) await new Promise(r => setTimeout(r, backoff * attempt))
+      }
+    }
+    failed.push(c)
   }))
   return { bars, failed }
 }

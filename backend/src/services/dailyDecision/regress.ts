@@ -16,11 +16,19 @@ import type { DecisionSession } from './types'
 import { MARKET_INDEX, sinaSymbol, verifyInput, type SinaRaw } from './verify'
 
 const REF = process.argv[2] ?? 'origin/cursor/account-snapshot-1009-c819'
-const LEDGER = 'backend/src/services/cockpit/data/portfolio.json'
+/** 账本在仓库里待过的位置，新的在前 */
+const LEDGER_PATHS = ['backend/src/services/dailyDecision/data/portfolio.json', 'backend/src/services/cockpit/data/portfolio.json']
 const ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf-8' }).trim()
 
 function git(...args: string[]): string {
-  return execFileSync('git', args, { encoding: 'utf-8', cwd: ROOT, maxBuffer: 64 * 1024 * 1024 })
+  return execFileSync('git', args, { encoding: 'utf-8', cwd: ROOT, maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
+}
+
+function ledgerAt(commit: string): LedgerFile | null {
+  for (const path of LEDGER_PATHS) {
+    try { return JSON.parse(git('show', `${commit}:${path}`)) as LedgerFile } catch { /* 这次提交里账本不在这个位置 */ }
+  }
+  return null
 }
 
 interface Parsed {
@@ -61,7 +69,8 @@ for (const file of files) {
   const parsed = parseCard(file, archived)
   if (typeof parsed === 'string') { skipped.push(`${file.slice(15)}：${parsed}`); continue }
 
-  const pf = JSON.parse(git('show', `${commit}:${LEDGER}`)) as LedgerFile
+  const pf = ledgerAt(commit)
+  if (!pf) { skipped.push(`${file.slice(15)}：那次提交里没有账本`); continue }
   if (pf.positions.some(p => p.quantity > 0 && parsed.prices[p.code] === undefined)) {
     skipped.push(`${file.slice(15)}：账本里有持仓不在核对明细中`)
     continue
