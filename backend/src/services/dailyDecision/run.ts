@@ -8,13 +8,12 @@
  *   FORCE=1                    周末与休市日也出单（调试用）
  *   DECISION_PUSHED_MARKER=<路径> 推送成功后写此文件，工作流据此判断是否还需补发失败告警
  */
-import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { beijingToday } from '../cockpit/renderObsidian'
 import { buildCard, buildFailureCard, type DecisionCard } from './card'
+import { buildDecisionInput, fetchLastBars } from './input'
+import { beijingToday, loadLedger } from './ledger'
 import { beijingMinutes, resolveSession } from './schedule'
 import { renderSitePage, type CardMeta } from './agentPack'
 import { configuredChannels, pushAll } from './notify'
@@ -36,21 +35,18 @@ function cardUrl(): string | undefined {
   return repo && ref ? `https://github.com/${repo}/blob/${ref}/share/decision/latest.md` : undefined
 }
 
-/** 驾驶舱在子进程里跑：它失败时仍要能推出一张「不下单」的执行单，而不是一声不响 */
-function exportDecisionInput(): { input: DecisionInput | null; error: string | null } {
-  const given = process.env.DECISION_JSON
-  const file = given ?? join(mkdtempSync(join(tmpdir(), 'hh-decision-')), 'input.json')
-  if (!given) {
-    const r = spawnSync(process.execPath, [...process.execArgv, join(HERE, '..', 'cockpit', 'run.ts')], {
-      cwd: BACKEND_ROOT,
-      env: { ...process.env, DECISION_JSON: file, DECISION_ONLY: '1', ARCHIVE: '0' },
-      stdio: ['ignore', 'inherit', 'inherit'],
-      timeout: 15 * 60_000,
-    })
-    if (r.status !== 0) return { input: null, error: `驾驶舱运行失败（退出码 ${r.status ?? r.signal}）` }
+/** 账本读不出时仍要能推出一张「不下单」的执行单，而不是一声不响 */
+async function loadDecisionInput(today: string): Promise<{ input: DecisionInput | null; error: string | null }> {
+  try {
+    if (process.env.DECISION_JSON) {
+      return { input: JSON.parse(readFileSync(process.env.DECISION_JSON, 'utf-8')) as DecisionInput, error: null }
+    }
+    const pf = loadLedger()
+    const { bars, failed } = await fetchLastBars(pf.positions.map(p => p.code))
+    return { input: buildDecisionInput(pf, bars, failed, today), error: null }
+  } catch (e) {
+    return { input: null, error: `账本或行情读取失败（${e instanceof Error ? e.message : String(e)}）` }
   }
-  if (!existsSync(file)) return { input: null, error: '驾驶舱未写出决策输入' }
-  return { input: JSON.parse(readFileSync(file, 'utf-8')) as DecisionInput, error: null }
 }
 
 async function publish(card: DecisionCard, today: string, session: DecisionSession): Promise<void> {
@@ -91,7 +87,7 @@ async function main(): Promise<void> {
     return
   }
 
-  const { input, error } = exportDecisionInput()
+  const { input, error } = await loadDecisionInput(today)
   if (!input) {
     await publish(buildFailureCard(today, error ?? '未知错误', cardUrl()), today, session)
     process.exitCode = 1

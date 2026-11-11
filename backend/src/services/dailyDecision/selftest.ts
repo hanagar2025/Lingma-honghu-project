@@ -2,19 +2,21 @@
  * 每日执行单自检。守四条：
  *   ① 数据核对不通过就不出股数（fail-closed）；
  *   ② 顺序固定：C 级清退 → 单票归位 → 熔断 → 新增投资；
- *   ③ 执行单不新增判定 —— 只排序驾驶舱动作与委员会已登记的指令；
- *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失。
+ *   ③ 执行单不新增判定 —— 只排序决策输入里的动作与委员会已登记的指令；
+ *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失；
+ *   ⑤ 决策输入只由账本和持仓价格算出，不依赖研究模块；主线外持仓只提示、不出指令。
  */
 import { buildAgentPack, demoteHeadings, renderSitePage } from './agentPack'
 import { buildCard, buildFailureCard, SYSTEM_NAME } from './card'
 import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { CommitteeOrder } from './orders'
-import type { DecisionInput } from './types'
+import { buildDecisionInput } from './input'
+import type { LedgerFile } from './ledger'
+import type { DecisionAction, DecisionInput } from './types'
 import { parseRunLog, RUN_LOG_HEADER, summarize } from './runLog'
 import { resolveSession } from './schedule'
 import { fetchSinaRaw, parseSinaRaw, sinaSymbol, verifyInput, type SinaRaw } from './verify'
-import type { Action } from '../cockpit/types'
 
 let pass = 0
 let fail = 0
@@ -27,11 +29,8 @@ const ORDERS: CommitteeOrder[] = [
   { code: '603986', name: '兆易创新', sell: 'ALL', reason: 'C 级清退', source: 'test' },
 ]
 
-function limitAction(code: string, name: string, shares: number | null): Action {
-  return {
-    code, name, kind: 'REDUCE', reason: 'POSITION_LIMIT', reasonDetail: '', notReason: [], reviewTriggers: [],
-    size: { display: '', value: shares, note: '' }, metrics: [],
-  }
+function limitAction(code: string, name: string, shares: number | null): DecisionAction {
+  return { code, name, kind: 'REDUCE', reason: 'POSITION_LIMIT', size: { value: shares } }
 }
 
 function baseInput(over: Partial<DecisionInput> = {}): DecisionInput {
@@ -192,9 +191,8 @@ process.stdout.write('\n【盘前：新浪现价为 0，用昨收核对】\n')
 
 process.stdout.write('\n【熔断已核实：降仓须委员会指派】\n')
 {
-  const circuitAct: Action = {
-    code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER', reasonDetail: '', notReason: [],
-    reviewTriggers: [], size: { display: '', value: 500_000, note: '' }, metrics: [],
+  const circuitAct: DecisionAction = {
+    code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER', size: { value: 500_000 },
   }
   const input = baseInput({ actions: [circuitAct] })
   input.snapshot.peakVerified = true
@@ -210,6 +208,50 @@ process.stdout.write('\n【无动作】\n')
   const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
   ok(card.ok && card.lines.length === 0 && card.title.includes('不交易'), '无法定理由 → 不交易')
   ok(card.push.includes('不新开仓'), '未熔断但无新增建仓 → 写不新开仓')
+}
+
+process.stdout.write('\n【决策输入：账本 + 持仓价格】\n')
+{
+  // 合成账本：总资产 100 万。甲 20%（主板，超限）、乙 13%（科创板，超限 1%）、丙 5%（主线外）
+  const pf: LedgerFile = {
+    asOf: '2026-11-10', cash: 620_000, peakAssets: 2_000_000, peakBasis: 'PORTFOLIO', peakVerified: false,
+    positions: [
+      { code: '300308', name: '中际旭创', quantity: 400, cost: 500 },
+      { code: '688041', name: '海光信息', quantity: 650, cost: 200 },
+      { code: '300750', name: '宁德时代', quantity: 200, cost: 250 },
+    ],
+  }
+  const bars = {
+    '300308': { date: '2026-11-10', close: 500 },
+    '688041': { date: '2026-11-10', close: 200 },
+    '300750': { date: '2026-11-10', close: 250 },
+  }
+  const input = buildDecisionInput(pf, bars, [], '2026-11-11')
+  ok(input.snapshot.portfolioTotal === 1_000_000 && !input.account.stale, '总资产 = 现金 + 股数 × 价格；账本落后 1 天不算过期')
+  const a = input.actions.find(x => x.code === '300308')
+  const b = input.actions.find(x => x.code === '688041')
+  ok(a?.size.value === 200, '创业板超限 8 万 ÷ 500 = 160 股 → 向上取整到一手，卖 200 股')
+  ok(b?.size.value === 200, '科创板超限 1 万 ÷ 200 = 50 股 → 单笔不少于 200 股')
+  ok(input.circuit.level === 'LEVEL2' && !input.actions.some(x => x.reason === 'CIRCUIT_BREAKER'), '峰值待核验：达二级线，但组合降仓不成为指令')
+  ok(input.outsideMainline?.length === 1 && input.outsideMainline[0]!.code === '300750', '主线外持仓被识别')
+  const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(card.ok && card.lines.length === 2 && card.lines[0]!.code === '300308', '两笔单票归位，超得多的排前')
+  ok(card.push.includes('宁德时代 300750 不在四条主线内') && !card.lines.some(l => l.code === '300750'), '主线外持仓只提示，不出卖出指令')
+  ok(card.push.includes('今日不执行、不撤销'), '熔断补足待核验的说明仍在')
+
+  const verified = buildDecisionInput({ ...pf, peakVerified: true }, bars, [], '2026-11-11')
+  const act = verified.actions.find(x => x.reason === 'CIRCUIT_BREAKER')
+  ok(act !== undefined && Math.abs((act.size.value ?? 0) - 80_000) < 1e-6, '峰值已核实：组合降仓 = (38% − 30%) × 总资产')
+
+  const stale = buildDecisionInput(pf, bars, [], '2026-11-20')
+  ok(stale.account.stale && !buildCard(stale, verifyInput(stale, sinaFor(stale), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS }).ok, '账本落后超过 5 天 → 不下单')
+
+  const noPrice = buildDecisionInput(pf, { '300308': bars['300308'], '300750': bars['300750'] }, ['688041'], '2026-11-11')
+  const blocked = buildCard(noPrice, verifyInput(noPrice, sinaFor(noPrice), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(!blocked.ok && blocked.lines.length === 0, '有持仓取不到价格 → 不下单、不出股数')
+
+  const peakOld = buildDecisionInput({ ...pf, peakBasis: 'BROKER' }, bars, [], '2026-11-11')
+  ok(peakOld.circuit.level === 'INCOMPARABLE' && peakOld.circuit.drawdown === null, '峰值口径不可比 → 回撤为空，不是 0')
 }
 
 process.stdout.write('\n【解析与推送】\n')
