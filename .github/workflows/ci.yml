@@ -47,7 +47,7 @@ jobs:
         run: for f in scripts/*.sh; do bash -n "$f"; done
 
   frontend:
-    name: Frontend (typecheck + build)
+    name: Frontend (typecheck + build + package)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,3 +66,6 @@ jobs:
         run: npm -w frontend run typecheck
       - name: Build
         run: npm -w frontend run build
+      # 发布包必须不靠仓库里的 node_modules 自己跑起来：服务器上没有 npm。
+      - name: Package + smoke (发布包试跑)
+        run: node scripts/package-server.mjs --smoke

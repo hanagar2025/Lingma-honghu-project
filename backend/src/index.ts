@@ -126,7 +126,9 @@ app.set('trust proxy', 'loopback')
 app.use(helmet({ contentSecurityPolicy: { directives: { 'img-src': ["'self'", 'data:', 'blob:'] } } }))
 app.use(express.json({ limit: '12mb' }))
 
-app.get('/health', (_req, res) => { res.json({ status: 'ok' }) })
+/** 版本号在打包时写入；发布脚本靠它确认线上跑的是刚发的那一版 */
+const VERSION = process.env.HONGHU_VERSION ?? 'dev'
+app.get('/health', (_req, res) => { res.json({ status: 'ok', version: VERSION }) })
 
 app.get('/api/state', auth('COMMITTEE', 'AGENT'), wrap(async (_req, res) => {
   const produced = await currentCard()
@@ -195,7 +197,12 @@ app.get('/api/records', auth('AGENT', 'COMMITTEE'), (_req, res) => {
 
 const WEB_DIR = resolve(process.env.WEB_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'frontend', 'dist'))
 if (existsSync(join(WEB_DIR, 'index.html'))) {
-  app.use(express.static(WEB_DIR, { index: 'index.html', maxAge: '1h' }))
+  app.use(express.static(WEB_DIR, {
+    index: 'index.html',
+    maxAge: '1h',
+    // 首页不缓存：发布新版后，旧首页引用的脚本文件已经不在了
+    setHeaders: (res, file) => { if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache') },
+  }))
 }
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

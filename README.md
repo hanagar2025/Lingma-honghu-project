@@ -38,11 +38,37 @@ npm run decision                          # 出一张执行单（定时任务用
 DATA_DIR=.private COMMITTEE_TOKEN=<至少16位> npm run dev
 ```
 
-部署到服务器（root，在仓库根目录）：
+## 部署到服务器
+
+服务器连不上 GitHub，所以在自己的电脑上打包、拷上去、在服务器上安装。服务器上只需要 Node.js 18 以上和 systemd，不需要 npm，不需要 git。
+
+在自己的电脑上，仓库根目录：
 
 ```bash
-DOMAIN=<域名> bash scripts/deploy-server.sh
+DEPLOY_HOST=<服务器公网地址> DOMAIN=<域名> DEPLOY_KEY=<登录私钥路径> ./scripts/ship-from-mac.sh
 ```
+
+这一条命令做四件事：打包并在本机试跑；拷到服务器；在服务器上运行 `scripts/install-on-server.sh`；从公网核对线上跑的是刚发的这一版。加 `DRY_RUN=1` 只做第一件。
+
+安装脚本在服务器上做的事：
+
+| 位置 | 内容 |
+|---|---|
+| `/opt/honghu` | 程序（一个后端文件加页面） |
+| `/var/lib/honghu` | 私有数据：账本、成交、意向、截图。只有服务账号能读 |
+| `/etc/honghu.env` | 两个口令，第一次安装时生成。只有 root 能读 |
+| `honghu.service` | 系统服务，只监听本机端口 5080 |
+| nginx 的 `honghu.conf` | 把域名接到本机端口。机器上没有 nginx 时改用 Caddy |
+
+重复运行是安全的：口令和数据不会被覆盖，nginx 现有站点不会被改动，新配置检查不通过会自动还原。证书就绪之前，域名只返回 503，不会用不加密的连接传口令和账本。
+
+三个前提，脚本会检查并写明还差哪一个：
+
+1. 域名有一条 A 记录指向这台服务器。
+2. 服务器在中国大陆时，域名已经备案。没有备案的域名，80 和 443 端口的请求会被拦截，证书也申请不下来。
+3. 机器上有 certbot（配 nginx 用）。
+
+已验证与未验证：打包、安装脚本的前四步、nginx 站点的三种情形（无证书、证书损坏时还原、有证书时转发）在一台装了 nginx 的 Ubuntu 24.04 上演练过，其中 systemd 用替身模拟，证书用自签名。真实 systemd、certbot 申请证书、Caddy 这一路没有跑过。
 
 ## 输入框怎么写
 
