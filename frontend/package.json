@@ -1,40 +1,21 @@
 {
   "name": "stock-decision-frontend",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No frontend tests (placeholder)\" && exit 0",
     "build": "vite build",
-    "preview": "vite preview",
-    "dev:offline": "VITE_OFFLINE=1 vite",
-    "dev:open": "VITE_OFFLINE=1 vite --open",
-    "dev:lan": "VITE_OFFLINE=1 vite --host",
-    "build:offline": "VITE_OFFLINE=1 vite build",
-    "serve:offline": "VITE_OFFLINE=1 vite preview --port 4173",
-    "serve:lan": "VITE_OFFLINE=1 vite preview --port 4173 --host",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "dev:money": "VITE_OFFLINE=1 vite --open /money"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@reduxjs/toolkit": "^2.0.1",
-    "antd": "^5.12.8",
-    "axios": "^1.6.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-redux": "^9.0.4",
-    "react-router-dom": "^6.20.1"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "eslint": "^8.55.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }
