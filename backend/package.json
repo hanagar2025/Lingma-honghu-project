@@ -51,7 +51,14 @@
     "ladder:snapshot": "tsx src/services/ladder/snapshot.ts",
     "ladder:audit": "tsx src/services/governance/ladderAudit.ts",
     "sim:ma60": "tsx src/services/simulation/ma60Run.ts",
-    "sim:selftest": "tsx src/services/simulation/selftest.ts"
+    "sim:selftest": "tsx src/services/simulation/selftest.ts",
+    "sim:leadlag": "tsx src/services/simulation/cycleLeadLagRun.ts",
+    "sim:leadlag:selftest": "tsx src/services/simulation/cycleLeadLagSelftest.ts",
+    "cycle:package": "tsx src/services/cycle/run.ts package",
+    "cycle:record": "tsx src/services/cycle/run.ts record",
+    "cycle:check": "tsx src/services/cycle/run.ts check",
+    "cycle:docs": "tsx src/services/cycle/run.ts docs",
+    "cycle:selftest": "tsx src/services/cycle/selftest.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

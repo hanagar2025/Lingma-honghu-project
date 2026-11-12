@@ -1,0 +1,20 @@
+{
+  "id": "CY-01",
+  "kind": "ARCHIVE_INDEX",
+  "note": "只增不改。每条记录文件的 SHA-256 与哈希链；改动任何历史条目都会使 cycle:check 失败。",
+  "entries": [
+    {
+      "kind": "PACKAGE",
+      "id": "P-2026-10-17",
+      "file": "share/cycle/packages/2026-10-17.json",
+      "sha256": "54a8946d0858a473a9136c8d9f32f80fdc64c92d28efd13ac6cc533a4ff08c53",
+      "mdFile": "share/cycle/packages/2026-10-17.md",
+      "mdSha256": "dd47678946d1af66c568e435f40f81b8bd29fda903898afdeae8a7c092577d00",
+      "recordedAt": "2026-10-17T11:32:05.000Z",
+      "refs": [],
+      "seq": 1,
+      "prevEntryHash": null,
+      "entryHash": "fd5b0a869aae2baf56a7dad092056b8c7cbd607ad7ae2e413af98b5075deba27"
+    }
+  ]
+}
