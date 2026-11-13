@@ -189,7 +189,7 @@ CERT_DIR="/etc/letsencrypt/live/${DOMAIN}"
 
 # 接到正在占用 80/443 端口的那个程序上；两个都没在跑时才看装了哪个
 PROXY=""
-HOLDER="$(ss -ltnpH '( sport = :80 or sport = :443 )' 2>/dev/null | grep -o 'users:(("[^"]*"' | sed 's/users:(("//' | sort -u | tr '\n' ' ' || true)"
+HOLDER="$(ss -ltnpH '( sport = :80 or sport = :443 )' 2>/dev/null | grep -o 'users:(("[^"]*"' | sed 's/users:(("//; s/"$//' | sort -u | tr '\n' ' ' || true)"
 if systemctl is-active --quiet caddy 2>/dev/null; then
   PROXY=caddy
 elif systemctl is-active --quiet nginx 2>/dev/null; then
