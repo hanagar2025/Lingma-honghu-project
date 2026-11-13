@@ -12,8 +12,8 @@
 #   三、第一次运行时生成两个口令，写入 /etc/honghu.env（只有 root 能读）。
 #   四、注册 systemd 服务，只监听本机端口。
 #   五、把域名接到本机端口并配 HTTPS：
-#       机器上已有 nginx 就加一个站点（不动现有站点），证书用 certbot 申请；
-#       没有 nginx 就用 Caddy。
+#       接到正在占用 80/443 的 nginx 或 Caddy 上，加一个站点，不动现有站点；
+#       nginx 的证书用 certbot 申请，Caddy 自己申请。两个都没有时装 Caddy。
 #
 # 重复运行是安全的：口令和数据不会被覆盖；nginx 配置写坏了会自动还原。
 # 第五步做不成（域名没解析到本机、证书申请不下来）不会让前四步白做，脚本会写明还差什么。
@@ -160,8 +160,24 @@ note "本机公网地址：${PUBLIC_IP:-读不到}；域名解析到：${RESOLVE
 
 CERT_DIR="/etc/letsencrypt/live/${DOMAIN}"
 
-if command -v nginx >/dev/null 2>&1; then
-  note "机器上已有 nginx，加一个站点，不动现有站点"
+# 接到正在占用 80/443 端口的那个程序上；两个都没在跑时才看装了哪个
+PROXY=""
+HOLDER="$(ss -ltnpH '( sport = :80 or sport = :443 )' 2>/dev/null | grep -o 'users:(("[^"]*"' | sed 's/users:(("//' | sort -u | tr '\n' ' ' || true)"
+if systemctl is-active --quiet caddy 2>/dev/null; then
+  PROXY=caddy
+elif systemctl is-active --quiet nginx 2>/dev/null; then
+  PROXY=nginx
+elif [ -n "${HOLDER}" ]; then
+  TODO+=("80/443 端口被 ${HOLDER}占着，它不是系统服务里的 nginx 或 Caddy，没有自动接入。请手动把 https://${DOMAIN} 转到 http://127.0.0.1:${PORT}")
+elif command -v nginx >/dev/null 2>&1; then
+  PROXY=nginx
+else
+  PROXY=caddy
+fi
+note "对外的网页服务：${PROXY:-未接入}"
+
+if [ "${PROXY}" = "nginx" ]; then
+  note "用 nginx 加一个站点，不动现有站点"
   if grep -Eq 'include[[:space:]]+(/etc/nginx/)?conf\.d/\*\.conf' /etc/nginx/nginx.conf 2>/dev/null; then
     CONF="/etc/nginx/conf.d/honghu.conf"
   elif grep -Eq 'include[[:space:]]+(/etc/nginx/)?sites-enabled/' /etc/nginx/nginx.conf 2>/dev/null; then
@@ -242,12 +258,16 @@ NGINX
     fi
     rm -f "${CONF}.bak"
   fi
-else
+elif [ "${PROXY}" = "caddy" ]; then
   if ! command -v caddy >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
     note "没有 nginx，安装 Caddy"
     apt-get install -y caddy >/dev/null 2>&1 || true
   fi
   if command -v caddy >/dev/null 2>&1; then
+    # 用正在运行的 Caddy 实际读取的那份配置
+    CADDYFILE="$(systemctl cat caddy 2>/dev/null | sed -n 's/.*--config[= ]\([^ ]*\).*/\1/p' | head -1)"
+    CADDYFILE="${CADDYFILE:-/etc/caddy/Caddyfile}"
+    note "Caddy 配置：${CADDYFILE}，加一个站点，不动现有站点"
     install -d -m 755 /etc/caddy
     cat > /etc/caddy/honghu.caddy <<CADDY
 ${DOMAIN} {
@@ -255,15 +275,20 @@ ${DOMAIN} {
     reverse_proxy 127.0.0.1:${PORT}
 }
 CADDY
-    touch /etc/caddy/Caddyfile
-    grep -q 'honghu.caddy' /etc/caddy/Caddyfile || printf '\nimport /etc/caddy/honghu.caddy\n' >> /etc/caddy/Caddyfile
-    if caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+    touch "${CADDYFILE}"
+    cp "${CADDYFILE}" "${CADDYFILE}.honghu.bak"
+    grep -q 'honghu.caddy' "${CADDYFILE}" || printf '\nimport /etc/caddy/honghu.caddy\n' >> "${CADDYFILE}"
+    if caddy validate --config "${CADDYFILE}" --adapter caddyfile >/dev/null 2>&1; then
       systemctl enable caddy >/dev/null 2>&1 || true
       systemctl reload caddy 2>/dev/null || systemctl restart caddy
       note "Caddy 站点已启用，证书由 Caddy 自动申请和续期"
     else
-      TODO+=("Caddy 配置检查没有通过。请查看 /etc/caddy/Caddyfile")
+      caddy validate --config "${CADDYFILE}" --adapter caddyfile 2>&1 | tail -5 | sed 's/^/   /' || true
+      mv "${CADDYFILE}.honghu.bak" "${CADDYFILE}"
+      rm -f /etc/caddy/honghu.caddy
+      die "Caddy 配置检查没有通过，已还原。现有站点没有受影响"
     fi
+    rm -f "${CADDYFILE}.honghu.bak"
   else
     TODO+=("机器上没有 nginx，也装不上 Caddy。请手动配一个反向代理，把 https://${DOMAIN} 转到 http://127.0.0.1:${PORT}")
   fi

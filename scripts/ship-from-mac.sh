@@ -56,7 +56,12 @@ case "${LIVE}" in
     printf '✓ https://%s 上运行的是这一版（%s）\n' "${DOMAIN}" "${VERSION}"
     ;;
   "")
-    printf '⚠ 从公网打不开 https://%s/health 。服务器上的安装输出里写了还差什么。\n' "${DOMAIN}"
+    if curl -s -m 10 "http://${DOMAIN}/" 2>/dev/null | grep -q 'ICP'; then
+      printf '⚠ 阿里云把 %s 当成未备案域名拦截了（返回 Non-compliance ICP Filing）。\n' "${DOMAIN}"
+      printf '  程序已装在服务器上。到阿里云「备案」控制台确认这个域名已备案、且接入的是这台服务器；拦截解除后重新运行本脚本即可。\n'
+    else
+      printf '⚠ 从公网打不开 https://%s/health 。服务器上的安装输出里写了还差什么。\n' "${DOMAIN}"
+    fi
     exit 1
     ;;
   *)
