@@ -1,51 +1,26 @@
 {
-  "name": "tios-app",
-  "version": "2.0.0",
-  "description": "TIOS 科技投资操作系统 —— 规则驱动的交易决策闭环小程序",
+  "name": "honghu",
+  "version": "3.0.0",
+  "description": "鸿鹄：按真实账本出执行单，一个页面、一个输入框",
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "npm run dev --workspace frontend",
-    "dev:backend": "npm run dev --workspace backend",
-    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "dev": "concurrently \"npm run dev --workspace frontend\" \"npm run dev --workspace backend\"",
+    "build": "npm run build --workspace frontend",
     "start": "npm run start --workspace backend",
-    "test": "npm run test --workspace backend",
-    "tios:selftest": "npm run tios:selftest --workspace backend",
-    "web": "npm run web:snapshot && npm run dev:open --workspace frontend",
-    "web:snapshot": "cd backend && ARCHIVE=0 WEB=1 HTML=1 npx tsx src/services/cockpit/run.ts",
-    "web:build": "npm run web:snapshot && npm run build:offline --workspace frontend",
-    "web:serve": "npm run serve:offline --workspace frontend",
-    "web:lan": "npm run web:snapshot && node scripts/lan-url.mjs && npm run dev:lan --workspace frontend",
-    "obsidian": "npm run obsidian --workspace backend",
-    "obsidian:refresh": "cd backend && ARCHIVE=0 WEB=1 OBSIDIAN=1 npx tsx src/services/cockpit/run.ts",
-    "obsidian:pre": "cd backend && SESSION=pre ARCHIVE=0 WEB=1 OBSIDIAN=1 npx tsx src/services/cockpit/run.ts",
-    "obsidian:pull": "npm run obsidian:pull --workspace backend",
-    "report": "npm run web:snapshot && node scripts/open-report.mjs",
-    "web:preflight": "node scripts/preflight-deploy.mjs",
-    "web:package": "node scripts/package-deploy.mjs",
-    "share": "cd backend && ARCHIVE=0 SHARE=1 WEB=1 npx tsx src/services/cockpit/run.ts",
-    "share:amounts": "cd backend && ARCHIVE=0 SHARE=1 SHARE_AMOUNTS=1 npx tsx src/services/cockpit/run.ts",
-    "web:deploy": "npm run web:build && npm run web:preflight",
-    "web:status": "node scripts/check-live.mjs",
-    "ship": "./scripts/ship.sh",
-    "reaudit": "cd backend && npx tsx reaudit.ts",
-    "decision": "cd backend && npm run decision:daily",
-    "money": "cd backend && npm run money",
-    "money:web": "npm run money && npm run dev:money --workspace frontend",
-    "money:publish": "cd backend && npm run money:publish -- --push"
+    "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend",
+    "selftest": "npm run decision:daily:selftest --workspace backend && npm run intake:selftest --workspace backend",
+    "decision": "npm run decision:daily --workspace backend"
   },
   "workspaces": [
     "backend",
     "frontend"
   ],
   "keywords": [
-    "tios",
-    "trading",
-    "rule-based",
-    "portfolio"
+    "portfolio",
+    "rule-based"
   ],
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "qrcode": "^1.5.4"
+    "esbuild": "^0.25.12"
   }
 }

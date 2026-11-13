@@ -2,19 +2,21 @@
  * 每日执行单自检。守四条：
  *   ① 数据核对不通过就不出股数（fail-closed）；
  *   ② 顺序固定：C 级清退 → 单票归位 → 熔断 → 新增投资；
- *   ③ 执行单不新增判定 —— 只排序驾驶舱动作与委员会已登记的指令；
- *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失。
+ *   ③ 执行单不新增判定 —— 只排序决策输入里的动作与委员会已登记的指令；
+ *   ④ 熔断待核验时第③步不出现在执行列表里，也不消失；
+ *   ⑤ 决策输入只由账本和持仓价格算出，不依赖研究模块；主线外持仓只提示、不出指令。
  */
 import { buildAgentPack, demoteHeadings, renderSitePage } from './agentPack'
 import { buildCard, buildFailureCard, SYSTEM_NAME } from './card'
 import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import type { CommitteeOrder } from './orders'
-import type { DecisionInput } from './types'
+import { buildDecisionInput, fetchLastBars } from './input'
+import type { LedgerFile } from './ledger'
+import type { DecisionAction, DecisionInput } from './types'
 import { parseRunLog, RUN_LOG_HEADER, summarize } from './runLog'
 import { resolveSession } from './schedule'
 import { fetchSinaRaw, parseSinaRaw, sinaSymbol, verifyInput, type SinaRaw } from './verify'
-import type { Action } from '../cockpit/types'
 
 let pass = 0
 let fail = 0
@@ -27,11 +29,8 @@ const ORDERS: CommitteeOrder[] = [
   { code: '603986', name: '兆易创新', sell: 'ALL', reason: 'C 级清退', source: 'test' },
 ]
 
-function limitAction(code: string, name: string, shares: number | null): Action {
-  return {
-    code, name, kind: 'REDUCE', reason: 'POSITION_LIMIT', reasonDetail: '', notReason: [], reviewTriggers: [],
-    size: { display: '', value: shares, note: '' }, metrics: [],
-  }
+function limitAction(code: string, name: string, shares: number | null): DecisionAction {
+  return { code, name, kind: 'REDUCE', reason: 'POSITION_LIMIT', size: { value: shares } }
 }
 
 function baseInput(over: Partial<DecisionInput> = {}): DecisionInput {
@@ -78,7 +77,7 @@ process.stdout.write('\n【核对通过：顺序与股数】\n')
   ok(card.lines.map(l => l.code).join(',') === '688008,603986,688041', 'C 级清退在前、单票归位在后')
   ok(card.lines.filter(l => l.code === '688008').length === 1, '委员会已清仓的股票不再重复出单票归位指令')
   ok(card.lines[0]!.shares === 1300 && card.lines[0]!.all, 'C 级清退 = 账本全部股数')
-  ok(card.lines[2]!.shares === 700, '单票归位股数取驾驶舱动作，不在执行单里重算')
+  ok(card.lines[2]!.shares === 700, '单票归位股数取决策输入里的动作，不在执行单里重算')
   ok(card.push.includes('不买入任何股票'), '二级熔断 → 写明不买入')
   ok(card.push.includes('待账本核验') && !card.lines.some(l => l.code === 'PORTFOLIO'), '熔断待核验：第③步不进执行列表，也不消失')
   ok(!card.push.includes('*'.repeat(2)), '推送正文无 Markdown 星号')
@@ -192,9 +191,8 @@ process.stdout.write('\n【盘前：新浪现价为 0，用昨收核对】\n')
 
 process.stdout.write('\n【熔断已核实：降仓须委员会指派】\n')
 {
-  const circuitAct: Action = {
-    code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER', reasonDetail: '', notReason: [],
-    reviewTriggers: [], size: { display: '', value: 500_000, note: '' }, metrics: [],
+  const circuitAct: DecisionAction = {
+    code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER', size: { value: 500_000 },
   }
   const input = baseInput({ actions: [circuitAct] })
   input.snapshot.peakVerified = true
@@ -212,6 +210,50 @@ process.stdout.write('\n【无动作】\n')
   ok(card.push.includes('不新开仓'), '未熔断但无新增建仓 → 写不新开仓')
 }
 
+process.stdout.write('\n【决策输入：账本 + 持仓价格】\n')
+{
+  // 合成账本：总资产 100 万。甲 20%（主板，超限）、乙 13%（科创板，超限 1%）、丙 5%（主线外）
+  const pf: LedgerFile = {
+    asOf: '2026-11-10', cash: 620_000, peakAssets: 2_000_000, peakBasis: 'PORTFOLIO', peakVerified: false,
+    positions: [
+      { code: '300308', name: '中际旭创', quantity: 400, cost: 500 },
+      { code: '688041', name: '海光信息', quantity: 650, cost: 200 },
+      { code: '300750', name: '宁德时代', quantity: 200, cost: 250 },
+    ],
+  }
+  const bars = {
+    '300308': { date: '2026-11-10', close: 500 },
+    '688041': { date: '2026-11-10', close: 200 },
+    '300750': { date: '2026-11-10', close: 250 },
+  }
+  const input = buildDecisionInput(pf, bars, [], '2026-11-11')
+  ok(input.snapshot.portfolioTotal === 1_000_000 && !input.account.stale, '总资产 = 现金 + 股数 × 价格；账本落后 1 天不算过期')
+  const a = input.actions.find(x => x.code === '300308')
+  const b = input.actions.find(x => x.code === '688041')
+  ok(a?.size.value === 200, '创业板超限 8 万 ÷ 500 = 160 股 → 向上取整到一手，卖 200 股')
+  ok(b?.size.value === 200, '科创板超限 1 万 ÷ 200 = 50 股 → 单笔不少于 200 股')
+  ok(input.circuit.level === 'LEVEL2' && !input.actions.some(x => x.reason === 'CIRCUIT_BREAKER'), '峰值待核验：达二级线，但组合降仓不成为指令')
+  ok(input.outsideMainline?.length === 1 && input.outsideMainline[0]!.code === '300750', '主线外持仓被识别')
+  const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(card.ok && card.lines.length === 2 && card.lines[0]!.code === '300308', '两笔单票归位，超得多的排前')
+  ok(card.push.includes('宁德时代 300750 不在四条主线内') && !card.lines.some(l => l.code === '300750'), '主线外持仓只提示，不出卖出指令')
+  ok(card.push.includes('今日不执行、不撤销'), '熔断补足待核验的说明仍在')
+
+  const verified = buildDecisionInput({ ...pf, peakVerified: true }, bars, [], '2026-11-11')
+  const act = verified.actions.find(x => x.reason === 'CIRCUIT_BREAKER')
+  ok(act !== undefined && Math.abs((act.size.value ?? 0) - 80_000) < 1e-6, '峰值已核实：组合降仓 = (38% − 30%) × 总资产')
+
+  const stale = buildDecisionInput(pf, bars, [], '2026-11-20')
+  ok(stale.account.stale && !buildCard(stale, verifyInput(stale, sinaFor(stale), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS }).ok, '账本落后超过 5 天 → 不下单')
+
+  const noPrice = buildDecisionInput(pf, { '300308': bars['300308'], '300750': bars['300750'] }, ['688041'], '2026-11-11')
+  const blocked = buildCard(noPrice, verifyInput(noPrice, sinaFor(noPrice), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
+  ok(!blocked.ok && blocked.lines.length === 0, '有持仓取不到价格 → 不下单、不出股数')
+
+  const peakOld = buildDecisionInput({ ...pf, peakBasis: 'BROKER' }, bars, [], '2026-11-11')
+  ok(peakOld.circuit.level === 'INCOMPARABLE' && peakOld.circuit.drawdown === null, '峰值口径不可比 → 回撤为空，不是 0')
+}
+
 process.stdout.write('\n【解析与推送】\n')
 {
   const f = Array(33).fill('0')
@@ -220,7 +262,7 @@ process.stdout.write('\n【解析与推送】\n')
   ok(parsed.sh688041?.price === 219.59 && parsed.sh688041?.prevClose === 219, '新浪行情解析现价与昨收')
   ok(sinaSymbol('688041') === 'sh688041' && sinaSymbol('300502') === 'sz300502', '沪深代码前缀')
   ok(configuredChannels({}).length === 0, '未配置通道 → 无推送目标')
-  const fc = buildFailureCard('2026-10-12', '驾驶舱运行失败')
+  const fc = buildFailureCard('2026-10-12', '账本读不出')
   ok(!fc.ok && fc.title.includes('不下单'), '采集失败也出一张「不下单」')
 }
 
@@ -228,11 +270,10 @@ process.stdout.write('\n【执行单网页】\n')
 {
   const input = baseInput()
   const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
-  const page = renderCardPage(card.markdown, { ok: card.ok, title: card.title, generatedAt: '2026-10-09 15:45', cockpitHref: 'cockpit.html' })
+  const page = renderCardPage(card.markdown, { ok: card.ok, title: card.title, generatedAt: '2026-10-09 15:45' })
   const firstItem = page.indexOf('<ol>')
   ok(firstItem > 0 && firstItem < page.indexOf('核对明细'), '第一屏是执行清单，核对明细在后')
   ok(page.includes('<li>卖出 澜起科技 688008') && page.includes('<table>'), '编号清单与核对表都渲染成 HTML')
-  ok(page.includes('href="cockpit.html"'), '完整驾驶舱在第二页')
   ok(!/(src|href)="https?:\/\//.test(page.replace(/<a href="https?:[^"]*">/g, '')), '页面不加载任何外部资源')
   ok(markdownToHtml('- a<b>').includes('a&lt;b&gt;'), '正文转义 HTML')
   const bad = buildCard(input, verifyInput(input, null, 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
@@ -251,6 +292,19 @@ process.stdout.write('\n【新浪间歇拒绝】\n')
 }
 
 async function sinaFetchTests(): Promise<void> {
+  {
+    let n = 0
+    const kline = (async (url: string) => {
+      n++
+      const symbol = /param=(\w+),/.exec(String(url))![1]!
+      if (symbol === 'sh688041' && n < 3) return new Response('busy', { status: 503 })
+      if (symbol === 'sz300750') return new Response('busy', { status: 503 })
+      return new Response(JSON.stringify({ code: 0, data: { [symbol]: { qfqday: [['2026-11-10', '1', '200.5', '1', '1', '1']] } } }))
+    }) as typeof fetch
+    const got = await fetchLastBars(['688041', '300750'], { doFetch: kline, backoffMs: 1 })
+    ok(got.bars['688041']?.close === 200.5 && got.bars['688041']?.date === '2026-11-10', '日 K 先被拒后成功：重试拿到收盘价')
+    ok(got.failed.length === 1 && got.failed[0] === '300750', '日 K 试满 3 次仍取不到 → 记为失败，由核对环节停单')
+  }
   const f = new Array(33).fill('0')
   f[0] = '海光信息'; f[2] = '219.00'; f[3] = '219.59'; f[30] = '2026-10-15'
   const body = new TextEncoder().encode(`var hq_str_sh688041="${f.join(',')}";`)
@@ -275,18 +329,16 @@ process.stdout.write('\n【给 Agent 的数据包】\n')
 {
   const input = baseInput()
   const card = buildCard(input, verifyInput(input, sinaFor(input), 'POST_CLOSE'), 'POST_CLOSE', { orders: ORDERS })
-  const brief = '# 驾驶舱摘要\n\n## 持仓\n\n| 名称 | 仓位 |\n|---|---|\n| 海光信息 | 12% |'
-  const pack = buildAgentPack({ card: card.markdown, brief, generatedAt: '2026-10-12 16:10', siteUrl: 'https://x.io/p' })
-  ok(pack.indexOf('读者须知') < pack.indexOf('第一部分') && pack.indexOf('第一部分') < pack.indexOf('第二部分'), '须知在最前，执行单在摘要之前')
+  const pack = buildAgentPack({ card: card.markdown, generatedAt: '2026-10-12 16:10', siteUrl: 'https://x.io/p' })
+  ok(pack.indexOf('读者须知') < pack.indexOf('## 执行单'), '须知在最前，执行单在后')
   ok(pack.includes('核对明细') && pack.includes('卖出 澜起科技 688008'), '数据包含执行单全文与核对明细')
-  ok(pack.includes('不是成交记录') && pack.includes('第一部分含股数、现金与总资产'), '须知写明计划≠成交，且如实说明哪部分未脱敏')
-  ok(!/^# /m.test(pack.split('\n').slice(1).join('\n')) && pack.includes('### 驾驶舱摘要'), '嵌入文档的标题下沉，不与分部标题同级')
+  ok(pack.includes('不是成交记录') && pack.includes('执行单含股数、现金与总资产'), '须知写明计划≠成交，且如实说明含金额')
+  ok(!/^# /m.test(pack.split('\n').slice(1).join('\n')) && pack.includes('#### 核对明细'), '嵌入文档的标题下沉，不与数据包标题同级')
   ok(pack.includes('https://x.io/p/agent.md'), '写明纯文本地址')
-  ok(buildAgentPack({ card: card.markdown, brief: null, generatedAt: '' }).includes('驾驶舱摘要没有生成'), '摘要缺失照样出包并说明')
   ok(demoteHeadings('```\n# 不是标题\n```\n# 是标题') === '```\n# 不是标题\n```\n### 是标题', '代码块里的 # 不动')
-  const page = renderSitePage(card.markdown, { title: card.title, ok: card.ok, generatedAt: '' }, brief, 'https://x.io/p/')
+  const page = renderSitePage(card.markdown, { title: card.title, ok: card.ok, generatedAt: '' }, 'https://x.io/p/')
   const embedded = /<textarea id="agent" readonly>([\s\S]*?)<\/textarea>/.exec(page)?.[1] ?? ''
-  ok(embedded.includes('第二部分') && !embedded.includes('<td>'), '首页嵌入完整数据包（转义后的纯文本）')
+  ok(embedded.includes('核对明细') && !embedded.includes('<td>'), '首页嵌入完整数据包（转义后的纯文本）')
   ok(page.indexOf('一键复制给 Agent') < page.indexOf('class="card"'), '复制按钮在第一屏')
   ok(page.includes("execCommand('copy')") && page.includes('长按'), '剪贴板被拦截时有退路')
   ok(!renderCardPage(card.markdown, { ok: true, title: 't', generatedAt: '' }).includes('copyAgent'), '没有数据包时不出按钮')

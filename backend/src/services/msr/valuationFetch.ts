@@ -1,6 +1,6 @@
-// 估值数据抓取与生成 —— 产出 data/valuation.json，供 MSR 离线读取
+// 估值数据抓取与生成 —— 产出 data/valuation.json，只用于排序，不产生动作
 //
-// 用法：npm run msr:valuation
+// 用法：npm run valuation:fetch
 //
 // 数据源与口径：
 //   财报  东方财富 datacenter RPT_LICO_FN_CPD（逐季，含 NOTICE_DATE 公告日）
@@ -10,9 +10,8 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { DailyBar } from '../tios/types'
 import { MAINLINES } from './universe'
-import { summarizeValuation, type FinancialReport, type ValuationResult } from './valuation'
+import { summarizeValuation, type DailyBar, type FinancialReport, type ValuationResult } from './valuation'
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
 
@@ -122,7 +121,7 @@ async function main(): Promise<void> {
   process.stdout.write(`\n成功 ${rows.length} 只，失败 ${Object.keys(file.failures).length} 只\n\n`)
   process.stdout.write(
     `${'标的'.padEnd(6)}${'PE-TTM'.padStart(10)}${'3年分位'.padStart(10)}${'全历史分位'.padStart(12)}` +
-    `${'样本'.padStart(7)}${'闸门'.padStart(7)}  说明\n`
+    `${'样本'.padStart(7)}${'可用'.padStart(7)}  说明\n`
   )
   for (const r of rows.sort((a, b) => (a.percentile3y ?? 9) - (b.percentile3y ?? 9))) {
     const pe = r.peTtm === null ? '亏损/缺' : r.peTtm.toFixed(1)
@@ -134,7 +133,7 @@ async function main(): Promise<void> {
     )
   }
   const unusable = rows.filter(r => !r.usable)
-  process.stdout.write(`\n可用于闸门判定 ${rows.length - unusable.length}/${rows.length} 只`)
+  process.stdout.write(`\n估值分位可用 ${rows.length - unusable.length}/${rows.length} 只`)
   process.stdout.write(unusable.length ? `，不可用：${unusable.map(r => r.name).join('、')}\n` : '\n')
   for (const [code, msg] of Object.entries(file.failures)) {
     process.stdout.write(`  失败 ${code} ${msg}\n`)

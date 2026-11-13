@@ -1,25 +1,17 @@
 {
-  "frozenAt": "2026-08-17",
-  "tradingDays": 30,
-  "hash": "fbd2c753e958",
-  "entryCount": 51,
+  "frozenAt": "2026-11-11",
+  "hash": "dfc59afbd116",
+  "entryCount": 21,
   "byDomain": {
-    "GUARD": "7d85758a9c17",
-    "LEGAL_REASON": "0de3f52d932c",
-    "POSITION_LIMIT": "b481dd150240",
-    "PRICE_WINDOW": "7f8a35934192",
-    "PROMOTION": "dce15f91262f",
-    "UNIVERSE": "04b86a635493",
-    "VALUATION": "5d9de12e91c1"
+    "ACCOUNT": "70b86ca0f01a",
+    "GUARD": "9fd1911a4157",
+    "POSITION_LIMIT": "30fe5442be27",
+    "SELL_RULE": "b4dda079e714",
+    "UNIVERSE": "2469f43d8f85"
   },
-  "tierCounts": {
-    "ACCOUNTING": 49,
-    "VALIDATED": 1,
-    "OBSERVATION": 1
-  },
-  "note": "委员会 2026-10-10 裁定：券商账户截图（10/9 收盘）中的股票与现金即全部投资资金，账户外 200 万移出分母；组合峰值按出金扣减 630 万 → 430 万（portfolio_basis_v2），v1 与券商口径峰值留作历史。只改峰值口径与取值（GUARD 域两条），阈值与动作规则不变。",
+  "note": "委员会 2026-11-11 同意留改砍清单并要求砍掉的部分全部删除。登记册改为只登记现行生效规则：三条卖出规则、仓位上限与熔断线、账本新鲜度、两源核价、委员会指令、四条主线名单、峰值口径。数值一项未改；生产分支上能比对的历史执行单由新代码逐字重现。研究层与决策语义层的登记项随模块删除。",
   "supersedes": {
-    "hash": "88ab0757a76c",
-    "note": "委员会 2026-09-23 授权纠错：msr/universe.ts 中英维克代码登记为 688292（实为浩瀚深度），改为 002837（经腾讯行情核实）。仅修正 UNIVERSE 域一个成员代码，不新增、不修改任何决策规则或阈值；同步重抓英维克估值与利润数据。冻结起始日沿用 2026-08-17。"
+    "hash": "fbd2c753e958",
+    "note": "2026-10-10 裁定后的基线，51 条，含研究层与决策语义层的登记项。全文见 git 历史。"
   }
 }

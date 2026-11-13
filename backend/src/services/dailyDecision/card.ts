@@ -3,9 +3,9 @@
  *
  * 顺序按委员会 10/10 裁定：风险预算 → 规则减仓（C 级清退、单票归位）→ 熔断 → 新增投资。
  * 数据核对不通过时不出股数（fail-closed）—— 宁可今天不下单，也不按错数下单。
- * 本模块只排序与换算驾驶舱已产生的动作，不新增任何判定。
+ * 本模块只排序与换算决策输入里已有的动作，不新增任何判定。
  */
-import { LIMITS } from '../cockpit/safety'
+import { LIMITS } from './rules'
 import { COMMITTEE_ORDERS, type CommitteeOrder } from './orders'
 import type { DecisionInput, DecisionSession, Verification } from './types'
 
@@ -188,6 +188,12 @@ export function buildCard(
     body.push('', '## 熔断补足（不是今日指令）', '', `- 降到股票上限 ${pct(input.circuit.equityCap!)} 所需的额外卖出：待账本核验，今日不执行、不撤销（委员会 10/10 裁定）`)
   }
 
+  const outside = input.outsideMainline ?? []
+  if (outside.length) {
+    body.push('', '## 提示（不是指令）', '')
+    outside.forEach(o => body.push(`- ${o.name} ${o.code} 不在四条主线内。现行规则没有对应的卖出指令，是否保留由委员会裁定`))
+  }
+
   const buys = input.actions.filter(a => a.kind === 'BUY')
   body.push('', '## 不做', '')
   if (input.circuit.sellOnly) body.push('- 不买入任何股票，不追跌、不抢反弹（只卖不买照常执行）')
@@ -201,11 +207,11 @@ export function buildCard(
   return finish(title, head, body, v, opts.url, true, lines)
 }
 
-/** 驾驶舱本身没跑完、拿不到决策输入时的执行单 */
+/** 账本读不出、拿不到决策输入时的执行单 */
 export function buildFailureCard(today: string, reason: string, url?: string): DecisionCard {
   const title = `⛔ ${SYSTEM_NAME} ${md(today)}：数据采集失败，不下单`
   const lines = [`# ${title}`, '', '## 今日动作', '', '不下单。采集恢复后重新出单。', '', '## 原因', '', `- ${reason}`]
-  if (url) lines.push('', `执行单与完整驾驶舱：${url}`)
+  if (url) lines.push('', `执行单：${url}`)
   const text = lines.join('\n')
   return { ok: false, title, push: text, markdown: `${text}\n`, lines: [] }
 }
@@ -213,7 +219,7 @@ export function buildFailureCard(today: string, reason: string, url?: string): D
 function finish(
   title: string, head: string[], body: string[], v: Verification, url: string | undefined, ok: boolean, lines: ExecLine[],
 ): DecisionCard {
-  const tail = url ? ['', `执行单全文、核对明细、完整驾驶舱与「一键复制给 Agent」：${url}`] : []
+  const tail = url ? ['', `执行单全文、核对明细与「一键复制给 Agent」：${url}`] : []
   const push = [...head, ...body, ...tail].join('\n')
   const detail = ['', '---', '', '## 核对明细', '', '| 持仓 | 腾讯 | 新浪 | 结果 |', '|---|---|---|---|']
   for (const c of v.checks) {

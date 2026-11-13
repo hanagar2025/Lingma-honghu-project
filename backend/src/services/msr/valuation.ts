@@ -15,7 +15,15 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { DailyBar } from '../tios/types'
+
+export interface DailyBar {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
 
 /** 生成物路径。放在本纯模块内，避免消费方从 scan.ts 导入而触发其顶层 main() */
 export const VALUATION_FILE = join(dirname(fileURLToPath(import.meta.url)), 'data', 'valuation.json')

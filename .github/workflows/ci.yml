@@ -3,14 +3,12 @@ name: CI
 on:
   push:
     branches: [ main ]
-  # 不限定 base 分支：叠在别的 PR 之上的 PR（stacked PR）base 不是 main，
-  # 若限定 branches: [main]，这类 PR 会**一次检查都不跑**而界面上只显示"无检查"。
-  # 与今天修掉的两处同类：一个不运行的守卫和没有守卫是一回事。
+  # 不限定 base 分支：叠在别的 PR 之上的 PR，base 不是 main，限定后会一次检查都不跑
   pull_request:
 
 jobs:
   backend:
-    name: Backend (typecheck + selftest + tests)
+    name: Backend (typecheck + selftest + regression)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,90 +22,32 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
       - name: Install (workspaces)
-        run: |
-          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
-          npm install --workspaces --include-workspace-root --legacy-peer-deps
-      # 用工作区自己的 script，而不是 npx --workspace + -p 路径：
-      # 后者会把 cwd 切到 backend/ 却仍按仓库根解析 backend/tsconfig.json，
-      # 结果 typecheck 一直以 TS5058 失败，**后面的自检步骤从未执行过**。
-      # 一个不运行的守卫和没有守卫是一回事。
+        run: npm ci --no-audit --progress=false
       - name: Typecheck
         run: npm -w backend run typecheck
-      - name: TIOS engine selftest
-        run: npm -w backend run tios:selftest
-      - name: MSR radar selftest (执行债务闸门不变量)
-        run: npm -w backend run msr:selftest
-      # 驾驶舱自检守的是"观察指标不得产生动作"这条不变量。
-      # 它必须在 CI 里跑 —— 否则该约束只是注释里的一句承诺。
-      - name: Cockpit selftest (观察指标不得产生动作)
-        run: npm -w backend run cockpit:selftest
-      # 守四条：禁止综合评分；「不可判断」是合法输出；装配层不生产动作；
-      # 全部在册标的被清退的节点不得被输出为"最值得研究"（兆易创新案例）。
-      - name: Dashboard selftest (禁止综合评分 + 不可判断合法)
-        run: npm -w backend run dashboard:selftest
-      # 守两条：规则漂移必须能被发现；E3 不得用盈亏评判模型。
-      - name: Governance selftest (规则指纹 + E3不用盈亏)
-        run: npm -w backend run audit:selftest
-      # 守：研究域与决策域永不相交；加研究标的不得改变规则指纹；利润数据不得插值。
-      - name: Research selftest (研究域不得进入决策域)
-        run: npm -w backend run research:selftest
-      # 守三条否定式约束：技术数据不得单独构成减仓理由；R4 预期风险只能停止追加、
-      # 不能减仓（否则被回测证伪的"技术信号→卖出"会换个名字回来）；
-      # 状态变化不等于自动卖出（风险状态只允许进入评估）。
-      # 否定式约束在重构时不会报错，只会静默消失 —— 故必须由 CI 每次确认。
-      - name: Decision layer selftest (技术信号不得单独减仓)
-        run: npm -w backend run decision:selftest
-      # 守 V2 决策链：现有数据组织成战略—战术—仓位；R4 不得用 PE/均线填；
-      # 海光超限是组合风险不是公司变坏；兆易不因技术卖。
-      - name: Decision V2 selftest (战略—战术—仓位因果链)
-        run: npm -w backend run decision:v2
-      # 守 V3 资本生命线：证据变化才能迁移；涨跌不能迁移；
-      # 三种减仓不混；R4 不填；质量不能推出 100%。
-      - name: Decision V3 selftest (资本生命线)
-        run: npm -w backend run decision:v3
-      # 守 V4：R4 不填 PE；前瞻无细项必须 UNKNOWN；向上迁移必须有新的独立证据族；
-      # 证据强化 ≠ 加仓；STRETCHED 不产生卖出；首屏是五问 + 不可判断区。
-      - name: Decision V4 selftest (证据 → 资本向上迁移)
-        run: npm -w backend run decision:v4
-      # 守 V4.x：不开发新功能。验证 R4 不是 PE 排名、前瞻强化不是兑现、
-      # 同一因果链不能算多个独立族、核心持有不能被读成可以继续加仓。
-      - name: Decision V4.x selftest (证据有效性压力测试)
-        run: npm -w backend run decision:v4x
-      # 守：数据核对不通过不出股数；顺序 C 级清退 → 单票归位 → 熔断 → 新增；熔断待核验不进执行列表也不消失。
-      - name: Daily decision selftest (执行单 fail-closed)
+      # 守：数据核对不通过不出股数；顺序 C 级清退 → 单票归位 → 熔断；熔断待核验不进执行列表也不消失；
+      # 决策输入只由账本和持仓价格算出；主线外持仓只提示、不出指令。
+      - name: Daily decision selftest (执行单)
         run: npm -w backend run decision:daily:selftest
-      # 守 10/16 裁定：层级逐级计算、来源不授予层级；左侧雷达即使「爆发」也只观察；MA60 只模拟不接执行单。
-      - name: Ladder selftest (名单主表不越级)
-        run: npm -w backend run ladder:selftest
-      - name: MA60 simulation selftest (模拟不产生动作)
-        run: npm -w backend run sim:selftest
-      - name: Money sentinel selftest (左侧雷达权限锁)
-        run: npm -w backend run money:selftest
-      # 守 CY-01：证据包不给 C0–C3、节点独立、缺数据中性、事实与解读分栏；研判八项齐全、先落档后看结果、只增不改。
-      - name: Cycle monitor selftest (CY-01 证据包与研判记录)
-        run: npm -w backend run cycle:selftest
-      - name: Cycle archive check (指纹、哈希链、引用、时序、git 只增不改)
-        run: npm -w backend run cycle:check
-      - name: Lead-lag simulation selftest (领先期检验不宣布规律)
-        run: npm -w backend run sim:leadlag:selftest
-      - name: Full-chain audit (无重复名单、无越级、无隐藏买入权限、无未批准自动卖出)
-        run: npm -w backend run ladder:audit
-      # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
-      # 让 CI 变绿，把审计变成盖章。漂移只需在基线文件的 git diff 里显形即可。
-      - name: Rule freeze check (打印指纹，漂移不失败)
+      # 守：认不出的文字不猜；识别结果必须过勾稽核对；图片不经确认不生效；成交不改账本。
+      - name: Intake selftest (输入框)
+        run: npm -w backend run intake:selftest
+      # 生产分支上已经发出的执行单，现在的代码必须逐字重现。
+      # 有意修改执行单版式时这一步会失败，那时须在 PR 里写明改了什么。
+      - name: Historical card regression (历史执行单逐字重现)
+        run: |
+          git fetch --no-tags origin cursor/account-snapshot-1009-c819
+          npm -w backend run decision:regress -- FETCH_HEAD
+      # 打印规则指纹并与基线比对。变动时不失败，变动只需在基线文件的 git diff 里显形。
+      - name: Rule freeze check (规则指纹)
         run: npm -w backend run freeze:check
-      # 部署脚本里中文很多，裸 $VAR 紧邻全角字符会让某些 bash 把后续字节
-      # 并入变量名，在 set -u 下报 "w?: unbound variable" —— 报错指不到真正原因。
-      # 这个 bug 真的把一次部署卡住过，故做成机械检查。
       - name: Source lint (变量花括号 + 严格模式 + 界面文案无 Markdown 星号)
         run: node scripts/lint-source.mjs
       - name: Shell syntax
         run: for f in scripts/*.sh; do bash -n "$f"; done
-      - name: Run backend tests
-        run: npm -w backend run test -- --coverage
 
   frontend:
-    name: Frontend (typecheck + build)
+    name: Frontend (typecheck + build + package)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -121,10 +61,11 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-node-20-${{ hashFiles('package-lock.json') }}
       - name: Install (workspaces)
-        run: |
-          npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --progress=false || \
-          npm install --workspaces --include-workspace-root --legacy-peer-deps
+        run: npm ci --no-audit --progress=false
       - name: Typecheck
         run: npm -w frontend run typecheck
       - name: Build
         run: npm -w frontend run build
+      # 发布包必须不靠仓库里的 node_modules 自己跑起来：服务器上没有 npm。
+      - name: Package + smoke (发布包试跑)
+        run: node scripts/package-server.mjs --smoke
