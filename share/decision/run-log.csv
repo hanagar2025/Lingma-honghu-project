@@ -73,3 +73,4 @@ date,session,trigger,planned,started,delay_min,card_step,pushed,run_id
 2026-11-12,intra,schedule,13:30,2026-11-12 13:31:57,2,success,1,43161991118
 2026-11-12,post,schedule,15:40,2026-11-12 15:40:53,1,success,1,43177036150
 2026-11-13,pre,schedule,07:00,2026-11-13 07:06:56,7,success,1,43326024650
+2026-11-13,intra,schedule,13:30,2026-11-13 13:32:01,2,success,1,43372625462
