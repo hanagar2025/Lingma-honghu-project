@@ -2501,5 +2501,128 @@ try {
     !!base11 && fpb.hash === base11.hash, `${base11?.hash} → ${fpb.hash}`)
 }
 
+// ───────────────────────────────────────────────────────────────
+console.log('\n【R-02】核心股预选 · 估值重定价数据审计')
+// ───────────────────────────────────────────────────────────────
+{
+  const {
+    singleQuarters, buildStockView, renderRerating, reratingProducesAction,
+    PRESELECT_POOL, NEXT_WAVE_POOL, SCENARIO_ASSUMPTIONS, DEDUCT_SHARE_FLOOR, RECEIVABLE_GAP,
+  } = await import('./rerating')
+  const { RESEARCH_MODULES } = await import('../governance/researchIsolation')
+  const { fingerprint: fp12 } = await import('../governance/ruleRegistry')
+  const { loadBaseline: loadBase12 } = await import('../governance/freeze')
+  const src = readFileSync(new URL('./rerating.ts', import.meta.url), 'utf-8')
+  const fetchSrc = readFileSync(new URL('./reratingFetch.ts', import.meta.url), 'utf-8')
+  const importsOf = (t: string) => t.split('\n').filter(l => l.startsWith('import')).join('\n')
+
+  const Y = 1e8
+  const rep = (reportDate: string, netProfit: number, extra: Partial<import('./rerating').ReportRow> = {}) => ({
+    reportDate, revenue: netProfit * 4, revenueYoy: 50, netProfit, netProfitYoy: 50,
+    deductNetProfit: netProfit, deductNetProfitYoy: 50, grossMargin: 40, operatingCashFlow: netProfit, ...extra,
+  })
+  const reports = [
+    rep('2026-06-30', 30 * Y), rep('2026-03-31', 12 * Y), rep('2025-12-31', 40 * Y),
+    rep('2025-09-30', 28 * Y), rep('2025-06-30', 18 * Y), rep('2025-03-31', 8 * Y),
+  ]
+  const q = singleQuarters(reports)
+  ok('累计值拆单季：Q2 = 半年报 − 一季报，Q4 = 年报 − 三季报',
+    q.length === 4 && q[0]!.netProfit === 18 * Y && q[1]!.netProfit === 12 * Y
+    && q[2]!.netProfit === 12 * Y && q[3]!.netProfit === 10 * Y)
+  ok('单季同比对的是去年同一单季，缺去年数据时为空',
+    Math.abs(q[0]!.netProfitYoy! - (18 / 10 - 1)) < 1e-9 && Math.abs(q[1]!.netProfitYoy! - (12 / 8 - 1)) < 1e-9
+    && q[2]!.netProfitYoy === null)
+
+  const reportsV = [
+    rep('2026-06-30', 20 * Y), rep('2026-03-31', 10 * Y), rep('2025-12-31', 28 * Y),
+    rep('2025-09-30', 20 * Y), rep('2025-06-30', 14 * Y), rep('2025-03-31', 7 * Y),
+  ]
+  const bars = Array.from({ length: 300 }, (_, i) => ({ date: `d${i}`, close: 100 + i, high: 101 + i, volume: 1 + (i % 2) }))
+  const bench = Array.from({ length: 300 }, (_, i) => ({ date: `d${i}`, close: 100, high: 100, volume: 1 }))
+  const member = PRESELECT_POOL[0]!
+  const base = {
+    member, price: 100, marketCapYi: 1000, floatCapYi: 900, peTtm: 40, reports: reportsV,
+    balance: [
+      { reportDate: '2026-06-30', inventory: 120, receivables: 150, contractLiab: 200, constructionInProgress: 50 },
+      { reportDate: '2025-06-30', inventory: 100, receivables: 100, contractLiab: 100, constructionInProgress: 100 },
+    ],
+    forecast: { orgNum: 10, eps: [{ year: 2025, eps: 2, actual: true }, { year: 2026, eps: 4, actual: false }, { year: 2027, eps: 6, actual: false }, { year: 2028, eps: 9, actual: false }] },
+    preview: null, bars, pePercentile3y: 0.3, peNote: null, errors: [],
+  }
+  const v = buildStockView(base, bench, '2026-10-15')
+  const pe20 = v.requiredProfit2028!.find(r => r.exitPe === 20)!
+  ok('前瞻 PE = 现价 / 预测每股收益', v.forwardPe.find(f => f.year === 2026)!.pe === 25)
+  ok('一致预期 2028 净利 = 2028E 每股收益 × 股本（股本由市值 / 现价反推）', Math.abs(v.consensusProfit2028Yi! - 90) < 1e-9)
+  ok('一致预期 2026→2028 年化 = 两年复合', Math.abs(v.consensusCagr! - 0.5) < 1e-9)
+  const reverse = buildStockView({ ...base, forecast: { orgNum: 1, eps: [{ year: 2026, eps: 4, actual: false }, { year: 2028, eps: pe20.yi / 10, actual: false }] } }, bench, '2026-10-15')
+  ok('情景格与「需要净利」互为反算：利润恰好等于需要净利时，年化等于目标年化',
+    Math.abs(reverse.scenarios.find(s => s.profit === '一致预期' && s.exitPe === 20)!.annualReturn! - SCENARIO_ASSUMPTIONS.targetAnnualReturn) < 1e-9)
+  ok('相对强弱 = 个股涨跌 − 沪深 300 涨跌', Math.abs(v.rs20! - v.ret20!) < 1e-12 && v.drawdown250! < 0)
+  ok('数据完整时无缺口、无读数提示', v.dataGaps.length === 0 && v.caveats.length === 0, JSON.stringify([v.dataGaps, v.caveats]))
+
+  const lowDeduct = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { deductNetProfit: 20 * Y * (DEDUCT_SHARE_FLOOR - 0.1) }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('扣非占比偏低时提示 PE 与分位失真', lowDeduct.caveats.some(c => c.includes('非经常性收益')))
+  const stale = buildStockView({ ...base, preview: { reportDate: '2026-09-30', noticeDate: '2026-10-15', type: '预增', netProfitLower: 48 * Y, netProfitUpper: 50 * Y, yoyLower: 100, yoyUpper: 110 } }, bench, '2026-10-15')
+  ok('三季报预告拆出第三季单季', stale.previewQ3Yi![0] === 28 && stale.previewQ3Yi![1] === 30)
+  ok('一致预期没跟上预告时提示前瞻 PE 偏保守', stale.caveats.some(c => c.includes('还没计入这份预告')), JSON.stringify(stale.caveats))
+  ok('资产负债表四项同比对的是去年同一报告期',
+    v.balanceYoy?.reportDate === '2026-06-30' && Math.abs(v.balanceYoy.inventory! - 0.2) < 1e-12
+    && v.balanceYoy.contractLiab === 1 && v.balanceYoy.constructionInProgress === -0.5)
+  ok('单季毛利率由累计营收 × 累计毛利率相减得到', Math.abs(q[0]!.grossMargin! - 40) < 1e-9)
+  const split = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { netProfitYoy: 45, deductNetProfitYoy: -16 }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('归母增长而扣非下滑时提示增长来自非经常性收益', split.caveats.some(c => c.includes('主营利润在下滑')), JSON.stringify(split.caveats))
+  const arHeavy = buildStockView({ ...base, balance: [{ ...base.balance[0]!, receivables: 100 * (1.5 + RECEIVABLE_GAP + 0.1) }, base.balance[1]!] }, bench, '2026-10-15')
+  ok('应收比营收涨得快出阈值时提示收款质量', arHeavy.caveats.some(c => c.includes('收款质量')) && !v.caveats.some(c => c.includes('收款质量')))
+  ok('一致预期要求的剩余每季利润与最近单季同口径', v.consensusPace?.needPerQuarter === 10 && v.consensusPace.lastQuarter === 10)
+  const demanding = buildStockView({ ...base, forecast: { orgNum: 10, eps: [{ year: 2026, eps: 8, actual: false }, { year: 2028, eps: 12, actual: false }] } }, bench, '2026-10-15')
+  ok('一致预期要求利润明显加速时提示', demanding.caveats.some(c => c.includes('继续明显加速')), JSON.stringify(demanding.consensusPace))
+  const cashOut = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { operatingCashFlow: -5 * Y }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('账面盈利而经营现金流为负时提示', cashOut.caveats.some(c => c.includes('现金流量表附注')))
+  const thin = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { revenue: 2000 * Y, operatingCashFlow: -200 * Y }), ...reportsV.slice(1)] }, bench, '2026-10-15')
+  ok('净利率过薄时不列现金流 / 净利', thin.cashConversion === null && thin.caveats.some(c => c.includes('没有意义')))
+  const oneOff = buildStockView({ ...base, reports: [rep('2026-06-30', 20 * Y, { deductNetProfit: 8 * Y }), rep('2026-03-31', 10 * Y, { deductNetProfit: 4 * Y }), ...reportsV.slice(2)] }, bench, '2026-10-15')
+  ok('扣非占比偏低时，一致预期节奏改用扣非口径比', oneOff.consensusPace?.basis === '扣非' && oneOff.consensusPace.lastQuarter === 4 && oneOff.consensusPace.needPerQuarter === 16)
+  const noBalance = buildStockView({ ...base, balance: [] }, bench, '2026-10-15')
+  ok('缺资产负债表记为数据缺口', noBalance.dataGaps.some(g => g.includes('资产负债表')))
+  ok('第二批覆盖委员会四条线与对照组，代码不重复',
+    ['688676', '002851', '300870', '002335', '002837', '301086', '300499', '002600', '600183', '300476', '300604', '002156'].every(c => NEXT_WAVE_POOL.some(m => m.code === c))
+    && ['300308', '300502', '002371', '688012', '002463'].every(c => NEXT_WAVE_POOL.some(m => m.code === c))
+    && new Set(NEXT_WAVE_POOL.map(m => m.code)).size === NEXT_WAVE_POOL.length)
+  const g2 = renderRerating([v], '2026-10-15', 't', { subtitle: '下一轮价值承接候选', showGroup: true })
+  ok('第二批渲染带方向列与资产负债表旁证，表格列数对齐',
+    g2.includes('| 方向 | 公司 |') && g2.includes('资产负债表旁证')
+    && (() => {
+      const tables: string[][] = []
+      let cur: string[] = []
+      for (const l of [...g2.split('\n'), '']) {
+        if (l.startsWith('|')) cur.push(l)
+        else if (cur.length) { tables.push(cur); cur = [] }
+      }
+      return tables.length >= 6 && tables.every(t => t.every(r => r.split('|').length === t[0]!.split('|').length))
+    })())
+  const noForecast = buildStockView({ ...base, forecast: null, errors: ['一致预期失败：x'] }, bench, '2026-10-15')
+  ok('抓取失败与缺一致预期都记为数据缺口，不静默跳过',
+    noForecast.dataGaps.includes('一致预期失败：x') && noForecast.dataGaps.includes('无机构一致预期'))
+
+  const txt = renderRerating([v, stale], '2026-10-15', '2026-10-15 16:00')
+  ok('渲染声明 OBSERVATION、不是买入名单、不输出评分或排名',
+    txt.includes('OBSERVATION') && txt.includes('不是买入名单') && txt.includes('不输出综合评分或排名'))
+  ok('渲染不填三个价格区，留给委员会', txt.includes('本表不填') && !/试仓区[:：]\s*\d/.test(txt))
+  ok('预选池含委员会十只，代码不重复',
+    ['300308', '300502', '300394', '002463', '002916', '002371', '688012', '688072', '300124', '688041'].every(c => PRESELECT_POOL.some(m => m.code === c))
+    && new Set(PRESELECT_POOL.map(m => m.code)).size === PRESELECT_POOL.length)
+  ok('R-02 永不产生动作，不 import makeAction', reratingProducesAction() === false
+    && !importsOf(src).includes('makeAction') && !importsOf(fetchSrc).includes('makeAction'))
+  ok('R-02 不含 score/rank/weight/tier 字段',
+    !/\b(score|rank|weight|tier)\s*[:=?]/i.test(src) && !/"(score|rank|weight|tier)"/i.test(JSON.stringify(v)))
+  ok('抓取脚本不 import 顶层执行 main() 的 valuationFetch', !importsOf(fetchSrc).includes('valuationFetch'))
+  ok('两个文件已登记进研究层隔离名单',
+    (RESEARCH_MODULES as readonly string[]).includes('research/rerating.ts')
+    && (RESEARCH_MODULES as readonly string[]).includes('research/reratingFetch.ts'))
+  const base12 = loadBase12()
+  const fpr = fp12()
+  ok('加入 R-02 后规则指纹未变', !!base12 && fpr.hash === base12.hash, `${base12?.hash} → ${fpr.hash}`)
+}
+
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)
 if (failed > 0) process.exit(1)

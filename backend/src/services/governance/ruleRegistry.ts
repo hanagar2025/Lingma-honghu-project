@@ -13,7 +13,7 @@
 import { createHash } from 'node:crypto'
 import { LEGAL_REASON_TEXT, FORBIDDEN_REASON_PHRASES } from '../cockpit/types'
 import { LIMITS, SAFETY_NET_POLICY } from '../cockpit/safety'
-import { PEAK_HISTORY } from './peakBasis'
+import { ACTIVE_PEAK_BASIS, PEAK_HISTORY } from './peakBasis'
 import {
   RISK_CAN_PRODUCE, EVIDENCE_CAN_REDUCE, STATES,
 } from '../decision/lifecycle'
@@ -104,13 +104,13 @@ export function buildRuleRegistry(): RuleEntry[] {
   // 峰值口径与取值：情形 B 的裁定直接决定熔断是否成立，
   // 故峰值本身也是决策生效参数，而不只是一个数据点。
   out.push({
-    domain: 'GUARD', key: 'portfolioPeakBasis', value: 'portfolio_basis_v1',
+    domain: 'GUARD', key: 'portfolioPeakBasis', value: ACTIVE_PEAK_BASIS,
     tier: 'ACCOUNTING',
-    definedIn: 'governance/peakBasis.ts（2026-08-15 裁定采用情形 B：430万 + 200万 = 630万）',
+    definedIn: 'governance/peakBasis.ts（2026-10-10 裁定：账户外 200 万移出，630万 − 200万 = 430万；v1 留作历史）',
   })
   out.push({
     domain: 'GUARD', key: 'portfolioPeakValue',
-    value: PEAK_HISTORY.find(r => r.basis === 'portfolio_basis_v1')?.peak ?? null,
+    value: PEAK_HISTORY.find(r => r.basis === ACTIVE_PEAK_BASIS)?.peak ?? null,
     tier: 'ACCOUNTING',
     definedIn: 'governance/peakBasis.ts:PEAK_HISTORY',
   })

@@ -2,7 +2,7 @@ import React from 'react'
 import { Tooltip } from 'antd'
 
 /**
- * 资金驾驶舱 · 时效检验与慢钱
+ * 资金哨兵 · 时效检验与慢钱
  *
  * 时效检验回答"资金信号领先还是跟随价格"；慢钱回答"钱是谁的"（被动 ETF、基金、股东户数）。
  * 两块都只读 money.json 里已经算好的结果。

@@ -436,16 +436,17 @@ console.log('\n【熔断口径】不可比必须与正常区分')
 {
   const { judgeCircuit, PEAK_HISTORY } = await import('../governance/peakBasis')
 
-  // 峰值已于 2026-08-15 按情形 B 认定为 630 万，故此处应真的算出一级熔断。
-  const cur = judgeCircuit(5_342_513)
-  ok('组合口径峰值已认定 → 一级熔断成立', cur.state === 'LEVEL1', cur.state)
-  ok('回撤约 15.2%',
-    cur.drawdown !== null && Math.abs(cur.drawdown - 0.152) < 0.002, String(cur.drawdown))
+  // 2026-10-10 起峰值为 v2 的 430 万（630 万 − 移出的 200 万），10/9 券商总资产 274.0 万 → 二级熔断。
+  const cur = judgeCircuit(2_739_991)
+  ok('组合口径 v2 峰值已认定 → 二级熔断成立', cur.state === 'LEVEL2', cur.state)
+  ok('回撤约 36.3%',
+    cur.drawdown !== null && Math.abs(cur.drawdown - 0.363) < 0.002, String(cur.drawdown))
 
   // 不可比的分支仍须存在 —— 它是守卫本身，不能因为当前口径已对齐就删掉
   const mismatch = judgeCircuit(5_342_513, [
     { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
-    { basis: 'portfolio_basis_v1', peak: null, peakDate: null, reliableFrom: null, note: '' },
+    { basis: 'portfolio_basis_v1', peak: 6_300_000, peakDate: null, reliableFrom: null, note: '' },
+    { basis: 'portfolio_basis_v2', peak: null, peakDate: null, reliableFrom: null, note: '' },
   ])
   ok('组合口径峰值缺失时仍判 INCOMPARABLE（守卫不得因当前已对齐而失效）',
     mismatch.state === 'INCOMPARABLE', mismatch.state)
@@ -459,22 +460,25 @@ console.log('\n【熔断口径】不可比必须与正常区分')
   ok('旧口径峰值 430 万仍在册（删掉会让那段历史无法复核）',
     legacy?.peak === 4_300_000, String(legacy?.peak))
   const v1 = PEAK_HISTORY.find(h => h.basis === 'portfolio_basis_v1')
-  ok('组合口径峰值为 630 万（情形 B：430 + 200），不是今天的 534 万',
+  ok('组合口径 v1 峰值 630 万仍在册（情形 B：430 + 200，只作历史）',
     v1?.peak === 6_300_000, String(v1?.peak))
-  ok('峰值不等于今日值 —— 取今日值等于把回撤时钟归零',
-    v1?.peak !== null && v1!.peak! > 5_400_000, String(v1?.peak))
+  const v2 = PEAK_HISTORY.find(h => h.basis === 'portfolio_basis_v2')
+  ok('组合口径 v2 峰值为 430 万（630 − 移出的 200 万），不是今天的 274 万',
+    v2?.peak === 4_300_000, String(v2?.peak))
+  ok('移出资金按出金扣减峰值，而不是取今日值 —— 取今日值等于把回撤时钟归零',
+    v2?.peak !== null && v2!.peak! > 2_739_991, String(v2?.peak))
 
   // 一旦峰值建立，判定必须真的能算出来
   const withPeak = judgeCircuit(5_335_000, [
     { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
-    { basis: 'portfolio_basis_v1', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
+    { basis: 'portfolio_basis_v2', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
   ])
   ok('峰值建立后可算出回撤（600万 → 533.5万 ≈ 11.1%）',
     withPeak.drawdown !== null && Math.abs(withPeak.drawdown - (1 - 5_335_000 / 6_000_000)) < 1e-9)
   ok('11.1% 回撤未触发熔断（一级线 15%）', withPeak.state === 'NORMAL')
   const deep = judgeCircuit(4_000_000, [
     { basis: 'legacy_account_basis', peak: 4_300_000, peakDate: null, reliableFrom: null, note: '' },
-    { basis: 'portfolio_basis_v1', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
+    { basis: 'portfolio_basis_v2', peak: 6_000_000, peakDate: '2026-07-01', reliableFrom: '2026-06-01', note: '' },
   ])
   ok('33% 回撤触发二级熔断', deep.state === 'LEVEL2', deep.state)
 }
@@ -530,6 +534,52 @@ console.log('\n【执行债务重审】')
   const reauditSrc = readFileSync(new URL('../governance/reaudit.ts', import.meta.url), 'utf-8')
   ok('重审层不调用 makeAction（不生成交易指令）', !/\bmakeAction\s*\(/.test(reauditSrc))
   ok('重审层不含股数计算（撤销与执行属执行层）', !/quantity|股数\s*=/.test(reauditSrc))
+}
+
+// ── 卖回上限的股数必须向上取整（10/9 海光：向下取整 1000 股后仍为 12.02%）──
+console.log('\n【超限卖出股数】卖完必须真的不超限')
+{
+  const { sharesToClearExcess } = await import('./index')
+  const total = 2_739_990.96
+  const cap = total * 0.12
+  const cases: [string, string, number, number][] = [
+    ['688041', '海光信息', 2500, 219.59],
+    ['300308', '中际旭创', 600, 775.29],
+    ['300502', '新易盛', 1260, 370.2],
+  ]
+  for (const [code, name, qty, px] of cases) {
+    const n = sharesToClearExcess(code, qty * px - cap, px, qty)
+    ok(`${name} 卖 ${n} 股后 ≤ 12%`, (qty - n) * px <= cap, `${((qty - n) * px / total * 100).toFixed(2)}%`)
+  }
+  ok('海光为科创板，按 1 股递增：1003 股', sharesToClearExcess('688041', 2500 * 219.59 - cap, 219.59, 2500) === 1003)
+  ok('创业板按 100 股一手向上取整：中际 200 股、新易盛 400 股',
+    sharesToClearExcess('300308', 600 * 775.29 - cap, 775.29, 600) === 200
+    && sharesToClearExcess('300502', 1260 * 370.2 - cap, 370.2, 1260) === 400)
+  ok('科创板单笔不足 200 股按 200 股', sharesToClearExcess('688041', 10_000, 219.59, 2500) === 200)
+  ok('超过持仓时按清仓', sharesToClearExcess('300308', 1e9, 775.29, 600) === 600)
+}
+
+// ── 熔断触发待账本核验（委员会 2026-10-10）──
+console.log('\n【熔断待核验】不执行、不撤销，只卖不买照常')
+{
+  const pendingSnap: AccountSnapshot = {
+    date: '2026-10-09', brokerTotal: 2_740_000, cash: 391_000, positionsValue: 2_349_000,
+    externalCash: 0, portfolioTotal: 2_740_000, peakAssets: 4_300_000, peakBasis: 'PORTFOLIO',
+    peakVerified: false,
+  }
+  const base = { date: '2026-10-09', positions, barsByCode, indexBarsByCode, pendingSellCount: 0, marketAllows: true }
+  const pending = runCockpit({ ...base, snapshot: pendingSnap })
+  const verified = runCockpit({ ...base, snapshot: { ...pendingSnap, peakVerified: true } })
+  const circuitActs = (r: typeof pending) => r.actions.filter(a => a.reason === 'CIRCUIT_BREAKER')
+  ok('峰值已核实时出现组合层强制降仓', circuitActs(verified).length === 1)
+  ok('峰值待核验时组合层强制降仓不进入动作', circuitActs(pending).length === 0)
+  ok('待核验时只卖不买的买入封锁照常生效',
+    pending.noNewEntry.reasons.some(r => r.includes('只卖不买')), pending.noNewEntry.reasons.join(' / '))
+  ok('待核验写入数据缺口，且写明"不撤销"',
+    pending.dataGaps.some(g => g.includes('待账本核验') && g.includes('不撤销')))
+  const { peakVerified: _omit, ...legacySnap } = pendingSnap
+  ok('缺省（未标注）视为已核实 —— 取严',
+    circuitActs(runCockpit({ ...base, snapshot: legacySnap })).length === 1)
 }
 
 console.log(`\n═══ 结果：${passed} 通过 / ${failed} 失败 ═══\n`)

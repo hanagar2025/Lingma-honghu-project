@@ -15,7 +15,13 @@
 // 我们并没有记录，而缺失的那部分不能用今天的 200 万往回抹平：
 // 那等于假设这笔钱一直存在且金额不变，而这个假设没有任何依据。
 
-export type PeakBasis = 'legacy_account_basis' | 'portfolio_basis_v1'
+export type PeakBasis = 'legacy_account_basis' | 'portfolio_basis_v1' | 'portfolio_basis_v2'
+
+/**
+ * 熔断判定所用的口径。委员会 2026-10-10 裁定：券商账户截图中的股票与现金即全部投资资金，
+ * 账户外 200 万移出分母。v1 自此只作历史，不再产生约束。
+ */
+export const ACTIVE_PEAK_BASIS: PeakBasis = 'portfolio_basis_v2'
 
 export interface PeakRecord {
   basis: PeakBasis
@@ -52,7 +58,20 @@ export const PEAK_HISTORY: PeakRecord[] = [
       + 'peakDate 仍为 null —— 峰值出现的具体日期未从日志考据，不猜；'
       + '它不影响回撤计算，只影响将来复盘时能否定位那一天。'
       + 'reliableFrom 仍为 null —— 期间该笔资金的逐日余额没有记录，'
-      + '故 630 万只可用作「峰值」这一个点，不可用于重建整条组合口径净值曲线。',
+      + '故 630 万只可用作「峰值」这一个点，不可用于重建整条组合口径净值曲线。'
+      + '2026-10-10 起被 portfolio_basis_v2 取代，只作历史。',
+  },
+  {
+    basis: 'portfolio_basis_v2',
+    peak: 4_300_000,
+    peakDate: null,
+    reliableFrom: '2026-10-09',
+    note:
+      '组合口径 v2（全部投资资金 = 券商账户持仓 + 账内现金）峰值 430 万。'
+      + '委员会 2026-10-10 裁定账户外 200 万不再属于投资资金。按"扣除出入金"的口径，'
+      + '这是一笔 200 万的流出，峰值同额扣减：630 − 200 = 430 万。'
+      + '不取今日值作峰值 —— 那等于把回撤时钟归零，须另行明确裁定，不能作为口径迁移的默认结果。'
+      + '账内现金另有约 11.67 万去向待报；若确认为出金，峰值应再扣至约 418.3 万，在此之前取严用 430 万。',
   },
 ]
 
@@ -80,7 +99,7 @@ export function judgeCircuit(
   history: PeakRecord[] = PEAK_HISTORY,
   levels: { level1: number; level2: number } = { level1: 0.15, level2: 0.25 }
 ): CircuitVerdict {
-  const v1 = history.find(h => h.basis === 'portfolio_basis_v1')
+  const v1 = history.find(h => h.basis === ACTIVE_PEAK_BASIS)
   if (!v1 || v1.peak === null) {
     const legacy = history.find(h => h.basis === 'legacy_account_basis')
     return {
@@ -97,7 +116,7 @@ export function judgeCircuit(
   const dd = 1 - portfolioTotal / v1.peak
   const state: CircuitState = dd >= levels.level2 ? 'LEVEL2' : dd >= levels.level1 ? 'LEVEL1' : 'NORMAL'
   return {
-    state, drawdown: dd, usedPeak: v1.peak, usedBasis: 'portfolio_basis_v1',
+    state, drawdown: dd, usedPeak: v1.peak, usedBasis: ACTIVE_PEAK_BASIS,
     reason: `组合口径回撤 ${(dd * 100).toFixed(1)}%`
       + `（峰值 ${(v1.peak / 10000).toFixed(1)}万，${v1.peakDate ?? '日期未记录'}）`,
   }
@@ -193,6 +212,7 @@ export function renderPeakScenarios(rows: PeakScenario[]): string {
   L.push('  两者相差一次强制降仓，故当初不由代码挑默认值 ——')
   L.push('  而且默认值天然会偏向"不触发"，因为那是什么都不用做的那个。')
   L.push(`  委员会 2026-08-15 裁定：${ADOPTED_SCENARIO}（430 万峰值发生时那 200 万已属股票投资资金）。`)
+  L.push('  委员会 2026-10-10 裁定：账户外 200 万移出投资资金，按出金扣减峰值，组合峰值回到 430 万（portfolio_basis_v2）。')
   L.push('')
   return L.join('\n')
 }

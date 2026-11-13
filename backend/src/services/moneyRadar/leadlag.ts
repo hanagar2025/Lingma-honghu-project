@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 资金信号时效检验
+ * 资金哨兵（R-01）· 资金信号时效检验
  *
  *   npm run money:leadlag
  *
@@ -465,7 +465,7 @@ const pct = (v: number | null, d = 2) => (v === null ? '—' : `${v >= 0 ? '+' :
 const ci3 = (c: [number, number] | null) => (c ? `[${f3(c[0])}, ${f3(c[1])}]` : '—')
 
 export function renderLeadLag(r: LeadLagReport): string {
-  const L: string[] = ['', `资金驾驶舱 · 资金信号时效检验（${r.runOn}，数据 ${r.period[0]} ~ ${r.period[1]}）`, '─'.repeat(110)]
+  const L: string[] = ['', `资金哨兵 · 资金信号时效检验（${r.runOn}，数据 ${r.period[0]} ~ ${r.period[1]}）`, '─'.repeat(110)]
   L.push('  IC = 当日横截面秩相关（资金信号 vs 该段超额收益），逐日取平均；区间为 20 日块自助抽样 95%。未来收益从 T+1 收盘起算。')
   for (const u of Object.keys(r.universes) as UniverseId[]) {
     L.push('', `  ── ${r.universes[u].text}（${r.universes[u].size} 个）──`)
