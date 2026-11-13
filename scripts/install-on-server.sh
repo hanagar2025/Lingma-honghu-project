@@ -3,7 +3,8 @@
 # 也可以登录服务器后手动运行：
 #   DOMAIN=example.com bash install.sh
 #
-# 前提：以 root 运行；服务器上有 Node.js 18 以上和 systemd。不需要 npm，不需要访问 GitHub。
+# 前提：以 root 运行；服务器上有 systemd。没有 Node.js 18 以上时自动从阿里云镜像下载一份，只给鸿鹄用。
+# 不需要 npm，不需要访问 GitHub。
 #
 # 做五件事：
 #   一、建服务账号和私有数据目录 /var/lib/honghu（只有服务账号能读）。
@@ -37,9 +38,35 @@ die() { printf '✗ %s\n' "$1" >&2; exit 1; }
 [[ "${PORT}" =~ ^[0-9]+$ ]] || die "端口必须是数字：${PORT}"
 [ -f "${HERE}/server.mjs" ] && [ -d "${HERE}/web" ] || die "发布包不完整：${HERE} 里缺 server.mjs 或 web/"
 command -v systemctl >/dev/null 2>&1 || die "这台机器没有 systemd"
-command -v node >/dev/null 2>&1 || die "没有 Node.js。请先安装 18 以上的版本"
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-[ "${NODE_MAJOR}" -ge 18 ] || die "Node.js 版本过低（$(node -v)），需要 18 以上"
+# 系统里没有合适的 Node.js 时，给鸿鹄单独放一份在 /opt/honghu/node，不动系统里的 Node.js：
+# 同一台机器上的别的程序可能依赖它。阿里云镜像在服务器上能连上，GitHub 和 nodejs.org 不一定。
+NODE_VERSION=v20.18.1
+NODE_SHA256=259e5a8bf2e15ecece65bd2a47153262eda71c0b2c9700d5e703ce4951572784
+PRIVATE_NODE="${APP_DIR}/node/bin/node"
+node_ok() { [ -x "$1" ] && [ "$("$1" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge 18 ]; }
+if node_ok "$(command -v node 2>/dev/null || true)"; then
+  :
+elif node_ok "${PRIVATE_NODE}"; then
+  PATH="${APP_DIR}/node/bin:${PATH}"
+else
+  [ "$(uname -m)" = "x86_64" ] || die "没有 Node.js 18 以上，且这台机器不是 x86_64，不能自动下载。请先安装 Node.js 18 以上"
+  printf '没有 Node.js 18 以上，给鸿鹄单独下载一份 %s（不动系统里的 Node.js）\n' "${NODE_VERSION}"
+  TGZ="$(mktemp)"
+  GOT=0
+  for MIRROR in https://mirrors.aliyun.com/nodejs-release https://cdn.npmmirror.com/binaries/node; do
+    if curl -fsSL -m 300 -o "${TGZ}" "${MIRROR}/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.gz" \
+      && echo "${NODE_SHA256}  ${TGZ}" | sha256sum -c --status; then
+      GOT=1
+      break
+    fi
+  done
+  [ "${GOT}" -eq 1 ] || { rm -f "${TGZ}"; die "Node.js 下载失败或校验不通过"; }
+  install -d -m 755 "${APP_DIR}/node"
+  tar xzf "${TGZ}" -C "${APP_DIR}/node" --strip-components=1 --no-same-owner
+  rm -f "${TGZ}"
+  node_ok "${PRIVATE_NODE}" || die "下载的 Node.js 运行不了"
+  PATH="${APP_DIR}/node/bin:${PATH}"
+fi
 VERSION="$(cat "${HERE}/VERSION" 2>/dev/null || echo unknown)"
 printf '安装鸿鹄 %s 到 %s，域名 %s，本机端口 %s\n' "${VERSION}" "${APP_DIR}" "${DOMAIN}" "${PORT}"
 

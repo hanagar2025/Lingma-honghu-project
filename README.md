@@ -40,7 +40,7 @@ DATA_DIR=.private COMMITTEE_TOKEN=<至少16位> npm run dev
 
 ## 部署到服务器
 
-服务器连不上 GitHub，所以在自己的电脑上打包、拷上去、在服务器上安装。服务器上只需要 Node.js 18 以上和 systemd，不需要 npm，不需要 git。
+服务器连不上 GitHub，所以在自己的电脑上打包、拷上去、在服务器上安装。服务器上只需要 systemd，不需要 npm，不需要 git。没有 Node.js 18 以上时，安装脚本从阿里云镜像下载一份放在 `/opt/honghu/node`，只给鸿鹄用，不动系统里的 Node.js。
 
 在自己的电脑上，仓库根目录：
 
