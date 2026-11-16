@@ -9,6 +9,8 @@
  *   COMMITTEE_TOKEN  安装口令（必填，至少 16 位）。页面上另可设好记的口令和登录链接，见 services/auth
  *   AGENT_TOKEN      战略侧读取与交回识别结果用的口令（选填，至少 16 位）
  *   PORT             缺省 5000
+ *   推送通道与截图识别服务的密钥由委员会在页面「设置」里填，存在 DATA_DIR/settings.json；
+ *   也可以用环境变量 PUSHPLUS_TOKEN、BARK_URL、WECOM_WEBHOOK、SERVERCHAN_SENDKEY、VISION_API_KEY 等给缺省值。
  *   WEB_DIR          前端构建产物目录，缺省 ../frontend/dist
  */
 import express, { type NextFunction, type Request, type Response } from 'express'
@@ -17,13 +19,17 @@ import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Auth, PASSWORD_MAX, PASSWORD_MIN, type Role } from './services/auth/auth'
+import { runDaily, type Daily } from './services/daily'
+import { pushAll, type PushResult } from './services/dailyDecision/notify'
 import { markdownToHtml } from './services/dailyDecision/html'
 import { beijingToday } from './services/dailyDecision/ledger'
 import { produceCard, type ProducedCard } from './services/dailyDecision/produce'
 import type { DayRange } from './services/intake/reconcile'
-import { attachParsed, confirm, reject, submitImage, submitText, type IntakeContext } from './services/intake/service'
-import { Store } from './services/intake/store'
+import { attachParsed, autoRecognize, confirm, reject, submitImage, submitText, type IntakeContext } from './services/intake/service'
+import { beijingStamp, Store } from './services/intake/store'
 import type { Submission } from './services/intake/types'
+import { isTradingToday, SLOTS, startScheduler, type Slot } from './services/scheduler'
+import { Settings } from './services/settings'
 
 function requireEnv(name: string, minLength: number): string {
   const v = process.env[name]?.trim() ?? ''
@@ -36,6 +42,7 @@ function requireEnv(name: string, minLength: number): string {
 
 const DATA_DIR = resolve(requireEnv('DATA_DIR', 1))
 const store = new Store(DATA_DIR)
+const settings = new Settings(store)
 const authority = new Auth(join(DATA_DIR, 'auth.json'), {
   committee: requireEnv('COMMITTEE_TOKEN', 16),
   agent: process.env.AGENT_TOKEN?.trim() ? requireEnv('AGENT_TOKEN', 16) : undefined,
@@ -88,6 +95,40 @@ async function currentCard(): Promise<ProducedCard> {
   return produced
 }
 
+/** 简报要取十几处行情和融资数据，缓存 5 分钟；账本或执行单结论一变就重算。同时到来的请求共用一次计算 */
+let dailyCache: { at: number; key: string; daily: Promise<Daily> } | null = null
+async function currentDaily(): Promise<Daily> {
+  const produced = await currentCard()
+  const key = `${JSON.stringify(store.readLedger())}|${produced.card.title}`
+  if (dailyCache && dailyCache.key === key && Date.now() - dailyCache.at < 300_000) return dailyCache.daily
+  const daily = runDaily(store, produced)
+  dailyCache = { at: Date.now(), key, daily }
+  daily.catch(() => { if (dailyCache?.daily === daily) dailyCache = null })
+  return daily
+}
+
+interface PushLog { at: string; what: string; results: PushResult[] }
+
+/** 推送一次执行单与简报。没有配置通道时什么都不做 */
+async function pushDecision(what: string, produced: ProducedCard, daily: Daily): Promise<void> {
+  if (!settings.pushConfigured) return
+  const site = store.readDoc<{ url: string }>('site')?.url
+  const body = [produced.card.push, '', daily.brief.push, ...(site ? ['', `全文与确认入口：${site}`] : [])].join('\n')
+  const results = await pushAll(produced.card.title, body, settings.pushEnv())
+  store.writeDoc('pushlog', { at: beijingStamp(), what, results: results.map(r => ({ ...r, detail: r.detail.slice(0, 120) })) } satisfies PushLog)
+  for (const r of results) process.stdout.write(`推送（${what}）${r.channel}：${r.ok ? '成功' : `失败 ${r.detail}`}\n`)
+}
+
+async function runSlot(slot: Slot, now: Date): Promise<boolean> {
+  const trading = await isTradingToday(now)
+  // 开盘前行情日期可能还没切到今天，窗口内再试；其余时段日期不是今天就是休市
+  if (trading !== true) return slot.id !== 'pre' && trading === false
+  const produced = await produceCard(store.readLedger(), now)
+  const daily = await runDaily(store, produced, { now })
+  if (slot.always || (produced.card.ok && produced.card.lines.length > 0)) await pushDecision(slot.label, produced, daily)
+  return true
+}
+
 function instructed(p: ProducedCard): Record<string, number> | null {
   if (!p.card.ok) return null
   return Object.fromEntries(p.card.lines.filter(l => l.shares !== null && l.shares > 0).map(l => [l.code, l.shares as number]))
@@ -130,7 +171,12 @@ app.use(express.json({ limit: '12mb' }))
 const VERSION = process.env.HONGHU_VERSION ?? 'dev'
 app.get('/health', (_req, res) => { res.json({ status: 'ok', version: VERSION }) })
 
-app.get('/api/state', auth('COMMITTEE', 'AGENT'), wrap(async (_req, res) => {
+app.get('/api/state', auth('COMMITTEE', 'AGENT'), wrap(async (req, res) => {
+  // 推送里要带上页面地址。记下委员会实际打开的那个域名
+  const host = req.get('host')
+  if (res.locals.role === 'COMMITTEE' && host && /^[\w.-]+$/.test(host) && store.readDoc<{ url: string }>('site')?.url !== `https://${host}`) {
+    store.writeDoc('site', { url: `https://${host}` })
+  }
   const produced = await currentCard()
   res.json({
     card: {
@@ -146,7 +192,15 @@ app.post('/api/intake', auth('COMMITTEE'), wrap(async (req, res) => {
   const body = req.body as { text?: unknown; image?: unknown }
   const text = typeof body.text === 'string' ? body.text.trim() : ''
   if (typeof body.image === 'string') {
-    send(res, submitImage({ store }, body.image, text))
+    const result = submitImage({ store }, body.image, text)
+    const vision = settings.vision()
+    if (typeof result !== 'string' && vision) {
+      result.summary = '图片已收到，正在自动识别，一般不超过一分钟。识别结果出来后需要您确认。'
+      store.save(result)
+      void autoRecognize(store, result.id, vision, dayRanges)
+        .catch(e => { process.stderr.write(`自动识别出错：${e instanceof Error ? e.message : String(e)}\n`) })
+    }
+    send(res, result)
     return
   }
   if (!text) {
@@ -187,8 +241,54 @@ app.post('/api/intake/:id/parsed', auth('AGENT', 'COMMITTEE'), wrap(async (req, 
   send(res, attachParsed({ store, ranges }, req.params.id ?? '', payload))
 }))
 
-app.post('/api/intake/:id/confirm', auth('COMMITTEE'), (req, res) => { send(res, confirm({ store }, req.params.id ?? '')) })
+app.post('/api/intake/:id/confirm', auth('COMMITTEE'), (req, res) => {
+  const result = confirm({ store }, req.params.id ?? '')
+  send(res, result)
+  // 账本一更新就按新账本重算并推送，不等下一个定时时段
+  if (typeof result !== 'string' && result.parsed?.kind === 'HOLDINGS') {
+    void (async () => {
+      const produced = await currentCard()
+      await pushDecision('账本更新', produced, await currentDaily())
+    })().catch(e => { process.stderr.write(`账本更新后的推送出错：${e instanceof Error ? e.message : String(e)}\n`) })
+  }
+})
 app.post('/api/intake/:id/reject', auth('COMMITTEE'), (req, res) => { send(res, reject({ store }, req.params.id ?? '')) })
+
+app.get('/api/brief', auth('COMMITTEE', 'AGENT'), wrap(async (_req, res) => {
+  const { brief } = await currentDaily()
+  res.json({
+    asOf: brief.asOf, generatedAt: brief.generatedAt, gateOpen: brief.gateOpen, changes: brief.changes,
+    sections: brief.sections.map(s => ({ id: s.id, title: s.title, html: markdownToHtml(s.markdown), markdown: s.markdown })),
+  })
+}))
+
+function settingsView(): unknown {
+  return {
+    items: settings.view(),
+    pushConfigured: settings.pushConfigured,
+    visionConfigured: settings.vision() !== null,
+    slots: SLOTS.map(s => ({ at: s.at, label: s.label, always: s.always })),
+    lastPush: store.readDoc<PushLog>('pushlog'),
+  }
+}
+
+app.get('/api/settings', auth('COMMITTEE'), (_req, res) => { res.json(settingsView()) })
+
+app.post('/api/settings', auth('COMMITTEE'), (req, res) => {
+  const body = req.body as { key?: unknown; value?: unknown }
+  const problem = typeof body.key === 'string' && typeof body.value === 'string' ? settings.set(body.key, body.value) : '缺少设置项或内容'
+  if (problem) res.status(400).json({ error: problem })
+  else res.json(settingsView())
+})
+
+app.post('/api/settings/test-push', auth('COMMITTEE'), wrap(async (_req, res) => {
+  if (!settings.pushConfigured) {
+    res.status(400).json({ error: '还没有填任何推送通道' })
+    return
+  }
+  const results = await pushAll('鸿鹄：推送测试', '这是一条测试消息。收到它，说明执行单能推送到这里。', settings.pushEnv())
+  res.json({ results: results.map(r => ({ channel: r.channel, ok: r.ok })) })
+}))
 
 function loginLink(req: Request): string {
   return `https://${req.get('host') ?? 'localhost'}/#k=${authority.linkKey}`
@@ -238,4 +338,11 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = Number(process.env.PORT ?? 5000)
 app.listen(PORT, '127.0.0.1', () => {
   process.stdout.write(`鸿鹄服务器已启动：127.0.0.1:${PORT}，数据目录 ${DATA_DIR}\n`)
+})
+
+startScheduler({
+  loadDone: () => store.readDoc<Record<string, string>>('schedule') ?? {},
+  saveDone: done => store.writeDoc('schedule', done),
+  run: runSlot,
+  log: line => process.stderr.write(`${line}\n`),
 })
