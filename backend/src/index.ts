@@ -6,17 +6,17 @@
  *
  * 环境变量：
  *   DATA_DIR         私有数据目录（必填，放在仓库之外）
- *   COMMITTEE_TOKEN  委员会口令（必填，至少 16 位）
+ *   COMMITTEE_TOKEN  安装口令（必填，至少 16 位）。页面上另可设好记的口令和登录链接，见 services/auth
  *   AGENT_TOKEN      战略侧读取与交回识别结果用的口令（选填，至少 16 位）
  *   PORT             缺省 5000
  *   WEB_DIR          前端构建产物目录，缺省 ../frontend/dist
  */
 import express, { type NextFunction, type Request, type Response } from 'express'
 import helmet from 'helmet'
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { Auth, PASSWORD_MAX, PASSWORD_MIN, type Role } from './services/auth/auth'
 import { markdownToHtml } from './services/dailyDecision/html'
 import { beijingToday } from './services/dailyDecision/ledger'
 import { produceCard, type ProducedCard } from './services/dailyDecision/produce'
@@ -24,8 +24,6 @@ import type { DayRange } from './services/intake/reconcile'
 import { attachParsed, confirm, reject, submitImage, submitText, type IntakeContext } from './services/intake/service'
 import { Store } from './services/intake/store'
 import type { Submission } from './services/intake/types'
-
-type Role = 'COMMITTEE' | 'AGENT'
 
 function requireEnv(name: string, minLength: number): string {
   const v = process.env[name]?.trim() ?? ''
@@ -37,13 +35,11 @@ function requireEnv(name: string, minLength: number): string {
 }
 
 const DATA_DIR = resolve(requireEnv('DATA_DIR', 1))
-const TOKENS: [Role, Buffer][] = [['COMMITTEE', digest(requireEnv('COMMITTEE_TOKEN', 16))]]
-if (process.env.AGENT_TOKEN?.trim()) TOKENS.push(['AGENT', digest(requireEnv('AGENT_TOKEN', 16))])
 const store = new Store(DATA_DIR)
-
-function digest(s: string): Buffer {
-  return createHash('sha256').update(s).digest()
-}
+const authority = new Auth(join(DATA_DIR, 'auth.json'), {
+  committee: requireEnv('COMMITTEE_TOKEN', 16),
+  agent: process.env.AGENT_TOKEN?.trim() ? requireEnv('AGENT_TOKEN', 16) : undefined,
+})
 
 /** 同一来源连续答错口令的次数。超过上限后锁 10 分钟 */
 const failures = new Map<string, { count: number; until: number }>()
@@ -58,11 +54,15 @@ function auth(...allowed: Role[]) {
       res.status(429).json({ error: '口令连续答错，请 10 分钟后再试' })
       return
     }
-    const given = digest(/^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1] ?? '')
-    const role = TOKENS.find(([, t]) => timingSafeEqual(t, given))?.[0]
+    const raw = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1] ?? ''
+    let given = ''
+    try { given = decodeURIComponent(raw) } catch { given = raw }
+    const role = authority.roleFor(given)
     if (!role) {
       failures.set(who, { count: (f && Date.now() < f.until ? f.count : 0) + 1, until: Date.now() + LOCK_MS })
-      res.status(401).json({ error: '口令不对' })
+      authority.noteFailure()
+      const paused = authority.passwordPaused && authority.hasPassword
+      res.status(401).json({ error: paused ? '近一小时口令答错太多，好记的口令暂停一小时；登录链接照常可用' : '口令不对' })
       return
     }
     failures.delete(who)
@@ -189,6 +189,30 @@ app.post('/api/intake/:id/parsed', auth('AGENT', 'COMMITTEE'), wrap(async (req, 
 
 app.post('/api/intake/:id/confirm', auth('COMMITTEE'), (req, res) => { send(res, confirm({ store }, req.params.id ?? '')) })
 app.post('/api/intake/:id/reject', auth('COMMITTEE'), (req, res) => { send(res, reject({ store }, req.params.id ?? '')) })
+
+function loginLink(req: Request): string {
+  return `https://${req.get('host') ?? 'localhost'}/#k=${authority.linkKey}`
+}
+
+app.get('/api/auth', auth('COMMITTEE'), (req, res) => {
+  res.json({ hasPassword: authority.hasPassword, passwordSetAt: authority.passwordSetAt, link: loginLink(req) })
+})
+
+app.post('/api/auth/password', auth('COMMITTEE'), (req, res) => {
+  const password = (req.body as { password?: unknown }).password
+  if (typeof password !== 'string') {
+    res.status(400).json({ error: `口令要 ${PASSWORD_MIN} 到 ${PASSWORD_MAX} 个字` })
+    return
+  }
+  const problem = authority.setPassword(password)
+  if (problem) res.status(400).json({ error: problem })
+  else res.json({ ok: true, passwordSetAt: authority.passwordSetAt })
+})
+
+app.post('/api/auth/link', auth('COMMITTEE'), (req, res) => {
+  authority.newLink()
+  res.json({ link: loginLink(req) })
+})
 
 /** 战略侧做记分牌用：账本、成交、意向 */
 app.get('/api/records', auth('AGENT', 'COMMITTEE'), (_req, res) => {

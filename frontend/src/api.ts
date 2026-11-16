@@ -36,10 +36,21 @@ export const getToken = (): string => localStorage.getItem(TOKEN_KEY) ?? ''
 export const setToken = (t: string): void => localStorage.setItem(TOKEN_KEY, t)
 export const clearToken = (): void => localStorage.removeItem(TOKEN_KEY)
 
+/** 扫码打开的登录链接形如 https://域名/#k=长码：收下长码，再把它从地址栏抹掉 */
+export function takeLinkKey(): void {
+  const m = /^#k=([\w-]{16,})$/.exec(location.hash)
+  if (!m) return
+  setToken(m[1])
+  history.replaceState(null, '', location.pathname + location.search)
+}
+
+// 请求头只能放 ASCII，汉字口令要先编码，服务器再解开
+const bearer = (): string => `Bearer ${encodeURIComponent(getToken())}`
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
-    headers: { Authorization: `Bearer ${getToken()}`, ...(init?.body ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { Authorization: bearer(), ...(init?.body ? { 'Content-Type': 'application/json' } : {}) },
   })
   const body = (await res.json().catch(() => ({}))) as { error?: string }
   if (!res.ok) throw new ApiError(res.status, body.error ?? `请求失败（${res.status}）`)
@@ -54,8 +65,21 @@ export const submit = (text: string, image?: string): Promise<{ submission: Subm
 export const settle = (id: string, action: 'confirm' | 'reject'): Promise<{ submission: Submission }> =>
   call(`/api/intake/${id}/${action}`, { method: 'POST' })
 
+export interface AuthInfo {
+  hasPassword: boolean
+  passwordSetAt: string | null
+  link: string
+}
+
+export const fetchAuth = (): Promise<AuthInfo> => call<AuthInfo>('/api/auth')
+
+export const changePassword = (password: string): Promise<{ passwordSetAt: string }> =>
+  call('/api/auth/password', { method: 'POST', body: JSON.stringify({ password }) })
+
+export const renewLink = (): Promise<{ link: string }> => call('/api/auth/link', { method: 'POST' })
+
 export async function fetchImage(id: string): Promise<string> {
-  const res = await fetch(`/api/intake/${id}/image`, { headers: { Authorization: `Bearer ${getToken()}` } })
+  const res = await fetch(`/api/intake/${id}/image`, { headers: { Authorization: bearer() } })
   if (!res.ok) throw new ApiError(res.status, '图片读不出')
   return URL.createObjectURL(await res.blob())
 }

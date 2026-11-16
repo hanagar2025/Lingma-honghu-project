@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import qrcode from 'qrcode-generator'
 import {
-  ApiError, clearToken, fetchImage, fetchState, getToken, readAsDataUrl, setToken, settle, submit,
-  type State, type Status, type Submission,
+  ApiError, changePassword, clearToken, fetchAuth, fetchImage, fetchState, getToken, readAsDataUrl, renewLink,
+  setToken, settle, submit, takeLinkKey, type AuthInfo, type State, type Status, type Submission,
 } from './api'
+
+takeLinkKey()
 
 const STATUS_TEXT: Record<Status, string> = {
   RECORDED: '已记录',
@@ -16,6 +19,8 @@ const STATUS_TEXT: Record<Status, string> = {
 const KIND_TEXT = { HOLDINGS: '持仓', TRADE: '成交', INTENT: '下单前登记', NOTE: '留言' } as const
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024
+const PASSWORD_MIN = 6
+const charCount = (s: string): number => Array.from(s).length
 
 function Login({ onDone }: { onDone: () => void }) {
   const [value, setValue] = useState('')
@@ -23,11 +28,89 @@ function Login({ onDone }: { onDone: () => void }) {
     <main className="login">
       <h1>鸿鹄</h1>
       <form onSubmit={e => { e.preventDefault(); if (value.trim()) { setToken(value.trim()); onDone() } }}>
-        <label htmlFor="token">口令</label>
+        <label htmlFor="token">口令（好记的口令或安装口令）</label>
         <input id="token" type="password" autoComplete="current-password" value={value} onChange={e => setValue(e.target.value)} />
         <button type="submit" disabled={!value.trim()}>进入</button>
       </form>
+      <p className="muted">手机上也可以扫电脑页面里「登录设置」的二维码，扫一次就登录。</p>
     </main>
+  )
+}
+
+function Qr({ text }: { text: string }) {
+  const qr = qrcode(0, 'M')
+  qr.addData(text)
+  qr.make()
+  return <img className="qr" src={qr.createDataURL(6, 2)} alt="登录二维码" />
+}
+
+function Settings({ onError }: { onError: (e: unknown) => void }) {
+  const [info, setInfo] = useState<AuthInfo | null>(null)
+  const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
+  const [showQr, setShowQr] = useState(false)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => { fetchAuth().then(setInfo).catch(onError) }, [onError])
+
+  const n = charCount(pw)
+  const problem = pw !== pw.trim() ? '首尾不能是空格'
+    : n < PASSWORD_MIN ? `至少 ${PASSWORD_MIN} 个字，现在 ${n} 个`
+    : /^(\d)\1+$|^(123456|1234567|12345678|654321|abcdef|qwerty)$/i.test(pw) ? '太容易猜，换一句'
+    : pw2 && pw2 !== pw ? '两次不一样' : ''
+
+  async function savePw() {
+    setBusy(true)
+    try {
+      const r = await changePassword(pw)
+      setInfo(i => i && { ...i, hasPassword: true, passwordSetAt: r.passwordSetAt })
+      setPw('')
+      setPw2('')
+      setNote('口令已改好。以后在任何设备上都可以用它登录，旧口令立即失效。')
+    } catch (e) { onError(e) } finally { setBusy(false) }
+  }
+
+  async function renew() {
+    if (!info || !window.confirm('作废后，之前扫过码的手机都要重新扫一次。确定作废？')) return
+    setBusy(true)
+    try {
+      const { link } = await renewLink()
+      if (getToken() === info.link.split('#k=')[1]) setToken(link.split('#k=')[1])
+      setInfo({ ...info, link })
+      setShowQr(true)
+      setNote('旧链接已作废，下面是新的二维码。')
+    } catch (e) { onError(e) } finally { setBusy(false) }
+  }
+
+  if (!info) return <p className="muted">读取中</p>
+  return (
+    <>
+      <h3>好记的口令</h3>
+      <p className="muted">{info.hasPassword ? `已设置（${info.passwordSetAt}）。可以随时改。` : '还没有设置。设好后就不用再输那串长口令了。'}</p>
+      <form className="pw" onSubmit={e => { e.preventDefault(); if (!problem && pw2 === pw) void savePw() }}>
+        <input type="password" autoComplete="new-password" placeholder="新口令：至少 6 个字，汉字也可以" value={pw} onChange={e => setPw(e.target.value)} />
+        <input type="password" autoComplete="new-password" placeholder="再输一次" value={pw2} onChange={e => setPw2(e.target.value)} />
+        {pw && problem && <p className="muted">{problem}</p>}
+        <button type="submit" disabled={busy || !pw || Boolean(problem) || pw2 !== pw}>保存口令</button>
+      </form>
+
+      <h3>手机扫码登录</h3>
+      <p className="muted">用手机相机扫一下就登录，之后手机上一直保持登录，直到点「退出」。</p>
+      {showQr
+        ? (
+          <>
+            <Qr text={info.link} />
+            <p className="warn">这个二维码等同于钥匙：不要截图转发，用完点「收起」。手机丢了就点「作废旧链接」。</p>
+            <div className="actions">
+              <button type="button" className="ghost" onClick={() => setShowQr(false)}>收起</button>
+              <button type="button" className="ghost" disabled={busy} onClick={() => { void renew() }}>作废旧链接</button>
+            </div>
+          </>
+        )
+        : <button type="button" onClick={() => setShowQr(true)}>显示二维码</button>}
+      {note && <p role="status">{note}</p>}
+    </>
   )
 }
 
@@ -249,6 +332,13 @@ export default function App() {
         {rest.length
           ? <ul className="items">{rest.map(s => <Item key={s.id} s={s} busy={busy} onSettle={onSettle} />)}</ul>
           : <p className="muted">还没有提交。</p>}
+      </section>
+
+      <section className="panel">
+        <details>
+          <summary>登录设置</summary>
+          <Settings onError={fail} />
+        </details>
       </section>
 
       <footer>

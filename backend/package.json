@@ -14,7 +14,8 @@
     "intake:selftest": "tsx src/services/intake/selftest.ts",
     "freeze:check": "tsx src/services/governance/freeze.ts check",
     "freeze:baseline": "tsx src/services/governance/freeze.ts baseline",
-    "valuation:fetch": "tsx src/services/msr/valuationFetch.ts"
+    "valuation:fetch": "tsx src/services/msr/valuationFetch.ts",
+    "auth:selftest": "tsx src/services/auth/selftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

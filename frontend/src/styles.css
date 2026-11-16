@@ -106,3 +106,8 @@ footer { text-align: center; margin-top: 24px; }
 @media (prefers-reduced-motion: no-preference) {
   button, .file { transition: opacity 0.15s ease; }
 }
+
+.pw { display: grid; gap: 8px; max-width: 360px; }
+.qr { display: block; width: 220px; height: 220px; image-rendering: pixelated; margin: 10px 0; background: #fff; }
+.warn { color: var(--warn); font-size: 14px; }
+details h3 { color: var(--ink); font-size: 15px; margin: 16px 0 4px; }

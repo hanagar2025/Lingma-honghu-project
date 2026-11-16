@@ -32,6 +32,9 @@ jobs:
       # 守：认不出的文字不猜；识别结果必须过勾稽核对；图片不经确认不生效；成交不改账本。
       - name: Intake selftest (输入框)
         run: npm -w backend run intake:selftest
+
+      - name: Auth selftest (登录)
+        run: npm -w backend run auth:selftest
       # 生产分支上已经发出的执行单，现在的代码必须逐字重现。
       # 有意修改执行单版式时这一步会失败，那时须在 PR 里写明改了什么。
       - name: Historical card regression (历史执行单逐字重现)
