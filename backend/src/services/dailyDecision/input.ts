@@ -10,7 +10,7 @@ import type { DecisionAction, DecisionInput } from './types'
 
 export interface LastBar { date: string; close: number }
 
-function tencentSymbol(code: string): string {
+export function tencentSymbol(code: string): string {
   if (/^(60|68|51|58)/.test(code)) return `sh${code}`
   if (/^(43|83|87|92)/.test(code)) return `bj${code}`
   return `sz${code}`
