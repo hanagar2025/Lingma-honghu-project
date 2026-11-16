@@ -93,3 +93,46 @@ export function readAsDataUrl(file: File): Promise<string> {
     reader.readAsDataURL(file)
   })
 }
+
+/** 浏览器自己认得的图片（例如 Safari 里的 HEIC）转成 JPEG 再上传；认不得就说明怎么办 */
+export async function toUploadable(file: File): Promise<string> {
+  if (/^image\/(png|jpeg|webp)$/.test(file.type)) return readAsDataUrl(file)
+  try {
+    const bitmap = await createImageBitmap(file)
+    const canvas = document.createElement('canvas')
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0)
+    return canvas.toDataURL('image/jpeg', 0.92)
+  } catch {
+    throw new Error('这种图片这个浏览器打不开（多半是 HEIC）。请在手机上截屏后直接用手机打开本页上传，或在 Mac 的「预览」里导出为 JPEG')
+  }
+}
+
+export interface BriefSection { id: string; title: string; html: string }
+
+export interface Brief {
+  asOf: string | null
+  generatedAt: string
+  gateOpen: boolean
+  changes: string[]
+  sections: BriefSection[]
+}
+
+export const fetchBrief = (): Promise<Brief> => call<Brief>('/api/brief')
+
+export interface SettingsView {
+  items: { key: string; set: boolean; value?: string }[]
+  pushConfigured: boolean
+  visionConfigured: boolean
+  slots: { at: string; label: string; always: boolean }[]
+  lastPush: { at: string; what: string; results: { channel: string; ok: boolean }[] } | null
+}
+
+export const fetchSettings = (): Promise<SettingsView> => call<SettingsView>('/api/settings')
+
+export const saveSetting = (key: string, value: string): Promise<SettingsView> =>
+  call('/api/settings', { method: 'POST', body: JSON.stringify({ key, value }) })
+
+export const testPush = (): Promise<{ results: { channel: string; ok: boolean }[] }> =>
+  call('/api/settings/test-push', { method: 'POST' })

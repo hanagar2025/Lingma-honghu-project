@@ -111,3 +111,18 @@ footer { text-align: center; margin-top: 24px; }
 .qr { display: block; width: 220px; height: 220px; image-rendering: pixelated; margin: 10px 0; background: #fff; }
 .warn { color: var(--warn); font-size: 14px; }
 details h3 { color: var(--ink); font-size: 15px; margin: 16px 0 4px; }
+
+input[type="text"] { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.setting { display: grid; gap: 6px; margin: 12px 0; max-width: 520px; }
+.setting label { color: var(--ink); font-weight: 600; }
+.setting .actions { margin-top: 0; }
+.fold { margin-top: 0; font-size: inherit; color: inherit; }
+.fold > summary { list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary h2 { display: inline-block; margin: 0; }
+.fold > summary::after { content: '展开'; float: right; color: var(--accent); font-size: 14px; }
+.fold[open] > summary::after { content: '收起'; }
+.fold[open] > summary { margin-bottom: 10px; }
+.changes { margin: 0 0 10px; padding: 10px 12px 10px 30px; background: #fff6e0; border-left: 4px solid var(--warn); border-radius: 8px; }
+.md h3 { font-size: 15px; margin: 16px 0 4px; color: var(--ink); }
+.md p { margin: 6px 0; }
