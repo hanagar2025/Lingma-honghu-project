@@ -35,6 +35,9 @@ jobs:
 
       - name: Auth selftest (登录)
         run: npm -w backend run auth:selftest
+
+      - name: Insight selftest (简报、记分牌、定时推送、自动识别)
+        run: npm -w backend run insight:selftest
       # 生产分支上已经发出的执行单，现在的代码必须逐字重现。
       # 有意修改执行单版式时这一步会失败，那时须在 PR 里写明改了什么。
       - name: Historical card regression (历史执行单逐字重现)
