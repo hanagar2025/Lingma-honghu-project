@@ -11,8 +11,10 @@ import { COMMITTEE_ORDERS } from '../dailyDecision/orders'
 import { MAINLINES } from '../msr/universe'
 import { parseText, type NameBook } from './parseText'
 import { checksPassed, classifyIntent, diffLedger, reconcileHoldings, toLedger, unverifiable, type DayRange } from './reconcile'
+import { readFileSync } from 'node:fs'
 import { beijingStamp, decodeImage, type Store } from './store'
 import type { HoldingsSnapshot, Parsed, Submission, TradeRecord } from './types'
+import { noteCodes, recognize, type VisionConfig } from './vision'
 
 export interface IntakeContext {
   store: Store
@@ -155,14 +157,14 @@ export function validateParsed(x: unknown): Parsed | string {
 }
 
 /** 识别方交回结果。只挂在等待识别的图片上；过了勾稽核对才进入待确认 */
-export function attachParsed(ctx: IntakeContext, id: string, payload: unknown): Submission | string {
+export function attachParsed(ctx: IntakeContext, id: string, payload: unknown, by: 'AGENT' | 'VISION' = 'AGENT'): Submission | string {
   const s = ctx.store.get(id)
   if (!s) return '没有这条提交'
   if (s.status !== 'PENDING_PARSE' && s.status !== 'NEEDS_FIX') return '这条提交不在等待识别的状态'
   const parsed = validateParsed(payload)
   if (typeof parsed === 'string') return parsed
   s.parsed = parsed
-  s.parsedBy = 'AGENT'
+  s.parsedBy = by
   if (parsed.kind === 'HOLDINGS') {
     s.checks = reconcileHoldings(parsed.holdings, ctx.ranges)
     const older = olderThanLedger(ctx.store, parsed.holdings)
@@ -208,4 +210,38 @@ export function reject(ctx: IntakeContext, id: string): Submission | string {
   s.status = 'REJECTED'
   s.settledAt = at
   return ctx.store.save(s)
+}
+
+/**
+ * 服务器自动识别一张等待识别的图片。结果走 attachParsed，与人工识别同一条路。
+ * 读不出来时不改状态，留给战略侧人工识别，并把原因写给提交人看。
+ */
+export async function autoRecognize(
+  store: Store, id: string, cfg: VisionConfig,
+  rangesFor: (codes: string[]) => Promise<Record<string, DayRange> | undefined>,
+  doFetch: typeof fetch = fetch,
+): Promise<Submission | null> {
+  const s = store.get(id)
+  const file = s ? store.imagePath(s) : null
+  if (!s || !file || s.status !== 'PENDING_PARSE') return null
+  try {
+    const today = s.receivedAt.slice(0, 10)
+    const { payload, remark } = await recognize(
+      readFileSync(file), file.split('.').pop()!, cfg, today, { ...nameBook(store), ...noteCodes(s.text) }, doFetch,
+    )
+    const holdings = (payload as { kind?: string; holdings?: { positions: { code: string }[] } })
+    const ranges = holdings.kind === 'HOLDINGS' && holdings.holdings ? await rangesFor(holdings.holdings.positions.map(p => p.code)) : undefined
+    const result = attachParsed({ store, ranges }, id, payload, 'VISION')
+    if (typeof result === 'string') throw new Error(result)
+    if (remark) {
+      result.summary = `${result.summary ?? ''}${remark}`
+      store.save(result)
+    }
+    return result
+  } catch (e) {
+    const latest = store.get(id)
+    if (!latest || latest.status !== 'PENDING_PARSE') return latest
+    latest.summary = `自动识别没有成功：${e instanceof Error ? e.message : String(e)}。这张图已留给战略侧人工识别；您也可以重发一张更清晰的截图。`
+    return store.save(latest)
+  }
 }

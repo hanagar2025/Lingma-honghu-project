@@ -77,7 +77,8 @@ export interface Submission {
   imageFile?: string
   status: SubmissionStatus
   parsed?: Parsed
-  parsedBy?: 'RULE' | 'AGENT'
+  /** RULE 文字句式；AGENT 战略侧人工识别；VISION 服务器自动识别 */
+  parsedBy?: 'RULE' | 'AGENT' | 'VISION'
   checks?: Check[]
   /** 给提交人看的一句话：系统把这条理解成了什么 */
   summary?: string
