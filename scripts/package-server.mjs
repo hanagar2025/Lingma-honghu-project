@@ -66,8 +66,9 @@ if (existsSync(seed)) cpSync(seed, join(OUT, 'seed-ledger.json'))
 writeFileSync(join(OUT, 'VERSION'), `${version}\n`)
 
 const tarball = join(RELEASE, `honghu-${version}.tar.gz`)
-// COPYFILE_DISABLE：不让 macOS 的 tar 往包里塞 ._ 开头的属性文件
-execFileSync('tar', ['czf', tarball, '-C', RELEASE, 'honghu'], { env: { ...process.env, COPYFILE_DISABLE: '1' } })
+// COPYFILE_DISABLE 和 --no-xattrs：不让 macOS 的 tar 往包里塞 ._ 属性文件和扩展属性，
+// 否则服务器上解包时每个文件报一行 Ignoring unknown extended header keyword
+execFileSync('tar', ['--no-xattrs', '-czf', tarball, '-C', RELEASE, 'honghu'], { env: { ...process.env, COPYFILE_DISABLE: '1' } })
 console.log(`已打包：${tarball}（版本 ${version}）`)
 
 if (process.argv.includes('--smoke')) {
