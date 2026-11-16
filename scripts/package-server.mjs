@@ -12,7 +12,7 @@
 
 import { build } from 'esbuild'
 import { execFileSync, spawn } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -32,6 +32,13 @@ function git(...args) {
 const commit = git('rev-parse', '--short', 'HEAD') || 'unknown'
 const dirty = git('status', '--porcelain', '--untracked-files=no') ? '-dirty' : ''
 const version = `${commit}${dirty}`
+
+// git pull 带来新依赖时 node_modules 会落后于 package-lock.json，先补装，否则构建找不到模块
+const installed = join(ROOT, 'node_modules', '.package-lock.json')
+if (!existsSync(installed) || statSync(installed).mtimeMs < statSync(join(ROOT, 'package-lock.json')).mtimeMs) {
+  console.log('依赖有更新，先安装依赖')
+  execFileSync('npm', ['install', '--no-audit', '--no-fund'], { cwd: ROOT, stdio: 'inherit' })
+}
 
 rmSync(RELEASE, { recursive: true, force: true })
 mkdirSync(OUT, { recursive: true })
