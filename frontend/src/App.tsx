@@ -186,6 +186,18 @@ export default function App() {
     fetchState().then(s => { setState(s); setError('') }).catch(fail)
   }, [fail])
 
+  // 页面已经开着时扫码，浏览器只改 # 后面、不重新加载，要在这里收下
+  useEffect(() => {
+    const onHash = () => {
+      if (!takeLinkKey()) return
+      setError('')
+      setAuthed(true)
+      load()
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [load])
+
   useEffect(() => {
     if (!authed) return
     load()
@@ -204,6 +216,10 @@ export default function App() {
 
   async function pick(file: File | undefined) {
     if (!file) return
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      setError('只收 PNG、JPG、WebP 图片。HEIC 照片请在手机上直接截屏后从这里上传，或在 Mac 的「预览」里导出为 JPEG')
+      return
+    }
     if (file.size > MAX_IMAGE_BYTES) {
       setError('图片太大，请控制在 8MB 以内')
       return

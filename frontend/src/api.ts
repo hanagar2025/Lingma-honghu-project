@@ -37,11 +37,12 @@ export const setToken = (t: string): void => localStorage.setItem(TOKEN_KEY, t)
 export const clearToken = (): void => localStorage.removeItem(TOKEN_KEY)
 
 /** 扫码打开的登录链接形如 https://域名/#k=长码：收下长码，再把它从地址栏抹掉 */
-export function takeLinkKey(): void {
+export function takeLinkKey(): boolean {
   const m = /^#k=([\w-]{16,})$/.exec(location.hash)
-  if (!m) return
+  if (!m) return false
   setToken(m[1])
   history.replaceState(null, '', location.pathname + location.search)
+  return true
 }
 
 // 请求头只能放 ASCII，汉字口令要先编码，服务器再解开
