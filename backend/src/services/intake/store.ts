@@ -91,6 +91,30 @@ export class Store {
     this.write(this.ledgerPath, text)
   }
 
+  /** 每个交易日收盘后的一份留底：<DATA_DIR>/journal/<日期>.json。同一天重写 */
+  saveJournal(date: string, record: unknown): void {
+    mkdirSync(join(this.dir, 'journal'), { recursive: true, mode: 0o700 })
+    this.write(join(this.dir, 'journal', `${date}.json`), `${JSON.stringify(record, null, 2)}\n`)
+  }
+
+  /** 旧的在前 */
+  listJournal(): unknown[] {
+    const dir = join(this.dir, 'journal')
+    if (!existsSync(dir)) return []
+    return readdirSync(dir).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort()
+      .map(f => JSON.parse(readFileSync(join(dir, f), 'utf-8')) as unknown)
+  }
+
+  /** 设置、推送留痕这类单份文件：<DATA_DIR>/<name>.json */
+  readDoc<T>(name: string): T | null {
+    const file = join(this.dir, `${name}.json`)
+    return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf-8')) as T) : null
+  }
+
+  writeDoc(name: string, doc: unknown): void {
+    this.write(join(this.dir, `${name}.json`), `${JSON.stringify(doc, null, 2)}\n`)
+  }
+
   append(name: 'trades' | 'intents', record: unknown): void {
     appendFileSync(join(this.dir, `${name}.jsonl`), `${JSON.stringify(record)}\n`, { mode: 0o600 })
   }
