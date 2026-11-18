@@ -129,6 +129,7 @@ function overseasPremise(market: MarketData): Premise {
 function roomPremise(code: string, input: DecisionInput | null): Premise {
   const name = '仓位有空间'
   if (!input || !(input.snapshot.portfolioTotal > 0)) return { no: 6, name, ok: false, reading: '没有账本，无法试算' }
+  if (input.priceFailed.length) return { no: 6, name, ok: false, reading: `持仓价格取不到（${input.priceFailed.join('、')}），无法试算` }
   const s = input.snapshot
   const total = s.portfolioTotal
   const value = (c: string): number => {
@@ -208,7 +209,7 @@ function holdingViews(input: DecisionInput, card: DecisionCard, market: MarketDa
     const line = card.lines.find(l => l.code === h.code)
     return {
       code: h.code, name: h.name,
-      weight: h.close !== null && total > 0 ? h.quantity * h.close / total : null,
+      weight: h.close !== null && total > 0 && !input.priceFailed.length ? h.quantity * h.close / total : null,
       order: line ? `卖出 ${line.shares} 股（${line.reason.split('，')[0]}）` : null,
       view: STOCK_VIEWS.find(v => v.code === h.code) ?? null,
       outside: member === null,
@@ -259,6 +260,7 @@ function events(input: DecisionInput | null, market: MarketData): string[] {
 
 function goalLines(input: DecisionInput | null): string[] {
   if (!input) return ['没有账本，算不出进度。']
+  if (input.priceFailed.length) return [`持仓价格取不到（${input.priceFailed.join('、')}），市值只能按成本价估，今天算不出进度。`]
   const c = input.circuit
   const s = input.snapshot
   if (c.drawdown === null || !(s.portfolioTotal > 0)) return ['峰值口径不可比，算不出进度。', `待您裁定：${PENDING.goal}`]
@@ -364,6 +366,7 @@ export function buildBrief(input: DecisionInput | null, card: DecisionCard, mark
     if (over) todo.push(PENDING.circuit)
     for (const o of input.outsideMainline ?? []) todo.push(`${o.name}：${PENDING.outside}`)
   }
+  if (input?.priceFailed.length) todo.unshift(`持仓价格取不到：${input.priceFailed.join('、')}。占比、回撤、进度今天都不可用；执行单已停单`)
   todo.push(PENDING.gate)
   if (market.failed.length) todo.push(`今天取不到的数据（已按不成立处理）：${market.failed.join('、')}`)
 

@@ -188,6 +188,11 @@ process.stdout.write('\n【简报】\n')
   breaking.input.holdings[0] = { ...breaking.input.holdings[0]!, close: 1, barDate: TODAY }
   ok(buildBrief(breaking.input, breaking.card, mk, TODAY).changes.some(c => c.includes('沪电股份') && c.includes('收盘不回升就是新低')), '盘中跌破 60 日最低收盘价 → 列在今天的变化里')
 
+  const failedInput = { ...input, priceFailed: ['002463'] }
+  const fb = buildBrief(failedInput, { ...card, ok: false }, mk, TODAY)
+  ok(fb.todo[0]!.includes('持仓价格取不到') && fb.sections.find(s => s.id === 'goal')!.markdown.includes('算不出进度')
+    && !fb.sections.find(s => s.id === 'risk')!.markdown.includes('占总资产'), '持仓价格取不到 → 不用成本价冒充占比与进度')
+
   const none = buildBrief(null, { ok: false, title: 't', push: '', markdown: '', lines: [] }, mk, TODAY)
   ok(none.todo[0]!.includes('上传一张持仓截图'), '没有账本 → 第一件事是上传持仓截图')
 }
