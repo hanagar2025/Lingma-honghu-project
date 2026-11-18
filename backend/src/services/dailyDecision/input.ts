@@ -19,7 +19,7 @@ export function tencentSymbol(code: string): string {
 /** 腾讯前复权日 K 的最新一根。最新一根的收盘价与不复权价相同；盘中它就是实时价 */
 export async function fetchLastBar(code: string, doFetch: typeof fetch = fetch): Promise<LastBar> {
   const symbol = tencentSymbol(code)
-  const res = await doFetch(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${symbol},day,,,5,qfq`, {
+  const res = await doFetch(`https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?param=${symbol},day,,,5,qfq`, {
     headers: { Referer: 'https://gu.qq.com/' },
   })
   if (!res.ok) throw new Error(`日K源HTTP ${res.status}: ${code}`)

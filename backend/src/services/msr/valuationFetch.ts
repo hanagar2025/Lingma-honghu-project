@@ -23,7 +23,7 @@ export function tencentSymbol(code: string): string {
 export async function fetchUnadjustedBars(code: string, days = 1200): Promise<DailyBar[]> {
   const sym = tencentSymbol(code)
   // 末位留空 = 未复权。前复权(qfq)会因分红送股回调而系统性压低历史PE。
-  const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${sym},day,,,${days},`
+  const url = `https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?param=${sym},day,,,${days},`
   const res = await fetch(url, { headers: { Referer: 'https://gu.qq.com/' } })
   if (!res.ok) throw new Error(`行情HTTP ${res.status}`)
   const json = await res.json() as any
