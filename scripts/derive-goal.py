@@ -4,8 +4,10 @@
   甲 创业板指历史上回撤达到现在这个深度之后，又跌了多少、几年后在哪里
   乙 我们的持仓跟着指数跌多少（贝塔、最差 60 日）
   丙 不同股票上限下，上面几种跌法让总资产亏多少、会不会碰到停手线；到期日按指数历史分位能到多少
+  丁 把几种打法放回历史上那几次，从回撤达到现在深度那天起走到期限，总资产各是多少
+     只用指数乘以持仓贝塔来走，止跌信号也只看指数，是示意，不是《分段重建计划》登记的个股回测
 
-用法：PORTFOLIO=<账本路径> python3 scripts/derive-goal.py --cut 2026-11-18 [--stop 0.20] [--end 2030-12-31] [--save]
+用法：PORTFOLIO=<账本路径> python3 scripts/derive-goal.py --cut 2026-11-18 [--stop 0.20] [--end 2030-12-31] [--caps 0.3,0.5,0.7] [--save]
   不给 PORTFOLIO 只算甲。账本只用来算占比，输出不含金额。
 数据源：腾讯日 K（指数与个股收盘价）；新浪日 K（第二源，逐日核对创业板指收盘价）。
 """
@@ -23,7 +25,8 @@ def arg(name, default):
 
 
 CUT, STOP, END = arg('--cut', None), float(arg('--stop', '0.20')), arg('--end', '2030-12-31')
-INDEX, CAPS, CASH_YIELD = 'sz399006', (0.30, 0.50, 0.70), 0.015
+INDEX, CASH_YIELD = 'sz399006', 0.015
+CAPS = tuple(float(x) for x in arg('--caps', '0.3,0.5,0.7').split(','))
 SAVE_DIR = os.path.join(os.path.dirname(__file__), '..', '战略组合2026-2030', '数据', '目标推导')
 
 
@@ -122,27 +125,65 @@ if os.environ.get('PORTFOLIO'):
     print(f'- 持仓对创业板指的贝塔（近 250 日）{beta:.2f}，相关系数 {statistics.correlation(b, x):.2f}')
     print(f'- 按现在的权重，持仓最差的 60 个交易日 {pct(worst60)}（样本 {common[0]} 起）')
     print(f'- 自待核验峰值回撤 {drawdown * 100:.1f}%；回到峰值总资产要涨 {pct(1 / (1 - drawdown) - 1)}，年化 {pct((1 / (1 - drawdown)) ** (1 / horizon_years) - 1, 1)}')
-    cases = [(f"{e['peak'][:4]} 年那次（指数再跌 {pct(close[peak_i] * (1 + e['peak_to_trough']) / close[-1] - 1)}）",
+    cases = [(f"{e['hit'][:4]} 年那次（指数再跌 {pct(close[peak_i] * (1 + e['peak_to_trough']) / close[-1] - 1)}）",
               max(-0.95, (close[peak_i] * (1 + e['peak_to_trough']) / close[-1] - 1) * beta)) for e in past]
     cases.append(('最差 60 日重演', worst60))
     cash_gain = (1 + CASH_YIELD) ** horizon_years - 1
     print(f'\n### 丙　停手线 {pct(-STOP)} 下，不同股票上限的结果（总资产，相对 {last} 收盘）\n')
-    print('| 股票上限 | ' + ' | '.join(c[0] for c in cases) + f' | 到期：指数中位 | 到期：指数上四分位 | 回到峰值需要股票部分涨 |')
-    print('|---|' + '---|' * (len(cases) + 3))
+    print('| 股票上限 | ' + ' | '.join(c[0] for c in cases) + f' | 到期：指数中位 | 到期：指数上四分位 | 回到峰值需要股票部分涨 | 指数历史上做到的比例 |')
+    print('|---|' + '---|' * (len(cases) + 4))
     table = []
     for cap in CAPS:
         losses = [cap * loss for _, loss in cases]
         ends = [cap * q + (1 - cap) * cash_gain for q in (q50, q75)]
         need = (1 / (1 - drawdown) - (1 - cap) * (1 + cash_gain)) / cap - 1
-        table.append({'cap': cap, 'losses': losses, 'ends': ends, 'stock_needed_for_peak': need})
-        print(f'| {cap * 100:.0f}% | ' + ' | '.join('触线' if x <= -STOP else pct(x) for x in losses) + f' | {pct(ends[0])} | {pct(ends[1])} | {pct(need)} |')
+        reached = sum(1 for x in forward if x >= need) / len(forward)
+        table.append({'cap': cap, 'losses': losses, 'ends': ends, 'stock_needed_for_peak': need, 'share_of_sample_reaching_it': reached})
+        print(f'| {cap * 100:.0f}% | ' + ' | '.join('触线' if x <= -STOP else pct(x) for x in losses) + f' | {pct(ends[0])} | {pct(ends[1])} | {pct(need)} | {reached * 100:.0f}% |')
     print(f'\n到期一栏按指数本身的涨幅算，不假设选股更好；现金按年化 {CASH_YIELD * 100:.1f}% 计。这是历史分位，不是预测。')
-    record.update({'ledger_as_of': pf['asOf'], 'exposure': exposure, 'exposure_after_single_cap': after_cap, 'beta_250': beta,
+    def low60(i):
+        return close[i] <= min(close[max(0, i - 60):i])
+
+    def walk(start, begin, wait_cap, open_cap, quiet_days=15, batch=0.05, gap=5):
+        """begin：起始股票占比；wait_cap：止跌信号出现前的上限；open_cap：出现后的上限（等于 wait_cap 即不加仓）"""
+        stock_part, cash_part, stopped, last_buy = begin, 1 - begin, None, -99
+        for i in range(start + 1, min(start + H, n - 1) + 1):
+            stock_part *= 1 + (close[i] / close[i - 1] - 1) * beta
+            cash_part *= 1 + CASH_YIELD / 243
+            assets = stock_part + cash_part
+            if stopped is None and assets <= 1 - STOP:
+                stopped = days[i]
+                move = max(0.0, stock_part - 0.30 * assets)
+                stock_part, cash_part = stock_part - move, cash_part + move
+            quiet = not any(low60(j) for j in range(i - quiet_days + 1, i + 1))
+            if stopped is None and open_cap > wait_cap and quiet and i - last_buy >= gap:
+                buy = min(batch * assets, open_cap * assets - stock_part, cash_part - 0.10 * assets)
+                if buy > 0:
+                    stock_part, cash_part, last_buy = stock_part + buy, cash_part - buy, i
+        return stock_part + cash_part - 1, stopped
+
+    plays = [('一直 30%', 0.30, 0.30, 0.30), ('一直 50%', 0.50, 0.50, 0.50), ('50%，止跌后加到 70%', 0.50, 0.50, 0.70), ('50%，止跌后加到 90%', 0.50, 0.50, 0.90)]
+    print(f'\n### 丁　几种打法放回历史（到期 {horizon_years:.1f} 年，停手线 {pct(-STOP)}，贝塔 {beta:.2f}；止跌 = 指数连续 15 个交易日收盘不创 60 日新低，每批 5%，间隔 5 日）\n')
+    print('| 打法 | ' + ' | '.join(f"{e['hit'][:4]} 年那次（指数 {pct(e['at_end'])}）" for e in past if e['at_end'] is not None) + ' |')
+    print('|---|' + '---|' * len([e for e in past if e['at_end'] is not None]))
+    walks = []
+    for label, begin, wait_cap, open_cap in plays:
+        cells = []
+        for e in past:
+            if e['at_end'] is None:
+                continue
+            result, stopped = walk(days.index(e['hit']), begin, wait_cap, open_cap)
+            cells.append(pct(result) + (f'（{stopped} 触线）' if stopped else ''))
+            walks.append({'play': label, 'episode': e['hit'], 'result': result, 'stopped': stopped})
+        print(f'| {label} | ' + ' | '.join(cells) + ' |')
+    need_total = 1 / (1 - drawdown) - 1
+    print(f'\n回到待核验峰值需要 {pct(need_total)}。')
+    record.update({'walks': walks, 'ledger_as_of': pf['asOf'], 'exposure': exposure, 'exposure_after_single_cap': after_cap, 'beta_250': beta,
                    'worst_60d': worst60, 'drawdown_from_unverified_peak': drawdown, 'caps': table})
 
 if '--save' in sys.argv:
     os.makedirs(SAVE_DIR, exist_ok=True)
-    path = os.path.join(SAVE_DIR, f'{last}.json')
+    path = os.path.join(SAVE_DIR, f'{last}-到期{END}.json')
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(record, f, ensure_ascii=False, indent=1)
     print(f'\n已保存 {os.path.relpath(path)}')
