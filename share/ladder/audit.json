@@ -1,7 +1,7 @@
 {
  "id": "AUD-1016",
- "asOf": "2026-10-16",
- "commit": "9f92dab1",
+ "asOf": "2026-10-17",
+ "commit": "30e9dc02",
  "checks": [
   {
    "group": "DEDUP",
@@ -132,14 +132,14 @@
   {
    "group": "NO_HIDDEN_BUY",
    "how": "STATIC",
-   "name": "执行单调用链（dailyDecision/run.ts 与 cockpit/run.ts 的全部传递依赖）不含名单主表、模拟层、资金哨兵",
+   "name": "执行单调用链（dailyDecision/run.ts 与 cockpit/run.ts 的全部传递依赖）不含名单主表、模拟层、资金哨兵、周期监控",
    "pass": true,
    "detail": "调用链 74 个模块；其中 19 个研究模块是驾驶舱的阅读区，由 8/16 研究层隔离的行为证明覆盖（audit:selftest）"
   },
   {
    "group": "NO_HIDDEN_BUY",
    "how": "STATIC",
-   "name": "执行单、驾驶舱、决策层、交易操作系统、MSR 都不 import 名单主表与模拟层",
+   "name": "执行单、驾驶舱、决策层、交易操作系统、MSR 都不 import 名单主表、模拟层与周期监控",
    "pass": true,
    "detail": ""
   },
@@ -153,7 +153,7 @@
   {
    "group": "NO_HIDDEN_BUY",
    "how": "DATA",
-   "name": "最近一次执行单输出不含名单主表、模拟层、雷达锁的字样",
+   "name": "最近一次执行单输出不含名单主表、模拟层、雷达锁、周期监控的字样",
    "pass": true,
    "detail": "2 个文件"
   },
@@ -202,7 +202,7 @@
   {
    "group": "NO_AUTO_SELL",
    "how": "STATIC",
-   "name": "模拟层、名单主表声明不产生动作",
+   "name": "模拟层（MA60、领先期检验）、名单主表、周期监控声明不产生动作",
    "pass": true,
    "detail": ""
   },
