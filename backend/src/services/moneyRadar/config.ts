@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 配置层
+ * 资金哨兵（R-01）· 配置层
  *
  * 三样东西登记在这里：三个入口的名单、国家队观察名单、预先登记的阈值。
  *
@@ -11,7 +11,7 @@
 
 import { readFileSync } from 'node:fs'
 import { MAINLINES, findMember } from '../msr/universe'
-import type { EntryNo, MoneyObject } from './types'
+import type { EntryNo, MoneyObject, ObjectKind } from './types'
 
 // ─────────────────────────── 三个入口 ───────────────────────────
 
@@ -40,6 +40,121 @@ export const WATCHLIST: readonly { code: string; name: string }[] = [
 ]
 
 export const WATCHLIST_CONFIRMED_ON = '2026-09-23'
+
+/**
+ * 入口② 扩充：左侧雷达五个方向 19 只（委员会 2026-10-16 确认，取自已删除的 Python 版资金哨兵）。
+ *
+ * 只吸收名单，不吸收它的打分、阶段判断和减仓动作。
+ * 不并入 msr/universe.ts —— 那是选股候选池，进去就会被 MSR 当作候选打分。
+ * 每个方向另建一个方向篮子，看"钱是否在往这个方向走"，和个股状态分开读。
+ */
+export type RadarScope = 'NON_MAINLINE' | 'RESEARCH_ONLY' | 'MAINLINE_ADJACENT'
+
+export const LEFT_RADAR: readonly {
+  id: string
+  name: string
+  scope: RadarScope
+  members: readonly { code: string; name: string }[]
+}[] = [
+  { id: 'ai-software', name: 'AI软件/Agent', scope: 'NON_MAINLINE', members: [
+    { code: '688111', name: '金山办公' },
+    { code: '300033', name: '同花顺' },
+    { code: '600570', name: '恒生电子' },
+    { code: '002230', name: '科大讯飞' },
+  ] },
+  { id: 'embodied', name: '具身智能', scope: 'NON_MAINLINE', members: [
+    { code: '300124', name: '汇川技术' },
+    { code: '601689', name: '拓普集团' },
+    { code: '002050', name: '三花智控' },
+    { code: '688017', name: '绿的谐波' },
+    { code: '002747', name: '埃斯顿' },
+  ] },
+  { id: 'ai-power', name: 'AI电力', scope: 'RESEARCH_ONLY', members: [
+    { code: '600406', name: '国电南瑞' },
+    { code: '002028', name: '思源电气' },
+    { code: '688676', name: '金盘科技' },
+    { code: '002851', name: '麦格米特' },
+  ] },
+  { id: 'ai-inference', name: 'AI推理', scope: 'MAINLINE_ADJACENT', members: [
+    { code: '688256', name: '寒武纪' },
+    { code: '603019', name: '中科曙光' },
+    { code: '688521', name: '芯原股份' },
+  ] },
+  { id: 'industrial-ai', name: '工业AI', scope: 'NON_MAINLINE', members: [
+    { code: '688777', name: '中控技术' },
+    { code: '002415', name: '海康威视' },
+    { code: '600845', name: '宝信软件' },
+  ] },
+]
+
+export const LEFT_RADAR_CONFIRMED_ON = '2026-10-16'
+
+/**
+ * 左侧雷达权限锁（委员会 2026-10-16 裁定三）。
+ *
+ * 资金强度、趋势启动或状态升级只改变研究优先级，不改变主线归属和买入权限。
+ * 雷达即使判定为「爆发」，也只能输出观察状态或复核提示，
+ * 不能进入备选池、建仓申请或实盘执行单。
+ *
+ * 解除只能来自正式战略评审或冻结令规定的变更流程，不能由雷达信号自动解除：
+ * releasedBy 是字面量 null，没有任何函数能改它，要解除只能改这一行代码并留下评审记录。
+ */
+export const LEFT_RADAR_LOCK = {
+  label: '只观察，不具备建仓权限',
+  freeze: '战略冻结期：至 2027 年 1 月评审，或触发冻结令规定的正式变更条件',
+  signalEffect: '资金强度、趋势启动或状态升级：只改变研究优先级，不改变主线归属和买入权限',
+  releasedBy: null,
+} as const
+
+export const RADAR_SCOPE_TEXT: Record<RadarScope, string> = {
+  NON_MAINLINE: '非当前作战主线，只观察、研究',
+  RESEARCH_ONLY: '仅研究，仓位为零',
+  MAINLINE_ADJACENT: '属 AI 基础设施·算力方向，雷达来源不授予任何资格；冠军席位只看冻结令',
+}
+
+/** 某只股票所在的左侧雷达方向；不在雷达里返回空数组 */
+export function radarGroupsOf(code: string): typeof LEFT_RADAR[number][] {
+  return LEFT_RADAR.filter(g => g.members.some(m => m.code === code))
+}
+
+/** 左侧雷达锁的完整文字（页面、导出报告与个股卡片共用同一份） */
+export function radarLockText(scope: RadarScope): string {
+  return `${LEFT_RADAR_LOCK.label}｜${RADAR_SCOPE_TEXT[scope]}｜${LEFT_RADAR_LOCK.freeze}`
+}
+
+/**
+ * 资金对象的权限锁：左侧雷达方向篮子、以及未持有的左侧雷达个股带锁，其余为 null。
+ * 资金视图、提醒卡片、文字版与 Agent 文件都读这一个函数，不各写一份。
+ */
+export function radarLockOf(o: { id: string; kind: ObjectKind; codes: readonly string[]; entry: EntryNo | null }): string | null {
+  const groups = o.id.startsWith('radar:')
+    ? LEFT_RADAR.filter(g => `radar:${g.id}` === o.id)
+    : o.kind === 'STOCK' && o.entry !== 1 ? radarGroupsOf(o.codes[0] ?? '') : []
+  if (!groups.length) return null
+  return groups.map(g => `左侧雷达·${g.name}：${radarLockText(g.scope)}`).join('；')
+}
+
+/** 入口② 全部观察股：起始 7 只 + 左侧雷达，按代码去重（重复的以起始名单为准） */
+export function watchlistAll(): { code: string; name: string; radar: string | null }[] {
+  const out = new Map<string, { code: string; name: string; radar: string | null }>()
+  for (const w of WATCHLIST) out.set(w.code, { ...w, radar: null })
+  for (const g of LEFT_RADAR) {
+    for (const m of g.members) if (!out.has(m.code)) out.set(m.code, { ...m, radar: g.id })
+  }
+  return [...out.values()]
+}
+
+/** 左侧雷达的方向篮子 */
+export function radarBasketObjects(entry: EntryNo | null = 2): MoneyObject[] {
+  return LEFT_RADAR.map(g => ({
+    id: `radar:${g.id}`,
+    name: `${g.name}（左侧雷达）`,
+    kind: 'BASKET' as const,
+    entry,
+    codes: g.members.map(m => m.code),
+    themeEtfs: [],
+  }))
+}
 
 /**
  * 入口③ 的行业骨架口径。申万 2021 二级 134 个，三级只在下钻时用。

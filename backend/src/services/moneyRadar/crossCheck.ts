@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 第二数据源交叉核对
+ * 资金哨兵（R-01）· 第二数据源交叉核对
  *
  * 主数据源是腾讯日 K。这里用两个与腾讯无关的来源逐项核对：
  *
@@ -30,7 +30,7 @@ async function get(url: string, headers: Record<string, string>): Promise<ArrayB
       return await res.arrayBuffer()
     } catch (e) {
       last = e
-      await new Promise(r => setTimeout(r, 600 * 2 ** i))
+      await new Promise(r => setTimeout(r, 600 * Math.pow(2, i)))
     } finally {
       clearTimeout(timer)
     }

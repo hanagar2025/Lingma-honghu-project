@@ -1,0 +1,3363 @@
+{
+  "generatedAt": "2026-10-15 18:05",
+  "asOf": "2026-10-15",
+  "assumptions": {
+    "horizonEnd": "2028-12-31",
+    "targetAnnualReturn": 0.15,
+    "exitPe": [
+      20,
+      30
+    ]
+  },
+  "quoteTime": {
+    "300124": "20261015161451",
+    "300308": "20261015161430",
+    "300394": "20261015161433",
+    "300502": "20261015161409",
+    "603019": "20261015161448",
+    "688012": "20261015161448",
+    "688041": "20261015161456",
+    "688072": "20261015161441",
+    "002463": "20261015161415",
+    "002916": "20261015161442",
+    "002371": "20261015161436"
+  },
+  "benchmarkLast": "2026-10-15",
+  "stocks": [
+    {
+      "member": {
+        "code": "300308",
+        "name": "中际旭创",
+        "group": "AI 算力",
+        "attributionVerified": true
+      },
+      "price": 656.94,
+      "marketCapYi": 7738.16,
+      "floatCapYi": 7291.62,
+      "peTtm": 37.83,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 41777861795.03,
+          "revenueYoy": 182.4913813287,
+          "netProfit": 13651149693.27,
+          "netProfitYoy": 241.7,
+          "deductNetProfit": 13091597476.79,
+          "deductNetProfitYoy": 229.316750212959,
+          "grossMargin": 46.2521843492,
+          "operatingCashFlow": 1799674832.02
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 19496398083.95,
+          "revenueYoy": 192.1169094233,
+          "netProfit": 5734501526.83,
+          "netProfitYoy": 262.28,
+          "deductNetProfit": 5717748340.78,
+          "deductNetProfitYoy": 264.562737707404,
+          "grossMargin": 46.0581330258,
+          "operatingCashFlow": 3367573676.62
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 38239935640.67,
+          "revenueYoy": 60.2534559317,
+          "netProfit": 10797254300.45,
+          "netProfitYoy": 108.78,
+          "deductNetProfit": 10710053246.51,
+          "deductNetProfitYoy": 111.312159833723,
+          "grossMargin": 42.0356317148,
+          "operatingCashFlow": 10896126160.03
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 25004800851.32,
+          "revenueYoy": 44.4312132346,
+          "netProfit": 7131932436.7,
+          "netProfitYoy": 90.05,
+          "deductNetProfit": 7083699712.66,
+          "deductNetProfitYoy": 90.539695745523,
+          "grossMargin": 40.7411487935,
+          "operatingCashFlow": 5454821227.43
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 14789074837.8,
+          "revenueYoy": 36.9537051158,
+          "netProfit": 3995115384.7,
+          "netProfitYoy": 69.4,
+          "deductNetProfit": 3975381594.87,
+          "deductNetProfitYoy": 70.404499340949,
+          "grossMargin": 39.3270577222,
+          "operatingCashFlow": 3218463287.3
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 6674176487.23,
+          "revenueYoy": 37.8236822825,
+          "netProfit": 1582876128.67,
+          "netProfitYoy": 56.83,
+          "deductNetProfit": 1568385287.19,
+          "deductNetProfitYoy": 58.388107822512,
+          "grossMargin": 36.7009988471,
+          "operatingCashFlow": 2164459570.16
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 23862159738.37,
+          "revenueYoy": 122.636632875,
+          "netProfit": 5171485967.85,
+          "netProfitYoy": 137.93,
+          "deductNetProfit": 5068356338.29,
+          "deductNetProfitYoy": 138.660345770301,
+          "grossMargin": 33.8049582366,
+          "operatingCashFlow": 3164582957.85
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 17312601820.15,
+          "revenueYoy": 146.2572796436,
+          "netProfit": 3752659170.15,
+          "netProfitYoy": 189.59,
+          "deductNetProfit": 3717702857.11,
+          "deductNetProfitYoy": 198.770366003847,
+          "grossMargin": 33.3214470022,
+          "operatingCashFlow": 1315866293.65
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 10798594185.75,
+          "revenueYoy": 169.6964228066,
+          "netProfit": 2358421051.42,
+          "netProfitYoy": 284.26,
+          "deductNetProfit": 2332908820.04,
+          "deductNetProfitYoy": 300.074774520965,
+          "grossMargin": 33.1322785221,
+          "operatingCashFlow": 968101519.95
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 19825909263.51,
+          "receivables": 15091720498.52,
+          "contractLiab": 20708561.8,
+          "constructionInProgress": 3707416577.7
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 9168268345.69,
+          "receivables": 6449493877.4,
+          "contractLiab": 6607423.92,
+          "constructionInProgress": 111067960.93
+        }
+      ],
+      "forecast": {
+        "orgNum": 25,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 9.166453796306,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 28.90652173913,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 53.51652173913,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 77.579130434783,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.25466666666666665,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-22)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 661.19,
+        "close": 656.94,
+        "high": 676,
+        "low": 645.01,
+        "volume": 330142
+      }
+    },
+    {
+      "member": {
+        "code": "300502",
+        "name": "新易盛",
+        "group": "AI 算力",
+        "attributionVerified": true
+      },
+      "price": 306.01,
+      "marketCapYi": 4268.04,
+      "floatCapYi": 3839.58,
+      "peTtm": 32.53,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 20909746962.2,
+          "revenueYoy": 100.3392340098,
+          "netProfit": 7529168039.39,
+          "netProfitYoy": 90.98,
+          "deductNetProfit": 7510738801.54,
+          "deductNetProfitYoy": 90.923514888284,
+          "grossMargin": 48.4397325072,
+          "operatingCashFlow": 1616408524.15
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 8337902040.74,
+          "revenueYoy": 105.759481459,
+          "netProfit": 2780222960.23,
+          "netProfitYoy": 76.8,
+          "deductNetProfit": 2767975248.13,
+          "deductNetProfitYoy": 76.442410106467,
+          "grossMargin": 49.1609551491,
+          "operatingCashFlow": 684071355.88
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 24841854840.22,
+          "revenueYoy": 187.2943215188,
+          "netProfit": 9531922730.17,
+          "netProfitYoy": 235.89,
+          "deductNetProfit": 9507308848.08,
+          "deductNetProfitYoy": 235.974111817484,
+          "grossMargin": 47.8056285949,
+          "operatingCashFlow": 7701234651
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 16504791211.36,
+          "revenueYoy": 221.7034931799,
+          "netProfit": 6327092507.84,
+          "netProfitYoy": 284.37,
+          "deductNetProfit": 6301361138.7,
+          "deductNetProfitYoy": 283.273549078891,
+          "grossMargin": 47.2469750517,
+          "operatingCashFlow": 4637420688.24
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 10437170265.5,
+          "revenueYoy": 282.6398357668,
+          "netProfit": 3942294268.37,
+          "netProfitYoy": 355.68,
+          "deductNetProfit": 3933899292.57,
+          "deductNetProfitYoy": 354.928758760119,
+          "grossMargin": 47.4263202934,
+          "operatingCashFlow": 952686853.97
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 4052256538.37,
+          "revenueYoy": 264.1319456609,
+          "netProfit": 1572525789.22,
+          "netProfitYoy": 384.54,
+          "deductNetProfit": 1568769802.26,
+          "deductNetProfitYoy": 383.096593910192,
+          "grossMargin": 48.6597338537,
+          "operatingCashFlow": 199026140.7
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 8646831134.32,
+          "revenueYoy": 179.145631521,
+          "netProfit": 2837813624.37,
+          "netProfitYoy": 312.26,
+          "deductNetProfit": 2829774233.69,
+          "deductNetProfitYoy": 317.593035963907,
+          "grossMargin": 44.717413033,
+          "operatingCashFlow": 640930145.58
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 5130435808.52,
+          "revenueYoy": 145.8226600561,
+          "netProfit": 1646072871.21,
+          "netProfitYoy": 283.2,
+          "deductNetProfit": 1644089751,
+          "deductNetProfitYoy": 287.728752005103,
+          "grossMargin": 42.3353191636,
+          "operatingCashFlow": 284568423.34
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 2727674771.39,
+          "revenueYoy": 109.0678767592,
+          "netProfit": 865142094.15,
+          "netProfitYoy": 200.02,
+          "deductNetProfit": 864728645.27,
+          "deductNetProfitYoy": 204.5190988625,
+          "grossMargin": 43.0443113488,
+          "operatingCashFlow": -290744263.77
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 11655392245.35,
+          "receivables": 7562545769.4,
+          "contractLiab": 217046814.51,
+          "constructionInProgress": 556998528.16
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 5944105034.32,
+          "receivables": 5025872538.8,
+          "contractLiab": 7291181,
+          "constructionInProgress": 268123578.37
+        }
+      ],
+      "forecast": {
+        "orgNum": 19,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 6.83420662385,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 16.180333333333,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 29.359888888889,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 42.629388888889,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-25)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 314.98,
+        "close": 306.01,
+        "high": 319.98,
+        "low": 299.23,
+        "volume": 555864
+      }
+    },
+    {
+      "member": {
+        "code": "300394",
+        "name": "天孚通信",
+        "group": "AI 算力",
+        "attributionVerified": null
+      },
+      "price": 223.33,
+      "marketCapYi": 2436.14,
+      "floatCapYi": 2430.7,
+      "peTtm": 104.9,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 2827938748.37,
+          "revenueYoy": 15.1492291388,
+          "netProfit": 1204285104.14,
+          "netProfitYoy": 33.92,
+          "deductNetProfit": 1186263481.07,
+          "deductNetProfitYoy": 36.763184203691,
+          "grossMargin": 60.8695979509,
+          "operatingCashFlow": 1000881668.42
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 1330270175.36,
+          "revenueYoy": 40.8242783073,
+          "netProfit": 492218878.05,
+          "netProfitYoy": 45.79,
+          "deductNetProfit": 493192417.72,
+          "deductNetProfitYoy": 48.440814591365,
+          "grossMargin": 56.6039337232,
+          "operatingCashFlow": 182277065.44
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 5163432471.16,
+          "revenueYoy": 58.7914125152,
+          "netProfit": 2017266034.08,
+          "netProfitYoy": 50.15,
+          "deductNetProfit": 1976452906.47,
+          "deductNetProfitYoy": 50.416723746744,
+          "grossMargin": 53.9627002495,
+          "operatingCashFlow": 1868203465.93
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 3918403111.99,
+          "revenueYoy": 63.6276360778,
+          "netProfit": 1465355835.83,
+          "netProfitYoy": 50.07,
+          "deductNetProfit": 1431366456.48,
+          "deductNetProfitYoy": 50.441618240047,
+          "grossMargin": 51.8674190397,
+          "operatingCashFlow": 1344182030.69
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 2455890299.5,
+          "revenueYoy": 57.8383922928,
+          "netProfit": 899241294.92,
+          "netProfitYoy": 37.46,
+          "deductNetProfit": 867385099.27,
+          "deductNetProfitYoy": 35.272988749503,
+          "grossMargin": 50.7884244269,
+          "operatingCashFlow": 608178009.04
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 944631274.77,
+          "revenueYoy": 29.106096866,
+          "netProfit": 337626696.86,
+          "netProfitYoy": 21.07,
+          "deductNetProfit": 332248525.5,
+          "deductNetProfitYoy": 23.394225237927,
+          "grossMargin": 53.0450541469,
+          "operatingCashFlow": 293609336.55
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 3251707626.61,
+          "revenueYoy": 67.7350508872,
+          "netProfit": 1343522232.87,
+          "netProfitYoy": 84.07,
+          "deductNetProfit": 1313984813.15,
+          "deductNetProfitYoy": 82.561791997803,
+          "grossMargin": 57.216796078,
+          "operatingCashFlow": 1262516765.12
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 2394707401.46,
+          "revenueYoy": 98.5479023441,
+          "netProfit": 976446154.92,
+          "netProfitYoy": 122.39,
+          "deductNetProfit": 951443140.02,
+          "deductNetProfitYoy": 126.146543887628,
+          "grossMargin": 58.2140109735,
+          "operatingCashFlow": 893548799.62
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 1555952429.46,
+          "revenueYoy": 134.2700796249,
+          "netProfit": 654195158.6,
+          "netProfitYoy": 177.2,
+          "deductNetProfit": 641210863.52,
+          "deductNetProfitYoy": 184.238335784249,
+          "grossMargin": 57.7713847294,
+          "operatingCashFlow": 480197801.31
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 928830690.11,
+          "receivables": 1453805514.14,
+          "contractLiab": 112080142.55,
+          "constructionInProgress": 120543923.79
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 364686350.19,
+          "receivables": 1176151472.28,
+          "contractLiab": 189440784.72,
+          "constructionInProgress": 116452866.51
+        }
+      ],
+      "forecast": {
+        "orgNum": 22,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 1.849302924021,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 3.436761904762,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 5.481428571429,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 8.159857142857,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.556,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-19)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 221.01,
+        "close": 223.33,
+        "high": 229.73,
+        "low": 218,
+        "volume": 296215
+      }
+    },
+    {
+      "member": {
+        "code": "002463",
+        "name": "沪电股份",
+        "group": "AI 算力",
+        "attributionVerified": true
+      },
+      "price": 116.18,
+      "marketCapYi": 2235.73,
+      "floatCapYi": 2233.97,
+      "peTtm": 44.16,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 13689427504,
+          "revenueYoy": 61.1682833526,
+          "netProfit": 2923361746,
+          "netProfitYoy": 73.72,
+          "deductNetProfit": 2794525941,
+          "deductNetProfitYoy": 70.002677269413,
+          "grossMargin": 38.7155693432,
+          "operatingCashFlow": 1150686191
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 6214156406,
+          "revenueYoy": 53.9061409765,
+          "netProfit": 1242081367,
+          "netProfitYoy": 62.9,
+          "deductNetProfit": 1162681935,
+          "deductNetProfitYoy": 56.015734456112,
+          "grossMargin": 35.6324179234,
+          "operatingCashFlow": 511016585
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 18945220585,
+          "revenueYoy": 42.0017369822,
+          "netProfit": 3822306272,
+          "netProfitYoy": 47.74,
+          "deductNetProfit": 3760567906,
+          "deductNetProfitYoy": 47.687450839386,
+          "grossMargin": 35.4755614,
+          "operatingCashFlow": 3871967792
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 13512390231,
+          "revenueYoy": 49.9558224394,
+          "netProfit": 2717617995,
+          "netProfitYoy": 47.03,
+          "deductNetProfit": 2676420260,
+          "deductNetProfitYoy": 48.170418241859,
+          "grossMargin": 35.4028082021,
+          "operatingCashFlow": 2895195011
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 8493871883,
+          "revenueYoy": 56.594868895,
+          "netProfit": 1682780947,
+          "netProfitYoy": 47.5,
+          "deductNetProfit": 1643812901,
+          "deductNetProfitYoy": 47.895239187227,
+          "grossMargin": 35.1439479559,
+          "operatingCashFlow": 2097416668
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 4037627327,
+          "revenueYoy": 56.2527850262,
+          "netProfit": 762465400,
+          "netProfitYoy": 48.11,
+          "deductNetProfit": 745233767,
+          "deductNetProfitYoy": 50.073428535774,
+          "grossMargin": 32.7549227527,
+          "operatingCashFlow": 1421099718
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 13341541440,
+          "revenueYoy": 49.2624731014,
+          "netProfit": 2587236693,
+          "netProfitYoy": 71.05,
+          "deductNetProfit": 2546301588,
+          "deductNetProfitYoy": 80.796364981258,
+          "grossMargin": 34.5397357848,
+          "operatingCashFlow": 2325184965
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 9010914022,
+          "revenueYoy": 48.1459573631,
+          "netProfit": 1848389385,
+          "netProfitYoy": 93.94,
+          "deductNetProfit": 1806312145,
+          "deductNetProfitYoy": 105.796614076584,
+          "grossMargin": 35.7313758642,
+          "operatingCashFlow": 1860311828
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 5424106130,
+          "revenueYoy": 44.1250000769,
+          "netProfit": 1140830259,
+          "netProfitYoy": 131.59,
+          "deductNetProfit": 1111471140,
+          "deductNetProfitYoy": 150.223958509156,
+          "grossMargin": 36.3169225636,
+          "operatingCashFlow": 1193934948
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 6041283966,
+          "receivables": 7967258462,
+          "contractLiab": 88763787,
+          "constructionInProgress": 3570866866
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 3099441471,
+          "receivables": 4406160116,
+          "contractLiab": 52906881,
+          "constructionInProgress": 2235665190
+        }
+      ],
+      "forecast": {
+        "orgNum": 18,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 1.986270368622,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 3.445882352941,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 5.537058823529,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 7.910588235294,
+            "actual": false
+          }
+        ]
+      },
+      "preview": {
+        "reportDate": "2026-09-30",
+        "noticeDate": "2026-10-15",
+        "type": "预增",
+        "netProfitLower": 5450000000,
+        "netProfitUpper": 5700000000,
+        "yoyLower": 100.54,
+        "yoyUpper": 109.74
+      },
+      "pePercentile3y": 0.8066666666666666,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-26)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 115,
+        "close": 116.18,
+        "high": 118.89,
+        "low": 113.07,
+        "volume": 752815
+      }
+    },
+    {
+      "member": {
+        "code": "002916",
+        "name": "深南电路",
+        "group": "AI 算力",
+        "attributionVerified": true
+      },
+      "price": 318.8,
+      "marketCapYi": 2171.56,
+      "floatCapYi": 2120.09,
+      "peTtm": 52.11,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 15296361440.43,
+          "revenueYoy": 46.3282888807,
+          "netProfit": 2251458836.99,
+          "netProfitYoy": 65.55,
+          "deductNetProfit": 2239172474.35,
+          "deductNetProfitYoy": 76.943010276961,
+          "grossMargin": 31.0149106719,
+          "operatingCashFlow": 1501855888.16
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 6595587902.38,
+          "revenueYoy": 37.8994473036,
+          "netProfit": 850230796.58,
+          "netProfitYoy": 73.01,
+          "deductNetProfit": 849446715.47,
+          "deductNetProfitYoy": 75.035537239669,
+          "grossMargin": 29.1690112056,
+          "operatingCashFlow": 247409844.58
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 23646977088.98,
+          "revenueYoy": 32.0510924765,
+          "netProfit": 3275738151.27,
+          "netProfitYoy": 74.47,
+          "deductNetProfit": 3113627500.81,
+          "deductNetProfitYoy": 78.957207870796,
+          "grossMargin": 28.3163430047,
+          "operatingCashFlow": 3838343369.18
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 16754015317.37,
+          "revenueYoy": 28.3882003926,
+          "netProfit": 2325825551.62,
+          "netProfitYoy": 56.3,
+          "deductNetProfit": 2181963307.42,
+          "deductNetProfitYoy": 58.563507475572,
+          "grossMargin": 28.2045395422,
+          "operatingCashFlow": 2314155787.42
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 10453454733.49,
+          "revenueYoy": 25.6271405626,
+          "netProfit": 1360017775.49,
+          "netProfitYoy": 37.75,
+          "deductNetProfit": 1265476647.45,
+          "deductNetProfitYoy": 39.977468644955,
+          "grossMargin": 26.2843829549,
+          "operatingCashFlow": 1495526343.91
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 4782896546.25,
+          "revenueYoy": 20.7493011337,
+          "netProfit": 491448182.06,
+          "netProfitYoy": 29.47,
+          "deductNetProfit": 485299573.37,
+          "deductNetProfitYoy": 44.64252312642,
+          "grossMargin": 24.7402808248,
+          "operatingCashFlow": 612758707.92
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 17907445251.3,
+          "revenueYoy": 32.3885947479,
+          "netProfit": 1877565481.01,
+          "netProfitYoy": 34.29,
+          "deductNetProfit": 1739872642.1,
+          "deductNetProfitYoy": 74.343985502049,
+          "grossMargin": 24.834022675,
+          "operatingCashFlow": 2982221520.41
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 13049497746.78,
+          "revenueYoy": 37.9221807192,
+          "netProfit": 1488055070.66,
+          "netProfitYoy": 63.86,
+          "deductNetProfit": 1376081635.78,
+          "deductNetProfitYoy": 86.66881748568,
+          "grossMargin": 25.9070478621,
+          "operatingCashFlow": 1664019386.23
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 8321016212.48,
+          "revenueYoy": 37.90721992,
+          "netProfit": 987300206.62,
+          "netProfitYoy": 108.32,
+          "deductNetProfit": 904057388.45,
+          "deductNetProfitYoy": 112.382979218969,
+          "grossMargin": 26.197991576,
+          "operatingCashFlow": 1398768459.51
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 7817302215.85,
+          "receivables": 7657495529.11,
+          "contractLiab": 272210793.93,
+          "constructionInProgress": 3248061441.51
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 4054567744.24,
+          "receivables": 5148339305.82,
+          "contractLiab": 279695198.7,
+          "constructionInProgress": 744081006.99
+        }
+      ],
+      "forecast": {
+        "orgNum": 21,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 4.80901173856,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 8.560952380952,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 12.63,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 17.2645,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.7173333333333334,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-27)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 335.14,
+        "close": 318.8,
+        "high": 335.17,
+        "low": 316,
+        "volume": 85364
+      }
+    },
+    {
+      "member": {
+        "code": "688041",
+        "name": "海光信息",
+        "group": "AI 算力",
+        "attributionVerified": true
+      },
+      "price": 193.82,
+      "marketCapYi": 4505.03,
+      "floatCapYi": 4505.03,
+      "peTtm": 143.39,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 9099020774.81,
+          "revenueYoy": 66.5195709856,
+          "netProfit": 1798467918.03,
+          "netProfitYoy": 49.69,
+          "deductNetProfit": 1631411695.35,
+          "deductNetProfitYoy": 49.66894847981,
+          "grossMargin": 55.2090490096,
+          "operatingCashFlow": -427541001.36
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 4033592186.34,
+          "revenueYoy": 68.0559205815,
+          "netProfit": 687094336.71,
+          "netProfitYoy": 35.82,
+          "deductNetProfit": 596883341.55,
+          "deductNetProfitYoy": 34.992272779499,
+          "grossMargin": 55.6039833349,
+          "operatingCashFlow": 67617712.14
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 14376889476.95,
+          "revenueYoy": 56.9161430668,
+          "netProfit": 2544890905.62,
+          "netProfitYoy": 31.79,
+          "deductNetProfit": 2304668898.5,
+          "deductNetProfitYoy": 26.924620897363,
+          "grossMargin": 57.828432155,
+          "operatingCashFlow": 2096939063.47
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 9489974831.12,
+          "revenueYoy": 54.6470219917,
+          "netProfit": 1961446439.52,
+          "netProfitYoy": 28.56,
+          "deductNetProfit": 1816705304.64,
+          "deductNetProfitYoy": 23.175416590999,
+          "grossMargin": 60.0972470918,
+          "operatingCashFlow": 2254504302.55
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 5464235057.15,
+          "revenueYoy": 45.2129138009,
+          "netProfit": 1201451841.15,
+          "netProfitYoy": 40.78,
+          "deductNetProfit": 1090013467.67,
+          "deductNetProfitYoy": 33.313715190147,
+          "grossMargin": 60.1469190848,
+          "operatingCashFlow": 2176641209.26
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 2400148814.98,
+          "revenueYoy": 50.7555521886,
+          "netProfit": 505894195.29,
+          "netProfitYoy": 75.33,
+          "deductNetProfit": 442161117.27,
+          "deductNetProfitYoy": 62.633224305735,
+          "grossMargin": 61.1949319314,
+          "operatingCashFlow": 2522136186.99
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 9162148135.92,
+          "revenueYoy": 52.3976991611,
+          "netProfit": 1930990510.51,
+          "netProfitYoy": 52.87,
+          "deductNetProfit": 1815777649.92,
+          "deductNetProfitYoy": 59.789221022849,
+          "grossMargin": 63.7201964005,
+          "operatingCashFlow": 977081091.31
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 6136539009.22,
+          "revenueYoy": 55.6421559969,
+          "netProfit": 1525718345.3,
+          "netProfitYoy": 69.22,
+          "deductNetProfit": 1474892762.63,
+          "deductNetProfitYoy": 76.868212392289,
+          "grossMargin": 65.6338275493,
+          "operatingCashFlow": 398575116.39
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 3762912618.53,
+          "revenueYoy": 44.0793785339,
+          "netProfit": 853395945.66,
+          "netProfitYoy": 25.97,
+          "deductNetProfit": 817630403.68,
+          "deductNetProfitYoy": 32.089402677182,
+          "grossMargin": 63.4258547333,
+          "operatingCashFlow": -113318054.55
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 7518222148.23,
+          "receivables": 3596877783.1,
+          "contractLiab": 19358226.08,
+          "constructionInProgress": null
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 6012657314.86,
+          "receivables": 3100219909.03,
+          "contractLiab": 3090796470.54,
+          "constructionInProgress": null
+        }
+      ],
+      "forecast": {
+        "orgNum": 24,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 1.094888439627,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 1.938260869565,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 2.983043478261,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 4.29347826087,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.21466666666666667,
+      "peNote": "基于999个有效PE样本，取数自2026-06-30(公告2026-08-14)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 193.8,
+        "close": 193.82,
+        "high": 195,
+        "low": 189.08,
+        "volume": 27023007
+      }
+    },
+    {
+      "member": {
+        "code": "603019",
+        "name": "中科曙光",
+        "group": "AI 算力",
+        "attributionVerified": true,
+        "note": "已有核心名单成员，委员会预选池未列，作对照补入"
+      },
+      "price": 66.99,
+      "marketCapYi": 980.14,
+      "floatCapYi": 980.1,
+      "peTtm": 40.52,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 7465810151.43,
+          "revenueYoy": 27.6215367812,
+          "netProfit": 971389448.14,
+          "netProfitYoy": 33.31,
+          "deductNetProfit": 844062349.36,
+          "deductNetProfitYoy": 48.449253043123,
+          "grossMargin": 27.2302934533,
+          "operatingCashFlow": -186509143.38
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 3199430492.82,
+          "revenueYoy": 23.7100491767,
+          "netProfit": 227843919.03,
+          "netProfitYoy": 22.19,
+          "deductNetProfit": 164129860.91,
+          "deductNetProfitYoy": 53.296211648669,
+          "grossMargin": 26.5575244168,
+          "operatingCashFlow": -1390698665.3
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 14963644356.95,
+          "revenueYoy": 13.8120072272,
+          "netProfit": 2176292865.25,
+          "netProfitYoy": 13.87,
+          "deductNetProfit": 1837698173.45,
+          "deductNetProfitYoy": 33.974216288437,
+          "grossMargin": 30.583472516,
+          "operatingCashFlow": 1313355634.49
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 8820220222.94,
+          "revenueYoy": 9.684388771,
+          "netProfit": 966113568.64,
+          "netProfitYoy": 25.55,
+          "deductNetProfit": 757332693.11,
+          "deductNetProfitYoy": 70.171793553289,
+          "grossMargin": 24.4533609774,
+          "operatingCashFlow": -1295679558.8
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 5849961017.34,
+          "revenueYoy": 2.4142243493,
+          "netProfit": 728660816.53,
+          "netProfitYoy": 29.39,
+          "deductNetProfit": 568586457.7,
+          "deductNetProfitYoy": 55.20483073475,
+          "grossMargin": 26.6495741589,
+          "operatingCashFlow": -1381335558.12
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 2586233304.5,
+          "revenueYoy": 4.3407555001,
+          "netProfit": 186472838.24,
+          "netProfitYoy": 30.79,
+          "deductNetProfit": 107067134.37,
+          "deductNetProfitYoy": 89.100191648115,
+          "grossMargin": 26.0682858463,
+          "operatingCashFlow": -1117741866.55
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 13147685135.79,
+          "revenueYoy": -8.3954698369,
+          "netProfit": 1911152257.13,
+          "netProfitYoy": 4.1,
+          "deductNetProfit": 1371680480.29,
+          "deductNetProfitYoy": 7.344694823626,
+          "grossMargin": 29.161187698,
+          "operatingCashFlow": 2721815770.05
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 8041454505.76,
+          "revenueYoy": 3.6517826697,
+          "netProfit": 769521744.76,
+          "netProfitYoy": 2.57,
+          "deductNetProfit": 445040084.08,
+          "deductNetProfitYoy": 8.655595290472,
+          "grossMargin": 26.8114157656,
+          "operatingCashFlow": -1276797532.03
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 5712059095.8,
+          "revenueYoy": 5.7652070278,
+          "netProfit": 563158665.42,
+          "netProfitYoy": 3.38,
+          "deductNetProfit": 366345850.84,
+          "deductNetProfitYoy": 20.002570517912,
+          "grossMargin": 26.2455231948,
+          "operatingCashFlow": -934037270.84
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 6792454378.56,
+          "receivables": 2143456281.8500001,
+          "contractLiab": 1461763095.12,
+          "constructionInProgress": 1134632052.89
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 3323014702.7,
+          "receivables": 2931162095.13,
+          "contractLiab": 1212798061.74,
+          "constructionInProgress": 907760829.85
+        }
+      ],
+      "forecast": {
+        "orgNum": 21,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 1.487437213821,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 2.0745,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 2.647,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 3.315263157895,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.32133333333333336,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-26)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 66.5,
+        "close": 66.99,
+        "high": 67.57,
+        "low": 66.11,
+        "volume": 298578
+      }
+    },
+    {
+      "member": {
+        "code": "002371",
+        "name": "北方华创",
+        "group": "半导体设备",
+        "attributionVerified": true
+      },
+      "price": 610,
+      "marketCapYi": 4426.7,
+      "floatCapYi": 4423.02,
+      "peTtm": 77.88,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 20161416890.56,
+          "revenueYoy": 24.9038763685,
+          "netProfit": 3370020676.75,
+          "netProfitYoy": 5.05,
+          "deductNetProfit": 3340719149.36,
+          "deductNetProfitYoy": 5.022908563986,
+          "grossMargin": 40.0682862059,
+          "operatingCashFlow": 3773698817.34
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 10322863908.82,
+          "revenueYoy": 25.7960902419,
+          "netProfit": 1634739048.68,
+          "netProfitYoy": 3.42,
+          "deductNetProfit": 1626678172.85,
+          "deductNetProfitYoy": 3.598595772873,
+          "grossMargin": 40.7727895045,
+          "operatingCashFlow": 748055666.52
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 39353112419.78,
+          "revenueYoy": 30.8505250033,
+          "netProfit": 5521993004.86,
+          "netProfitYoy": -1.77,
+          "deductNetProfit": 5335952532.08,
+          "deductNetProfitYoy": -4.224087609645,
+          "grossMargin": 40.1037429257,
+          "operatingCashFlow": 2133444577.85
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 27301379656.81,
+          "revenueYoy": 32.9694718089,
+          "netProfit": 5130342602.7,
+          "netProfitYoy": 14.83,
+          "deductNetProfit": 5102078327.94,
+          "deductNetProfitYoy": 19.473788354149,
+          "grossMargin": 41.4069253389,
+          "operatingCashFlow": -2566434879.21
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 16141546184.74,
+          "revenueYoy": 29.5096575939,
+          "netProfit": 3207978523.58,
+          "netProfitYoy": 14.97,
+          "deductNetProfit": 3180943277.08,
+          "deductNetProfitYoy": 20.167520319154,
+          "grossMargin": 42.1683743905,
+          "operatingCashFlow": -3191375954.04
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 8206029208.83,
+          "revenueYoy": 37.903283475,
+          "netProfit": 1580707286.38,
+          "netProfitYoy": 38.8,
+          "deductNetProfit": 1570173959.13,
+          "deductNetProfitYoy": 44.74863038359,
+          "grossMargin": 43.0156502414,
+          "operatingCashFlow": -1728688646.61
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 30074860164.89,
+          "revenueYoy": 36.2119488579,
+          "netProfit": 5621756343.64,
+          "netProfitYoy": 44.17,
+          "deductNetProfit": 5571288645.45,
+          "deductNetProfitYoy": 55.547054027496,
+          "grossMargin": 42.9358520325,
+          "operatingCashFlow": 1551813643.85
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 20532065958.75,
+          "revenueYoy": 40.7427752791,
+          "netProfit": 4467785189.44,
+          "netProfitYoy": 54.72,
+          "deductNetProfit": 4270458314.1,
+          "deductNetProfitYoy": 61.584678532883,
+          "grossMargin": 44.3588392306,
+          "operatingCashFlow": 418663857.1
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 12463584943.88,
+          "revenueYoy": 47.9078110412,
+          "netProfit": 2790294946.72,
+          "netProfitYoy": 54.54,
+          "deductNetProfit": 2647090718.55,
+          "deductNetProfitYoy": 64.060876997634,
+          "grossMargin": 45.7314847106,
+          "operatingCashFlow": -313699468.26
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 30505708932.06,
+          "receivables": 9574195102.07,
+          "contractLiab": 5366573273.339999,
+          "constructionInProgress": 592778918.7
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 31139368224.85,
+          "receivables": 8821051083.23,
+          "contractLiab": 5053136852.04,
+          "constructionInProgress": 450777257.75
+        }
+      ],
+      "forecast": {
+        "orgNum": 28,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 7.609308509566,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 9.895555555556,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 14.268888888889,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 19.64,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.8746666666666667,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-26)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 576.3,
+        "close": 610,
+        "high": 614.96,
+        "low": 566,
+        "volume": 116802
+      }
+    },
+    {
+      "member": {
+        "code": "688012",
+        "name": "中微公司",
+        "group": "半导体设备",
+        "attributionVerified": true
+      },
+      "price": 297.67,
+      "marketCapYi": 2851.21,
+      "floatCapYi": 2804.64,
+      "peTtm": 67.39,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 6691287327.67,
+          "revenueYoy": 34.8886347323,
+          "netProfit": 2825194624.91,
+          "netProfitYoy": 300.22,
+          "deductNetProfit": 1122590335.26,
+          "deductNetProfitYoy": 108.362533628544,
+          "grossMargin": 39.7417373409,
+          "operatingCashFlow": 684553490.6
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 2914986518.73,
+          "revenueYoy": 34.1285376976,
+          "netProfit": 930487319.17,
+          "netProfitYoy": 197.2,
+          "deductNetProfit": 477558746.17,
+          "deductNetProfitYoy": 60.092377422919,
+          "grossMargin": 39.8925648403,
+          "operatingCashFlow": -158726143.08
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 12384638268.11,
+          "revenueYoy": 36.6179008837,
+          "netProfit": 2111472990.43,
+          "netProfitYoy": 30.69,
+          "deductNetProfit": 1549796388.43,
+          "deductNetProfitYoy": 11.644465203208,
+          "grossMargin": 39.1654495476,
+          "operatingCashFlow": 2295352919.08
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 8062565115.42,
+          "revenueYoy": 46.4005850857,
+          "netProfit": 1211192400.82,
+          "netProfitYoy": 32.66,
+          "deductNetProfit": 886804273.29,
+          "deductNetProfitYoy": 9.013112804648,
+          "grossMargin": 39.1009449999,
+          "operatingCashFlow": 1298309239.31
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 4960601270.04,
+          "revenueYoy": 43.8809329122,
+          "netProfit": 705916536.34,
+          "netProfitYoy": 36.62,
+          "deductNetProfit": 538767846.46,
+          "deductNetProfitYoy": 11.493005276186,
+          "grossMargin": 39.855119181,
+          "operatingCashFlow": 202896547.3
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 2173278385.62,
+          "revenueYoy": 35.4047200139,
+          "netProfit": 313082457.72,
+          "netProfitYoy": 25.67,
+          "deductNetProfit": 298301989.05,
+          "deductNetProfitYoy": 13.444907095835,
+          "grossMargin": 41.5370612685,
+          "operatingCashFlow": 376808177.47
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 9065165097.69,
+          "revenueYoy": 44.7297108871,
+          "netProfit": 1615675746.81,
+          "netProfitYoy": -9.53,
+          "deductNetProfit": 1388153354.14,
+          "deductNetProfitYoy": 16.511059248031,
+          "grossMargin": 41.0603394111,
+          "operatingCashFlow": 1458401788.71
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 5507194599.46,
+          "revenueYoy": 36.2739781658,
+          "netProfit": 912979678.37,
+          "netProfitYoy": -21.28,
+          "deductNetProfit": 813484039.19,
+          "deductNetProfitYoy": 10.881434470903,
+          "grossMargin": 42.2218579211,
+          "operatingCashFlow": 267567582.39
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 3447712750.84,
+          "revenueYoy": 36.4619580435,
+          "netProfit": 516693982.42,
+          "netProfitYoy": -48.48,
+          "deductNetProfit": 483230176.75,
+          "deductNetProfitYoy": -6.876550576927,
+          "grossMargin": 41.3207534698,
+          "operatingCashFlow": 381921900.15
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 7665975529.63,
+          "receivables": 3236482029.42,
+          "contractLiab": 2772340766.93,
+          "constructionInProgress": 1176249182.7
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 8077829492.22,
+          "receivables": 2035341750.24,
+          "contractLiab": 3165115439.83,
+          "constructionInProgress": 761906294.18
+        }
+      ],
+      "forecast": {
+        "orgNum": 23,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 2.204405552583,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 4.633681818182,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 5.678090909091,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 7.394818181818,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.0026666666666666666,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-20)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 280.05,
+        "close": 297.67,
+        "high": 303.05,
+        "low": 280,
+        "volume": 22369660
+      }
+    },
+    {
+      "member": {
+        "code": "688072",
+        "name": "拓荆科技",
+        "group": "半导体设备",
+        "attributionVerified": null
+      },
+      "price": 645,
+      "marketCapYi": 1884.52,
+      "floatCapYi": 1833.01,
+      "peTtm": 86.64,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 2912864261.46,
+          "revenueYoy": 49.060715147,
+          "netProfit": 1342753980.93,
+          "netProfitYoy": 1324.1,
+          "deductNetProfit": 367334974.63,
+          "deductNetProfitYoy": 861.919477028539,
+          "grossMargin": 41.0042896167,
+          "operatingCashFlow": 115460241.35
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 1112431778.96,
+          "revenueYoy": 56.9673418563,
+          "netProfit": 570602298.59,
+          "netProfitYoy": 488.29176657,
+          "deductNetProfit": 102114282.97,
+          "deductNetProfitYoy": 156.652729580122,
+          "grossMargin": 41.6890753169,
+          "operatingCashFlow": -519847055.4
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 6519094874.63,
+          "revenueYoy": 58.8684826859,
+          "netProfit": 926703966.52,
+          "netProfitYoy": 34.67,
+          "deductNetProfit": 723146885.28,
+          "deductNetProfitYoy": 103.052468836974,
+          "grossMargin": 34.9522590568,
+          "operatingCashFlow": 3633207138.2
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 4220109407.24,
+          "revenueYoy": 85.2700817747,
+          "netProfit": 556505392.21,
+          "netProfitYoy": 105.14,
+          "deductNetProfit": 458180613.17,
+          "deductNetProfitYoy": 599.672685697367,
+          "grossMargin": 33.2790757526,
+          "operatingCashFlow": 2831601105.66
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 1954146173.65,
+          "revenueYoy": 54.2474181675,
+          "netProfit": 94287965.15,
+          "netProfitYoy": -26.96,
+          "deductNetProfit": 38187705.25,
+          "deductNetProfitYoy": 91.345396499701,
+          "grossMargin": 31.958085805,
+          "operatingCashFlow": 1566015443.91
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 708702693.06,
+          "revenueYoy": 50.2158083276,
+          "netProfit": -146951943.8,
+          "netProfitYoy": -1503.33,
+          "deductNetProfit": -180246007.08,
+          "deductNetProfitYoy": -307.710907248669,
+          "grossMargin": 19.892254923,
+          "operatingCashFlow": 10925081.84
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 4103453853.41,
+          "revenueYoy": 51.7003046827,
+          "netProfit": 688154723.26,
+          "netProfitYoy": 3.86,
+          "deductNetProfit": 356137942.78,
+          "deductNetProfitYoy": 14.103007298681,
+          "grossMargin": 41.6857140962,
+          "operatingCashFlow": -282525331.06
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 2277814834.87,
+          "revenueYoy": 33.7918037738,
+          "netProfit": 271284793.17,
+          "netProfitYoy": 0.1,
+          "deductNetProfit": 65484993.56,
+          "deductNetProfitYoy": -62.721882985546,
+          "grossMargin": 39.7785198889,
+          "operatingCashFlow": -999017913.83
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 1266890685.67,
+          "revenueYoy": 26.2208819909,
+          "netProfit": 129093960.35,
+          "netProfitYoy": 3.64,
+          "deductNetProfit": 19957472.69,
+          "deductNetProfitYoy": -69.382170317479,
+          "grossMargin": 43.212357202,
+          "operatingCashFlow": -899812522.62
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 8832503986.79,
+          "receivables": 1190249042.1399999,
+          "contractLiab": 5130654458.79,
+          "constructionInProgress": 515505279.09
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 8322530306.59,
+          "receivables": 1049963719.9599999,
+          "contractLiab": 4535774320.25,
+          "constructionInProgress": 278793564.79
+        }
+      ],
+      "forecast": {
+        "orgNum": 13,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 3.171761628023,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 6.961538461538,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 9.656923076923,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 13.276923076923,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.416,
+      "peNote": "基于1077个有效PE样本，取数自2026-06-30(公告2026-08-21)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 600,
+        "close": 645,
+        "high": 654.74,
+        "low": 600,
+        "volume": 6163447
+      }
+    },
+    {
+      "member": {
+        "code": "300124",
+        "name": "汇川技术",
+        "group": "工业自动化",
+        "attributionVerified": null,
+        "note": "不在现有作战名单，主线归因未核验"
+      },
+      "price": 49.39,
+      "marketCapYi": 1338.4,
+      "floatCapYi": 1191.55,
+      "peTtm": 27.36,
+      "reports": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 24675250997.63,
+          "revenueYoy": 20.3121582778,
+          "netProfit": 2809924122.46,
+          "netProfitYoy": -5.35,
+          "deductNetProfit": 2756053764.48,
+          "deductNetProfitYoy": 3.152172969361,
+          "grossMargin": 29.7416847059,
+          "operatingCashFlow": 1975059030.42
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 10143223378.12,
+          "revenueYoy": 12.9797628104,
+          "netProfit": 1013451151.58,
+          "netProfitYoy": -23.39,
+          "deductNetProfit": 1045687470.08,
+          "deductNetProfitYoy": -15.245932720335,
+          "grossMargin": 29.0770551368,
+          "operatingCashFlow": 94051224.97
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 45104844200.13,
+          "revenueYoy": 21.7702072863,
+          "netProfit": 5050002089.89,
+          "netProfitYoy": 17.84,
+          "deductNetProfit": 4950505396.54,
+          "deductNetProfitYoy": 22.6638074405,
+          "grossMargin": 28.9545515221,
+          "operatingCashFlow": 6681025417.16
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 31662606469.69,
+          "revenueYoy": 24.6685853879,
+          "netProfit": 4254130654.72,
+          "netProfitYoy": 26.84,
+          "deductNetProfit": 3888104374.94,
+          "deductNetProfitYoy": 24.032827719548,
+          "grossMargin": 29.2687966181,
+          "operatingCashFlow": 3930659053.66
+        },
+        {
+          "reportDate": "2025-06-30",
+          "revenue": 20509357782.99,
+          "revenueYoy": 26.7313470642,
+          "netProfit": 2968778046.74,
+          "netProfitYoy": 40.15,
+          "deductNetProfit": 2671832967.88,
+          "deductNetProfitYoy": 29.149528991427,
+          "grossMargin": 30.2260120222,
+          "operatingCashFlow": 3020067332.25
+        },
+        {
+          "reportDate": "2025-03-31",
+          "revenue": 8977911730.21,
+          "revenueYoy": 38.283485728,
+          "netProfit": 1322825045.35,
+          "netProfitYoy": 63.08,
+          "deductNetProfit": 1233790310.77,
+          "deductNetProfitYoy": 55.868390787627,
+          "grossMargin": 30.9820571917,
+          "operatingCashFlow": 262550980.59
+        },
+        {
+          "reportDate": "2024-12-31",
+          "revenue": 37040952138.72,
+          "revenueYoy": 21.7654272801,
+          "netProfit": 4285493340.7,
+          "netProfitYoy": -9.62,
+          "deductNetProfit": 4035832165.85,
+          "deductNetProfitYoy": -0.868177136566,
+          "grossMargin": 28.7021467949,
+          "operatingCashFlow": 7200440164.32
+        },
+        {
+          "reportDate": "2024-09-30",
+          "revenue": 25397421789.27,
+          "revenueYoy": 26.2221767722,
+          "netProfit": 3353827529.06,
+          "netProfitYoy": 1.04,
+          "deductNetProfit": 3134738154.75,
+          "deductNetProfitYoy": 2.907193559852,
+          "grossMargin": 30.2791693473,
+          "operatingCashFlow": 3856715361.66
+        },
+        {
+          "reportDate": "2024-06-30",
+          "revenue": 16183334477.3,
+          "revenueYoy": 29.9773484758,
+          "netProfit": 2118060738.46,
+          "netProfitYoy": 1.98,
+          "deductNetProfit": 2068488355.12,
+          "deductNetProfitYoy": 10.766675604093,
+          "grossMargin": 31.1524698976,
+          "operatingCashFlow": 1827740235.15
+        }
+      ],
+      "balance": [
+        {
+          "reportDate": "2026-06-30",
+          "inventory": 10060152711.64,
+          "receivables": 18903570355.66,
+          "contractLiab": 861607823.75,
+          "constructionInProgress": 1547300538.52
+        },
+        {
+          "reportDate": "2025-06-30",
+          "inventory": 8189824141.16,
+          "receivables": 14141795519.02,
+          "contractLiab": 791758748.58,
+          "constructionInProgress": 1157243091.31
+        }
+      ],
+      "forecast": {
+        "orgNum": 18,
+        "eps": [
+          {
+            "year": 2025,
+            "eps": 1.863558671699,
+            "actual": true
+          },
+          {
+            "year": 2026,
+            "eps": 2.182388888889,
+            "actual": false
+          },
+          {
+            "year": 2027,
+            "eps": 2.67,
+            "actual": false
+          },
+          {
+            "year": 2028,
+            "eps": 3.206166666667,
+            "actual": false
+          }
+        ]
+      },
+      "preview": null,
+      "pePercentile3y": 0.06266666666666666,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-29)",
+      "errors": [],
+      "barsLast": {
+        "date": "2026-10-15",
+        "open": 48.6,
+        "close": 49.39,
+        "high": 49.85,
+        "low": 48.5,
+        "volume": 253861
+      }
+    }
+  ],
+  "views": [
+    {
+      "code": "300308",
+      "name": "中际旭创",
+      "group": "AI 算力",
+      "attributionVerified": true,
+      "price": 656.94,
+      "marketCapYi": 7738.16,
+      "floatCapYi": 7291.62,
+      "peTtm": 37.83,
+      "pePercentile3y": 0.25466666666666665,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-22)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 41777861795.03,
+        "revenueYoy": 182.4913813287,
+        "netProfit": 13651149693.27,
+        "netProfitYoy": 241.7,
+        "deductNetProfit": 13091597476.79,
+        "deductNetProfitYoy": 229.316750212959,
+        "grossMargin": 46.2521843492,
+        "operatingCashFlow": 1799674832.02
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 22281463711.079998,
+          "netProfit": 7916648166.440001,
+          "netProfitYoy": 2.281866898836981,
+          "deductNetProfit": 7373849136.010001,
+          "grossMargin": 46.42198027907162
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 19496398083.95,
+          "netProfit": 5734501526.83,
+          "netProfitYoy": 2.6228365713294144,
+          "deductNetProfit": 5717748340.78,
+          "grossMargin": 46.058133025800004
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 13235134789.349998,
+          "netProfit": 3665321863.750001,
+          "netProfitYoy": 1.5833469382532797,
+          "deductNetProfit": 3626353533.8500004,
+          "grossMargin": 44.48126511164212
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 10215726013.52,
+          "netProfit": 3136817052,
+          "netProfitYoy": 1.24984312927644,
+          "deductNetProfit": 3108318117.79,
+          "grossMargin": 42.788296363163006
+        }
+      ],
+      "deductShare": 0.9590106160248277,
+      "cashConversion": 0.13183320617363367,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 1.1624486234448135,
+        "receivables": 1.339985243090728,
+        "contractLiab": 2.13413548922104,
+        "constructionInProgress": 32.379712264967026
+      },
+      "preview": null,
+      "orgNum": 25,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 22.726359329172336
+        },
+        {
+          "year": 2027,
+          "pe": 12.275461458468838
+        },
+        {
+          "year": 2028,
+          "pe": 8.4679990136298
+        }
+      ],
+      "consensusCagr": 0.6382287193316294,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 527.0871962191854
+        },
+        {
+          "exitPe": 30,
+          "yi": 351.3914641461236
+        }
+      ],
+      "consensusProfit2026Yi": 340.49272423793064,
+      "consensusProfit2028Yi": 913.8121045532627,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 101.99061365261532,
+        "lastQuarter": 79.16648166440001,
+        "ratio": 1.2883054988469822,
+        "basis": "归母"
+      },
+      "caveats": [],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": 0.4747701646716789
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": 0.21243140630736423
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.7714341054663869
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": 0.4563234293186158
+        }
+      ],
+      "ret20": -0.2762634597545901,
+      "ret60": -0.4376072239400881,
+      "rs20": -0.18734468269121252,
+      "rs60": -0.3079229685533773,
+      "drawdown250": -0.5359564197145412,
+      "upDownVolume20": 0.4129815345693028,
+      "dataGaps": []
+    },
+    {
+      "code": "300502",
+      "name": "新易盛",
+      "group": "AI 算力",
+      "attributionVerified": true,
+      "price": 306.01,
+      "marketCapYi": 4268.04,
+      "floatCapYi": 3839.58,
+      "peTtm": 32.53,
+      "pePercentile3y": 0,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-25)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 20909746962.2,
+        "revenueYoy": 100.3392340098,
+        "netProfit": 7529168039.39,
+        "netProfitYoy": 90.98,
+        "deductNetProfit": 7510738801.54,
+        "deductNetProfitYoy": 90.923514888284,
+        "grossMargin": 48.4397325072,
+        "operatingCashFlow": 1616408524.15
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 12571844921.460001,
+          "netProfit": 4748945079.16,
+          "netProfitYoy": 1.0039700590765621,
+          "deductNetProfit": 4742763553.41,
+          "grossMargin": 47.96140305155575
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 8337902040.74,
+          "netProfit": 2780222960.23,
+          "netProfitYoy": 0.7679983242812436,
+          "deductNetProfit": 2767975248.13,
+          "grossMargin": 49.16095514909999
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 8337063628.860001,
+          "netProfit": 3204830222.33,
+          "netProfitYoy": 1.6892008298215244,
+          "deductNetProfit": 3205947709.38,
+          "grossMargin": 48.911588738719054
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 6067620945.860001,
+          "netProfit": 2384798239.4700003,
+          "netProfitYoy": 2.053789541306262,
+          "deductNetProfit": 2367461846.1299996,
+          "grossMargin": 46.938475750139744
+        }
+      ],
+      "deductShare": 0.9975522876161635,
+      "cashConversion": 0.21468620645647837,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 0.9608321484990998,
+        "receivables": 0.5047229532815942,
+        "contractLiab": 28.76840302140353,
+        "constructionInProgress": 1.077394802598688
+      },
+      "preview": null,
+      "orgNum": 19,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 18.912465750602973
+        },
+        {
+          "year": 2027,
+          "pe": 10.422723367860117
+        },
+        {
+          "year": 2028,
+          "pe": 7.178381111622246
+        }
+      ],
+      "consensusCagr": 0.6231580922728568,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 290.7188836818226
+        },
+        {
+          "exitPe": 30,
+          "yi": 193.81258912121504
+        }
+      ],
+      "consensusProfit2026Yi": 225.6733762948877,
+      "consensusProfit2028Yi": 594.568598912891,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 75.19084795049385,
+        "lastQuarter": 47.4894507916,
+        "ratio": 1.583316856631109,
+        "basis": "归母"
+      },
+      "caveats": [
+        "一致预期 2026E 要求剩余每季约 75.2 亿，是最近单季 47.5 亿的 1.6 倍 —— 前瞻 PE 与情景格建立在利润继续明显加速上，要先看下一份季报能否接住"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": 0.5891331964526385
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": 0.31060713512167415
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.9088023407035224
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": 0.5742481327854811
+        }
+      ],
+      "ret20": -0.26227097396335586,
+      "ret60": -0.44962230215827337,
+      "rs20": -0.17335219689997827,
+      "rs60": -0.31993804677156257,
+      "drawdown250": -0.5055342802204017,
+      "upDownVolume20": 0.5271380919956719,
+      "dataGaps": []
+    },
+    {
+      "code": "300394",
+      "name": "天孚通信",
+      "group": "AI 算力",
+      "attributionVerified": null,
+      "price": 223.33,
+      "marketCapYi": 2436.14,
+      "floatCapYi": 2430.7,
+      "peTtm": 104.9,
+      "pePercentile3y": 0.556,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-19)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 2827938748.37,
+        "revenueYoy": 15.1492291388,
+        "netProfit": 1204285104.14,
+        "netProfitYoy": 33.92,
+        "deductNetProfit": 1186263481.07,
+        "deductNetProfitYoy": 36.763184203691,
+        "grossMargin": 60.8695979509,
+        "operatingCashFlow": 1000881668.42
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 1497668573.01,
+          "netProfit": 712066226.0900002,
+          "netProfitYoy": 0.2678912345756488,
+          "deductNetProfit": 693071063.3499999,
+          "grossMargin": 64.65847754847665
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 1330270175.36,
+          "netProfit": 492218878.05,
+          "netProfitYoy": 0.4578790203136782,
+          "deductNetProfit": 493192417.72,
+          "grossMargin": 56.60393372320001
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 1245029359.17,
+          "netProfit": 551910198.25,
+          "netProfitYoy": 0.5035308248149493,
+          "deductNetProfit": 545086449.99,
+          "grossMargin": 60.557047886769986
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 1462512812.4899998,
+          "netProfit": 566114540.91,
+          "netProfitYoy": 0.7567503200140302,
+          "deductNetProfit": 563981357.21,
+          "grossMargin": 53.679295407659296
+        }
+      ],
+      "deductShare": 0.9850354181015386,
+      "cashConversion": 0.8311002643636833,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 1.546930230939774,
+        "receivables": 0.23606996922068268,
+        "contractLiab": -0.4083631847510645,
+        "constructionInProgress": 0.03513058460994345
+      },
+      "preview": null,
+      "orgNum": 22,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 64.98268026381243
+        },
+        {
+          "year": 2027,
+          "pe": 40.74302840760693
+        },
+        {
+          "year": 2028,
+          "pe": 27.369351704337042
+        }
+      ],
+      "consensusCagr": 0.5408719696551814,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 165.938440429948
+        },
+        {
+          "exitPe": 30,
+          "yi": 110.62562695329866
+        }
+      ],
+      "consensusProfit2026Yi": 37.48906616516768,
+      "consensusProfit2028Yi": 89.00978095195293,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 12.72310756188384,
+        "lastQuarter": 7.120662260900001,
+        "ratio": 1.7867871127306814,
+        "basis": "归母"
+      },
+      "caveats": [
+        "存货同比 +155%，比营收同比 +15% 快 140 个百分点：可能是为在手订单备货，也可能是交付放缓，要看合同负债是否同步增加",
+        "一致预期 2026E 要求剩余每季约 12.7 亿，是最近单季 7.1 亿的 1.8 倍 —— 前瞻 PE 与情景格建立在利润继续明显加速上，要先看下一份季报能否接住"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": -0.13220675205358678
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.2711442799369328
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.04235805193953923
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": -0.12452807127989696
+        }
+      ],
+      "ret20": -0.1328000621286839,
+      "ret60": -0.1373889532638083,
+      "rs20": -0.04388128506530631,
+      "rs60": -0.007704697877097488,
+      "drawdown250": -0.4028609625668449,
+      "upDownVolume20": 0.8345336795126981,
+      "dataGaps": []
+    },
+    {
+      "code": "002463",
+      "name": "沪电股份",
+      "group": "AI 算力",
+      "attributionVerified": true,
+      "price": 116.18,
+      "marketCapYi": 2235.73,
+      "floatCapYi": 2233.97,
+      "peTtm": 44.16,
+      "pePercentile3y": 0.8066666666666666,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-26)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 13689427504,
+        "revenueYoy": 61.1682833526,
+        "netProfit": 2923361746,
+        "netProfitYoy": 73.72,
+        "deductNetProfit": 2794525941,
+        "deductNetProfitYoy": 70.002677269413,
+        "grossMargin": 38.7155693432,
+        "operatingCashFlow": 1150686191
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 7475271098,
+          "netProfit": 1681280379,
+          "netProfitYoy": 0.8268520883739889,
+          "deductNetProfit": 1631844006,
+          "grossMargin": 41.27857808159134
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 6214156406,
+          "netProfit": 1242081367,
+          "netProfitYoy": 0.629033090550732,
+          "deductNetProfit": 1162681935,
+          "grossMargin": 35.6324179234
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 5432830354,
+          "netProfit": 1104688277,
+          "netProfitYoy": 0.4951509805054335,
+          "deductNetProfit": 1084147646,
+          "grossMargin": 35.65651120636642
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 5018518348,
+          "netProfit": 1034837048,
+          "netProfitYoy": 0.4625449803045858,
+          "deductNetProfit": 1032607359,
+          "grossMargin": 35.840930694508714
+        }
+      ],
+      "deductShare": 0.9559288872900233,
+      "cashConversion": 0.3936174483279292,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 0.9491524594109686,
+        "receivables": 0.8082090192475428,
+        "contractLiab": 0.6777361530724142,
+        "constructionInProgress": 0.5972279221290733
+      },
+      "preview": {
+        "reportDate": "2026-09-30",
+        "noticeDate": "2026-10-15",
+        "type": "预增",
+        "netProfitLower": 5450000000,
+        "netProfitUpper": 5700000000,
+        "yoyLower": 100.54,
+        "yoyUpper": 109.74
+      },
+      "orgNum": 18,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 33.71560259474396
+        },
+        {
+          "year": 2027,
+          "pe": 20.982258578563126
+        },
+        {
+          "year": 2028,
+          "pe": 14.68664485425364
+        }
+      ],
+      "consensusCagr": 0.5151448937852843,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 152.28745040204902
+        },
+        {
+          "exitPe": 30,
+          "yi": 101.52496693469934
+        }
+      ],
+      "consensusProfit2026Yi": 66.31143529816475,
+      "consensusProfit2028Yi": 152.22877806243633,
+      "previewQ3Yi": [
+        25.26638254,
+        27.76638254
+      ],
+      "previewCompletion": 0.8407298039821338,
+      "consensusPace": {
+        "needPerQuarter": 10.561435298164753,
+        "lastQuarter": 26.51638254,
+        "ratio": 0.3982984964948674,
+        "basis": "归母"
+      },
+      "caveats": [
+        "存货同比 +95%，比营收同比 +61% 快 34 个百分点：可能是为在手订单备货，也可能是交付放缓，要看合同负债是否同步增加",
+        "一致预期 2026E 全年 66 亿，扣掉前三季预告后第四季只剩约 11 亿，低于第三季单季约 27 亿的六成 —— 一致预期大概率还没计入这份预告，本表的前瞻 PE 与情景格偏保守"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": 0.14979969497506573
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.0284555916615008
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.3810927579940038
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": 0.1669797376794122
+        }
+      ],
+      "ret20": -0.08914151313210494,
+      "ret60": -0.15339211542665587,
+      "rs20": -0.0002227360687273583,
+      "rs60": -0.023707860039945072,
+      "drawdown250": -0.2656131479140328,
+      "upDownVolume20": 1.1794288094418348,
+      "dataGaps": []
+    },
+    {
+      "code": "002916",
+      "name": "深南电路",
+      "group": "AI 算力",
+      "attributionVerified": true,
+      "price": 318.8,
+      "marketCapYi": 2171.56,
+      "floatCapYi": 2120.09,
+      "peTtm": 52.11,
+      "pePercentile3y": 0.7173333333333334,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-27)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 15296361440.43,
+        "revenueYoy": 46.3282888807,
+        "netProfit": 2251458836.99,
+        "netProfitYoy": 65.55,
+        "deductNetProfit": 2239172474.35,
+        "deductNetProfitYoy": 76.943010276961,
+        "grossMargin": 31.0149106719,
+        "operatingCashFlow": 1501855888.16
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 8700773538.05,
+          "netProfit": 1401228040.4099998,
+          "netProfitYoy": 0.6132593761157583,
+          "deductNetProfit": 1389725758.8799999,
+          "grossMargin": 32.41418765982475
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 6595587902.38,
+          "netProfit": 850230796.58,
+          "netProfitYoy": 0.7300517686647927,
+          "deductNetProfit": 849446715.47,
+          "grossMargin": 29.169011205599997
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 6892961771.609999,
+          "netProfit": 949912599.6500001,
+          "netProfitYoy": 1.4387348178870063,
+          "deductNetProfit": 931664193.3899999,
+          "grossMargin": 28.588092215753953
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 6300560583.880001,
+          "netProfit": 965807776.1299999,
+          "netProfitYoy": 0.928703734074666,
+          "deductNetProfit": 916486659.97,
+          "grossMargin": 31.390330663375487
+        }
+      ],
+      "deductShare": 0.9945429325919075,
+      "cashConversion": 0.6670590034716548,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 0.9280235795678631,
+        "receivables": 0.4873719609842917,
+        "contractLiab": -0.026759146402179468,
+        "constructionInProgress": 3.3651986961060167
+      },
+      "preview": null,
+      "orgNum": 21,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 37.2388474802553
+        },
+        {
+          "year": 2027,
+          "pe": 25.241488519398256
+        },
+        {
+          "year": 2028,
+          "pe": 18.46563758000521
+        }
+      ],
+      "consensusCagr": 0.42009030312081874,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 147.91649071894795
+        },
+        {
+          "exitPe": 30,
+          "yi": 98.61099381263197
+        }
+      ],
+      "consensusProfit2026Yi": 58.31437187070302,
+      "consensusProfit2028Yi": 117.6000552697616,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 17.899891750401512,
+        "lastQuarter": 14.012280404099998,
+        "ratio": 1.277443159442056,
+        "basis": "归母"
+      },
+      "caveats": [
+        "存货同比 +93%，比营收同比 +46% 快 46 个百分点：可能是为在手订单备货，也可能是交付放缓，要看合同负债是否同步增加"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": 0.03674118099837442
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.10293586339594718
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.24529145663241447
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": 0.07751705617461324
+        }
+      ],
+      "ret20": -0.16827550221758414,
+      "ret60": -0.15489224080799513,
+      "rs20": -0.07935672515420655,
+      "rs60": -0.02520798542128433,
+      "drawdown250": -0.34209711703159495,
+      "upDownVolume20": 1.0497626655911643,
+      "dataGaps": []
+    },
+    {
+      "code": "688041",
+      "name": "海光信息",
+      "group": "AI 算力",
+      "attributionVerified": true,
+      "price": 193.82,
+      "marketCapYi": 4505.03,
+      "floatCapYi": 4505.03,
+      "peTtm": 143.39,
+      "pePercentile3y": 0.21466666666666667,
+      "peNote": "基于999个有效PE样本，取数自2026-06-30(公告2026-08-14)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 9099020774.81,
+        "revenueYoy": 66.5195709856,
+        "netProfit": 1798467918.03,
+        "netProfitYoy": 49.69,
+        "deductNetProfit": 1631411695.35,
+        "deductNetProfitYoy": 49.66894847981,
+        "grossMargin": 55.2090490096,
+        "operatingCashFlow": -427541001.36
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 5065428588.469999,
+          "netProfit": 1111373581.32,
+          "netProfitYoy": 0.5978166409857768,
+          "deductNetProfit": 1034528353.8,
+          "grossMargin": 54.89456347677192
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 4033592186.34,
+          "netProfit": 687094336.71,
+          "netProfitYoy": 0.35817794136999015,
+          "deductNetProfit": 596883341.55,
+          "grossMargin": 55.60398333490001
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 4886914645.83,
+          "netProfit": 583444466.0999999,
+          "netProfitYoy": 0.4396361659766992,
+          "deductNetProfit": 487963593.8599999,
+          "grossMargin": 53.422585479312005
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 4025739773.970001,
+          "netProfit": 759994598.3699999,
+          "netProfitYoy": 0.13040201959200615,
+          "deductNetProfit": 726691836.97,
+          "grossMargin": 60.02982608081858
+        }
+      ],
+      "deductShare": 0.9071119250973408,
+      "cashConversion": -0.2377251198499657,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 0.2503992418874541,
+        "receivables": 0.1602008530502581,
+        "contractLiab": -0.993736816298157,
+        "constructionInProgress": null
+      },
+      "preview": null,
+      "orgNum": 24,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 99.99685957829743
+        },
+        {
+          "year": 2027,
+          "pe": 64.97391050866936
+        },
+        {
+          "year": 2028,
+          "pe": 45.142886075944794
+        }
+      ],
+      "consensusCagr": 0.488327547078909,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 306.8615318865618
+        },
+        {
+          "exitPe": 30,
+          "yi": 204.5743545910412
+        }
+      ],
+      "consensusProfit2026Yi": 45.05171481382939,
+      "consensusProfit2028Yi": 99.79490439359806,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 13.533517816764697,
+        "lastQuarter": 11.1137358132,
+        "ratio": 1.2177289476946784,
+        "basis": "归母"
+      },
+      "caveats": [
+        "账面盈利 17.98 亿，经营现金流却是 -4.28 亿：钱流向了哪里（备货、预付、保证金还是其他往来），要读现金流量表附注"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": -0.30788811431648266
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.41140088760463667
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": -0.16866327481517684
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": -0.2929986196347325
+        }
+      ],
+      "ret20": -0.17803223070398655,
+      "ret60": -0.40199315047360473,
+      "rs20": -0.08911345364060896,
+      "rs60": -0.27230889508689393,
+      "drawdown250": -0.509527545107169,
+      "upDownVolume20": 0.48939797008878266,
+      "dataGaps": []
+    },
+    {
+      "code": "603019",
+      "name": "中科曙光",
+      "group": "AI 算力",
+      "attributionVerified": true,
+      "note": "已有核心名单成员，委员会预选池未列，作对照补入",
+      "price": 66.99,
+      "marketCapYi": 980.14,
+      "floatCapYi": 980.1,
+      "peTtm": 40.52,
+      "pePercentile3y": 0.32133333333333336,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-26)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 7465810151.43,
+        "revenueYoy": 27.6215367812,
+        "netProfit": 971389448.14,
+        "netProfitYoy": 33.31,
+        "deductNetProfit": 844062349.36,
+        "deductNetProfitYoy": 48.449253043123,
+        "grossMargin": 27.2302934533,
+        "operatingCashFlow": -186509143.38
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 4266379658.61,
+          "netProfit": 743545529.11,
+          "netProfitYoy": 0.37137959320872294,
+          "deductNetProfit": 679932488.45,
+          "grossMargin": 27.734814368511874
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 3199430492.82,
+          "netProfit": 227843919.03,
+          "netProfitYoy": 0.22186116316175397,
+          "deductNetProfit": 164129860.91,
+          "grossMargin": 26.5575244168
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 6143424134.01,
+          "netProfit": 1210179296.6100001,
+          "netProfitYoy": 0.06004463221440548,
+          "deductNetProfit": 1080365480.3400002,
+          "grossMargin": 39.38457961559157
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 2970259205.6000004,
+          "netProfit": 237452752.11,
+          "netProfitYoy": 0.15065520862274595,
+          "deductNetProfit": 188746235.40999997,
+          "grossMargin": 20.12789285888675
+        }
+      ],
+      "deductShare": 0.8689227075465934,
+      "cashConversion": -0.192002439121739,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 1.0440638956670965,
+        "receivables": -0.2687349889617976,
+        "contractLiab": 0.20528152314393555,
+        "constructionInProgress": 0.24992400594932995
+      },
+      "preview": null,
+      "orgNum": 21,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 32.29211858279103
+        },
+        {
+          "year": 2027,
+          "pe": 25.307895731016245
+        },
+        {
+          "year": 2028,
+          "pe": 20.206540720747718
+        }
+      ],
+      "consensusCagr": 0.26416069762190686,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 66.76254361531326
+        },
+        {
+          "exitPe": 30,
+          "yi": 44.50836241020884
+        }
+      ],
+      "consensusProfit2026Yi": 30.352297805642632,
+      "consensusProfit2028Yi": 48.50607600506353,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 10.319201662121316,
+        "lastQuarter": 7.4354552911,
+        "ratio": 1.3878372282694063,
+        "basis": "归母"
+      },
+      "caveats": [
+        "账面盈利 9.71 亿，经营现金流却是 -1.87 亿：钱流向了哪里（备货、预付、保证金还是其他往来），要读现金流量表附注",
+        "存货同比 +104%，比营收同比 +28% 快 77 个百分点：可能是为在手订单备货，也可能是交付放缓，要看合同负债是否同步增加"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": -0.004633546748643247
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.09914532403756082
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.19559381181209767
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": 0.08207009830850609
+        }
+      ],
+      "ret20": -0.18731044522625273,
+      "ret60": -0.3076684580405127,
+      "rs20": -0.09839166816287515,
+      "rs60": -0.17798420265380188,
+      "drawdown250": -0.47528785149212815,
+      "upDownVolume20": 0.3571936933632819,
+      "dataGaps": []
+    },
+    {
+      "code": "002371",
+      "name": "北方华创",
+      "group": "半导体设备",
+      "attributionVerified": true,
+      "price": 610,
+      "marketCapYi": 4426.7,
+      "floatCapYi": 4423.02,
+      "peTtm": 77.88,
+      "pePercentile3y": 0.8746666666666667,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-26)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 20161416890.56,
+        "revenueYoy": 24.9038763685,
+        "netProfit": 3370020676.75,
+        "netProfitYoy": 5.05,
+        "deductNetProfit": 3340719149.36,
+        "deductNetProfitYoy": 5.022908563986,
+        "grossMargin": 40.0682862059,
+        "operatingCashFlow": 3773698817.34
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 9838552981.740002,
+          "netProfit": 1735281628.07,
+          "netProfitYoy": 0.06637516131351928,
+          "deductNetProfit": 1714040976.5100002,
+          "grossMargin": 39.329103148365014
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 10322863908.82,
+          "netProfit": 1634739048.68,
+          "netProfitYoy": 0.03418201634518869,
+          "deductNetProfit": 1626678172.85,
+          "grossMargin": 40.7727895045
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 12051732762.969997,
+          "netProfit": 391650402.15999985,
+          "netProfitYoy": -0.6606064192033341,
+          "deductNetProfit": 233874204.14000034,
+          "grossMargin": 37.151580068739726
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 11159833472.070002,
+          "netProfit": 1922364079.12,
+          "netProfitYoy": 0.1459763104213021,
+          "deductNetProfit": 1921135050.8599997,
+          "grossMargin": 40.30556795175899
+        }
+      ],
+      "deductShare": 0.9913052380977503,
+      "cashConversion": 1.1197850634493143,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": -0.020349137728630007,
+        "receivables": 0.08538030351868464,
+        "contractLiab": 0.06202808878478372,
+        "constructionInProgress": 0.3150151399801846
+      },
+      "preview": null,
+      "orgNum": 28,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 61.643835616435595
+        },
+        {
+          "year": 2027,
+          "pe": 42.75035041270797
+        },
+        {
+          "year": 2028,
+          "pe": 31.05906313645621
+        }
+      ],
+      "consensusCagr": 0.4088042432903085,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 301.52605936081295
+        },
+        {
+          "exitPe": 30,
+          "yi": 201.01737290720862
+        }
+      ],
+      "consensusProfit2026Yi": 71.81091111111434,
+      "consensusProfit2028Yi": 142.5252262295082,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 19.05535217180717,
+        "lastQuarter": 17.3528162807,
+        "ratio": 1.0981129439490895,
+        "basis": "归母"
+      },
+      "caveats": [],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": -0.18042560961581944
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.2887224388689421
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": -0.015560484018489196
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": -0.14564224282296045
+        }
+      ],
+      "ret20": -0.056311881188118806,
+      "ret60": -0.17862817440012924,
+      "rs20": 0.03260689587525878,
+      "rs60": -0.048943919013418435,
+      "drawdown250": -0.3693382600766306,
+      "upDownVolume20": 0.6839408765022711,
+      "dataGaps": []
+    },
+    {
+      "code": "688012",
+      "name": "中微公司",
+      "group": "半导体设备",
+      "attributionVerified": true,
+      "price": 297.67,
+      "marketCapYi": 2851.21,
+      "floatCapYi": 2804.64,
+      "peTtm": 67.39,
+      "pePercentile3y": 0.0026666666666666666,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-20)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 6691287327.67,
+        "revenueYoy": 34.8886347323,
+        "netProfit": 2825194624.91,
+        "netProfitYoy": 300.22,
+        "deductNetProfit": 1122590335.26,
+        "deductNetProfitYoy": 108.362533628544,
+        "grossMargin": 39.7417373409,
+        "operatingCashFlow": 684553490.6
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 3776300808.94,
+          "netProfit": 1894707305.7399998,
+          "netProfitYoy": 3.823174487294943,
+          "deductNetProfit": 645031589.0899999,
+          "grossMargin": 39.62531120070379
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 2914986518.73,
+          "netProfit": 930487319.17,
+          "netProfitYoy": 1.9720199782070367,
+          "deductNetProfit": 477558746.17,
+          "grossMargin": 39.8925648403
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 4322073152.690001,
+          "netProfit": 900280589.6100001,
+          "netProfitYoy": 0.2811806270791326,
+          "deductNetProfit": 662992115.1400001,
+          "grossMargin": 39.28577886589213
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 3101963845.38,
+          "netProfit": 505275864.4799999,
+          "netProfitYoy": 0.27502927722062265,
+          "deductNetProfit": 348036426.8299999,
+          "grossMargin": 37.89488406976761
+        }
+      ],
+      "deductShare": 0.3973497349039313,
+      "cashConversion": 0.24230312650471197,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": -0.05098572122457756,
+        "receivables": 0.5901418172345583,
+        "contractLiab": -0.12409489649486405,
+        "constructionInProgress": 0.5438239474920414
+      },
+      "preview": null,
+      "orgNum": 23,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 64.24049204932014
+        },
+        {
+          "year": 2027,
+          "pe": 52.42431034758718
+        },
+        {
+          "year": 2028,
+          "pe": 40.25386327035001
+        }
+      ],
+      "consensusCagr": 0.2632829824012679,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 194.21106370663102
+        },
+        {
+          "exitPe": 30,
+          "yi": 129.47404247108733
+        }
+      ],
+      "consensusProfit2026Yi": 44.38337735350791,
+      "consensusProfit2028Yi": 70.83071706312795,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 16.578737000453955,
+        "lastQuarter": 6.450315890899999,
+        "ratio": 2.5702209443483177,
+        "basis": "扣非"
+      },
+      "caveats": [
+        "扣非只占归母净利的 40%，PE（TTM）与历史分位被非经常性收益压低，应以扣非口径复核",
+        "一致预期 2026E 要求剩余每季约 16.6 亿，是最近单季扣非 6.5 亿的 2.6 倍 —— 前瞻 PE 与情景格建立在利润继续明显加速上，要先看下一份季报能否接住"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": -0.2710801871574363
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.34010937167452204
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": -0.12445108563275409
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": -0.20736614226689798
+        }
+      ],
+      "ret20": -0.10609609609609605,
+      "ret60": -0.2392598839735235,
+      "rs20": -0.017177319032718463,
+      "rs60": -0.10957562858681269,
+      "drawdown250": -0.40466,
+      "upDownVolume20": 0.6656635340742204,
+      "dataGaps": []
+    },
+    {
+      "code": "688072",
+      "name": "拓荆科技",
+      "group": "半导体设备",
+      "attributionVerified": null,
+      "price": 645,
+      "marketCapYi": 1884.52,
+      "floatCapYi": 1833.01,
+      "peTtm": 86.64,
+      "pePercentile3y": 0.416,
+      "peNote": "基于1077个有效PE样本，取数自2026-06-30(公告2026-08-21)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 2912864261.46,
+        "revenueYoy": 49.060715147,
+        "netProfit": 1342753980.93,
+        "netProfitYoy": 1324.1,
+        "deductNetProfit": 367334974.63,
+        "deductNetProfitYoy": 861.919477028539,
+        "grossMargin": 41.0042896167,
+        "operatingCashFlow": 115460241.35
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 1800432482.5,
+          "netProfit": 772151682.34,
+          "netProfitYoy": 2.2007626171838677,
+          "deductNetProfit": 265220691.66,
+          "grossMargin": 40.5811816234349
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 1112431778.96,
+          "netProfit": 570602298.59,
+          "netProfitYoy": null,
+          "deductNetProfit": 102114282.97,
+          "grossMargin": 41.689075316899995
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 2298985467.3900003,
+          "netProfit": 370198574.30999994,
+          "netProfitYoy": -0.11195663781727772,
+          "deductNetProfit": 264966272.10999995,
+          "grossMargin": 38.023621056363915
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 2265963233.5899997,
+          "netProfit": 462217427.06000006,
+          "netProfitYoy": 2.250683731806558,
+          "deductNetProfit": 419992907.92,
+          "grossMargin": 34.41828552143763
+        }
+      ],
+      "deductShare": 0.27356833779452394,
+      "cashConversion": 0.08598763659596934,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 0.061276277936313406,
+        "receivables": 0.13360968528069184,
+        "contractLiab": 0.1311529402783893,
+        "constructionInProgress": 0.8490573104809718
+      },
+      "preview": null,
+      "orgNum": 13,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 92.65193370166361
+        },
+        {
+          "year": 2027,
+          "pe": 66.79146088896023
+        },
+        {
+          "year": 2028,
+          "pe": 48.580533024334
+        }
+      ],
+      "consensusCagr": 0.3810077191826642,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 128.36467106120568
+        },
+        {
+          "exitPe": 30,
+          "yi": 85.57644737413713
+        }
+      ],
+      "consensusProfit2026Yi": 20.339780560523398,
+      "consensusProfit2028Yi": 38.79166988670222,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 8.333215407111698,
+        "lastQuarter": 2.6522069166,
+        "ratio": 3.1419929399002076,
+        "basis": "扣非"
+      },
+      "caveats": [
+        "扣非只占归母净利的 27%，PE（TTM）与历史分位被非经常性收益压低，应以扣非口径复核",
+        "一致预期 2026E 要求剩余每季约 8.3 亿，是最近单季扣非 2.7 亿的 3.1 倍 —— 前瞻 PE 与情景格建立在利润继续明显加速上，要先看下一份季报能否接住"
+      ],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": -0.33047254472829346
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": -0.4145546838557117
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": -0.1957907766065632
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": -0.29678683177427645
+        }
+      ],
+      "ret20": 0.02246247007910207,
+      "ret60": -0.16628966586957927,
+      "rs20": 0.11138124714247966,
+      "rs60": -0.03660541048286847,
+      "drawdown250": -0.3172074313237707,
+      "upDownVolume20": 1.7012396588337813,
+      "dataGaps": []
+    },
+    {
+      "code": "300124",
+      "name": "汇川技术",
+      "group": "工业自动化",
+      "attributionVerified": null,
+      "note": "不在现有作战名单，主线归因未核验",
+      "price": 49.39,
+      "marketCapYi": 1338.4,
+      "floatCapYi": 1191.55,
+      "peTtm": 27.36,
+      "pePercentile3y": 0.06266666666666666,
+      "peNote": "基于1200个有效PE样本，取数自2026-06-30(公告2026-08-29)",
+      "latest": {
+        "reportDate": "2026-06-30",
+        "revenue": 24675250997.63,
+        "revenueYoy": 20.3121582778,
+        "netProfit": 2809924122.46,
+        "netProfitYoy": -5.35,
+        "deductNetProfit": 2756053764.48,
+        "deductNetProfitYoy": 3.152172969361,
+        "grossMargin": 29.7416847059,
+        "operatingCashFlow": 1975059030.42
+      },
+      "quarters": [
+        {
+          "reportDate": "2026-06-30",
+          "revenue": 14532027619.51,
+          "netProfit": 1796472970.88,
+          "netProfitYoy": 0.09144852214059984,
+          "deductNetProfit": 1710366294.4,
+          "grossMargin": 30.20559011260554
+        },
+        {
+          "reportDate": "2026-03-31",
+          "revenue": 10143223378.12,
+          "netProfit": 1013451151.58,
+          "netProfitYoy": -0.23387362891072572,
+          "deductNetProfit": 1045687470.08,
+          "grossMargin": 29.077055136799995
+        },
+        {
+          "reportDate": "2025-12-31",
+          "revenue": 13442237730.439999,
+          "netProfit": 795871435.1700006,
+          "netProfitYoy": -0.14575438400059149,
+          "deductNetProfit": 1062401021.5999999,
+          "grossMargin": 28.214360862687222
+        },
+        {
+          "reportDate": "2025-09-30",
+          "revenue": 11153248686.699997,
+          "netProfit": 1285352607.98,
+          "netProfitYoy": 0.04012554614445074,
+          "deductNetProfit": 1216271407.06,
+          "grossMargin": 27.50860335517321
+        }
+      ],
+      "deductShare": 0.9808285364186852,
+      "cashConversion": 0.7028869621898893,
+      "balanceYoy": {
+        "reportDate": "2026-06-30",
+        "inventory": 0.2283722505200323,
+        "receivables": 0.33671642545217484,
+        "contractLiab": 0.08822014950295465,
+        "constructionInProgress": 0.3370574861401461
+      },
+      "preview": null,
+      "orgNum": 18,
+      "forwardPe": [
+        {
+          "year": 2026,
+          "pe": 22.631163607666284
+        },
+        {
+          "year": 2027,
+          "pe": 18.49812734082397
+        },
+        {
+          "year": 2028,
+          "pe": 15.40468888080102
+        }
+      ],
+      "consensusCagr": 0.21206797449159343,
+      "requiredProfit2028": [
+        {
+          "exitPe": 20,
+          "yi": 91.1655359180681
+        },
+        {
+          "exitPe": 30,
+          "yi": 60.77702394537873
+        }
+      ],
+      "consensusProfit2026Yi": 59.139689995728645,
+      "consensusProfit2028Yi": 86.88263751097617,
+      "previewQ3Yi": null,
+      "previewCompletion": null,
+      "consensusPace": {
+        "needPerQuarter": 15.520224385564322,
+        "lastQuarter": 17.9647297088,
+        "ratio": 0.863927520042885,
+        "basis": "归母"
+      },
+      "caveats": [],
+      "scenarios": [
+        {
+          "profit": "一致预期",
+          "exitPe": 20,
+          "annualReturn": 0.12525565401356498
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 20,
+          "annualReturn": 0.0358721819207517
+        },
+        {
+          "profit": "一致预期",
+          "exitPe": 30,
+          "annualReturn": 0.35161145149168127
+        },
+        {
+          "profit": "增速减半",
+          "exitPe": 30,
+          "annualReturn": 0.24424765018677586
+        }
+      ],
+      "ret20": -0.11677396280400576,
+      "ret60": -0.19085845347313235,
+      "rs20": -0.027855185740628174,
+      "rs60": -0.06117419808642155,
+      "drawdown250": -0.4542541436464088,
+      "upDownVolume20": 0.9315991449636691,
+      "dataGaps": []
+    }
+  ]
+}

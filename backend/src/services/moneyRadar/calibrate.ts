@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 一次性校准与样本外检验
+ * 资金哨兵（R-01）· 一次性校准与样本外检验
  *
  *   npm run money:calibrate
  *
@@ -47,7 +47,7 @@ export function loadLatestCalibration(): CalibrationReport | null {
 const pct = (v: number | null, d = 2) => (v === null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(d)}%`)
 
 export function renderCalibration(r: CalibrationReport): string {
-  const L: string[] = ['', `资金驾驶舱 · 校准与样本外检验（${r.runOn}，数据截至 ${r.dataThrough}）`, '─'.repeat(100)]
+  const L: string[] = ['', `资金哨兵 · 校准与样本外检验（${r.runOn}，数据截至 ${r.dataThrough}）`, '─'.repeat(100)]
   L.push(`  阈值指纹 ${r.thresholdsHash}（预登记于 ${r.thresholdsRegisteredOn}）　对象 ${r.objects.total} 个：行业 ${r.objects.industries}、篮子 ${r.objects.baskets}、个股 ${r.objects.stocks}`)
   L.push(`  样本内 ${r.split.inSample[0]} ~ ${r.split.inSample[1]}　样本外 ${r.split.outOfSample[0]} ~ ${r.split.outOfSample[1]}`)
   L.push('')
