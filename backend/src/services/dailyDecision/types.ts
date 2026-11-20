@@ -1,6 +1,4 @@
-import type { CircuitCalc } from '../cockpit/safety'
-import type { Action } from '../cockpit/types'
-import type { AccountSnapshot } from '../tios/types'
+import type { CircuitCalc } from './rules'
 
 export interface DecisionHolding {
   code: string
@@ -11,18 +9,44 @@ export interface DecisionHolding {
   barDate: string | null
 }
 
-/** 驾驶舱一次运行导出给每日执行单的全部输入。执行单不得再自行计算仓位或回撤 */
+export interface DecisionSnapshot {
+  date: string
+  /** 券商账户内合计 = cash + positionsValue */
+  brokerTotal: number
+  cash: number
+  positionsValue: number
+  externalCash: number
+  /** 组合总资产 = positionsValue + cash + externalCash。所有仓位上限的分母 */
+  portfolioTotal: number
+  peakAssets: number
+  peakBasis: 'BROKER' | 'PORTFOLIO'
+  peakVerified: boolean
+}
+
+/** 法定动作。reason 只有 POSITION_LIMIT（单票超限）与 CIRCUIT_BREAKER（熔断降仓）两种会被执行单读取 */
+export interface DecisionAction {
+  code: string
+  name: string
+  kind: string
+  reason: string
+  /** 单票超限为股数，熔断降仓为金额；缺价格时为 null */
+  size: { value: number | null }
+}
+
+/** 执行单的全部输入。执行单不得再自行计算仓位或回撤 */
 export interface DecisionInput {
   date: string
   ledgerAsOf: string | null
   account: { stale: boolean; staleDays: number | null; gaps: string[] }
-  snapshot: AccountSnapshot
+  snapshot: DecisionSnapshot
   circuit: CircuitCalc
   holdings: DecisionHolding[]
   priceFailed: string[]
-  actions: Action[]
+  actions: DecisionAction[]
   noNewEntry: { verdict: boolean; reasons: string[] }
   dataGaps: string[]
+  /** 不在四条主线内的持仓。只提示，不产生指令 */
+  outsideMainline?: { code: string; name: string }[]
 }
 
 export interface PriceCheck {
