@@ -93,7 +93,8 @@ let cached: { at: number; ledgerStamp: string; produced: ProducedCard } | null =
 async function currentCard(): Promise<ProducedCard> {
   const ledger = store.readLedger()
   // 策略方登记或撤销了指令，执行单也要重算
-  const ledgerStamp = `${JSON.stringify(ledger)}|${chain.book().updatedAt}`
+  // 委员会填了净值基准，三条线也要重算
+  const ledgerStamp = `${JSON.stringify(ledger)}|${chain.book().updatedAt}|${chain.store.base()?.setAt ?? ''}`
   // 停单的执行单只缓存 20 秒：行情源恢复后要尽快重算
   const ttl = cached?.produced.card.ok ? 180_000 : 20_000
   if (cached && cached.ledgerStamp === ledgerStamp && Date.now() - cached.at < ttl) return cached.produced
@@ -106,7 +107,7 @@ async function currentCard(): Promise<ProducedCard> {
 let dailyCache: { at: number; key: string; daily: Promise<Daily> } | null = null
 async function currentDaily(): Promise<Daily> {
   const produced = await currentCard()
-  const key = `${JSON.stringify(store.readLedger())}|${produced.card.title}`
+  const key = `${JSON.stringify(store.readLedger())}|${produced.card.title}|${chain.book().updatedAt}|${chain.store.base()?.setAt ?? ''}`
   if (dailyCache && dailyCache.key === key && Date.now() - dailyCache.at < 300_000) return dailyCache.daily
   const daily = runDaily(store, produced)
   dailyCache = { at: Date.now(), key, daily }
@@ -179,6 +180,9 @@ app.use(express.json({ limit: '12mb' }))
 /** 版本号在打包时写入；发布脚本靠它确认线上跑的是刚发的那一版 */
 const VERSION = process.env.HONGHU_VERSION ?? 'dev'
 app.get('/health', (_req, res) => { res.json({ status: 'ok', version: VERSION }) })
+
+/** 页面按口令的身份决定显示什么：委员会看到否决和设置，策略方看到登记和写决定 */
+app.get('/api/me', auth('COMMITTEE', 'AGENT'), (_req, res) => { res.json({ role: res.locals.role as Role }) })
 
 app.get('/api/state', auth('COMMITTEE', 'AGENT'), wrap(async (req, res) => {
   // 推送里要带上页面地址。记下委员会实际打开的那个域名

@@ -126,3 +126,28 @@ input[type="text"] { width: 100%; font: inherit; padding: 10px 12px; border: 1px
 .changes { margin: 0 0 10px; padding: 10px 12px 10px 30px; background: #fff6e0; border-left: 4px solid var(--warn); border-radius: 8px; }
 .md h3 { font-size: 15px; margin: 16px 0 4px; color: var(--ink); }
 .md p { margin: 6px 0; }
+
+select { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); min-height: 44px; }
+.danger { background: var(--stop); border-color: var(--stop); color: #fff; }
+.tag.wait { color: var(--warn); }
+.tag.bad { color: var(--stop); }
+.pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.chips { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px; }
+.chips li { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chips li.on { color: var(--good); border-color: var(--good); }
+.chips li.off { color: var(--stop); border-color: var(--stop); }
+
+.row { display: flex; gap: 10px; align-items: center; width: 100%; padding: 4px 0; border: 0; background: none; color: var(--ink); font-weight: 400; text-align: left; }
+.row .tag { font-size: 14px; }
+.row .more { margin-left: auto; color: var(--accent); font-size: 14px; }
+.digest { margin-top: 6px; }
+.digest .reply { margin: 10px 0; }
+.annotate { margin: 10px 0 16px; }
+.annotate textarea { min-height: 64px; }
+
+.order-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; margin-top: 10px; color: var(--ink); }
+.order-form .error, .order-form .actions { margin: 0; }
+.order-form label { display: grid; gap: 4px; }
+.order-form .wide { grid-column: 1 / -1; }
+.order-form textarea { min-height: 64px; }

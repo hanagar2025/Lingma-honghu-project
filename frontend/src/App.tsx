@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import qrcode from 'qrcode-generator'
 import {
-  ApiError, changePassword, clearToken, fetchAuth, fetchBrief, fetchImage, fetchSettings, fetchState, getToken, renewLink,
+  ApiError, changePassword, clearToken, fetchAuth, fetchBrief, fetchChainStatus, fetchImage, fetchMe, fetchSettings, fetchState, getToken, renewLink,
   saveSetting, setToken, settle, submit, takeLinkKey, testPush, toUploadable,
-  type AuthInfo, type Brief, type SettingsView, type State, type Status, type Submission,
+  type AuthInfo, type Brief, type ChainStatus, type Role, type SettingsView, type State, type Status, type Submission,
 } from './api'
+import { DigestPanel, NavBase, OrdersPanel } from './Desk'
 
 takeLinkKey()
 
@@ -241,7 +242,8 @@ function Shot({ id }: { id: string }) {
   return url ? <img className="shot" src={url} alt="提交的截图" /> : <p className="muted">读取中</p>
 }
 
-function Item({ s, busy, onSettle }: { s: Submission; busy: boolean; onSettle: (id: string, a: 'confirm' | 'reject') => void }) {
+/** canSettle：确认、作废、撤销只有委员会能做 */
+function Item({ s, busy, canSettle, onSettle }: { s: Submission; busy: boolean; canSettle: boolean; onSettle: (id: string, a: 'confirm' | 'reject') => void }) {
   const kind = s.parsed ? KIND_TEXT[s.parsed.kind] : s.source === 'IMAGE' ? '截图' : '文字'
   const effective = s.status === 'RECORDED' || s.status === 'CONFIRMED'
   const undoable = effective && (s.parsed?.kind === 'TRADE' || s.parsed?.kind === 'INTENT')
@@ -263,13 +265,13 @@ function Item({ s, busy, onSettle }: { s: Submission; busy: boolean; onSettle: (
         </ul>
       )}
       {s.source === 'IMAGE' && <Shot id={s.id} />}
-      {s.status === 'PENDING_CONFIRM' && (
+      {canSettle && s.status === 'PENDING_CONFIRM' && (
         <div className="actions">
           <button type="button" disabled={busy} onClick={() => onSettle(s.id, 'confirm')}>内容无误，确认</button>
           <button type="button" className="ghost" disabled={busy} onClick={() => onSettle(s.id, 'reject')}>不对，作废</button>
         </div>
       )}
-      {undoable && (
+      {canSettle && undoable && (
         <button type="button" className="link" disabled={busy} onClick={() => onSettle(s.id, 'reject')}>撤销这条</button>
       )}
     </li>
@@ -285,6 +287,10 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState<Submission | null>(null)
   const [brief, setBrief] = useState<Brief | null>(null)
+  const [role, setRole] = useState<Role | null>(null)
+  const [chain, setChain] = useState<ChainStatus | null>(null)
+  /** 指令或净值基准有变动时加一：执行单和简报立即重取，不等下一轮 */
+  const [changes, setChanges] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const fail = useCallback((e: unknown) => {
@@ -300,6 +306,8 @@ export default function App() {
   const load = useCallback(() => {
     fetchState().then(s => { setState(s); setError('') }).catch(fail)
   }, [fail])
+
+  const loadChain = useCallback(() => fetchChainStatus().then(setChain), [])
 
   // 页面已经开着时扫码，浏览器只改 # 后面、不重新加载，要在这里收下
   useEffect(() => {
@@ -320,7 +328,16 @@ export default function App() {
     return () => window.clearInterval(timer)
   }, [authed, load])
 
-  // 简报跟着账本走：账本日期一变就重取，另外每 5 分钟取一次
+  // 这个口令是委员会还是策略方；数据到了哪一步每 5 分钟看一次
+  useEffect(() => {
+    if (!authed) return
+    fetchMe().then(m => setRole(m.role)).catch(fail)
+    loadChain().catch(() => undefined)
+    const timer = window.setInterval(() => { loadChain().catch(() => undefined) }, 300_000)
+    return () => window.clearInterval(timer)
+  }, [authed, fail, loadChain])
+
+  // 简报跟着账本走：账本日期变了、指令或净值基准有变动就重取，另外每 5 分钟取一次
   const ledgerAsOf = state?.ledgerAsOf
   const cardTitle = state?.card.title
   useEffect(() => {
@@ -329,7 +346,7 @@ export default function App() {
     get()
     const timer = window.setInterval(get, 300_000)
     return () => window.clearInterval(timer)
-  }, [authed, ledgerAsOf, cardTitle])
+  }, [authed, ledgerAsOf, cardTitle, changes])
 
   // 有图片正在识别时，每 5 秒看一次结果
   const parsing = state?.submissions.some(s => s.status === 'PENDING_PARSE' && Date.now() - Date.parse(`${s.receivedAt.replace(' ', 'T')}+08:00`) < 180_000)
@@ -396,16 +413,18 @@ export default function App() {
 
   const pending = state?.submissions.filter(s => s.status === 'PENDING_CONFIRM') ?? []
   const rest = state?.submissions.filter(s => s.status !== 'PENDING_CONFIRM') ?? []
+  const committee = role !== 'AGENT'
 
   return (
     <main>
       <header>
         <h1>鸿鹄</h1>
-        <p className="muted">账本日期：{state ? state.ledgerAsOf ?? '还没有账本' : '读取中'}</p>
+        <p className="muted">{role === 'AGENT' ? '策略方登录；' : ''}账本日期：{state ? state.ledgerAsOf ?? '还没有账本' : '读取中'}</p>
       </header>
 
       {error && <p className="error" role="alert">{error}</p>}
 
+      {committee && (
       <section className="panel">
         <h2>交给战略侧</h2>
         <textarea
@@ -456,11 +475,12 @@ export default function App() {
           </ul>
         </details>
       </section>
+      )}
 
       {pending.length > 0 && (
         <section className="panel">
-          <h2>等您确认（{pending.length}）</h2>
-          <ul className="items">{pending.map(s => <Item key={s.id} s={s} busy={busy} onSettle={onSettle} />)}</ul>
+          <h2>{committee ? '等您确认' : '等委员会确认'}（{pending.length}）</h2>
+          <ul className="items">{pending.map(s => <Item key={s.id} s={s} busy={busy} canSettle={committee} onSettle={onSettle} />)}</ul>
         </section>
       )}
 
@@ -477,25 +497,32 @@ export default function App() {
           : <p className="muted">读取中</p>}
       </section>
 
+      <OrdersPanel role={role} stamp={state?.card.generatedAt ?? ''} onChanged={() => { load(); setChanges(n => n + 1) }} onError={fail} />
+
+      <DigestPanel role={role} status={chain} onError={fail} />
+
       <BriefPanels brief={brief} />
 
       <section className="panel">
         <h2>最近提交</h2>
         {rest.length
-          ? <ul className="items">{rest.map(s => <Item key={s.id} s={s} busy={busy} onSettle={onSettle} />)}</ul>
+          ? <ul className="items">{rest.map(s => <Item key={s.id} s={s} busy={busy} canSettle={committee} onSettle={onSettle} />)}</ul>
           : <p className="muted">还没有提交。</p>}
       </section>
 
-      <section className="panel">
-        <details>
-          <summary>设置：推送、截图识别、登录</summary>
-          <Delivery onError={fail} />
-          <Settings onError={fail} />
-        </details>
-      </section>
+      {role === 'COMMITTEE' && (
+        <section className="panel">
+          <details>
+            <summary>设置：净值基准、推送、截图识别、登录</summary>
+            <NavBase status={chain} onSaved={() => { loadChain().catch(fail); load(); setChanges(n => n + 1) }} onError={fail} />
+            <Delivery onError={fail} />
+            <Settings onError={fail} />
+          </details>
+        </section>
+      )}
 
       <footer>
-        <button type="button" className="link" onClick={() => { clearToken(); setState(null); setAuthed(false) }}>退出</button>
+        <button type="button" className="link" onClick={() => { clearToken(); setState(null); setRole(null); setChain(null); setAuthed(false) }}>退出</button>
       </footer>
     </main>
   )

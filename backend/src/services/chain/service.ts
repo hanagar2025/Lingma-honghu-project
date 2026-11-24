@@ -77,6 +77,14 @@ export function watchDue(now: Date, lastAt: number): boolean {
   return inSession && now.getTime() - lastAt >= 5 * 60_000
 }
 
+/** 「2026-11-24 09:37」这样的北京时间 → 毫秒。写法不对，或不是真实存在的时刻（2 月 30 日、25 点）为 null */
+export function beijingMinute(at: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(at)
+  if (!m) return null
+  const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]) - 8, Number(m[5]))
+  return new Date(t + 8 * 3600_000).toISOString().slice(0, 16).replace('T', ' ') === at ? t : null
+}
+
 export interface ChainDeps {
   dataDir: string
   readLedger: () => LedgerFile | null
@@ -204,7 +212,9 @@ export class ChainService {
   /** 委员会填净值基准。金额只落在服务器，不回显 */
   setBase(totalAssets: unknown, at: unknown, now = new Date()): string | null {
     if (typeof totalAssets !== 'number' || !Number.isFinite(totalAssets) || totalAssets <= 0) return '基准总资产要是正数'
-    if (typeof at !== 'string' || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(at)) return '基准时点写成 2026-11-24 09:37 这样'
+    const moment = typeof at === 'string' ? beijingMinute(at) : null
+    if (typeof at !== 'string' || moment === null) return '基准时点写成 2026-11-24 09:37 这样'
+    if (moment > now.getTime()) return '基准时点不能晚于现在'
     this.store.saveDoc('base', { totalAssets, at, highIndex: 100, setAt: beijingStamp(now) } satisfies BaseFile)
     return null
   }

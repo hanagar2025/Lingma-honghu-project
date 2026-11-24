@@ -124,6 +124,23 @@ if (process.argv.includes('--smoke')) {
     if (!series.ok || (await series.json()).segments?.length < 15) problems.push('汇总机器人读不到环节名单')
     const mainline = await (await fetch(`${base}/api/chain/mainline?text=0`, { headers: bot })).json()
     if (mainline.state !== 'ready' || !mainline.data?.triggers) problems.push('随包的扫描脚本或历史读数没有就位')
+    // 页面上的汇总栏、指令、数据状态：机器人推一份，委员会读到、否决得了
+    const committee = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    if ((await (await fetch(`${base}/api/me`, { headers: committee })).json()).role !== 'COMMITTEE') problems.push('页面认不出登录的是委员会')
+    const pushed = await fetch(`${base}/api/digest`, {
+      method: 'POST',
+      headers: { ...bot, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: '2026-01-05', slot: 'close', title: '冒烟测试汇总', generatedAt: '2026-01-05 16:20:00', asOf: '2026-01-05', markdown: '# 冒烟测试汇总\n\n读数' }),
+    })
+    const heads = await (await fetch(`${base}/api/digest?days=5`, { headers: committee })).json()
+    const full = await (await fetch(`${base}/api/digest/2026-01-05/close?html=1`, { headers: committee })).json()
+    if (!pushed.ok || heads.digests?.[0]?.slot !== 'close' || !String(full.html).includes('<h1>冒烟测试汇总</h1>')) problems.push('页面读不到机器人推来的汇总')
+    const veto = await fetch(`${base}/api/digest/2026-01-05/close/veto`, { method: 'POST', headers: committee, body: JSON.stringify({ note: '冒烟测试否决' }) })
+    if (!veto.ok || (await veto.json()).veto?.note !== '冒烟测试否决') problems.push('委员会否决不了汇总')
+    const orders = await fetch(`${base}/api/orders`, { headers: committee })
+    if (!orders.ok || !Array.isArray((await orders.json()).instructions)) problems.push('页面读不到指令簿')
+    const status = await (await fetch(`${base}/api/chain/status`, { headers: committee })).json()
+    if (status.stocks?.expected !== 75 || status.base !== null) problems.push('页面读不到数据状态')
   } catch (e) {
     problems.push(e instanceof Error ? e.message : String(e))
   } finally {
@@ -134,5 +151,5 @@ if (process.argv.includes('--smoke')) {
     console.error(`✗ 包不能用：${problems.join('；')}\n${log}`)
     process.exit(1)
   }
-  console.log('✓ 包在本机起得来：健康检查、页面、口令、读执行单、提交文字、汇总接口与随包脚本均正常')
+  console.log('✓ 包在本机起得来：健康检查、页面、口令、读执行单、提交文字、汇总的推送与否决、指令簿、数据状态与随包脚本均正常')
 }
