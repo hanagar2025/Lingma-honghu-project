@@ -108,9 +108,9 @@ export class ScriptRunner {
     return this.jobs.get(`${kind}:${date}`) ?? null
   }
 
-  /** 某天的输出有了就直接说有；正在跑就说正在跑；否则现在开始跑，不等它跑完 */
-  ensure(kind: ScriptKind, date: string, now = new Date()): { state: 'ready' | 'running' | 'failed'; job: JobState | null } {
-    if (this.store.scriptOutput(kind, date) !== null) return { state: 'ready', job: this.jobs.get(`${kind}:${date}`) ?? null }
+  /** 某天的输出有了就直接说有；正在跑就说正在跑；否则现在开始跑，不等它跑完。redo：已有的那份带着缺项，重跑一遍盖掉它 */
+  ensure(kind: ScriptKind, date: string, now = new Date(), redo = false): { state: 'ready' | 'running' | 'failed'; job: JobState | null } {
+    if (!redo && this.store.scriptOutput(kind, date) !== null) return { state: 'ready', job: this.jobs.get(`${kind}:${date}`) ?? null }
     const key = `${kind}:${date}`
     const have = this.jobs.get(key)
     if (have?.state === 'running') return { state: 'running', job: have }
@@ -131,11 +131,21 @@ export class ScriptRunner {
   }
 
   /** 等到跑完。定时任务和自检用 */
-  async runNow(kind: ScriptKind, date: string): Promise<JobState | null> {
-    for (;;) {
-      const { state, job } = this.ensure(kind, date)
-      if (state !== 'running') return job
-      await new Promise(r => setTimeout(r, 500))
-    }
+  async runNow(kind: ScriptKind, date: string, redo = false): Promise<JobState | null> {
+    const { job } = this.ensure(kind, date, new Date(), redo)
+    // job 跑完时在原地改状态
+    while (job?.state === 'running') await new Promise(r => setTimeout(r, 200))
+    return job
   }
+}
+
+/**
+ * ai-mainline-map.py 自己记下的缺项（存档里的 missing 字段）。
+ * 日线两家都取不到、主力净流入缺、主力过半缺失而沿用了旧排序，都算这份读数不全。
+ * 融资缺不算：不是两融标的的股票本来就没有。
+ */
+export function mainlineIncomplete(output: unknown): boolean {
+  const m = (output as { missing?: { kline?: unknown[]; flow?: unknown[]; flow_short?: unknown } } | null)?.missing
+  if (!m) return false
+  return m.flow_short === true || (m.kline?.length ?? 0) > 0 || (m.flow?.length ?? 0) > 0
 }

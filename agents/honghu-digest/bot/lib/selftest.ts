@@ -7,7 +7,7 @@
  *   ⑤ 五个定时任务的时刻换成北京时间是 08:40、11:40、16:20、16:40、周五 16:50。
  */
 import type { Client } from "./client.js";
-import { compose, linesSection, triggersSection, type Inputs } from "./compose.js";
+import { compose, linesSection, mainlineGaps, triggersSection, type Inputs } from "./compose.js";
 import { nextCheckpoint, PLAN, stopLine } from "./plan.js";
 import { runSlot } from "./run.js";
 import { addRoom, buildBoard, entryCheck, scoreAt, sellCheck } from "./score.js";
@@ -201,6 +201,30 @@ async function main(): Promise<void> {
   ok(trig.hits.length === 0 && trig.lines.join("\n").includes("脚本输出里没有 triggers") && trig.lines.join("\n").includes("不自行核对"), "脚本输出缺 triggers：说缺，不自己算");
   trig = triggersSection(mainline(null, "脚本退出码 1"));
   ok(trig.lines.join("\n").includes("脚本退出码 1"), "脚本没跑成：带上原因");
+
+  process.stdout.write("\n【脚本记下的缺项】\n");
+  const view0 = makeView();
+  const someCode = Object.keys(view0.stocks)[0]!;
+  const MISSING: NonNullable<Mainline["missing"]> = { kline: [someCode, "999999"], kline_backup: ["甲", "乙"], flow: Array.from({ length: 14 }, (_, i) => `股${i}`), margin: ["丙"], earnings: true, ranking_from: PREV, flow_short: true };
+  const shortData: Partial<Mainline> = { triggers: TRIGGERS, missing: MISSING, segments: { 晶圆代工: { flow: "缺", main5: null, main20: null, margin5: 0.03, main_cov: "0/3" } } };
+  let gaps = mainlineGaps(mainline(shortData).data, view0);
+  ok(gaps[0] === `主力数据过半缺失：环节名次沿用 ${PREV} 的排序，不是 ${LAST} 当天算出来的`, "主力过半缺失：写明名次沿用哪一天的");
+  ok(gaps.some((g) => g.includes("S5 当天不计入")), "所有环节都没有主力数据：写明 S5 当天不计入");
+  ok(gaps.some((g) => g.startsWith("日线两家都取不到") && g.includes(`2 只：${view0.stocks[someCode]!.name}、999999`)), "日线取不到的股票：代码换成名称，查不到名称就写代码");
+  ok(gaps.some((g) => g.startsWith("主力净流入缺，14 只：股0、") && g.endsWith("股11 等")), "缺的股票多时列前 12 只并写总数");
+  ok(gaps.some((g) => g.startsWith("融资缺") && g.includes("丙")) && gaps.includes("业绩取不到，净利同比为空") && gaps.some((g) => g.startsWith("日线改用腾讯") && g.includes("甲、乙")), "融资、业绩、改用腾讯的都照写");
+  ok(gaps.some((g) => g.startsWith("没有读数的环节") && g.includes("光模块")), "脚本没给读数的环节单列出来");
+  ok(mainlineGaps(mainline({ triggers: TRIGGERS }).data, view0).length === 0, "旧存档没有 missing 字段：不编缺项");
+  gaps = mainlineGaps(mainline({ missing: { ...MISSING, kline: [], kline_backup: [], flow: [], margin: [], earnings: false, ranking_from: null } }).data, view0);
+  ok(gaps[0]!.includes("此前没有存档可沿用") && gaps[0]!.includes("用不全的数据排的"), "主力过半缺失又没有旧存档：照实说名次不可靠");
+  trig = triggersSection(mainline(shortData));
+  ok(trig.lines.join("\n").includes(`环节名次沿用 ${PREV} 的排序`) && trig.lines.join("\n").includes("S5 当天不计入") && trig.hits[0]!.endsWith(`（主力数据过半缺失，环节名次沿用 ${PREV}）`), "S1–S5 一节和推送都带上沿用日期");
+  let dShort = compose("close", inputs({ mainline: mainline(shortData) }));
+  ok(dShort.markdown.includes(`脚本 ${LAST} 这份读数的缺项：`) && dShort.markdown.includes("| 主力覆盖 |") && dShort.markdown.includes("| 0/3 |") && dShort.markdown.includes("无读数"), "收盘汇总：缺项清单、主力覆盖一列、没有读数的环节");
+  ok((dShort.data.scriptMissing as { ranking_from?: string } | null)?.ranking_from === PREV && dShort.push!.includes(`环节名次沿用 ${PREV}`), "缺项原样存进汇总的数据里，推送里也有");
+  const allSegs = Object.fromEntries(view0.segments.map((g) => [g.segment, { flow: "分歧", main5: 0.01, main20: 0.01, margin5: 0.01, main_cov: "3/3" }]));
+  dShort = compose("close", inputs({ mainline: mainline({ triggers: TRIGGERS, segments: allSegs, missing: { kline: [], kline_backup: [], flow: [], margin: [], earnings: false, ranking_from: null, flow_short: false } }) }));
+  ok(dShort.markdown.includes(`脚本 ${LAST} 这份读数没有缺项。`), "脚本说没有缺项：照写");
 
   process.stdout.write("\n【五份汇总】\n");
   const lagView = makeView({ marginAsOf: PREV }, Object.fromEntries(Object.entries(STOCKS).map(([c, x]) => [c, { ...x, rows: x.rows.map((r, i) => (i === at ? { ...r, margin: null } : r)) }])));

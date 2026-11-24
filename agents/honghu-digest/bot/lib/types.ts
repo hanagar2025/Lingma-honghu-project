@@ -87,6 +87,21 @@ export type Mainline = {
   segments?: Record<string, Record<string, number | string | null>>;
   streak?: Record<string, number>;
   triggers?: Record<string, { hit: boolean; segments?: string[]; streak?: Record<string, number> | number; above20?: Record<string, number> }>;
+  /** 脚本自己记下的缺项。旧存档没有这个字段 */
+  missing?: {
+    /** 日线两家都取不到、没计入的股票（代码） */
+    kline?: string[];
+    /** 日线改用腾讯的股票（名称） */
+    kline_backup?: string[];
+    /** 主力净流入取不到的股票（名称） */
+    flow?: string[];
+    /** 融资取不到的股票（名称），含不是两融标的的 */
+    margin?: string[];
+    earnings?: boolean;
+    /** 主力过半缺失时，排序沿用的那份存档的日期 */
+    ranking_from?: string | null;
+    flow_short?: boolean;
+  };
 };
 
 export type ScriptOutput<T> = {

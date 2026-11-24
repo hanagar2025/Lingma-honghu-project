@@ -19,7 +19,7 @@ import type { LedgerFile } from '../dailyDecision/ledger'
 import { collectDaily, collectEarnings, collectIntraday, collectMargin, earningsDue } from './collect'
 import { acceptDigest, DIGEST_SLOTS, listDigests, setDecision, setVeto, type DigestDoc } from './digest'
 import { mountChain } from './routes'
-import { ScriptRunner, type Spawn } from './scripts'
+import { ScriptRunner, mainlineIncomplete, type Spawn } from './scripts'
 import { CHAIN_TASKS, ChainService, dueChainTasks, watchDue } from './service'
 import { ChainStore } from './store'
 import type { WatchLine } from './types'
@@ -306,16 +306,17 @@ async function main(): Promise<void> {
 
   process.stdout.write('\n【调用脚本】\n')
   const calls: { command: string; args: string[]; env: Record<string, string>; cwd: string }[] = []
-  let outcome: 'ok' | 'fail' | 'nosave' | 'nopython' = 'ok'
+  let outcome: 'ok' | 'short' | 'fail' | 'nosave' | 'nopython' = 'ok'
   const fakeSpawn: Spawn = async (command, args, opts) => {
     calls.push({ command, args, env: opts.env, cwd: opts.cwd })
     if (outcome === 'nopython') return { code: null, stdout: '', stderr: 'spawn python3 ENOENT' }
     if (outcome === 'fail') return { code: 1, stdout: '', stderr: 'Traceback: 行情源不通' }
-    if (outcome === 'ok') {
+    if (outcome === 'ok' || outcome === 'short') {
       const kind = args[0]!.endsWith('ai-mainline-map.py') ? 'AI主线' : '全市场扫描'
       const out = join(opts.cwd, '战略组合2026-2030', '数据', kind)
       mkdirSync(out, { recursive: true })
-      writeFileSync(join(out, `${args[2]}.json`), JSON.stringify({ last: args[2], triggers: { S1: { hit: false } } }))
+      const missing = { kline: [], kline_backup: ['甲'], flow: outcome === 'short' ? ['甲', '乙'] : [], margin: ['丙'], earnings: false, ranking_from: outcome === 'short' ? '2026-11-23' : null, flow_short: outcome === 'short' }
+      writeFileSync(join(out, `${args[2]}.json`), JSON.stringify({ last: args[2], triggers: { S1: { hit: false } }, missing }))
     }
     return { code: 0, stdout: '| 名次 | 环节 |\n', stderr: '' }
   }
@@ -359,6 +360,27 @@ async function main(): Promise<void> {
   await lone.runner.runNow('mainline', TODAY)
   await lone.runner.runNow('scan', TODAY)
   ok(lone.ensureScript('mainline', TODAY, at('2026-11-25 10:00')).state === 'ready', '已有的读数任何时候都能查')
+  const dir3 = mkdtempSync(join(tmpdir(), 'honghu-chain-short-'))
+  const logs: string[] = []
+  const short = new ChainService({ dataDir: dir3, readLedger: () => null, notify: async () => undefined, isTrading: async () => true, log: m => { logs.push(m) }, source: SRC, spawn: fakeSpawn, pyHome: REPO })
+  outcome = 'short'
+  let spawned = calls.length
+  ok((await short.runMainline(TODAY, false)) === false && calls.length - spawned === 1 && mainlineIncomplete(short.store.scriptOutput('mainline', TODAY)), '脚本带着缺项存了一份：照样留存，但记为不全')
+  ok((await short.runMainline(TODAY, false)) === false && calls.length - spawned === 1, '后端自己的拉数还有缺（来源还断着）：不重跑脚本')
+  ok((await short.runMainline(TODAY, true)) === false && calls.length - spawned === 2, '后端的拉数齐了（来源恢复）：重跑一次')
+  outcome = 'ok'
+  ok((await short.runMainline(TODAY, true)) === true && calls.length - spawned === 3 && !mainlineIncomplete(short.store.scriptOutput('mainline', TODAY)), '重跑拿到齐的读数，盖掉带缺项的那份')
+  spawned = calls.length
+  ok((await short.runMainline(TODAY, true)) === true && calls.length === spawned, '读数齐了就不再跑')
+  outcome = 'short'
+  await short.runMainline('2026-11-25', true)
+  await short.runMainline('2026-11-25', true)
+  await short.runMainline('2026-11-25', true)
+  spawned = calls.length
+  ok((await short.runMainline('2026-11-25', true)) === false && calls.length === spawned && logs.filter(l => l.includes('2026-11-25') && l.includes('重跑')).length === 2, '带缺项的读数一天最多重跑 2 次')
+  outcome = 'ok'
+  ok(!mainlineIncomplete({ last: TODAY }) && !mainlineIncomplete({ missing: { kline: [], flow: [], margin: ['丙'], flow_short: false } }) && mainlineIncomplete({ missing: { kline: ['300308'], flow: [], flow_short: false } }), '旧存档没有 missing 字段算齐；只缺融资不算不全（不是两融标的本来就没有）')
+  rmSync(dir3, { recursive: true, force: true })
   const callsBefore = fake.calls
   const [p1, p2] = [lone.pullDaily(at('2026-11-24 15:35')), lone.pullDaily(at('2026-11-24 15:36'))]
   const [r1, r2] = [await p1, await p2]

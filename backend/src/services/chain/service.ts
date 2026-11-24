@@ -16,7 +16,7 @@ import { beijingStamp } from '../intake/store'
 import { beijing } from '../scheduler'
 import { collectDaily, collectEarnings, collectIntraday, collectMargin, earningsDue, type CollectOptions } from './collect'
 import { DIGEST_SLOTS } from './digest'
-import { ScriptRunner, type ScriptKind, type Spawn } from './scripts'
+import { ScriptRunner, type ScriptKind, type Spawn, mainlineIncomplete } from './scripts'
 import { emQuotes, tencentQuotes } from './sources'
 import { ChainStore } from './store'
 import type { BaseFile, RunRecord } from './types'
@@ -39,6 +39,9 @@ const minutes = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number
 const hhmm = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 
 export const ALERT_AFTER_MIN = 15
+
+/** 主线脚本带缺项的读数，一天最多重跑几次 */
+const MAX_REDO = 2
 
 /** 同一项拉数两次之间至少隔这么久 */
 const PULL_GAP_MS = 120_000
@@ -92,6 +95,8 @@ export class ChainService {
   private tried: Record<string, number> = {}
   private lastWatch = 0
   private busy = false
+  /** 主线脚本带缺项的读数，这一天已经重跑了几次 */
+  private redone: Record<string, number> = {}
 
   constructor(private readonly deps: ChainDeps) {
     this.store = new ChainStore(deps.dataDir)
@@ -262,15 +267,31 @@ export class ChainService {
     if (task.id === 'daily') {
       const record = await this.pullDaily(now)
       if (record.asOf !== today) return false
-      await this.runner.runNow('mainline', today)
       // 有缺项或脚本没跑出来，就在窗口内再试：下一轮只补缺的那几只
-      return record.failed.length === 0 && this.store.scriptOutput('mainline', today) !== null
+      return (await this.runMainline(today, record.failed.length === 0)) && record.failed.length === 0
     }
     if (task.id === 'scan') {
       // 日线还没到今天就等下一轮
       return this.ensureScript('scan', today, now).state !== 'failed'
     }
     return true
+  }
+
+  /**
+   * 收盘后跑主线脚本。脚本取不到数时不失败，而是带着缺项存一份（missing 字段）。
+   * 带缺项的那份要不要重跑：等后端自己的拉数齐了再重跑，那说明来源恢复了；来源还断着时不去添乱。
+   * 一天最多重跑 2 次。返回这一天的读数是否齐了。
+   */
+  async runMainline(date: string, pullComplete: boolean): Promise<boolean> {
+    const have = this.store.scriptOutput('mainline', date)
+    if (have === null) await this.runner.runNow('mainline', date)
+    else if (mainlineIncomplete(have) && pullComplete && (this.redone[date] ?? 0) < MAX_REDO) {
+      this.redone[date] = (this.redone[date] ?? 0) + 1
+      this.deps.log(`主线脚本 ${date} 的读数带缺项，来源已恢复，重跑第 ${this.redone[date]} 次`)
+      await this.runner.runNow('mainline', date, true)
+    }
+    const out = this.store.scriptOutput('mainline', date)
+    return out !== null && !mainlineIncomplete(out)
   }
 
   async tick(now = new Date()): Promise<void> {

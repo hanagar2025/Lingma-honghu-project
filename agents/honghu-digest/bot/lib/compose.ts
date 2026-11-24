@@ -160,12 +160,43 @@ export function candidatesSection(board: Board, portfolio: Portfolio, live?: Rec
   return { rows: shown.map((s) => ({ code: s.code, name: s.name, segment: s.segment, c: s.c, t: s.t, deduction: s.deduction, e: s.e, pct: s.pct, provisional: s.provisional })), eligible, lines: out };
 }
 
+/**
+ * 脚本自己记下的缺项（存档里的 missing 字段），原样转述：缺什么、缺哪几只、排序沿用了哪一天的。
+ * 汇总不替脚本补数，也不重排。
+ */
+export function mainlineGaps(m: Mainline | null, view: SeriesView): string[] {
+  const x = m?.missing;
+  if (!m || !x) return [];
+  const list = (items: string[]): string => `${items.length} 只：${items.length > 12 ? `${items.slice(0, 12).join("、")} 等` : items.join("、")}`;
+  const out: string[] = [];
+  if (x.flow_short) {
+    out.push(
+      x.ranking_from
+        ? `主力数据过半缺失：环节名次沿用 ${x.ranking_from} 的排序，不是 ${m.last} 当天算出来的`
+        : `主力数据过半缺失，此前没有存档可沿用：${m.last} 的环节名次是用不全的数据排的`,
+    );
+  }
+  const segs = Object.values(m.segments ?? {});
+  if (segs.length && segs.every((v) => v.main20 === null || v.main20 === undefined)) out.push(`${m.last} 所有环节都没有主力数据：S5 当天不计入连续天数`);
+  const absent = m.segments ? view.segments.map((s) => s.segment).filter((s) => !(s in m.segments!)) : [];
+  if (absent.length) out.push(`没有读数的环节（核心股的日线都取不到）：${absent.join("、")}`);
+  if (x.kline?.length) out.push(`日线两家都取不到，没有计入环节读数，${list(x.kline.map((c) => view.stocks[c]?.name || c))}`);
+  if (x.flow?.length) out.push(`主力净流入缺，${list(x.flow)}`);
+  if (x.margin?.length) out.push(`融资缺（含不是两融标的的），${list(x.margin)}`);
+  if (x.earnings) out.push("业绩取不到，净利同比为空");
+  if (x.kline_backup?.length) out.push(`日线改用腾讯（东方财富取不到），${list(x.kline_backup)}`);
+  return out;
+}
+
 /** 环节排序（脚本给的名次与资金状态）加各环节的分 */
 export function segmentsSection(board: Board, view: SeriesView, mainline: ScriptOutput<Mainline> | null, prevWeek?: Mainline | null): { rows: Record<string, unknown>[]; lines: string[] } {
   const m = mainline?.data ?? null;
   const out: string[] = ["## 环节排序", ""];
   if (!m?.ranking || !m.segments) out.push(`脚本 ai-mainline-map.py 还没有读数${mainline?.error ? `（${mainline.error}）` : ""}。下表按 E≥5 的只数排，不是脚本的资金排序。`, "");
   else if (m.last !== board.asOf) out.push(`脚本读数是 ${m.last} 的，日线已到 ${board.asOf}。`, "");
+  const gaps = mainlineGaps(m, view);
+  if (gaps.length) out.push(`脚本 ${m!.last} 这份读数的缺项：`, "", ...gaps.map((g) => `- ${g}`), "");
+  else if (m?.missing) out.push(`脚本 ${m.last} 这份读数没有缺项。`, "");
   const stat = view.segments.map((seg) => {
     const scores = seg.codes.map((c) => board.now[c]).filter((s): s is Score => !!s);
     const info = m?.segments?.[seg.segment];
@@ -175,7 +206,8 @@ export function segmentsSection(board: Board, view: SeriesView, mainline: Script
       layer: seg.layer,
       rank: m?.ranking ? m.ranking.indexOf(seg.segment) + 1 || null : null,
       prevRank: prevRank || null,
-      flow: typeof info?.flow === "string" ? info.flow : null,
+      flow: typeof info?.flow === "string" ? info.flow : m?.segments && !info ? "无读数" : null,
+      mainCov: typeof info?.main_cov === "string" ? info.main_cov : null,
       main5: typeof info?.main5 === "number" ? info.main5 : null,
       main20: typeof info?.main20 === "number" ? info.main20 : null,
       margin5: typeof info?.margin5 === "number" ? info.margin5 : null,
@@ -187,7 +219,7 @@ export function segmentsSection(board: Board, view: SeriesView, mainline: Script
     };
   });
   stat.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || b.e5 - a.e5 || (b.avgC ?? 0) - (a.avgC ?? 0));
-  const head = ["名次", ...(prevWeek ? ["上周五名次"] : []), "环节", "资金", "主力 5 日", "主力 20 日", "融资 5 日", "站上 20 日线", "E≥5 只数", "平均 C", "接力条件连续天数"];
+  const head = ["名次", ...(prevWeek ? ["上周五名次"] : []), "环节", "资金", "主力 5 日", "主力 20 日", "融资 5 日", "主力覆盖", "站上 20 日线", "E≥5 只数", "平均 C", "接力条件连续天数"];
   out.push(
     ...table(
       head,
@@ -199,6 +231,7 @@ export function segmentsSection(board: Board, view: SeriesView, mainline: Script
         pct(s.main5),
         pct(s.main20),
         pct(s.margin5),
+        s.mainCov ?? "—",
         share(s.above20, 0),
         `${s.e5}/${s.n}`,
         s.avgC === null ? "—" : s.avgC.toFixed(1),
@@ -234,7 +267,14 @@ export function triggersSection(mainline: ScriptOutput<Mainline> | null): { hits
     if (r.hit) hits.push(`${def.id} ${def.label}${r.segments?.length ? `（${r.segments.join("、")}）` : ""}：${def.action}`);
     return [`${def.id} ${def.label}`, r.hit ? `是${r.segments?.length ? `：${r.segments.join("、")}` : ""}` : "否", streak || "—", def.action];
   });
-  out.push(`脚本读数截至 ${mainline!.data!.last}，融资截至 ${mainline!.data!.margin_last ?? "—"}。`, "", ...table(["触发", "是否成立", "读数", "规则写的动作"], rows), "");
+  const m = mainline!.data!;
+  const notes: string[] = [];
+  if (m.missing?.flow_short) notes.push(m.missing.ranking_from ? `主力数据过半缺失，环节名次沿用 ${m.missing.ranking_from} 的排序；接力条件里的“资金排序前列”用的是这份旧名次` : "主力数据过半缺失，此前没有存档可沿用，环节名次是用不全的数据排的");
+  const segs = Object.values(m.segments ?? {});
+  if (segs.length && segs.every((v) => v.main20 === null || v.main20 === undefined)) notes.push("所有环节都没有主力数据，S5 当天不计入连续天数");
+  // 成立的那几条是在旧名次上判出来的，推送里也要带上这句
+  if (m.missing?.flow_short) for (let i = 0; i < hits.length; i++) hits[i] = `${hits[i]}（主力数据过半缺失${m.missing.ranking_from ? `，环节名次沿用 ${m.missing.ranking_from}` : ""}）`;
+  out.push(`脚本读数截至 ${m.last}，融资截至 ${m.margin_last ?? "—"}。${notes.length ? `${notes.join("；")}。` : ""}`, "", ...table(["触发", "是否成立", "读数", "规则写的动作"], rows), "");
   return { hits, lines: out };
 }
 
@@ -353,7 +393,7 @@ export function composePre(inputs: Inputs): Digest {
     candidates: cand.rows,
     eligible: cand.eligible,
     segments: seg.rows,
-    triggers: inputs.mainline?.data?.triggers ?? null,
+    triggers: inputs.mainline?.data?.triggers ?? null, scriptMissing: inputs.mainline?.data?.missing ?? null,
     noCandidateDays: board.noCandidateDays,
   });
 }
@@ -439,7 +479,7 @@ export function composeClose(inputs: Inputs): Digest {
     candidates: cand.rows,
     eligible: cand.eligible,
     segments: seg.rows,
-    triggers: inputs.mainline?.data?.triggers ?? null,
+    triggers: inputs.mainline?.data?.triggers ?? null, scriptMissing: inputs.mainline?.data?.missing ?? null,
     noCandidateDays: board.noCandidateDays,
   });
 }
@@ -456,7 +496,7 @@ export function composeScan(inputs: Inputs): Digest {
   const seg = board ? segmentsSection(board, view, inputs.mainline) : null;
   const body = [...head("scan", inputs, scan.date, ["下面先是环节排序和 S1–S5，再是 market-scan.py 的输出原文。"]), ...trig.lines, ...(seg?.lines ?? []), "## 全市场扫描（脚本输出原文）", "", scan.text.trim(), ""];
   const d = scan.data ?? {};
-  return digest("scan", inputs, scan.date, body, [], { breadth: d.breadth ?? null, margin_total: d.margin_total ?? null, index: d.index ?? null, triggers: inputs.mainline?.data?.triggers ?? null });
+  return digest("scan", inputs, scan.date, body, [], { breadth: d.breadth ?? null, margin_total: d.margin_total ?? null, index: d.index ?? null, triggers: inputs.mainline?.data?.triggers ?? null, scriptMissing: inputs.mainline?.data?.missing ?? null });
 }
 
 /** 周五 16:50：一周的环节排序与换仓条件 */
