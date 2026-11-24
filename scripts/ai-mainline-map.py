@@ -205,6 +205,8 @@ def daily():
         if not ss:
             continue
         okf = [s for s in ss if s['main20_raw'] is not None]
+        if len(okf) * 2 < len(cs):
+            okf = []
         okm = [s for s in ss if s['mg20'] and s['mg5']]
         segs[seg] = {
             'n': len(ss), 'main_cov': f'{len(okf)}/{len(cs)}', 'main5': sum(s['main5_raw'] for s in okf) / sum(s['amt5'] for s in okf) if okf else None,
@@ -252,8 +254,8 @@ def ebb(v):
 
 
 def no_inflow(segs):
-    # 主力数据整体缺失的那天不计入，也不中断计数之外的判断
-    if all(v['main20'] is None for v in segs.values()):
+    # 主力数据过半环节缺失的那天不计入
+    if sum(v['main20'] is None for v in segs.values()) * 2 >= len(segs):
         return False
     return not any((v['main20'] or 0) > 0 for v in segs.values())
 
@@ -318,7 +320,7 @@ def run_daily():
     print(f"| S2 代工或设备退潮 | {'是：' + '、'.join(t['segments']) if t['hit'] else '否'} | "
           + '；'.join(f"{s} 任两项为负连续 {t['streak'][s]} 日、站上 20 日线 {t['above20'][s]:.0%}" for s in t['streak']) + ' |')
     t = triggers['S5']
-    note = '；今天主力数据缺，不计入' if all(v['main20'] is None for v in segs.values()) else ''
+    note = '；今天主力数据缺，不计入' if sum(v['main20'] is None for v in segs.values()) * 2 >= len(segs) else ''
     print(f"| S5 全链退潮 | {'是' if t['hit'] else '否'} | 没有任何环节 20 日主力为正：连续 {t['streak']} 日（阈值 {SWITCH['s5_days']} 日）{note} |")
     print('\n### 个股\n')
     print('| 环节 | 股票 | 主力 5 日 | 主力 20 日 | 融资 5 日 | 融资 20 日 | 量能 5/20 | 相对 20 日线 | 相对 60 日线 | 报告期 | 营收同比 | 净利同比 |')
