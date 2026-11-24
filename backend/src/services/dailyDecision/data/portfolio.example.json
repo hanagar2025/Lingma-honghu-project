@@ -1,0 +1,11 @@
+{
+  "note": "示例账本，数字是编的，与任何真实账户无关。真实账本只在私有目录里：服务器是 <DATA_DIR>/ledger/portfolio.json，本机试跑是 .private/ledger/portfolio.json，都不进仓库。",
+  "asOf": "2026-01-05",
+  "cash": 100000,
+  "externalCash": 0,
+  "peakAssets": 0,
+  "positions": [
+    { "code": "300308", "name": "中际旭创", "quantity": 100, "cost": 100 },
+    { "code": "002463", "name": "沪电股份", "quantity": 200, "cost": 50 }
+  ]
+}

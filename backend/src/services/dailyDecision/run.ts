@@ -1,5 +1,6 @@
 /**
- * 每日执行单的命令行入口：读账本、取持仓价格算出决策输入 → 两源核对 → 出执行单 → 落盘 share/decision → 推送。
+ * 每日执行单的命令行入口：读账本、取持仓价格算出决策输入 → 两源核对 → 出执行单 → 落盘到私有目录 → 推送。
+ * 执行单带股数和金额，只写到私有目录（<DATA_DIR>/decision，本机缺省 .private/decision），不进仓库。
  *
  * 命令行单独运行时没有链上数据（日线、主力净流入、融资、指令簿都在服务器的私有目录里），
  * 所以这里出的单只有账户和价格核对，写明“卖出条件核对不了”，不出任何指令。日常出单由服务器做。
@@ -8,34 +9,29 @@
  *   DECISION_SESSION=pre|intra|post  盘前 / 盘中复核 / 收盘后；缺省按北京时间判断
  *   DECISION_JSON=<路径>        用已有的决策输入，不读账本、不取行情
  *   NO_PUSH=1                  只落盘不推送
+ *   DECISION_OUT=<目录>         落盘位置；缺省是私有目录下的 decision
  *   FORCE=1                    周末与休市日也出单（调试用）
  *   DECISION_PUSHED_MARKER=<路径> 推送成功后写此文件，工作流据此判断是否还需补发失败告警
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { buildCard, buildFailureCard, type DecisionCard } from './card'
 import { buildDecisionInput, fetchLastBars } from './input'
-import { beijingToday, loadLedger } from './ledger'
+import { beijingToday, loadLedger, privateDir } from './ledger'
 import { beijingMinutes, resolveSession } from './schedule'
 import { renderSitePage, type CardMeta } from './agentPack'
 import { configuredChannels, pushAll } from './notify'
 import type { DecisionInput, DecisionSession } from './types'
 import { fetchSinaRaw, MARKET_INDEX, sinaSymbol, verifyInput, type SinaRaw } from './verify'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-const BACKEND_ROOT = join(HERE, '..', '..', '..')
-export const DECISION_DIR = join(BACKEND_ROOT, '..', 'share', 'decision')
+const DECISION_DIR = process.env.DECISION_OUT ?? join(privateDir(), 'decision')
 
 function beijingClock(): string {
   return new Date(Date.now() + 8 * 3600_000).toISOString().slice(11, 16)
 }
 
 function cardUrl(): string | undefined {
-  if (process.env.DECISION_URL) return process.env.DECISION_URL
-  const repo = process.env.GITHUB_REPOSITORY
-  const ref = process.env.DECISION_BRANCH ?? process.env.GITHUB_REF_NAME
-  return repo && ref ? `https://github.com/${repo}/blob/${ref}/share/decision/latest.md` : undefined
+  return process.env.DECISION_URL || undefined
 }
 
 /** 账本读不出时仍要能推出一张「不下单」的执行单，而不是一声不响 */
@@ -61,7 +57,7 @@ async function publish(card: DecisionCard, today: string, session: DecisionSessi
   const meta: CardMeta = { title: card.title, ok: card.ok, generatedAt }
   writeFileSync(join(DECISION_DIR, 'latest.json'), `${JSON.stringify(meta, null, 2)}\n`, 'utf-8')
   writeFileSync(join(DECISION_DIR, 'latest.html'), renderSitePage(card.markdown, meta, process.env.DECISION_URL), 'utf-8')
-  process.stdout.write(`\n${card.push}\n\n已写出 share/decision/${today}-${tag}.md、latest.md、latest.html、latest.json\n`)
+  process.stdout.write(`\n${card.push}\n\n已写出 ${DECISION_DIR}/${today}-${tag}.md、latest.md、latest.html、latest.json\n`)
 
   if (process.env.NO_PUSH === '1') return
   if (!configuredChannels().length) {

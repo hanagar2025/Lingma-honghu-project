@@ -41,6 +41,8 @@ npm -w backend run chain:selftest         # 链上数据、盯线、汇总留存
 PORTFOLIO=<账本路径> npm -w backend run brief   # 在本机打印执行单推送稿与简报
 ```
 
+账本、执行单都不在仓库里。命令行默认从私有目录读账本（服务器是 `<DATA_DIR>/ledger/portfolio.json`，本机是 `.private/ledger/portfolio.json`，也可以用 `PORTFOLIO=<路径>` 指定），执行单写到私有目录下的 `decision/`。账本的格式见 `backend/src/services/dailyDecision/data/portfolio.example.json`，里面的数字是编的。
+
 本机试跑服务器：
 
 ```bash
@@ -234,4 +236,4 @@ curl -X PUT https://<域名>/api/chain/flags -H "Authorization: Bearer <战略�
 - 执行单是下单计划，不是成交记录。
 - 系统不下单，也不自己生成买入。买入由策略方登记目标占比，执行单逐条过规则后列出或挡住。简报是读数，不是指令。
 - 规则与阈值的改动须经委员会裁定，并重新生成规则基线。
-- 金额、股数、现金不进公开仓库。
+- 金额、股数、现金不进公开仓库：账本、成交、执行单只在私有目录里，仓库里的文档只写百分比和指数。

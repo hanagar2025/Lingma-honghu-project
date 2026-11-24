@@ -75,13 +75,7 @@ if ! id -u "${SERVICE_USER}" >/dev/null 2>&1; then
   useradd --system --home-dir "${DATA_DIR}" --shell "$(command -v nologin || echo /bin/false)" "${SERVICE_USER}"
 fi
 install -d -m 700 -o "${SERVICE_USER}" -g "${SERVICE_USER}" "${DATA_DIR}"
-# 首次安装用仓库里的旧账本做种子：它带着峰值与口径。
-# 第一张持仓截图确认后，股数与现金整份替换，峰值沿用。
-if [ ! -f "${DATA_DIR}/ledger/portfolio.json" ] && [ -f "${HERE}/seed-ledger.json" ]; then
-  install -d -m 700 -o "${SERVICE_USER}" -g "${SERVICE_USER}" "${DATA_DIR}/ledger"
-  install -m 600 -o "${SERVICE_USER}" -g "${SERVICE_USER}" "${HERE}/seed-ledger.json" "${DATA_DIR}/ledger/portfolio.json"
-  note "已放入种子账本（旧账本，等第一张持仓截图替换）"
-fi
+# 账本不随包带：第一次安装后没有账本，页面会提示先发一张持仓截图。已有的账本不动。
 note "数据目录 ${DATA_DIR}"
 
 step "二、程序文件"

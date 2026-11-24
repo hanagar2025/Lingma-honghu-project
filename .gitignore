@@ -12,6 +12,14 @@ node_modules
 # 本机试跑用的私有数据目录。账本、成交、意向、截图永远不进仓库。
 /.private
 
+# 执行单含金额与股数，只写到私有目录。这里只留定时运行台账。
+/share/decision/*
+!/share/decision/run-log.csv
+
+# 真实账本不进仓库，只留示例。
+/backend/src/services/dailyDecision/data/*
+!/backend/src/services/dailyDecision/data/portfolio.example.json
+
 .DS_Store
 
 /release

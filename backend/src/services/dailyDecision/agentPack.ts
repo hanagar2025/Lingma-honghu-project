@@ -8,7 +8,7 @@
 
 import { renderCardPage } from './html'
 
-/** share/decision/latest.json：站点任务据此重排首页，不必从 Markdown 里猜标题与红绿。 */
+/** 私有目录 decision/latest.json：站点任务据此重排首页，不必从 Markdown 里猜标题与红绿。 */
 export interface CardMeta {
   title: string
   ok: boolean

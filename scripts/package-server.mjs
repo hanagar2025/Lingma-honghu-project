@@ -7,8 +7,7 @@
 //   node scripts/package-server.mjs           打包到 release/honghu-<版本>.tar.gz
 //   node scripts/package-server.mjs --smoke   打包后在本机起一次服务，确认包能跑
 //
-// 包里有：server.mjs（后端）、web/（页面）、install.sh（服务器上的安装脚本）、
-// seed-ledger.json（仓库里的旧账本，首次安装时作为峰值与口径的种子）、VERSION、
+// 包里有：server.mjs（后端）、web/（页面）、install.sh（服务器上的安装脚本）、VERSION、
 // py/（两个扫描脚本原件和已有的历史读数；后端到点调用它们，需要服务器上有 Python 3.8 以上）。
 
 import { build } from 'esbuild'
@@ -62,8 +61,6 @@ await build({
 })
 
 cpSync(join(ROOT, 'scripts', 'install-on-server.sh'), join(OUT, 'install.sh'))
-const seed = join(ROOT, 'backend', 'src', 'services', 'dailyDecision', 'data', 'portfolio.json')
-if (existsSync(seed)) cpSync(seed, join(OUT, 'seed-ledger.json'))
 writeFileSync(join(OUT, 'VERSION'), `${version}\n`)
 
 // 扫描脚本原样带上，一个字不改；历史读数只带按日期存的那些，连续天数靠它们接续
