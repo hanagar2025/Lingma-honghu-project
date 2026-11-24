@@ -63,9 +63,14 @@ def arg(name, default=None):
 LAST = arg('--last')
 
 
-def get(url, referer):
+EM_PAUSE = 0.25  # 东方财富日线与资金流接口请求过密会断连接
+
+
+def get(url, referer, tries=5):
     last = None
-    for i in range(5):
+    for i in range(tries):
+        if 'eastmoney' in url:
+            time.sleep(EM_PAUSE)
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0', 'Referer': referer})
             return json.loads(urllib.request.urlopen(req, timeout=20).read())
@@ -81,15 +86,40 @@ def secid(c):
 
 def em_kline(c, lmt):
     d = get(f'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid(c)}&klt=101&fqt=1&lmt={lmt}&end=20500101'
-            f'&fields1=f1,f3&fields2=f51,f53,f57', 'https://quote.eastmoney.com/')['data']
+            f'&fields1=f1,f3&fields2=f51,f53,f57', 'https://quote.eastmoney.com/', tries=2)['data']
     rows = [k.split(',') for k in d['klines']]
     return d['name'], [(r[0], float(r[1]), float(r[2])) for r in rows if LAST is None or r[0] <= LAST]
 
 
+def tencent_kline(c, n):
+    sym = ('sh' if c[0] in '69' else 'sz') + c
+    d = get(f'https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?param={sym},day,,,{n},qfq', 'https://gu.qq.com/', tries=3)['data'][sym]
+    rows = d.get('qfqday') or d.get('day')
+    name = ((d.get('qt') or {}).get(sym) or [None, c])[1]
+    # 腾讯成交额单位为万元，换成元，与东方财富资金流同一单位
+    return name, [(r[0], float(r[2]), float(r[8]) * 1e4) for r in rows if len(r) > 8 and r[8] and (LAST is None or r[0] <= LAST)]
+
+
+def fetch_kline(c, lmt=70):
+    """日线：东方财富为主，腾讯备用；两家都取不到返回 None"""
+    for source, fn in (('东方财富', em_kline), ('腾讯', tencent_kline)):
+        try:
+            name, rows = fn(c, lmt)
+            if rows:
+                return name, rows, source
+        except Exception:  # noqa: BLE001
+            pass
+    return None
+
+
 def em_flow(c):
-    d = get(f'https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=0&klt=101&secid={secid(c)}&fields1=f1&fields2=f51,f52',
-            'https://quote.eastmoney.com/')['data']
-    return {k.split(',')[0]: float(k.split(',')[1]) for k in (d or {}).get('klines') or []}
+    """主力净流入只有东方财富一个来源；取不到返回 None"""
+    try:
+        d = get(f'https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=0&klt=101&secid={secid(c)}&fields1=f1&fields2=f51,f52',
+                'https://quote.eastmoney.com/', tries=3)['data']
+        return {k.split(',')[0]: float(k.split(',')[1]) for k in (d or {}).get('klines') or []} or None
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def em_report(name, columns, flt, sort, size=500, pages=1):
@@ -109,26 +139,47 @@ def margin(c, pages=1):
     return {r['DATE'][:10]: r['RZYE'] for r in rows if LAST is None or r['DATE'][:10] <= LAST}
 
 
+def margin_safe(c):
+    try:
+        return margin(c) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def pct(v, d=1):
     return '—' if v is None else f'{v * 100:+.{d}f}%'
 
 
 def daily():
     codes = [c for v in SEGMENTS.values() for c in v]
-    with ThreadPoolExecutor(6) as ex:
-        K = dict(zip(codes, ex.map(lambda c: em_kline(c, 70), codes)))
+    with ThreadPoolExecutor(3) as ex:
+        K = dict(zip(codes, ex.map(fetch_kline, codes)))
         F = dict(zip(codes, ex.map(em_flow, codes)))
-        M = dict(zip(codes, ex.map(margin, codes)))
-    rep = em_report('RPT_LICO_FN_CPD', 'SECURITY_CODE,REPORTDATE,YSTZ,SJLTZ', '(SECURITY_CODE in ("' + '","'.join(codes) + '"))', 'REPORTDATE', 500, 3)
+        M = dict(zip(codes, ex.map(margin_safe, codes)))
+    try:
+        rep = em_report('RPT_LICO_FN_CPD', 'SECURITY_CODE,REPORTDATE,YSTZ,SJLTZ', '(SECURITY_CODE in ("' + '","'.join(codes) + '"))', 'REPORTDATE', 500, 3)
+    except Exception:  # noqa: BLE001
+        rep = None
     earn = {}
-    for r in rep:
+    for r in rep or []:
         earn.setdefault(r['SECURITY_CODE'], r)
-    last = max(K[c][1][-1][0] for c in codes)
+    if not any(K.values()):
+        sys.exit('日线两家都取不到，停止')
+    last = max(k[1][-1][0] for k in K.values() if k)
+    missing = {'kline': [], 'kline_backup': [], 'flow': [], 'margin': [], 'earnings': rep is None}
     stocks = {}
     for c in codes:
-        name, rows = K[c]
-        if not rows or rows[-1][0] != last:
+        if not K[c] or K[c][1][-1][0] != last:
+            missing['kline'].append(c)
             continue
+        name, rows, source = K[c]
+        if source != '东方财富':
+            missing['kline_backup'].append(name)
+        if F[c] is None:
+            missing['flow'].append(name)
+        if M[c] is None:
+            missing['margin'].append(name)
+        F[c], M[c] = F[c] or {}, M[c] or {}
         cl, amt = [r[1] for r in rows], [r[2] for r in rows]
         days = [r[0] for r in rows]
         ma20, ma60 = statistics.mean(cl[-20:]), statistics.mean(cl[-60:]) if len(cl) >= 60 else None
@@ -144,17 +195,19 @@ def daily():
             'amt5': sum(amt[-5:]), 'amt20': sum(amt[-20:]),
             'mg_now': mg[-1] if mg else None, 'mg5': mg[-6] if len(mg) >= 6 else None, 'mg20': mg[0] if len(mg) >= 21 else None,
             'margin5': mg[-1] / mg[-6] - 1 if len(mg) >= 6 else None, 'margin20': mg[-1] / mg[0] - 1 if len(mg) >= 21 else None,
-            'margin_date': sorted(M[c])[-1] if M[c] else None,
+            'margin_date': sorted(M[c])[-1] if M[c] else None, 'kline_source': source,
             'report': (e.get('REPORTDATE') or '')[:10], 'rev_yoy': None if e.get('YSTZ') is None else e['YSTZ'] / 100,
             'np_yoy': None if e.get('SJLTZ') is None else e['SJLTZ'] / 100,
         }
     segs = {}
     for seg, cs in SEGMENTS.items():
         ss = [stocks[c] for c in cs if c in stocks]
+        if not ss:
+            continue
         okf = [s for s in ss if s['main20_raw'] is not None]
         okm = [s for s in ss if s['mg20'] and s['mg5']]
         segs[seg] = {
-            'n': len(ss), 'main5': sum(s['main5_raw'] for s in okf) / sum(s['amt5'] for s in okf) if okf else None,
+            'n': len(ss), 'main_cov': f'{len(okf)}/{len(cs)}', 'main5': sum(s['main5_raw'] for s in okf) / sum(s['amt5'] for s in okf) if okf else None,
             'main20': sum(s['main20_raw'] for s in okf) / sum(s['amt20'] for s in okf) if okf else None,
             'margin5': sum(s['mg_now'] for s in okm) / sum(s['mg5'] for s in okm) - 1 if okm else None,
             'margin20': sum(s['mg_now'] for s in okm) / sum(s['mg20'] for s in okm) - 1 if okm else None,
@@ -162,7 +215,7 @@ def daily():
             'd60': statistics.mean(s['d60'] for s in ss if s['d60'] is not None),
             'above20': sum(s['d20'] > 0 for s in ss) / len(ss), 'above60': sum((s['d60'] or -1) > 0 for s in ss) / len(ss),
             'r5': statistics.mean(s['r5'] for s in ss), 'r20': statistics.mean(s['r20'] for s in ss),
-            'np_yoy': statistics.median([s['np_yoy'] for s in ss if s['np_yoy'] is not None] or [0]),
+            'np_yoy': (statistics.median(ys) if (ys := [s['np_yoy'] for s in ss if s['np_yoy'] is not None]) else None),
             'rev_yoy': statistics.median([s['rev_yoy'] for s in ss if s['rev_yoy'] is not None] or [0]),
         }
     keys = ['main5', 'main20', 'margin5', 'margin20']
@@ -174,11 +227,19 @@ def daily():
         rs = [v['rank_' + k] for k in keys if v['rank_' + k]]
         v['score'] = statistics.mean(rs) if rs else 99
         pos = [v[k] is not None and v[k] > 0 for k in keys]
-        v['flow'] = '累积' if all(pos) else '流出' if not any(pos) else ('偏累积' if sum(pos) >= 3 else '偏流出' if sum(pos) <= 1 else '分歧')
+        v['flow'] = '缺' if v['main5'] is None and v['main20'] is None else '累积' if all(pos) else '流出' if not any(pos) else ('偏累积' if sum(pos) >= 3 else '偏流出' if sum(pos) <= 1 else '分歧')
     ranking = sorted(segs, key=lambda s: segs[s]['score'])
+    flow_ok = sum(1 for x in stocks.values() if x['main20'] is not None) >= len(stocks) / 2
+    missing['ranking_from'], missing['flow_short'] = None, not flow_ok
+    if not flow_ok:
+        prev = [p for p in sorted(glob.glob(os.path.join(SAVE_DIR, '20*.json'))) if os.path.basename(p)[:10] < last]
+        if prev:
+            old = json.load(open(prev[-1], encoding='utf-8'))
+            ranking = [s for s in old['ranking'] if s in segs] + [s for s in segs if s not in old['ranking']]
+            missing['ranking_from'] = old['last']
     for i, s in enumerate(ranking):
         segs[s]['rank'] = i + 1
-    return last, stocks, segs, ranking
+    return last, stocks, segs, ranking, missing
 
 
 def relay(v):
@@ -191,6 +252,9 @@ def ebb(v):
 
 
 def no_inflow(segs):
+    # 主力数据整体缺失的那天不计入，也不中断计数之外的判断
+    if all(v['main20'] is None for v in segs.values()):
+        return False
     return not any((v['main20'] or 0) > 0 for v in segs.values())
 
 
@@ -209,30 +273,40 @@ def switch_state(last, segs):
             n += 1
         return n
     streak = {s: run(lambda d, s=s: s in d and relay(d[s])) for s in segs}
-    ebb_streak = {s: run(lambda d, s=s: s in d and ebb(d[s])) for s in S2_SEGS}
+    ebb_streak = {s: run(lambda d, s=s: s in d and ebb(d[s])) for s in S2_SEGS if s in segs}
     s5 = run(no_inflow)
     triggers = {}
     for name, members in (('S1', S1_SEGS), ('S3', S3_SEGS), ('S4', S4_SEGS)):
-        hit = [s for s in members if streak[s] >= SWITCH['days']]
-        triggers[name] = {'hit': bool(hit), 'segments': hit, 'streak': {s: streak[s] for s in members}}
-    hit2 = [s for s in S2_SEGS if ebb_streak[s] >= SWITCH['days'] or segs[s]['above20'] < SWITCH['s2_above20']]
-    triggers['S2'] = {'hit': bool(hit2), 'segments': hit2, 'streak': ebb_streak, 'above20': {s: segs[s]['above20'] for s in S2_SEGS}}
+        hit = [s for s in members if streak.get(s, 0) >= SWITCH['days']]
+        triggers[name] = {'hit': bool(hit), 'segments': hit, 'streak': {s: streak[s] for s in members if s in streak}}
+    hit2 = [s for s in ebb_streak if ebb_streak[s] >= SWITCH['days'] or segs[s]['above20'] < SWITCH['s2_above20']]
+    triggers['S2'] = {'hit': bool(hit2), 'segments': hit2, 'streak': ebb_streak, 'above20': {s: segs[s]['above20'] for s in ebb_streak}}
     triggers['S5'] = {'hit': s5 >= SWITCH['s5_days'], 'streak': s5}
     return streak, triggers
 
 
 def run_daily():
-    last, stocks, segs, ranking = daily()
+    last, stocks, segs, ranking, missing = daily()
     streak, triggers = switch_state(last, segs)
     fetched = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
     mdate = max((s['margin_date'] for s in stocks.values() if s['margin_date']), default='—')
-    print(f'取数 {fetched}（北京时间）　行情截至 {last}　融资截至 {mdate}　主力资金截至 {last}\n')
-    print('| 名次 | 环节 | 资金 | 主力 5 日 | 主力 20 日 | 融资 5 日 | 融资 20 日 | 量能 5/20 | 相对 20 日线 | 相对 60 日线 | 站上 20 日线 | 5 日涨跌 | 20 日涨跌 | 净利同比中位 | 接力条件连续天数 |')
-    print('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+    print(f'取数 {fetched}（北京时间）　行情截至 {last}　融资截至 {mdate}　主力资金截至 {last}')
+    gaps = [x for x in [
+        ('日线两家都取不到（不计入）：' + '、'.join(missing['kline'])) if missing['kline'] else '',
+        ('日线改用腾讯：' + '、'.join(missing['kline_backup'])) if missing['kline_backup'] else '',
+        ('主力净流入缺：' + '、'.join(missing['flow'])) if missing['flow'] else '',
+        ('融资缺：' + '、'.join(missing['margin'])) if missing['margin'] else '',
+        '业绩缺' if missing['earnings'] else '',
+        ((f"主力数据过半缺失，排序沿用 {missing['ranking_from']} 的排序" if missing['ranking_from'] else '主力数据过半缺失，此前无存档可沿用，排序按趋势与融资')
+         if missing.get('flow_short') else '')] if x]
+    print('缺项：' + ('；'.join(gaps) if gaps else '无'))
+    print()
+    print('| 名次 | 环节 | 资金 | 主力 5 日 | 主力 20 日 | 融资 5 日 | 融资 20 日 | 量能 5/20 | 相对 20 日线 | 相对 60 日线 | 站上 20 日线 | 5 日涨跌 | 20 日涨跌 | 净利同比中位 | 主力覆盖 | 接力条件连续天数 |')
+    print('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
     for s in ranking:
         v = segs[s]
         print(f"| {v['rank']} | {s} | {v['flow']} | {pct(v['main5'])} | {pct(v['main20'])} | {pct(v['margin5'])} | {pct(v['margin20'])} | {v['vol']:.2f} | "
-              f"{pct(v['d20'], 0)} | {pct(v['d60'], 0)} | {v['above20']:.0%} | {pct(v['r5'], 0)} | {pct(v['r20'], 0)} | {pct(v['np_yoy'], 0)} | {streak[s]} |")
+              f"{pct(v['d20'], 0)} | {pct(v['d60'], 0)} | {v['above20']:.0%} | {pct(v['r5'], 0)} | {pct(v['r20'], 0)} | {pct(v['np_yoy'], 0)} | {v['main_cov']} | {streak[s]} |")
     print(f"\n接力条件：资金排序前 {SWITCH['rank_top']}，主力 5 日与 20 日为正，融资 5 日为正，站上 20 日线的比例不低于 {SWITCH['above20']:.0%}，连续 {SWITCH['days']} 日\n")
     print('| 触发 | 是否触发 | 读数 |')
     print('|---|---|---|')
@@ -242,9 +316,10 @@ def run_daily():
         print(f"| {k} {label[k]} | {'是：' + '、'.join(t['segments']) if t['hit'] else '否'} | " + '；'.join(f'{s} 连续 {n} 日' for s, n in t['streak'].items()) + ' |')
     t = triggers['S2']
     print(f"| S2 代工或设备退潮 | {'是：' + '、'.join(t['segments']) if t['hit'] else '否'} | "
-          + '；'.join(f"{s} 任两项为负连续 {t['streak'][s]} 日、站上 20 日线 {t['above20'][s]:.0%}" for s in S2_SEGS) + ' |')
+          + '；'.join(f"{s} 任两项为负连续 {t['streak'][s]} 日、站上 20 日线 {t['above20'][s]:.0%}" for s in t['streak']) + ' |')
     t = triggers['S5']
-    print(f"| S5 全链退潮 | {'是' if t['hit'] else '否'} | 没有任何环节 20 日主力为正：连续 {t['streak']} 日（阈值 {SWITCH['s5_days']} 日） |")
+    note = '；今天主力数据缺，不计入' if all(v['main20'] is None for v in segs.values()) else ''
+    print(f"| S5 全链退潮 | {'是' if t['hit'] else '否'} | 没有任何环节 20 日主力为正：连续 {t['streak']} 日（阈值 {SWITCH['s5_days']} 日）{note} |")
     print('\n### 个股\n')
     print('| 环节 | 股票 | 主力 5 日 | 主力 20 日 | 融资 5 日 | 融资 20 日 | 量能 5/20 | 相对 20 日线 | 相对 60 日线 | 报告期 | 营收同比 | 净利同比 |')
     print('|---|---|---|---|---|---|---|---|---|---|---|---|')
@@ -258,7 +333,7 @@ def run_daily():
         os.makedirs(SAVE_DIR, exist_ok=True)
         slim = {c: {k: v for k, v in x.items() if not k.endswith('_raw') and not k.startswith(('amt', 'mg_', 'mg5', 'mg20'))} for c, x in stocks.items()}
         rec = {'fetched_at_utc8': fetched, 'last': last, 'margin_last': mdate, 'switch_rule': SWITCH, 'ranking': ranking,
-               'segments': segs, 'streak': streak, 'triggers': triggers, 'stocks': slim}
+               'segments': segs, 'streak': streak, 'triggers': triggers, 'missing': missing, 'stocks': slim}
         path = os.path.join(SAVE_DIR, f'{last}.json')
         json.dump(rec, open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         print(f'\n已保存 {os.path.relpath(path)}')
