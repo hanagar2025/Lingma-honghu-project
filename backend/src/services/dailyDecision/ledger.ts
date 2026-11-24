@@ -1,15 +1,24 @@
 /**
  * 账本：只记股数、现金和峰值。市值永远由价格 × 股数现算。
  *
- * 路径由环境变量 PORTFOLIO 指定时，账本可以放在仓库之外的私有位置；
- * 未指定时沿用仓库内的旧位置，保持现有流程不变。
+ * 账本只在私有目录里，不进仓库。命令行工具按这个顺序找：
+ *   PORTFOLIO=<路径>                    直接指定
+ *   <DATA_DIR>/ledger/portfolio.json    服务器的私有目录（服务器自己读写的就是这一份）
+ *   <仓库>/.private/ledger/portfolio.json  本机试跑（.private 不进仓库）
+ * 格式见 data/portfolio.example.json，里面的数字是编的。
  */
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-export const DEFAULT_LEDGER_FILE = join(HERE, 'data', 'portfolio.json')
+const REPO = join(HERE, '..', '..', '..', '..')
+export const EXAMPLE_LEDGER_FILE = join(HERE, 'data', 'portfolio.example.json')
+
+/** 私有数据目录：服务器上是 DATA_DIR，本机缺省是仓库根下不进仓库的 .private */
+export function privateDir(): string {
+  return process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : join(REPO, '.private')
+}
 
 export interface LedgerPosition {
   code: string
@@ -34,10 +43,11 @@ export interface LedgerFile {
 }
 
 export function ledgerFile(): string {
-  return process.env.PORTFOLIO ?? DEFAULT_LEDGER_FILE
+  return process.env.PORTFOLIO ?? join(privateDir(), 'ledger', 'portfolio.json')
 }
 
 export function loadLedger(file = ledgerFile()): LedgerFile {
+  if (!existsSync(file)) throw new Error(`找不到账本 ${file}。账本不在仓库里：用 PORTFOLIO=<路径> 指定，或放到私有目录；格式见 portfolio.example.json`)
   return JSON.parse(readFileSync(file, 'utf-8')) as LedgerFile
 }
 

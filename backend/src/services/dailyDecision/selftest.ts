@@ -20,7 +20,7 @@ import { buildEvidence, scoreAt, sellCheck, type StockData } from './evidence'
 import { markdownToHtml, renderCardPage } from './html'
 import { configuredChannels, pushAll } from './notify'
 import { buildDecisionInput, fetchLastBars } from './input'
-import type { LedgerFile } from './ledger'
+import { EXAMPLE_LEDGER_FILE, ledgerFile, loadLedger, type LedgerFile } from './ledger'
 import { buildPlan } from './plan'
 import { computeLines, nextCheckpoint, PLAN, sharesForBuyValue, sharesForFraction, sharesForSellValue, stopLine } from './rules'
 import type { DecisionInput, DecisionSession, PlanFacts } from './types'
@@ -736,6 +736,19 @@ void (async () => {
   await sinaFetchTests()
   const r = await pushAll('t', 'x', {})
   ok(r.length === 0, '无通道时不发请求')
+  process.stdout.write('\n【账本位置】\n')
+  const example = loadLedger(EXAMPLE_LEDGER_FILE)
+  ok(example.positions.length > 0 && example.positions.every(p => p.quantity > 0 && /^\d{6}$/.test(p.code)), '示例账本读得出来')
+  const savedEnv = { PORTFOLIO: process.env.PORTFOLIO, DATA_DIR: process.env.DATA_DIR }
+  delete process.env.PORTFOLIO
+  process.env.DATA_DIR = '/srv/private'
+  ok(ledgerFile() === join('/srv/private', 'ledger', 'portfolio.json'), '缺省读私有目录里的账本')
+  delete process.env.DATA_DIR
+  ok(!ledgerFile().includes(join('backend', 'src')) && ledgerFile().includes('.private'), '本机缺省读 .private，不读仓库里的文件')
+  let missing = ''
+  try { loadLedger('/nonexistent/portfolio.json') } catch (e) { missing = (e as Error).message }
+  ok(missing.includes('找不到账本'), '账本不在时报清楚，不回落到仓库里的文件')
+  for (const [k, v] of Object.entries(savedEnv)) { if (v === undefined) delete process.env[k]; else process.env[k] = v }
   process.stdout.write(`\n每日执行单自检：${pass} 通过，${fail} 失败\n`)
   if (fail) process.exit(1)
 })()
