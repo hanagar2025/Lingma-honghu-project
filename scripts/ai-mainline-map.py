@@ -5,7 +5,7 @@
   量能：5 日均成交额 / 20 日均成交额；趋势：收盘相对 20 日、60 日均线；业绩：最近一期报告的营收、归母净利同比
   环节汇总：资金按成交额加权（主力）与余额合计（融资），趋势取等权均值，业绩取中位数
   资金排序：主力 5 日、主力 20 日、融资 5 日、融资 20 日四项各自排名，取平均名次
-  切换判定（阈值见 SWITCH，读之前几天保存的 json 计连续天数）
+  切换判定 S1–S5（阈值见 SWITCH，读之前几天保存的 json 计连续天数）
 历史：python3 scripts/ai-mainline-map.py --history [--save]
   按三轮行情，找各环节价格启动日与融资启动日，给出先后和间隔。主力资金日线只有约 120 个交易日，不进历史
 输出只有比例和指数，不含金额。
@@ -46,7 +46,11 @@ LAYERS = [
 ]
 SEGMENTS = {k: v for _, d in LAYERS for k, v in d.items()}
 # 重心切换：候选环节同时满足以下全部条件，且连续 DAYS 个交易日，判定“接力确认”；现重心任两项转负且连续 DAYS 日，判定“重心退潮”
-SWITCH = {'rank_top': 3, 'main5': 0.0, 'main20': 0.0, 'margin5': 0.0, 'above20': 0.6, 'days': 3}
+SWITCH = {'rank_top': 3, 'main5': 0.0, 'main20': 0.0, 'margin5': 0.0, 'above20': 0.6, 'days': 3, 's2_above20': 0.4, 's5_days': 5}
+# 地图第五节：S1 光模块或 PCB 接力；S2 代工或设备退潮（主力 5 日、主力 20 日、融资 5 日任两项为负连续 3 日，或站上 20 日线 <40%）；
+# S3 存储接力；S4 下游接力；S5 全链退潮（连续 5 日没有任何环节 20 日主力为正）
+S1_SEGS, S2_SEGS, S3_SEGS = ['光模块', 'PCB'], ['晶圆代工', '半导体设备'], ['存储']
+S4_SEGS = ['软件、应用', '机器人', '商业航天、星上算力', 'AI 医疗、制药']
 ROUNDS = [('2023 年 AI 第一轮', '2023-01-03', '2023-08-31'), ('2024-09 政策行情', '2024-09-02', '2025-03-31'),
           ('2025 海外算力行情', '2025-04-08', '2025-09-30'), ('2025-10 起国产链与存储行情', '2025-10-09', '2026-06-25')]
 SAVE_DIR = os.path.join(os.path.dirname(__file__), '..', '战略组合2026-2030', '数据', 'AI主线')
@@ -177,34 +181,49 @@ def daily():
     return last, stocks, segs, ranking
 
 
-def switch_state(last, segs, ranking):
+def relay(v):
+    return (v['rank'] <= SWITCH['rank_top'] and (v['main5'] or -1) > SWITCH['main5'] and (v['main20'] or -1) > SWITCH['main20']
+            and (v['margin5'] or -1) > SWITCH['margin5'] and v['above20'] >= SWITCH['above20'])
+
+
+def ebb(v):
+    return sum(1 for k in ('main5', 'main20', 'margin5') if v[k] is not None and v[k] < 0) >= 2
+
+
+def no_inflow(segs):
+    return not any((v['main20'] or 0) > 0 for v in segs.values())
+
+
+def switch_state(last, segs):
     prev = []
     for p in sorted(glob.glob(os.path.join(SAVE_DIR, '20*.json'))):
-        d = os.path.basename(p)[:10]
-        if d < last:
-            prev.append(json.load(open(p, encoding='utf-8')))
-    prev = prev[-(SWITCH['days'] - 1):]
+        if os.path.basename(p)[:10] < last:
+            prev.append(json.load(open(p, encoding='utf-8'))['segments'])
+    hist = prev[-(max(SWITCH['days'], SWITCH['s5_days']) - 1):] + [segs]
 
-    def ok(v):
-        return (v['rank'] <= SWITCH['rank_top'] and (v['main5'] or -1) > SWITCH['main5'] and (v['main20'] or -1) > SWITCH['main20']
-                and (v['margin5'] or -1) > SWITCH['margin5'] and v['above20'] >= SWITCH['above20'])
-    out = {}
-    for s, v in segs.items():
-        streak = 1 if ok(v) else 0
-        if streak:
-            for p in reversed(prev):
-                pv = p['segments'].get(s)
-                if pv and ok(pv):
-                    streak += 1
-                else:
-                    break
-        out[s] = streak
-    return out
+    def run(pred):
+        n = 0
+        for day in reversed(hist):
+            if not pred(day):
+                break
+            n += 1
+        return n
+    streak = {s: run(lambda d, s=s: s in d and relay(d[s])) for s in segs}
+    ebb_streak = {s: run(lambda d, s=s: s in d and ebb(d[s])) for s in S2_SEGS}
+    s5 = run(no_inflow)
+    triggers = {}
+    for name, members in (('S1', S1_SEGS), ('S3', S3_SEGS), ('S4', S4_SEGS)):
+        hit = [s for s in members if streak[s] >= SWITCH['days']]
+        triggers[name] = {'hit': bool(hit), 'segments': hit, 'streak': {s: streak[s] for s in members}}
+    hit2 = [s for s in S2_SEGS if ebb_streak[s] >= SWITCH['days'] or segs[s]['above20'] < SWITCH['s2_above20']]
+    triggers['S2'] = {'hit': bool(hit2), 'segments': hit2, 'streak': ebb_streak, 'above20': {s: segs[s]['above20'] for s in S2_SEGS}}
+    triggers['S5'] = {'hit': s5 >= SWITCH['s5_days'], 'streak': s5}
+    return streak, triggers
 
 
 def run_daily():
     last, stocks, segs, ranking = daily()
-    streak = switch_state(last, segs, ranking)
+    streak, triggers = switch_state(last, segs)
     fetched = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
     mdate = max((s['margin_date'] for s in stocks.values() if s['margin_date']), default='—')
     print(f'取数 {fetched}（北京时间）　行情截至 {last}　融资截至 {mdate}　主力资金截至 {last}\n')
@@ -214,9 +233,18 @@ def run_daily():
         v = segs[s]
         print(f"| {v['rank']} | {s} | {v['flow']} | {pct(v['main5'])} | {pct(v['main20'])} | {pct(v['margin5'])} | {pct(v['margin20'])} | {v['vol']:.2f} | "
               f"{pct(v['d20'], 0)} | {pct(v['d60'], 0)} | {v['above20']:.0%} | {pct(v['r5'], 0)} | {pct(v['r20'], 0)} | {pct(v['np_yoy'], 0)} | {streak[s]} |")
-    hit = [s for s in ranking if streak[s] >= SWITCH['days']]
-    print(f"\n切换判定：{'、'.join(hit) + ' 满足接力条件 ' + str(SWITCH['days']) + ' 日' if hit else '无环节满足接力条件 ' + str(SWITCH['days']) + ' 日'}"
-          f"（条件：资金排序前 {SWITCH['rank_top']}，主力 5 日与 20 日为正，融资 5 日为正，站上 20 日线的比例不低于 {SWITCH['above20']:.0%}）")
+    print(f"\n接力条件：资金排序前 {SWITCH['rank_top']}，主力 5 日与 20 日为正，融资 5 日为正，站上 20 日线的比例不低于 {SWITCH['above20']:.0%}，连续 {SWITCH['days']} 日\n")
+    print('| 触发 | 是否触发 | 读数 |')
+    print('|---|---|---|')
+    label = {'S1': '光模块或 PCB 接力', 'S3': '存储接力', 'S4': '下游接力'}
+    for k in ('S1', 'S3', 'S4'):
+        t = triggers[k]
+        print(f"| {k} {label[k]} | {'是：' + '、'.join(t['segments']) if t['hit'] else '否'} | " + '；'.join(f'{s} 连续 {n} 日' for s, n in t['streak'].items()) + ' |')
+    t = triggers['S2']
+    print(f"| S2 代工或设备退潮 | {'是：' + '、'.join(t['segments']) if t['hit'] else '否'} | "
+          + '；'.join(f"{s} 任两项为负连续 {t['streak'][s]} 日、站上 20 日线 {t['above20'][s]:.0%}" for s in S2_SEGS) + ' |')
+    t = triggers['S5']
+    print(f"| S5 全链退潮 | {'是' if t['hit'] else '否'} | 没有任何环节 20 日主力为正：连续 {t['streak']} 日（阈值 {SWITCH['s5_days']} 日） |")
     print('\n### 个股\n')
     print('| 环节 | 股票 | 主力 5 日 | 主力 20 日 | 融资 5 日 | 融资 20 日 | 量能 5/20 | 相对 20 日线 | 相对 60 日线 | 报告期 | 营收同比 | 净利同比 |')
     print('|---|---|---|---|---|---|---|---|---|---|---|---|')
@@ -230,7 +258,7 @@ def run_daily():
         os.makedirs(SAVE_DIR, exist_ok=True)
         slim = {c: {k: v for k, v in x.items() if not k.endswith('_raw') and not k.startswith(('amt', 'mg_', 'mg5', 'mg20'))} for c, x in stocks.items()}
         rec = {'fetched_at_utc8': fetched, 'last': last, 'margin_last': mdate, 'switch_rule': SWITCH, 'ranking': ranking,
-               'segments': segs, 'streak': streak, 'stocks': slim}
+               'segments': segs, 'streak': streak, 'triggers': triggers, 'stocks': slim}
         path = os.path.join(SAVE_DIR, f'{last}.json')
         json.dump(rec, open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         print(f'\n已保存 {os.path.relpath(path)}')
