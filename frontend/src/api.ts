@@ -114,7 +114,6 @@ export interface BriefSection { id: string; title: string; html: string }
 export interface Brief {
   asOf: string | null
   generatedAt: string
-  gateOpen: boolean
   changes: string[]
   sections: BriefSection[]
 }

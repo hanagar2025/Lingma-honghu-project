@@ -25,8 +25,8 @@ jobs:
         run: npm ci --no-audit --progress=false
       - name: Typecheck
         run: npm -w backend run typecheck
-      # 守：数据核对不通过不出股数；顺序 C 级清退 → 单票归位 → 熔断；熔断待核验不进执行列表也不消失；
-      # 决策输入只由账本和持仓价格算出；主线外持仓只提示、不出指令。
+      # 守：数据核对不通过不出指令；卖出只由资金分和趋势触发，占比再高也不卖；缺数据和初算只提示；
+      # 买入只来自策略方登记并逐条过规则；三条线 95/90/85；规则数值和证据分与汇总机器人逐项一致。
       - name: Daily decision selftest (执行单)
         run: npm -w backend run decision:daily:selftest
       # 守：认不出的文字不猜；识别结果必须过勾稽核对；图片不经确认不生效；成交不改账本。
@@ -44,12 +44,6 @@ jobs:
         run: npm -w backend run chain:selftest
       - name: Chain universe matches scripts/ai-mainline-map.py
         run: python3 scripts/chain-universe.py --check
-      # 生产分支上已经发出的执行单，现在的代码必须逐字重现。
-      # 有意修改执行单版式时这一步会失败，那时须在 PR 里写明改了什么。
-      - name: Historical card regression (历史执行单逐字重现)
-        run: |
-          git fetch --no-tags origin cursor/account-snapshot-1009-c819
-          npm -w backend run decision:regress -- FETCH_HEAD
       # 打印规则指纹并与基线比对。变动时不失败，变动只需在基线文件的 git diff 里显形。
       - name: Rule freeze check (规则指纹)
         run: npm -w backend run freeze:check

@@ -9,6 +9,7 @@
  *   scan/<日期>.json、.md     scripts/market-scan.py 的输出，原样
  *   digests/<日期>/<时点>.json bot 推来的汇总，连同策略方的决定和委员会的否决
  *   watch.json、flags.json、base.json、state.json
+ *   orders.json               执行单的指令簿（含股数，只在这里）
  *   runs.jsonl                每次拉数一行
  *
  * 写入规则：主力净流入和融资余额只增不改，已存的日期不删；同一天重拉时数值变了，新值生效、旧值记进修订记录。
@@ -158,11 +159,11 @@ export class ChainStore {
 
   // ── 单份文件 ──
 
-  doc<T>(name: 'watch' | 'flags' | 'base' | 'state'): T | null {
+  doc<T>(name: 'watch' | 'flags' | 'base' | 'state' | 'orders'): T | null {
     return this.readJson<T>(join(this.dir, `${name}.json`))
   }
 
-  saveDoc(name: 'watch' | 'flags' | 'base' | 'state', doc: unknown): void {
+  saveDoc(name: 'watch' | 'flags' | 'base' | 'state' | 'orders', doc: unknown): void {
     this.write(join(this.dir, `${name}.json`), `${JSON.stringify(doc, null, 2)}\n`)
   }
 

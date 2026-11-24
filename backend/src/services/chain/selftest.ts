@@ -20,6 +20,8 @@ import { collectDaily, collectEarnings, collectIntraday, collectMargin, earnings
 import { acceptDigest, DIGEST_SLOTS, listDigests, setDecision, setVeto, type DigestDoc } from './digest'
 import { mountChain } from './routes'
 import { ScriptRunner, mainlineIncomplete, type Spawn } from './scripts'
+import { buildDecisionInput } from '../dailyDecision/input'
+import { buildPlan } from '../dailyDecision/plan'
 import { CHAIN_TASKS, ChainService, dueChainTasks, watchDue } from './service'
 import { ChainStore } from './store'
 import type { WatchLine } from './types'
@@ -274,6 +276,12 @@ async function main(): Promise<void> {
   ok(typeof parsed !== 'string' && parsed[0]!.id === '300308-417.2-below-close', '登记的线校验通过')
   ok(typeof parseLines([{ code: '300308', basis: 'close', op: 'below', level: 417.2, source: 'x' }]) === 'string', '不写规则原文的动作不收')
   ok(typeof parseLines([{ code: '300308', basis: 'close', op: 'below', level: 'ma30', action: 'a', source: 'x' }]) === 'string', '不认识的线不收')
+  const withSell = parseLines([{ code: '300308', name: '甲', basis: 'close', op: 'below', level: 417.2, action: '次日卖三分之一', source: '半年计划第三节', sell: 'THIRD' }])
+  ok(typeof withSell !== 'string' && withSell[0]!.sell === 'THIRD', '收盘跌破的线可以写卖出档位')
+  ok(typeof parseLines([{ code: '300308', basis: 'close', op: 'below', level: 417.2, action: 'a', source: 'x', sell: 'QUARTER' }]) === 'string', '卖出档位只有全部、一半、三分之一')
+  ok(typeof parseLines([{ code: '300308', basis: 'price', op: 'below', level: 417.2, action: 'a', source: 'x', sell: 'HALF' }]) === 'string' && typeof parseLines([{ code: '300308', basis: 'close', op: 'above', level: 417.2, action: 'a', source: 'x', sell: 'HALF' }]) === 'string', '盘中触价的线、向上突破的线不能带卖出档位')
+  st = lineStatus(line({ sell: 'HALF' }), series, null)
+  ok(st.sell === 'HALF' && st.barDate === series.bars.slice(-1)[0]!.date && lineStatus(line({ sell: 'HALF' }), series, { price: lastClose, main: 0 }).barDate === null, '线的状态带上卖出档位和收盘日；盘中的状态没有收盘日')
   const beyond = [lineStatus(line({ id: 'a' }), series, null), lineStatus(line({ id: 'b', level: 1 }), series, null)]
   ok(newlyBeyond(beyond, {}, TODAY).length === 1 && newlyBeyond(beyond, { a: TODAY }, TODAY).length === 0 && newlyBeyond(beyond, { a: '2026-11-23' }, TODAY).length === 1, '同一条线一天只报一次')
 
@@ -452,6 +460,43 @@ async function main(): Promise<void> {
     const got = JSON.parse((await call(COMMITTEE, 'GET', `/api/digest/${TODAY}/pre`)).text) as DigestDoc
     ok(got.decision?.text === '按规则不动' && got.veto?.note === '否决' && got.by === 'BOT', '汇总、决定、否决存在一处')
     ok((await call(BOT, 'GET', '/api/digest/2026-11-24/order')).status === 404 && (await call(BOT, 'POST', '/api/chain/jobs/order')).status === 404, '没有下单接口')
+    // 执行单的指令簿
+    ok((await call(BOT, 'GET', '/api/orders')).status === 403 && (await call(BOT, 'POST', '/api/orders', {})).status === 403, 'bot 读不到指令簿，也登记不了指令')
+    ok((await call(COMMITTEE, 'POST', '/api/orders', { code: '300308', side: 'SELL', sell: 'HALF', reason: 'x', source: 'x' })).status === 403, '委员会不登记指令，只否决')
+    const sellBody = { code: '300308', side: 'SELL', sell: 'HALF', reason: '资金分连续 2 天 ≤1', source: '半年计划第三节' }
+    ok((await call(AGENT, 'POST', '/api/orders', { ...sellBody, reason: '先卖 500 股' })).status === 400, '理由里带股数的不收')
+    ok((await call(AGENT, 'POST', '/api/orders', { ...sellBody, sell: 'QUARTER' })).status === 400 && (await call(AGENT, 'POST', '/api/orders', { ...sellBody, code: '600000', name: '丁' })).status === 400, '档位不对、没有持仓的卖出不收')
+    const made = await call(AGENT, 'POST', '/api/orders', sellBody)
+    const madeId = (JSON.parse(made.text) as { instruction: { id: string; portion: string; origin: string } }).instruction
+    ok(made.status === 200 && madeId.origin === 'STRATEGY' && madeId.portion === '一半' && !PRIVATE_WORDS.test(made.text) && !made.text.includes('"keep"'), '策略方登记卖出：回执里只有档位，没有股数')
+    ok(readFileSync(join(dir, 'chain', 'orders.json'), 'utf-8').includes('"keep"'), '按股数算出的目标只落在服务器')
+    ok((await call(AGENT, 'POST', '/api/orders', sellBody)).status === 400, '同一只股票同一方向只留一条未结束的指令')
+    ok((await call(AGENT, 'POST', '/api/orders', { code: '002463', side: 'BUY', targetWeight: 0.25, reason: 'E=6', source: '半年计划第四节' })).status === 400, '买入目标占比超过单票上限的不收')
+    ok((await call(AGENT, 'POST', '/api/orders', { code: '002463', side: 'BUY', targetWeight: 0.15, reason: 'E=6，资金与趋势都成立', source: '半年计划第四节' })).status === 200, '策略方登记买入：写目标占比')
+    const listed = await call(COMMITTEE, 'GET', '/api/orders')
+    ok(listed.status === 200 && (JSON.parse(listed.text) as { instructions: unknown[] }).instructions.length === 2 && !listed.text.includes('"keep"'), '委员会看得到全部指令')
+    const vetoed = await call(COMMITTEE, 'DELETE', `/api/orders/${madeId.id}`)
+    ok(vetoed.status === 200 && vetoed.text.includes('由委员会撤销') && (await call(COMMITTEE, 'DELETE', `/api/orders/${madeId.id}`)).status === 400, '委员会否决一条指令；已结束的不能再撤')
+    ok((await call(BOT, 'PUT', '/api/orders/backup', { on: true, why: 'x' })).status === 403 && (await call(AGENT, 'PUT', '/api/orders/backup', { on: true })).status === 400, '备用目标：bot 不能切，不写原因不收')
+    const backup = await call(AGENT, 'PUT', '/api/orders/backup', { on: true, why: '1/20 净值指数低于 110' })
+    ok(backup.status === 200 && (JSON.parse(backup.text) as { backup: { why: string } | null }).backup?.why === '1/20 净值指数低于 110', '策略方切到备用目标，留下原因')
+    ok((JSON.parse((await call(COMMITTEE, 'PUT', '/api/orders/backup', { on: false, why: '委员会决定回到主目标' })).text) as { backup: unknown }).backup === null, '委员会可以撤回')
+    // 执行单从这里取链上数据和指令簿
+    const src = service.planSource()
+    const ctx = src.context()
+    const lastBars = Object.fromEntries(LEDGER.positions.filter(p => p.quantity > 0).map(p => {
+      const bar = ctx.view!.stocks[p.code]!.rows.slice(-1)[0]!
+      return [p.code, { date: bar.date, close: bar.close }]
+    }))
+    const input = buildDecisionInput(LEDGER, lastBars, [], TODAY, src.base())
+    const plan = buildPlan(input, 'PRE_OPEN', ctx, { sync: true, now: '2026-11-25 09:20:00' })
+    ok(plan.rows.map(r => r.code).sort().join() === '002463,300308,300750' && plan.rows.every(r => r.c !== null) && plan.asOf === ctx.view!.asOf, '执行单拿到每只持仓的证据分，链外的那只也有')
+    ok(plan.buys.length === 0 && plan.events.some(e => e.includes('乙') && e.includes('已买到位')) && service.book().instructions.every(i => i.status !== 'OPEN'), '登记的买入对着账本核：占比已到目标的自动结束')
+    const persisted = JSON.parse(readFileSync(join(dir, 'chain', 'orders.json'), 'utf-8')) as { updatedAt: string }
+    ok(plan.synced && persisted.updatedAt === service.book().updatedAt, '指令簿的变动落在私有目录')
+    ctx.saveHigh?.(999)
+    ok(service.store.base()?.highIndex === 999 && (ctx.saveHigh?.(500), service.store.base()?.highIndex === 999), '净值指数创新高时记下最高值，只升不降')
+    ok((await call(AGENT, 'POST', '/api/orders/execute', {})).status === 404 && (await call(AGENT, 'POST', '/api/broker/order', {})).status === 404, '没有向券商下单的接口')
     outcome = 'ok'
     const ml = JSON.parse((await call(BOT, 'GET', `/api/chain/mainline?date=${TODAY}`)).text) as { state: string; data: { triggers?: unknown } }
     ok(ml.state === 'ready' && !!ml.data.triggers, 'bot 读得到脚本存下的 triggers')

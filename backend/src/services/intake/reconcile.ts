@@ -5,7 +5,6 @@
  * 市值除以现价是整数股。三条都对上，读错的可能性就很小了。
  */
 import type { LedgerFile } from '../dailyDecision/ledger'
-import { findMember } from '../msr/universe'
 import type { Check, HoldingsSnapshot, Intent } from './types'
 
 export interface DayRange { low: number; high: number }
@@ -110,22 +109,23 @@ export function diffLedger(prev: LedgerFile | null, next: HoldingsSnapshot): str
   return out.length ? out : ['股数与上一份账本相同']
 }
 
+/** 当前执行单上的指令：代码 → 股数 */
+export interface Instructed { sell: Record<string, number>; buy: Record<string, number> }
+
 /**
- * 意向对照现行规则。只说明在规则内还是规则外，不批准、也不阻止。
- * instructed：当前执行单上的卖出指令（代码 → 股数）；执行单停单时为 null，此时不对卖出定性。
+ * 意向对照执行单。只说明在执行单内还是执行单外，不批准、也不阻止。
+ * 《半年计划》第六节：只按执行单下单，执行单以外的成交记为偏离。
+ * instructed：当前执行单上的指令；执行单停单时为 null，此时不定性。
  */
-export function classifyIntent(intent: Intent, instructed: Record<string, number> | null, held: Record<string, number>): string {
+export function classifyIntent(intent: Intent, instructed: Instructed | null, held: Record<string, number>): string {
   const who = `${intent.name} ${intent.code}`
-  if (intent.side === 'BUY') {
-    const scope = findMember(intent.code) ? '' : `${who} 不在四条主线内。`
-    return `规则外。${scope}现行规则下买入权限关闭，买入只通过分段重建计划，该计划尚未生效。已按收到时刻登记。`
-  }
-  if (!held[intent.code]) return `规则外。账本里没有 ${who} 的持仓。已按收到时刻登记。`
-  if (instructed === null) return '执行单此刻因数据未通过核对而停单，无法判断这笔卖出在规则内还是规则外。已按收到时刻登记，核对恢复后以当时的执行单为准。'
-  const want = instructed[intent.code]
-  if (want === undefined) return `规则外。现行三条卖出规则今天没有对 ${who} 的指令。已按收到时刻登记。`
-  if (intent.quantity === null) return `规则内。执行单要求卖出 ${who} ${want} 股，下单时按实时价重算。`
-  if (intent.quantity < want) return `规则内，但不足。执行单要求卖出 ${want} 股，意向只有 ${intent.quantity} 股。`
+  const verb = intent.side === 'BUY' ? '买入' : '卖出'
+  if (intent.side === 'SELL' && !held[intent.code]) return `规则外。账本里没有 ${who} 的持仓。已按收到时刻登记。`
+  if (instructed === null) return `执行单此刻因数据未通过核对而停单，无法判断这笔${verb}在规则内还是规则外。已按收到时刻登记，核对恢复后以当时的执行单为准。`
+  const want = (intent.side === 'BUY' ? instructed.buy : instructed.sell)[intent.code]
+  if (want === undefined) return `规则外。今天的执行单上没有${verb} ${who} 的指令；成交的话记为偏离。已按收到时刻登记。`
+  if (intent.quantity === null) return `规则内。执行单写的是${verb} ${who} ${want} 股，下单时按实时价重算。`
+  if (intent.quantity < want) return `规则内，但不足。执行单写的是${verb} ${want} 股，意向只有 ${intent.quantity} 股。`
   if (intent.quantity > want) return `前 ${want} 股在规则内，多出的 ${intent.quantity - want} 股在规则外。已按收到时刻登记。`
-  return `规则内。与执行单一致：卖出 ${who} ${want} 股。`
+  return `规则内。与执行单一致：${verb} ${who} ${want} 股。`
 }

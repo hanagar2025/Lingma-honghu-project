@@ -1,6 +1,7 @@
 /**
  * 盯线。线由策略方登记（固定价位、20 日线、60 日线、60 日最低收盘价），这里只算“现价在线的哪一边、差多少”。
- * 不产生买卖指令：越线只是读数，动作写的是规则原文。
+ * 这里不产生买卖指令：越线只是读数，动作写的是规则原文。
+ * 策略方给收盘判定的线写了 sell（全部、一半、三分之一）时，执行单在线成立后据此生成卖出指令。
  */
 import type { LineLevel, StockSeries, WatchLine } from './types'
 
@@ -25,6 +26,9 @@ export interface LineStatus {
   hit: boolean | null
   action: string
   source: string
+  sell: WatchLine['sell'] | null
+  /** 判定用的那一根日线的日期；盘中现价判定时为 null */
+  barDate: string | null
 }
 
 export interface LiveQuote { price: number; main: number | null }
@@ -67,6 +71,7 @@ export function lineStatus(line: WatchLine, series: StockSeries | null, live: Li
     id: line.id, code: line.code, name: line.name, basis: line.basis, op: line.op, level: line.level, levelValue, price,
     distance: price !== null && levelValue !== null && levelValue > 0 ? price / levelValue - 1 : null,
     beyond, and: line.and, andMet, hit, action: line.action, source: line.source,
+    sell: line.sell ?? null, barDate: live ? null : lastBar?.date ?? null,
   }
 }
 
@@ -88,10 +93,13 @@ export function parseLines(input: unknown): WatchLine[] | string {
     const source = String(r.source ?? '').trim()
     if (!action || action.length > 200) return `第 ${i + 1} 条：要写规则原文的动作（200 字以内）`
     if (!source || source.length > 200) return `第 ${i + 1} 条：要写出处（200 字以内）`
+    if (r.sell != null && r.sell !== 'ALL' && r.sell !== 'HALF' && r.sell !== 'THIRD') return `第 ${i + 1} 条：sell 只能是 ALL、HALF 或 THIRD`
+    if (r.sell != null && (r.basis !== 'close' || r.op !== 'below')) return `第 ${i + 1} 条：只有收盘跌破的线能带 sell`
     out.push({
       id: `${code}-${typeof level === 'number' ? level : level}-${r.op}-${r.basis}`,
       code, name: String(r.name ?? '').slice(0, 20), basis: r.basis, op: r.op, level: level as LineLevel,
       and: (r.and as WatchLine['and']) ?? null, action, source,
+      ...(r.sell != null ? { sell: r.sell as WatchLine['sell'] } : {}),
     })
   }
   if (new Set(out.map(l => l.id)).size !== out.length) return '有重复的线'

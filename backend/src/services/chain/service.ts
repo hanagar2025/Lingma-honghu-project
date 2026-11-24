@@ -11,7 +11,9 @@
  *
  * 这里不打分、不排序。打分和排序由 bot 做。
  */
+import { cancelOrder, EMPTY_BOOK, registerOrder, setBackup, type Instruction, type OrderBook } from '../dailyDecision/book'
 import type { LedgerFile } from '../dailyDecision/ledger'
+import type { PlanSource } from '../dailyDecision/produce'
 import { beijingStamp } from '../intake/store'
 import { beijing } from '../scheduler'
 import { collectDaily, collectEarnings, collectIntraday, collectMargin, earningsDue, type CollectOptions } from './collect'
@@ -21,7 +23,7 @@ import { emQuotes, tencentQuotes } from './sources'
 import { ChainStore } from './store'
 import type { BaseFile, RunRecord } from './types'
 import { withHoldings, type Segment } from './universe'
-import { portfolioView, type PortfolioView } from './view'
+import { portfolioView, seriesView, type PortfolioView } from './view'
 import { describeLine, lineStatus, newlyBeyond, type LineStatus, type LiveQuote } from './watch'
 
 export interface ChainTask {
@@ -204,6 +206,56 @@ export class ChainService {
     if (typeof totalAssets !== 'number' || !Number.isFinite(totalAssets) || totalAssets <= 0) return '基准总资产要是正数'
     if (typeof at !== 'string' || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(at)) return '基准时点写成 2026-11-24 09:37 这样'
     this.store.saveDoc('base', { totalAssets, at, highIndex: 100, setAt: beijingStamp(now) } satisfies BaseFile)
+    return null
+  }
+
+  // ── 执行单要用的：净值基准、序列、盯线、指令簿 ──
+
+  book(): OrderBook {
+    return this.store.doc<OrderBook>('orders') ?? EMPTY_BOOK
+  }
+
+  planSource(): PlanSource {
+    return {
+      base: () => this.store.base(),
+      context: () => ({
+        view: seriesView(this.store, this.segments(), 130),
+        watch: this.store.watch().map(l => lineStatus(l, this.store.series(l.code), null)),
+        book: this.book(),
+        saveBook: book => { this.store.saveDoc('orders', book) },
+        saveHigh: index => {
+          const base = this.store.base()
+          if (base && index > base.highIndex) this.store.saveDoc('base', { ...base, highIndex: index } satisfies BaseFile)
+        },
+      }),
+    }
+  }
+
+  /** 策略方登记一条指令。收盘后登记的从下一个交易日算起 */
+  async registerOrder(raw: unknown, now = new Date()): Promise<Instruction | string> {
+    const bj = beijing(now)
+    const closed = this.lastClosed()
+    const afterClose = bj.time >= '15:00' && (await this.deps.isTrading(now)) === true
+    const triggerDate = afterClose ? bj.date : closed
+    if (!triggerDate) return '还没有日线，先等链上数据拉到'
+    const holdings = (this.deps.readLedger()?.positions ?? []).map(p => ({ code: p.code, name: p.name, quantity: p.quantity }))
+    const result = registerOrder(this.book(), raw, { now: beijingStamp(now), triggerDate, holdings })
+    if (typeof result === 'string') return result
+    this.store.saveDoc('orders', result.book)
+    return result.instruction
+  }
+
+  cancelOrder(id: string, by: string, now = new Date()): string | null {
+    const result = cancelOrder(this.book(), id, by, beijingStamp(now))
+    if (typeof result === 'string') return result
+    this.store.saveDoc('orders', result)
+    return null
+  }
+
+  setBackup(on: unknown, why: unknown, now = new Date()): string | null {
+    const result = setBackup(this.book(), on, why, beijingStamp(now))
+    if (typeof result === 'string') return result
+    this.store.saveDoc('orders', result)
     return null
   }
 

@@ -2,7 +2,7 @@
  * 记分牌：事后对照，回答"照规则做了没有、做了之后结果怎样"。
  *
  *   净值      账户、"从第一天起不交易"、创业板指，三条线比
- *   执行差    规则要求的卖出挂了几天没做，这几天价格怎么走
+ *   执行差    执行单上的指令挂了几天没做，这几天价格怎么走
  *   交易记分  每笔登记的成交，到今天的结果
  *
  * 数据来自每个交易日收盘后的留底（journal）和成交记录，都在私有目录里。
@@ -19,7 +19,8 @@ export interface JournalDay {
   positions: { code: string; name: string; quantity: number; close: number }[]
   /** 创业板指收盘 */
   bench: number | null
-  orders: { code: string; name: string; shares: number; refPrice: number | null; reason: string }[]
+  /** 当天执行单上的指令。早先的留底没有 side，那时只有卖出 */
+  orders: { code: string; name: string; side?: 'SELL' | 'BUY'; shares: number; refPrice: number | null; reason: string }[]
 }
 
 export interface TradeLog {
@@ -46,7 +47,7 @@ export function journalOf(input: DecisionInput | null, card: DecisionCard, close
     positions: held.map(h => ({ code: h.code, name: h.name, quantity: h.quantity, close: h.close as number })),
     bench,
     orders: card.lines.filter(l => l.shares !== null && l.shares > 0)
-      .map(l => ({ code: l.code, name: l.name, shares: l.shares as number, refPrice: l.refPrice, reason: l.reason.split('，')[0]! })),
+      .map(l => ({ code: l.code, name: l.name, side: l.side, shares: l.shares as number, refPrice: l.refPrice, reason: l.reason.split('（')[0]! })),
   }
 }
 
@@ -71,6 +72,9 @@ function navLines(journal: readonly JournalDay[], prices: Readonly<Record<string
   return out
 }
 
+/** 早先的留底没有记方向，那时执行单只有卖出 */
+const sideOf = (o: { side?: 'SELL' | 'BUY' }): 'SELL' | 'BUY' => o.side ?? 'SELL'
+
 function gapLines(journal: readonly JournalDay[]): string[] {
   const last = journal[journal.length - 1]
   if (!last) return ['- 执行差：还没有留底。']
@@ -79,13 +83,13 @@ function gapLines(journal: readonly JournalDay[]): string[] {
     for (const o of journal[i - 1]!.orders) {
       const before = journal[i - 1]!.positions.find(p => p.code === o.code)?.quantity ?? 0
       const after = journal[i]!.positions.find(p => p.code === o.code)?.quantity ?? 0
-      if (after < before) done++
+      if (o.side === 'BUY' ? after > before : after < before) done++
     }
   }
   const out: string[] = []
   for (const o of last.orders) {
     let start = journal.length - 1
-    while (start > 0 && journal[start - 1]!.orders.some(x => x.code === o.code)) start--
+    while (start > 0 && journal[start - 1]!.orders.some(x => x.code === o.code && sideOf(x) === sideOf(o))) start--
     const firstDay = journal[start]!
     const days = journal.length - start
     const then = firstDay.orders.find(x => x.code === o.code)?.refPrice ?? null
@@ -94,12 +98,13 @@ function gapLines(journal: readonly JournalDay[]): string[] {
     if (then && now && days > 1) {
       const move = now / then - 1
       const impact = o.shares * (then - now) / last.total
-      cost = `；这期间股价 ${pct(move)}，${impact > 0 ? `没卖的这部分多亏了约占总资产 ${(impact * 100).toFixed(2)}%` : '没卖的这部分暂时没有多亏'}`
+      cost = sideOf(o) === 'BUY' ? `；这期间股价 ${pct(move)}`
+        : `；这期间股价 ${pct(move)}，${impact > 0 ? `没卖的这部分多亏了约占总资产 ${(impact * 100).toFixed(2)}%` : '没卖的这部分暂时没有多亏'}`
     }
-    out.push(`- 执行差：卖出 ${o.name} ${o.shares} 股（${o.reason}），自 ${md(firstDay.date)} 起已挂 ${days} 个交易日未完成${cost}。`)
+    out.push(`- 执行差：${sideOf(o) === 'BUY' ? '买入' : '卖出'} ${o.name} ${o.shares} 股（${o.reason}），自 ${md(firstDay.date)} 起已挂 ${days} 个交易日未完成${cost}。`)
   }
-  if (!last.orders.length) out.push('- 执行差：现在没有未完成的卖出指令。')
-  if (done) out.push(`- 留底以来，卖出指令之后持仓确有减少的共 ${done} 次。`)
+  if (!last.orders.length) out.push('- 执行差：现在没有未完成的指令。')
+  if (done) out.push(`- 留底以来，指令之后持仓确有相应变动的共 ${done} 次。`)
   return out
 }
 
@@ -110,8 +115,8 @@ function tradeLines(trades: readonly TradeLog[], journal: readonly JournalDay[],
   const last = journal[journal.length - 1]
   return live.slice(-10).map(t => {
     const now = last?.positions.find(p => p.code === t.code)?.close ?? prices[t.code!]
-    const ordered = journal.filter(j => j.date <= t.date!).pop()?.orders.some(o => o.code === t.code)
-    const rule = t.side === 'BUY' ? '规则外（买入权限关闭）' : ordered === undefined ? '当日没有留底，无法对照规则' : ordered ? '规则内' : '规则外'
+    const ordered = journal.filter(j => j.date <= t.date!).pop()?.orders.some(o => o.code === t.code && sideOf(o) === t.side)
+    const rule = ordered === undefined ? '当日没有留底，无法对照执行单' : ordered ? '规则内' : '规则外（执行单上没有，记为偏离）'
     const head = `- ${md(t.date!)} ${t.side === 'BUY' ? '买入' : '卖出'} ${t.name} ${t.quantity} 股`
     if (!t.price || !now) return `${head}：${rule}；缺成交价或现价，无法记分。`
     const move = now / t.price - 1

@@ -139,6 +139,11 @@ export interface WatchLine {
   /** 规则原文写的动作 */
   action: string
   source: string
+  /**
+   * 这条线成立后要卖多少：全部、一半、三分之一。只有收盘判定的线能带。
+   * 带了，成立后执行单生成一条卖出指令；不带，越线只是读数。
+   */
+  sell?: 'ALL' | 'HALF' | 'THIRD'
 }
 
 export interface BaseFile {

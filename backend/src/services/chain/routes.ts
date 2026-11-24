@@ -6,10 +6,11 @@
  *   AGENT      策略方。另可登记盯线和供给冲击、对汇总写决定；机器人缺席时可以手动补推汇总
  *   COMMITTEE  委员会。另可否决、填净值基准
  *
- * 没有任何下单接口。
+ * 没有任何向券商下单的接口。/api/orders 登记的是执行单上的指令：写给她本人看的下单计划，由她自己下单。
  */
 import type { Express, NextFunction, Request, RequestHandler, Response } from 'express'
 import type { Role } from '../auth/auth'
+import { publicBook } from '../dailyDecision/book'
 import { beijingStamp } from '../intake/store'
 import { beijing } from '../scheduler'
 import { acceptDigest, DIGEST_SLOTS, listDigests, setDecision, setVeto, type DigestDoc } from './digest'
@@ -124,6 +125,35 @@ export function mountChain(app: Express, deps: RouteDeps): void {
     const problem = chain.setBase(body.totalAssets, body.at)
     if (problem) { res.status(400).json({ error: problem }); return }
     res.json({ ok: true, at: body.at, index: 100 })
+  })
+
+  // ── 执行单上的指令 ──
+  // 规则卖出和盯线卖出由执行单自己生成；这里是策略方登记的买入、卖出，以及备用目标的切换。
+  // 机器人读不到：指令簿里有持仓信息。
+
+  const orderRoles = auth('AGENT', 'COMMITTEE')
+
+  app.get('/api/orders', orderRoles, (_req, res) => { res.json(publicBook(chain.book())) })
+
+  app.post('/api/orders', auth('AGENT'), wrap(async (req, res) => {
+    const result = await chain.registerOrder(req.body)
+    if (typeof result === 'string') { res.status(400).json({ error: result }); return }
+    const { keep: _keep, ...instruction } = result
+    res.json({ instruction })
+  }))
+
+  /** 策略方撤销，或委员会否决 */
+  app.delete('/api/orders/:id', orderRoles, (req, res) => {
+    const problem = chain.cancelOrder(req.params.id ?? '', res.locals.role === 'COMMITTEE' ? '委员会' : '策略方')
+    if (problem) { res.status(400).json({ error: problem }); return }
+    res.json(publicBook(chain.book()))
+  })
+
+  app.put('/api/orders/backup', orderRoles, (req, res) => {
+    const body = (req.body ?? {}) as { on?: unknown; why?: unknown }
+    const problem = chain.setBackup(body.on, body.why)
+    if (problem) { res.status(400).json({ error: problem }); return }
+    res.json(publicBook(chain.book()))
   })
 
   /** 现在就拉一次。日常由服务器自己到点拉；这个口子给补数和排障用 */

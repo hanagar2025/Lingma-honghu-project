@@ -68,7 +68,7 @@ export function accountFreshness(asOf: string | null | undefined, today?: string
   const date = asOf ?? null
   const staleDays = daysBehind(date, today ?? beijingToday())
   if (date === null || staleDays === null) {
-    return { stale: true, staleDays: null, gaps: ['账本快照缺 asOf → 股数与现金时点不可知，仓位/熔断/超限判定不可确认'] }
+    return { stale: true, staleDays: null, gaps: ['账本快照缺 asOf → 股数与现金时点不可知，占比和三条线不可确认'] }
   }
   if (staleDays <= ACCOUNT_STALE_LIMIT_DAYS) return { stale: false, staleDays, gaps: [] }
   return {
@@ -76,7 +76,7 @@ export function accountFreshness(asOf: string | null | undefined, today?: string
     staleDays,
     gaps: [
       `账本快照 ${date} 落后 ${staleDays} 天 → 股数与现金可能已变动，`
-      + '仓位/熔断/超限判定须按"账本可能过期"读，不得当成当日资本事实',
+      + '占比和三条线须按"账本可能过期"读，不得当成当日资本事实',
     ],
   }
 }
