@@ -11,13 +11,14 @@
 import type { Express, NextFunction, Request, RequestHandler, Response } from 'express'
 import type { Role } from '../auth/auth'
 import { publicBook } from '../dailyDecision/book'
+import { markdownToHtml } from '../dailyDecision/html'
 import { beijingStamp } from '../intake/store'
 import { beijing } from '../scheduler'
 import { acceptDigest, DIGEST_SLOTS, listDigests, setDecision, setVeto, type DigestDoc } from './digest'
 import type { ScriptKind } from './scripts'
 import type { ChainService } from './service'
 import type { ShockFlag } from './types'
-import { seriesView } from './view'
+import { seriesView, statusView } from './view'
 import { parseLines } from './watch'
 
 export interface RouteDeps {
@@ -53,6 +54,17 @@ export function mountChain(app: Express, deps: RouteDeps): void {
   const read = auth('BOT', 'AGENT', 'COMMITTEE')
   const store = chain.store
 
+  // 页面每次刷新都问一遍今天开不开市；判断得出的结果留一分钟，不每次都去问行情源
+  let tradingSeen: { at: number; date: string; value: boolean } | null = null
+  const tradingToday = async (now: Date): Promise<boolean | null> => {
+    const bj = beijing(now)
+    if (bj.weekday === 0 || bj.weekday === 6) return false
+    if (tradingSeen && tradingSeen.date === bj.date && now.getTime() - tradingSeen.at < 60_000) return tradingSeen.value
+    const value = await deps.isTrading(now)
+    if (value !== null) tradingSeen = { at: now.getTime(), date: bj.date, value }
+    return value
+  }
+
   /** 今天是不是交易日、数据到了哪一天、各时点 */
   app.get('/api/chain/calendar', read, wrap(async (_req, res) => {
     const now = new Date()
@@ -65,6 +77,22 @@ export function mountChain(app: Express, deps: RouteDeps): void {
       lastClosed: chain.lastClosed(),
       marginAsOf: market[market.length - 1]?.date ?? null,
       slots: DIGEST_SLOTS,
+    })
+  }))
+
+  /** 数据到了哪一步。只有日期和只数，发布后核对和页面「数据状态」用 */
+  app.get('/api/chain/status', read, wrap(async (_req, res) => {
+    const now = new Date()
+    const bj = beijing(now)
+    const status = statusView(store, chain.segments(), now)
+    const jobError = (kind: ScriptKind): string | null => (status.lastClosed ? chain.runner.job(kind, status.lastClosed)?.error ?? null : null)
+    res.json({
+      ...status,
+      today: bj.date, weekday: bj.weekday, time: bj.time,
+      // null = 判断不出
+      trading: await tradingToday(now),
+      // 最新收盘日的脚本没跑出来时的原因（例如服务器上没有 Python）
+      scriptError: jobError('mainline') ?? jobError('scan'),
     })
   }))
 
@@ -196,7 +224,8 @@ export function mountChain(app: Express, deps: RouteDeps): void {
     const { date = '', slot = '' } = req.params
     const doc = DATE.test(date) && /^[a-z]+$/.test(slot) ? store.digest<DigestDoc>(date, slot) : null
     if (!doc) { res.status(404).json({ error: '没有这份汇总' }); return }
-    res.json(doc)
+    // 页面要现成的 HTML：正文在服务器上转义后再转
+    res.json(req.query.html === '1' ? { ...doc, html: markdownToHtml(doc.markdown) } : doc)
   })
 
   const annotate = (fn: typeof setDecision, key: 'text' | 'note') => (req: Request, res: Response): void => {

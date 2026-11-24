@@ -184,6 +184,37 @@ case "${LIVE}" in
   *) die "本机端口 ${PORT} 上应答的不是这一版（${LIVE}）。可能端口被别的程序占用" ;;
 esac
 
+# 链上数据到了哪一步：只有日期和只数。用汇总机器人的口令在本机问一次；口令经标准输入交给 curl，不出现在命令行和输出里
+BOT_TOKEN_VALUE="$(sed -n 's/^BOT_TOKEN=//p' "${ENV_FILE}" | head -1)"
+CHAIN_STATUS="$(printf 'header = "Authorization: Bearer %s"\n' "${BOT_TOKEN_VALUE}" | curl -fsS -m 20 -K - "http://127.0.0.1:${PORT}/api/chain/status" 2>/dev/null || true)"
+CHAIN_LINE="$(printf '%s' "${CHAIN_STATUS}" | "${NODE_BIN}" -e '
+  let raw = ""
+  process.stdin.on("data", d => { raw += d }).on("end", () => {
+    let s
+    try { s = JSON.parse(raw) } catch { process.stdout.write("unknown"); return }
+    if (!s.stocks) { process.stdout.write("unknown"); return }
+    const filled = s.stocks.have >= s.stocks.expected && (s.stocks.minBars || 0) >= 120
+    const base = s.base ? "set" : "unset"
+    const text = s.stocks.have === 0
+      ? "链上数据还是空的"
+      : "日线 " + s.stocks.have + "/" + s.stocks.expected + " 只，最新到 " + (s.lastClosed || "还没有") + "，最少的一只有 " + (s.stocks.minBars || 0) + " 个交易日；融资到 " + (s.marginAsOf || "还没有")
+    process.stdout.write((filled ? "full" : "partial") + "|" + base + "|" + text)
+  })
+' 2>/dev/null || true)"
+case "${CHAIN_LINE}" in
+  full\|*|partial\|*)
+    CHAIN_REST="${CHAIN_LINE#*|}"
+    note "链上数据：${CHAIN_REST#*|}"
+    case "${CHAIN_LINE}" in
+      partial\|*) note "历史还没有补齐：服务启动后自动补近 130 个交易日，要几分钟。补完后页面「定时汇总」下面的「数据状态」里看得到" ;;
+    esac
+    case "${CHAIN_REST}" in
+      unset\|*) TODO+=("净值基准还没有填：打开页面，在最下面的「设置」里填一次。没填之前净值指数和三条线算不出，执行单不出买入") ;;
+    esac
+    ;;
+  *) note "链上数据的状态读不出来。打开页面，在「定时汇总」下面的「数据状态」里看" ;;
+esac
+
 step "五、域名与证书"
 # 阿里云实例的公网地址从元数据服务读；读不到就不做解析核对
 PUBLIC_IP="$(curl -fsS -m 3 http://100.100.100.200/latest/meta-data/eipv4 2>/dev/null || true)"

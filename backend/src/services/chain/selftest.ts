@@ -441,6 +441,7 @@ async function main(): Promise<void> {
     const pf2 = JSON.parse((await call(BOT, 'GET', '/api/chain/portfolio')).text) as { navIndex: number | null }
     ok(typeof pf2.navIndex === 'number' && pf2.navIndex > 0, '填了基准后有净值指数')
     ok((await call(COMMITTEE, 'PUT', '/api/chain/base', { totalAssets: -1, at: '2026-11-24 09:37' })).status === 400, '基准不是正数不收')
+    ok((await call(COMMITTEE, 'PUT', '/api/chain/base', { totalAssets: 1, at: '2026-13-45 99:99' })).status === 400 && (await call(COMMITTEE, 'PUT', '/api/chain/base', { totalAssets: 1, at: '2026-02-30 09:30' })).status === 400 && (await call(COMMITTEE, 'PUT', '/api/chain/base', { totalAssets: 1, at: '2999-01-01 09:30' })).status === 400, '基准时点不是真实的时刻、或晚于现在的不收')
     ok((await call(BOT, 'PUT', '/api/chain/watch', { lines: [] })).status === 403, 'bot 不能登记盯线')
     const lines = [{ code: '300308', name: '甲', basis: 'close', op: 'below', level: 9999, and: null, action: '次日卖三分之一', source: '自检' }]
     ok((await call(AGENT, 'PUT', '/api/chain/watch', { lines })).status === 200, '策略方登记盯线')
@@ -459,6 +460,16 @@ async function main(): Promise<void> {
     ok((await call(COMMITTEE, 'POST', `/api/digest/${TODAY}/pre/veto`, { note: '否决' })).status === 200, '委员会否决')
     const got = JSON.parse((await call(COMMITTEE, 'GET', `/api/digest/${TODAY}/pre`)).text) as DigestDoc
     ok(got.decision?.text === '按规则不动' && got.veto?.note === '否决' && got.by === 'BOT', '汇总、决定、否决存在一处')
+    // 页面用的两个口子
+    await call(AGENT, 'POST', '/api/digest', { ...good, slot: 'midday', markdown: '# 午间汇总\n\n<script>alert(1)</script>\n\n| 股票 | 占比 |\n|---|---|\n| 甲 | 13.9% |' })
+    const forPage = JSON.parse((await call(COMMITTEE, 'GET', `/api/digest/${TODAY}/midday?html=1`)).text) as DigestDoc & { html?: string }
+    ok(typeof forPage.html === 'string' && forPage.html.includes('<h1>午间汇总</h1>') && forPage.html.includes('<td>13.9%</td>') && !forPage.html.includes('<script>') && forPage.html.includes('&lt;script&gt;'), '页面取汇总时带转好的 HTML，正文里的标签被转义')
+    ok(!('html' in (JSON.parse((await call(BOT, 'GET', `/api/digest/${TODAY}/midday`)).text) as object)), '不要 HTML 时原样返回')
+    const statusRes = await call(BOT, 'GET', '/api/chain/status')
+    const status = JSON.parse(statusRes.text) as { lastClosed: string | null; stocks: { expected: number; have: number; minBars: number | null }; base: { at: string } | null; today: string; trading: boolean | null }
+    ok(statusRes.status === 200 && !PRIVATE_WORDS.test(statusRes.text) && !statusRes.text.includes('250000') && status.base?.at === '2026-11-24 09:37', '数据状态里基准只有时点，没有金额')
+    ok(status.lastClosed !== null && status.stocks.expected === 76 && status.stocks.have > 0 && status.stocks.have <= 76 && (status.stocks.minBars ?? 0) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(status.today), '数据状态：日线到哪天、多少只有数、最少有多少个交易日')
+    ok((await call('wrong', 'GET', '/api/chain/status')).status === 401, '没有口令读不了数据状态')
     ok((await call(BOT, 'GET', '/api/digest/2026-11-24/order')).status === 404 && (await call(BOT, 'POST', '/api/chain/jobs/order')).status === 404, '没有下单接口')
     // 执行单的指令簿
     ok((await call(BOT, 'GET', '/api/orders')).status === 403 && (await call(BOT, 'POST', '/api/orders', {})).status === 403, 'bot 读不到指令簿，也登记不了指令')

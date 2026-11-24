@@ -135,3 +135,101 @@ export const saveSetting = (key: string, value: string): Promise<SettingsView> =
 
 export const testPush = (): Promise<{ results: { channel: string; ok: boolean }[] }> =>
   call('/api/settings/test-push', { method: 'POST' })
+
+export type Role = 'COMMITTEE' | 'AGENT'
+
+export const fetchMe = (): Promise<{ role: Role }> => call('/api/me')
+
+export interface DigestSlot { id: string; at: string; label: string; weekday?: number }
+
+export interface DigestHead {
+  date: string
+  slot: string
+  title: string
+  generatedAt: string
+  asOf: string | null
+  decided: boolean
+  vetoed: boolean
+}
+
+export interface DigestDoc {
+  date: string
+  slot: string
+  title: string
+  generatedAt: string
+  asOf: string | null
+  by: 'BOT' | 'AGENT'
+  revision: number
+  decision: { at: string; text: string } | null
+  veto: { at: string; note: string } | null
+  html: string
+}
+
+export const fetchDigests = (days = 5): Promise<{ slots: DigestSlot[]; digests: DigestHead[] }> => call(`/api/digest?days=${days}`)
+
+export const fetchDigest = (date: string, slot: string): Promise<DigestDoc> => call(`/api/digest/${date}/${slot}?html=1`)
+
+/** 策略方写决定，或委员会否决 */
+export const annotateDigest = (date: string, slot: string, kind: 'decision' | 'veto', text: string): Promise<unknown> =>
+  call(`/api/digest/${date}/${slot}/${kind}`, { method: 'POST', body: JSON.stringify(kind === 'decision' ? { text } : { note: text }) })
+
+export interface Instruction {
+  id: string
+  code: string
+  name: string
+  side: 'SELL' | 'BUY'
+  origin: 'RULE_ZERO' | 'RULE_TREND' | 'RULE_HALVE' | 'WATCH' | 'STRATEGY'
+  reason: string
+  source: string
+  triggerDate: string
+  portion?: string
+  targetWeight?: number
+  status: 'OPEN' | 'DONE' | 'EXPIRED' | 'CANCELLED'
+  closedAt?: string
+  closedWhy?: string
+}
+
+export interface OrderBook {
+  instructions: Instruction[]
+  backup: { since: string; why: string } | null
+  updatedAt: string
+}
+
+export const fetchOrders = (): Promise<OrderBook> => call('/api/orders')
+
+export const cancelOrder = (id: string): Promise<OrderBook> => call(`/api/orders/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+export interface NewOrder {
+  code: string
+  name?: string
+  side: 'SELL' | 'BUY'
+  sell?: 'ALL' | 'HALF' | 'THIRD'
+  targetWeight?: number
+  reason: string
+  source: string
+}
+
+export const registerOrder = (order: NewOrder): Promise<{ instruction: Instruction }> =>
+  call('/api/orders', { method: 'POST', body: JSON.stringify(order) })
+
+export interface ChainStatus {
+  generatedAt: string
+  lastClosed: string | null
+  marginAsOf: string | null
+  stocks: { expected: number; have: number; minBars: number | null }
+  scripts: { mainline: string | null; scan: string | null }
+  base: { at: string; setAt: string } | null
+  gaps: string[]
+  lastRuns: { task: string; at: string; asOf: string | null; ok: number; failed: number }[]
+  today: string
+  weekday: number
+  time: string
+  trading: boolean | null
+  scriptError: string | null
+}
+
+export const fetchChainStatus = (): Promise<ChainStatus> => call('/api/chain/status')
+
+/** 金额只发给服务器，服务器不回显 */
+export const saveBase = (totalAssets: number, at: string): Promise<{ ok: boolean }> =>
+  call('/api/chain/base', { method: 'PUT', body: JSON.stringify({ totalAssets, at }) })

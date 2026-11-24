@@ -134,3 +134,36 @@ export function portfolioView(
     newHigh,
   }
 }
+
+export interface ChainStatus {
+  generatedAt: string
+  /** 日线最新的已收盘交易日 */
+  lastClosed: string | null
+  marginAsOf: string | null
+  /** 名单里应有多少只、多少只有日线、日线最少的一只有多少个交易日（最多数到 250） */
+  stocks: { expected: number; have: number; minBars: number | null }
+  /** 两个脚本的读数各存到哪一天 */
+  scripts: { mainline: string | null; scan: string | null }
+  /** 净值基准填没填、哪个时点。金额不出 */
+  base: { at: string; setAt: string } | null
+  gaps: string[]
+  lastRuns: { task: string; at: string; asOf: string | null; ok: number; failed: number }[]
+}
+
+/** 数据到了哪一步：发布后核对、页面「数据状态」用。只有日期和只数 */
+export function statusView(store: ChainStore, segments: Segment[], now = new Date()): ChainStatus {
+  const view = seriesView(store, segments, 250, now)
+  const lengths = Object.values(view.stocks).map(s => s.rows.length)
+  const base = store.base()
+  const last = (kind: 'mainline' | 'scan'): string | null => store.scriptDates(kind).slice(-1)[0] ?? null
+  return {
+    generatedAt: view.generatedAt,
+    lastClosed: view.asOf,
+    marginAsOf: view.marginAsOf,
+    stocks: { expected: segments.reduce((n, s) => n + s.codes.length, 0), have: lengths.length, minBars: lengths.length ? Math.min(...lengths) : null },
+    scripts: { mainline: last('mainline'), scan: last('scan') },
+    base: base ? { at: base.at, setAt: base.setAt } : null,
+    gaps: view.gaps,
+    lastRuns: view.lastRuns.map(r => ({ task: r.task, at: r.at, asOf: r.asOf, ok: r.ok, failed: r.failed.length })),
+  }
+}
