@@ -10,7 +10,7 @@
  * 每次拉数在 runs.jsonl 留一行：拉到哪一天、成功几只、缺哪几只。
  */
 import { beijingStamp } from '../intake/store'
-import { emBars, emEarnings, emFlow, emForecasts, emMargin, emMarketMargin, emQuotes, tencentQuotes, type SourceOptions } from './sources'
+import { dailyBars, emEarnings, emFlow, emForecasts, emMargin, emMarketMargin, emQuotes, tencentQuotes, type SourceOptions } from './sources'
 import type { ChainStore } from './store'
 import type { RunRecord } from './types'
 
@@ -46,35 +46,77 @@ function finish(store: ChainStore, task: string, now: Date, asOf: string | null,
   return record
 }
 
+/** 同一来源连着失败这么多只，这一轮就不再去碰它：对方在断连接时，越试断得越久 */
+const GIVE_UP_AFTER = 3
+
 export async function collectDaily(store: ChainStore, codes: readonly string[], opts: CollectOptions = {}): Promise<RunRecord> {
   const now = opts.now ?? new Date()
   const failed: string[] = []
   const notes: string[] = []
   const lastDates: string[] = []
+  /** 日线取自备用来源的那几只：它们的收盘价没有独立的第二来源可核对 */
+  const fallback = new Set<string>()
   let ok = 0
-  await pool(codes, opts.concurrency ?? 6, async code => {
+  let barsDown = 0
+  let flowDown = 0
+  /** 这一轮要拉到哪一天：由第一只拉到的日线定。已经齐到这一天的不重拉，重试时只补缺的 */
+  let target: string | null = null
+
+  const one = async (code: string): Promise<void> => {
     const have = store.series(code)
-    const count = opts.backfill || !have || have.bars.length < 70 ? 130 : 30
+    const lastOf = (rows: readonly { date: string }[] | undefined): string | null => rows?.[rows.length - 1]?.date ?? null
+    const fresh = !opts.backfill && target !== null
     let got = false
-    try {
-      const { name, bars } = await emBars(code, count, opts)
-      const closed = closedOnly(bars, now)
-      store.mergeSeries(code, { name, bars: closed }, now)
-      const last = closed[closed.length - 1]
-      if (last) lastDates.push(last.date)
+    /** 这一只的日线到了哪一天 */
+    let day: string | null = null
+    if (fresh && lastOf(have?.bars) === target) {
+      day = target
+      lastDates.push(target!)
       got = true
-    } catch (e) {
-      failed.push(`${code} 日线（${message(e)}）`)
+    } else {
+      const count = opts.backfill || !have || have.bars.length < 70 ? 130 : 30
+      try {
+        const skip = barsDown >= GIVE_UP_AFTER
+        const { name, bars, source } = await dailyBars(code, count, opts, skip)
+        if (source === 'tencent') fallback.add(code)
+        if (!skip) barsDown = source === 'tencent' ? barsDown + 1 : 0
+        const closed = closedOnly(bars, now)
+        store.mergeSeries(code, { name, bars: closed }, now)
+        const last = closed[closed.length - 1]
+        if (last) lastDates.push(last.date)
+        day = last?.date ?? null
+        got = true
+      } catch (e) {
+        failed.push(`${code} 日线（${message(e)}）`)
+      }
     }
-    try {
-      store.mergeSeries(code, { flow: closedOnly(await emFlow(code, opts), now) }, now)
-    } catch (e) {
+    if (!opts.backfill && day !== null && lastOf(have?.flow) === day) {
+      // 流向已经齐到这一天
+    } else if (flowDown >= GIVE_UP_AFTER) {
       got = false
-      failed.push(`${code} 主力净流入（${message(e)}）`)
+      failed.push(`${code} 主力净流入（来源连续取不到，本轮不再试）`)
+    } else {
+      try {
+        store.mergeSeries(code, { flow: closedOnly(await emFlow(code, opts), now) }, now)
+        flowDown = 0
+      } catch (e) {
+        flowDown++
+        got = false
+        failed.push(`${code} 主力净流入（${message(e)}）`)
+      }
     }
     if (got) ok++
-  })
+  }
+
+  const [first, ...rest] = codes
+  if (first !== undefined) {
+    await one(first)
+    target = lastDates[0] ?? null
+  }
+  await pool(rest, opts.concurrency ?? 3, one)
   const asOf = lastDates.sort().pop() ?? null
+
+  if (fallback.size) notes.push(`日线有 ${fallback.size} 只取自腾讯（东方财富取不到），这几只的收盘价没有第二来源核对`)
 
   // 第二来源核对最新收盘价。只在腾讯报的也是同一天时比
   if (asOf) {
@@ -83,7 +125,7 @@ export async function collectDaily(store: ChainStore, codes: readonly string[], 
       for (const code of codes) {
         const bar = store.series(code)?.bars.slice(-1)[0]
         const q = second[code]
-        if (!bar || bar.date !== asOf) continue
+        if (!bar || bar.date !== asOf || fallback.has(code)) continue
         // 盘中补数时腾讯报的已经是今天的实时价，和昨天的收盘价没法比
         if (q && q.date > asOf) continue
         if (!q || q.date !== asOf) { notes.push(`${code} 收盘价没有第二来源`); continue }

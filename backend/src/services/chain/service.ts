@@ -40,6 +40,9 @@ const hhmm = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0
 
 export const ALERT_AFTER_MIN = 15
 
+/** 同一项拉数两次之间至少隔这么久 */
+const PULL_GAP_MS = 120_000
+
 export const CHAIN_TASKS: readonly ChainTask[] = [
   { id: 'margin', at: '08:20', windowMin: 55, retryMin: 10 },
   { id: 'intraday', at: '11:35', windowMin: 20, retryMin: 3 },
@@ -133,18 +136,34 @@ export class ChainService {
 
   // ── 拉数 ──
 
+  /**
+   * 同一项拉数，正在拉或刚拉完（2 分钟内）就把那一次的结果交回去，不另拉一遍。
+   * 定时任务、bot 催数、人工补数可能挤在同一分钟；行情源对短时间的大量请求会直接断连接。
+   */
+  private readonly recent = new Map<string, { at: number; run: Promise<unknown> }>()
+  private once<T>(key: string, now: Date, force: boolean, work: () => Promise<T>): Promise<T> {
+    const have = this.recent.get(key)
+    if (!force && have && Math.abs(now.getTime() - have.at) < PULL_GAP_MS) return have.run as Promise<T>
+    const run = work()
+    this.recent.set(key, { at: now.getTime(), run })
+    run.catch(() => { if (this.recent.get(key)?.run === run) this.recent.delete(key) })
+    return run
+  }
+
   async pullDaily(now = new Date(), backfill = false): Promise<RunRecord> {
-    return collectDaily(this.store, this.codes(), { ...this.deps.source, now, backfill })
+    return this.once('daily', now, backfill, () => collectDaily(this.store, this.codes(), { ...this.deps.source, now, backfill }))
   }
 
   async pullMargin(now = new Date(), backfill = false): Promise<RunRecord[]> {
-    const out = [await collectMargin(this.store, this.codes(), { ...this.deps.source, now, backfill })]
-    if (backfill || earningsDue(now) || !this.store.earnings().updatedAt) out.push(await collectEarnings(this.store, this.codes(), { ...this.deps.source, now }))
-    return out
+    return this.once('margin', now, backfill, async () => {
+      const out = [await collectMargin(this.store, this.codes(), { ...this.deps.source, now, backfill })]
+      if (backfill || earningsDue(now) || !this.store.earnings().updatedAt) out.push(await collectEarnings(this.store, this.codes(), { ...this.deps.source, now }))
+      return out
+    })
   }
 
   async pullIntraday(now = new Date()): Promise<RunRecord> {
-    return collectIntraday(this.store, this.codes(), { ...this.deps.source, now })
+    return this.once('intraday', now, false, () => collectIntraday(this.store, this.codes(), { ...this.deps.source, now }))
   }
 
   /** 第一次启动时私有目录是空的：把近 130 个交易日的日线、主力净流入和融资一次补齐 */
@@ -244,7 +263,8 @@ export class ChainService {
       const record = await this.pullDaily(now)
       if (record.asOf !== today) return false
       await this.runner.runNow('mainline', today)
-      return true
+      // 有缺项或脚本没跑出来，就在窗口内再试：下一轮只补缺的那几只
+      return record.failed.length === 0 && this.store.scriptOutput('mainline', today) !== null
     }
     if (task.id === 'scan') {
       // 日线还没到今天就等下一轮

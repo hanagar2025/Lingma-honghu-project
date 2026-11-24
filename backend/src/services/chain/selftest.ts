@@ -55,7 +55,7 @@ const DAYS = tradingDays('2026-11-24', 80)
 const TODAY = '2026-11-24'
 const priceOf = (code: string, i: number): number => 50 + (Number(code) % 17) + i * 0.1
 /** 可调的假数据开关 */
-const fake = { marginThrough: '2026-11-23', flowValue: 1_000_000, downCodes: new Set<string>(), tencentShift: 0, calls: 0 }
+const fake = { marginThrough: '2026-11-23', flowValue: 1_000_000, downCodes: new Set<string>(), tencentShift: 0, calls: 0, tencentBars: false, flowDown: false }
 
 const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 })
 const fakeFetch = (async (input: string | URL | Request): Promise<Response> => {
@@ -73,11 +73,21 @@ const fakeFetch = (async (input: string | URL | Request): Promise<Response> => {
     }) } })
   }
   if (url.pathname.endsWith('/fflow/daykline/get')) {
+    if (fake.flowDown) return new Response('', { status: 502 })
     return json({ data: { klines: DAYS.slice(-60).map((d, i) => `${d},${fake.flowValue + i}`) } })
   }
   if (url.pathname.endsWith('/ulist.np/get')) {
     if (url.hostname === 'push2.eastmoney.com') return new Response('', { status: 302 })
     return json({ data: { diff: (q.get('secids') ?? '').split(',').map(s => ({ f2: 60.5, f3: 1.25, f6: 900_000_000, f12: s.split('.')[1], f62: -30_000_000, f124: Date.parse('2026-11-24T11:30:00+08:00') / 1000 })) } })
+  }
+  if (url.hostname === 'web.ifzq.gtimg.cn' && fake.tencentBars) {
+    const [sym, , , , n] = (q.get('param') ?? '').split(',')
+    const c = sym!.slice(2)
+    const rows = DAYS.slice(-Number(n)).map((d, k) => {
+      const close = priceOf(c, DAYS.length - Math.min(Number(n), DAYS.length) + k)
+      return [d, String(close - 0.2), String(close), String(close + 0.5), String(close - 0.5), '1000.00', {}, '1.00', '200000.00', '']
+    })
+    return json({ code: 0, data: { [sym!]: { qfqday: rows, qt: { [sym!]: ['51', `股票${c}`, c] } } } })
   }
   if (url.hostname === 'qt.gtimg.cn') {
     const body = url.pathname.replace('/q=', '').split(',').map(sym => {
@@ -167,6 +177,28 @@ async function main(): Promise<void> {
   run = await collectDaily(chainStore, codes, { ...SRC, now: at('2026-11-24 15:36') })
   ok(run.notes.filter(n => n.includes('两源不一致')).length === 4, '第二来源的收盘价对不上：写进记录')
   fake.tencentShift = 0
+  for (const c of codes) fake.downCodes.add(c)
+  fake.tencentBars = true
+  run = await collectDaily(chainStore, codes, { ...SRC, now: at('2026-11-24 15:37'), backfill: true })
+  const viaTencent = chainStore.series('300308')!.bars
+  ok(run.ok === 4 && run.failed.length === 0 && run.notes.length === 1 && run.notes[0]!.includes('4 只取自腾讯'), '东方财富日线取不到时改用腾讯，照实写明，不再拿腾讯核对它自己')
+  ok(viaTencent.slice(-1)[0]!.date === TODAY && viaTencent.slice(-1)[0]!.amount === 2_000_000_000 && Math.abs(viaTencent.slice(-1)[0]!.pct - (priceOf('300308', 79) / priceOf('300308', 78) - 1)) < 1e-12 && viaTencent.length === 80, '腾讯日线：成交额换成元，涨跌幅用相邻收盘价算')
+  fake.downCodes.clear()
+  fake.tencentBars = false
+  await collectDaily(chainStore, codes, { ...SRC, now: at('2026-11-24 15:38'), backfill: true })
+  let before = fake.calls
+  run = await collectDaily(chainStore, codes, { ...SRC, now: at('2026-11-24 15:39') })
+  ok(run.ok === 4 && run.asOf === TODAY && fake.calls - before === 2, '已经齐到今天的不重拉：只拉第一只的日线定日期，再核一次第二来源')
+  const many = ['300308', '002463', '000977', '300750', '688981', '002371', '688012', '688041']
+  fake.flowDown = true
+  before = fake.calls
+  run = await collectDaily(chainStore, many, { ...SRC, now: at('2026-11-24 15:40'), backfill: true, concurrency: 1 })
+  ok(run.ok === 0 && run.failed.length === 8 && run.failed.filter(f => f.includes('本轮不再试')).length === 5 && fake.calls - before === 8 + 3 + 1, '主力净流入连着三只取不到，这一轮不再去碰那个来源')
+  fake.flowDown = false
+  before = fake.calls
+  run = await collectDaily(chainStore, many, { ...SRC, now: at('2026-11-24 15:45'), concurrency: 1 })
+  // 第一只的日线 1 次；流向还缺的 4 只各 1 次；第二来源 1 次
+  ok(run.ok === 8 && run.failed.length === 0 && fake.calls - before === 1 + 4 + 1, '下一轮只补缺的：日线不重拉，只补主力净流入')
   let margin = await collectMargin(chainStore, codes, { ...SRC, now: at('2026-11-24 08:20') })
   ok(margin.asOf === '2026-11-23' && chainStore.series('300308')!.margin.slice(-1)[0]!.date === '2026-11-23', '融资拉到上一交易日')
   ok(margin.notes.some(n => n.startsWith('000977 没有融资数据')) && chainStore.series('000977')!.margin.length === 0, '不是两融标的：记一笔，不算失败')
@@ -182,7 +214,7 @@ async function main(): Promise<void> {
   ok(e.forecasts['300308']!.item.startsWith('归属于') && e.forecasts['300308']!.lower === 0.3, '业绩预告取归母净利那一条')
   ok(earn.notes[0]!.includes('002463'), '没有业绩报表的股票写进记录')
   ok(earningsDue(at('2026-10-14 08:20')) && !earningsDue(at('2026-11-24 08:20')) && earningsDue(at('2026-11-23 08:20')), '财报期每天拉业绩，其余时间只在周一拉')
-  ok(chainStore.runs().length === 7 && chainStore.runs().every(r => r.task && r.at), '每次拉数留一行记录')
+  ok(chainStore.runs().length === 12 && chainStore.runs().every(r => r.task && r.at), '每次拉数留一行记录')
 
   process.stdout.write('\n【给 bot 的数据】\n')
   const segs = withHoldings(['300308', '002463', '300750']).map(x => ({ ...x, codes: x.codes.filter(c => codes.includes(c)) })).filter(x => x.codes.length)
@@ -327,6 +359,13 @@ async function main(): Promise<void> {
   await lone.runner.runNow('mainline', TODAY)
   await lone.runner.runNow('scan', TODAY)
   ok(lone.ensureScript('mainline', TODAY, at('2026-11-25 10:00')).state === 'ready', '已有的读数任何时候都能查')
+  const callsBefore = fake.calls
+  const [p1, p2] = [lone.pullDaily(at('2026-11-24 15:35')), lone.pullDaily(at('2026-11-24 15:36'))]
+  const [r1, r2] = [await p1, await p2]
+  const callsOnce = fake.calls - callsBefore
+  ok(r1 === r2 && lone.store.runs().filter(r => r.task === 'daily').length === 1, '两分钟内重复催日线：交回同一次的结果，不另拉一遍')
+  await lone.pullDaily(at('2026-11-24 15:39'))
+  ok(lone.store.runs().filter(r => r.task === 'daily').length === 2 && fake.calls - callsBefore - callsOnce < callsOnce / 10, '隔够时间再催才真拉，而且只补缺的')
   rmSync(dir2, { recursive: true, force: true })
 
   process.stdout.write('\n【权限】\n')

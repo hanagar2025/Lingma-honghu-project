@@ -1,13 +1,15 @@
 /**
  * 行情源。一期全部用免费的网页接口：
  *
- *   日线        东方财富 push2his（主）；腾讯实时行情只用来核对最新收盘价
+ *   日线        东方财富 push2his（主）；它取不到时改用腾讯前复权日线（同一接口 market-scan.py 也在用）。
+ *               腾讯实时行情用来核对最新收盘价
  *   主力净流入  东方财富资金流日线。源头只留约 120 个交易日，所以必须自己逐日累积
  *   盘中        东方财富 ulist（现价、成交额、当日主力净流入）。实时入口 push2 在海外机房返回 302，依次换备用入口
  *   融资        东方财富数据中心（源头是交易所，次日早间公布）
  *   业绩        东方财富业绩报表、业绩预告
  *
  * 这些接口没有文档也没有承诺。每项重试；取不到就抛错，由调用方记成“缺”，不补、不猜。
+ * 东方财富的日线入口短时间内请求多了会直接断开连接（2026-11-24 在云端机房实测到），所以日线必须有备用来源。
  * 主力资金各家口径不同：一条序列只用一个来源。
  */
 import { tencentSymbol } from '../dailyDecision/input'
@@ -184,6 +186,46 @@ export async function emQuotes(codes: readonly string[], o: SourceOptions = {}):
     }
   }
   throw last instanceof Error ? last : new Error(String(last))
+}
+
+/**
+ * 腾讯前复权日线。旧的在前。每行是 [日期, 开, 收, 高, 低, 成交量, {}, 换手率, 成交额（万元）]。
+ * 涨跌幅用相邻两根的收盘价算，所以多取一根、丢掉最早那一根。
+ */
+export async function tencentBars(code: string, count: number, o: SourceOptions = {}): Promise<{ name: string; bars: BarRow[] }> {
+  const sym = tencentSymbol(code)
+  const url = `https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?param=${sym},day,,,${count + 1},qfq`
+  const json = await getJson<{ data?: Record<string, { qfqday?: unknown[][]; day?: unknown[][]; qt?: Record<string, unknown[]> } | undefined> }>(url, 'https://gu.qq.com/', o)
+  const node = json.data?.[sym]
+  const bars: BarRow[] = []
+  let prev: number | null = null
+  for (const r of node?.qfqday ?? node?.day ?? []) {
+    const date = String(r[0] ?? '')
+    const [open, close, high, low, amount] = [num(r[1]), num(r[2]), num(r[3]), num(r[4]), num(r[8])]
+    if (!DATE.test(date) || open === null || close === null || high === null || low === null || amount === null || close <= 0) { prev = null; continue }
+    if (prev !== null) bars.push({ date, open, close, high, low, amount: amount * 10_000, pct: close / prev - 1 })
+    prev = close
+  }
+  if (bars.length < 2) throw new Error('日线为空')
+  return { name: String(node?.qt?.[sym]?.[1] ?? '').replace(/\s+/g, ''), bars }
+}
+
+export type BarSource = 'eastmoney' | 'tencent'
+
+/** 日线：先东方财富，取不到改用腾讯。两处都取不到才算缺。skipPrimary：东方财富这一轮已经连着断开，不再去碰它 */
+export async function dailyBars(code: string, count: number, o: SourceOptions = {}, skipPrimary = false): Promise<{ name: string; bars: BarRow[]; source: BarSource }> {
+  try {
+    if (skipPrimary) throw new Error('本轮连续取不到，不再试')
+    return { ...(await emBars(code, count, o)), source: 'eastmoney' }
+  } catch (first) {
+    try {
+      // 换了来源就把均线用得到的整段都换掉，一条序列里不混两家的复权价
+      return { ...(await tencentBars(code, Math.max(count, 130), o)), source: 'tencent' }
+    } catch (second) {
+      const text = (e: unknown): string => (e instanceof Error ? e.message : String(e))
+      throw new Error(`东方财富：${text(first)}；腾讯：${text(second)}`)
+    }
+  }
 }
 
 export interface TencentQuote { price: number; prevClose: number; date: string }
