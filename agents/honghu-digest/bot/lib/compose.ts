@@ -158,9 +158,12 @@ export function candidatesSection(board: Board, portfolio: Portfolio, live?: Rec
   if (rows.length) out.push(...table(["股票", "环节", "C", "T", "扣分", "E", live ? "盘中涨幅" : "当天涨幅", live ? "盘中成交" : "日成交", "新开仓准入"], rows), "");
   else out.push("没有 E≥4 的候选。", "");
   const e5 = all.filter((s) => s.e >= PLAN.entry.minE).length;
+  const partial = all.filter((s) => s.cUnknown > 0);
+  const maybe = partial.filter((s) => s.e < PLAN.entry.minE && s.e + s.cUnknown >= PLAN.entry.minE);
   out.push(
     `未持有的 ${all.length} 只里，E≥5 有 ${e5} 只；准入条件全部满足（E≥5、当天涨幅 ≤3%、日成交 ≥10 亿、没有扣分）：${eligible.length ? eligible.join("、") : "没有"}。`,
-    `全链（含持仓）连续 ${board.noCandidateDays} 个交易日没有一只 E≥5；满 ${PLAN.backup.days} 天即触发备用目标条件 4。`,
+    ...(partial.length ? [`其中 ${partial.length} 只的资金分算不全（缺项按 0 分算，分只会偏低）；补齐后可能到 E≥5 的有 ${maybe.length} 只${maybe.length ? `：${cap(maybe.map((s) => s.name), 12).join("、")}` : ""}。缺数据时不算准入。`] : []),
+    `全链（含持仓）连续 ${board.noCandidateDays} 个交易日没有一只 E≥5；满 ${PLAN.backup.days} 天即触发备用目标条件 4。${board.noCandidateUnsureDays ? `另有 ${board.noCandidateUnsureDays} 天因为资金分算不全，说不准有没有 E≥5，没有计入。` : ""}`,
     "",
   );
   return { rows: shown.map((s) => ({ code: s.code, name: s.name, segment: s.segment, c: s.c, t: s.t, deduction: s.deduction, e: s.e, pct: s.pct, provisional: s.provisional })), eligible, lines: out };
@@ -170,6 +173,8 @@ export function candidatesSection(board: Board, portfolio: Portfolio, live?: Rec
  * 脚本自己记下的缺项（存档里的 missing 字段），原样转述：缺什么、缺哪几只、排序沿用了哪一天的。
  * 汇总不替脚本补数，也不重排。
  */
+const OUTSIDE = "链外持仓";
+
 export function mainlineGaps(m: Mainline | null, view: SeriesView): string[] {
   const x = m?.missing;
   if (!m || !x) return [];
@@ -184,7 +189,8 @@ export function mainlineGaps(m: Mainline | null, view: SeriesView): string[] {
   }
   const segs = Object.values(m.segments ?? {});
   if (segs.length && segs.every((v) => v.main20 === null || v.main20 === undefined)) out.push(`${m.last} 所有环节都没有主力数据：S5 当天不计入连续天数`);
-  const absent = m.segments ? view.segments.map((s) => s.segment).filter((s) => !(s in m.segments!)) : [];
+  // 「链外持仓」是后端为名单外的持仓加的，脚本本来就不算它
+  const absent = m.segments ? view.segments.filter((s) => s.segment !== OUTSIDE).map((s) => s.segment).filter((s) => !(s in m.segments!)) : [];
   if (absent.length) out.push(`没有读数的环节（核心股的日线都取不到）：${absent.join("、")}`);
   if (x.kline?.length) out.push(`日线两家都取不到，没有计入环节读数，${list(x.kline.map((c) => view.stocks[c]?.name || c))}`);
   if (x.flow?.length) out.push(`主力净流入缺，${list(x.flow)}`);
@@ -305,7 +311,16 @@ export function watchSection(watch: Watch | null): { beyond: string[]; lines: st
 }
 
 function gapsSection(view: SeriesView, board: Board | null, extra: string[] = []): string[] {
-  const all = [...extra, ...view.gaps, ...(board?.gaps ?? [])];
+  // 后端的缺口是一只一行（“代码 缺 某天的某项”）。同一项缺的股票多时并成一行，免得把别的缺口挤出去
+  const same = new Map<string, string[]>();
+  const rest: string[] = [];
+  for (const g of view.gaps) {
+    const hit = /^(\d{6}) (缺 .+)$/.exec(g);
+    if (hit) same.set(hit[2]!, [...(same.get(hit[2]!) ?? []), view.stocks[hit[1]!]?.name || hit[1]!]);
+    else rest.push(g);
+  }
+  const merged = [...same].flatMap(([what, names]) => (names.length >= 4 ? [`${names.length} 只${what}：${names.slice(0, 8).join("、")}${names.length > 8 ? " 等" : ""}`] : names.map((n) => `${n} ${what}`)));
+  const all = [...extra, ...(board?.gaps ?? []), ...merged, ...rest];
   const noMargin = board ? Object.values(board.now).filter((s) => s.gaps.some((g) => g.startsWith("没有融资数据"))).map((s) => s.name) : [];
   if (noMargin.length) all.push(`不是两融标的，融资两项记 0 分：${noMargin.join("、")}`);
   const uniq = [...new Set(all)];

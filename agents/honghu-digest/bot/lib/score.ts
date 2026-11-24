@@ -170,6 +170,8 @@ export type Board = {
   prev: Record<string, Score>;
   /** 截至 asOf，连续多少个交易日全链没有一只 E≥5；最多数到 limit */
   noCandidateDays: number;
+  /** 数到头之前，有几天因为资金分算不全、说不准有没有 E≥5（没有计入 noCandidateDays） */
+  noCandidateUnsureDays: number;
   gaps: string[];
 };
 
@@ -216,7 +218,7 @@ export function buildBoard(view: SeriesView, asOf = view.asOf): Board | null {
     else noCandidateDays++;
   }
   if (unsureDays) gaps.push(`“全链没有一只 E≥5”有 ${unsureDays} 天因为资金分算不全说不准，没有计入连续天数`);
-  return { asOf, now, prev, noCandidateDays, gaps };
+  return { asOf, now, prev, noCandidateDays, noCandidateUnsureDays: unsureDays, gaps };
 }
 
 // ── 规则核对：只回答“条件成立没有”，动作写规则原文 ──

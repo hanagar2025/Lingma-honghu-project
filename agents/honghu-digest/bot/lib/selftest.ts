@@ -72,7 +72,7 @@ function makeView(over: Partial<SeriesView> = {}, stocks = STOCKS): SeriesView {
       { layer: "中游", segment: "服务器、算力", codes: ["601138"] },
       { layer: "中游", segment: "光模块", codes: ["300308"] },
       { layer: "中游", segment: "PCB", codes: ["002463"] },
-      { layer: "持仓", segment: "链外持仓", codes: ["300750"] },
+      { layer: "链外持仓", segment: "链外持仓", codes: ["300750"] },
     ],
     stocks,
     // 全市场融资每天 +0.1%
@@ -205,6 +205,11 @@ async function main(): Promise<void> {
   ok(dGone.markdown.includes("（缺主力净流入，2 条算不出）") && dGone.markdown.includes("（不全）"), "持仓表里资金分和证据分标出不全");
   ok(dGone.push!.includes("另有 2 只持仓缺数据，卖出条件核对不了：弱乙、破线丙。"), "推送里说明有几只核对不了");
   ok((dGone.data.noCandidateDays as number) === 0 && dGone.markdown.includes("因为资金分算不全说不准，没有计入连续天数"), "全链没有 E≥5 的那天如果是缺数据造成的：不计入连续天数，写进缺口");
+  ok(dGone.markdown.includes("只的资金分算不全（缺项按 0 分算，分只会偏低）；补齐后可能到 E≥5 的有") && dGone.markdown.includes("缺数据时不算准入") && dGone.markdown.includes("另有 1 天因为资金分算不全，说不准有没有 E≥5，没有计入。"), "候选一节写明有几只算不全、补齐后可能够分的有几只");
+  const manyGaps = Object.keys(STOCKS).slice(0, 6).map((c) => `${c} 缺 ${LAST} 的主力净流入`);
+  dGone = compose("close", inputs({ view: makeView({ gaps: [...manyGaps, `688347 缺 ${LAST} 的融资余额`] }, flowGone) }));
+  ok(dGone.markdown.includes(`- 6 只缺 ${LAST} 的主力净流入：强甲、`) && dGone.markdown.includes(`- 候选丁 缺 ${LAST} 的融资余额`) && !dGone.markdown.includes(`- 300308 缺`), "数据缺口：同一项缺的股票多时并成一行，写股票名");
+  ok(!/没有读数的环节[^\n]*链外持仓/.test(compose("close", inputs({ mainline: mainline({ triggers: TRIGGERS, missing: { kline: [], kline_backup: [], flow: [], margin: [], earnings: false, ranking_from: null, flow_short: false } }) })).markdown), "「链外持仓」不是脚本的环节，不报成没有读数");
   dGone = compose("weekly", inputs({ view: makeView({}, flowGone) }));
   ok(dGone.data.rotate === false && dGone.markdown.includes("持仓里 E≤2：弱乙") && dGone.markdown.includes("候选里 E=6：没有") && dGone.markdown.includes("补齐后可能到 6：") && dGone.markdown.includes("候选丁（已得 E=4，缺主力净流入）") && dGone.markdown.includes("条件核对不了（缺数据），不算成立"), "周度：补齐后仍 ≤2 的持仓照算；候选缺数据到不了 6 的写核对不了，换仓条件不算成立");
 
