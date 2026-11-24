@@ -133,18 +133,18 @@ function Delivery({ onError }: { onError: (e: unknown) => void }) {
   )
 }
 
-const SECTION_ORDER = ['todo', 'risk', 'gate', 'goal', 'score', 'forecast']
+const SECTION_ORDER = ['todo', 'risk', 'goal', 'score', 'forecast']
 const SECTION_OPEN = new Set(['todo', 'risk', 'goal'])
 
 function BriefPanels({ brief }: { brief: Brief | null }) {
-  if (!brief) return <section className="panel"><h2>风险与机会</h2><p className="muted">正在取行情和融资数据，约十几秒</p></section>
+  if (!brief) return <section className="panel"><h2>持仓与进度</h2><p className="muted">正在取行情和融资数据，约十几秒</p></section>
   const sections = [...brief.sections].sort((a, b) => SECTION_ORDER.indexOf(a.id) - SECTION_ORDER.indexOf(b.id))
   return (
     <>
       {sections.map(s => (
-        <section key={s.id} className={`panel ${s.id === 'gate' ? (brief.gateOpen ? 'card good' : 'card stop') : ''}`}>
+        <section key={s.id} className="panel">
           <details open={SECTION_OPEN.has(s.id)} className="fold">
-            <summary><h2>{s.title}{s.id === 'gate' ? (brief.gateOpen ? '：可以登记' : '：关闭，不买') : ''}</h2></summary>
+            <summary><h2>{s.title}</h2></summary>
             {s.id === 'risk' && brief.changes.length > 0 && (
               <ul className="changes">{brief.changes.map(c => <li key={c}>{c}</li>)}</ul>
             )}

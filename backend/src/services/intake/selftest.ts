@@ -100,14 +100,19 @@ process.stdout.write('\n【意向定性】\n')
 {
   const sell = { side: 'SELL' as const, code: '300308', name: '中际旭创', reason: '' }
   const held = { '300308': 400 }
-  ok(classifyIntent({ ...sell, quantity: 200 }, { '300308': 200 }, held).startsWith('规则内。与执行单一致'), '与执行单一致 → 规则内')
-  ok(classifyIntent({ ...sell, quantity: 100 }, { '300308': 200 }, held).includes('不足'), '卖少了 → 规则内但不足')
-  ok(classifyIntent({ ...sell, quantity: 300 }, { '300308': 200 }, held).includes('多出的 100 股在规则外'), '卖多了 → 多出部分在规则外')
-  ok(classifyIntent({ ...sell, quantity: 100 }, {}, held).startsWith('规则外'), '执行单没有这条指令 → 规则外')
-  ok(classifyIntent({ ...sell, quantity: 100 }, {}, {}).includes('没有'), '账本里没有这只 → 规则外')
+  const none = { sell: {}, buy: {} }
+  ok(classifyIntent({ ...sell, quantity: 200 }, { sell: { '300308': 200 }, buy: {} }, held).startsWith('规则内。与执行单一致'), '与执行单一致 → 规则内')
+  ok(classifyIntent({ ...sell, quantity: 100 }, { sell: { '300308': 200 }, buy: {} }, held).includes('不足'), '卖少了 → 规则内但不足')
+  ok(classifyIntent({ ...sell, quantity: 300 }, { sell: { '300308': 200 }, buy: {} }, held).includes('多出的 100 股在规则外'), '卖多了 → 多出部分在规则外')
+  ok(classifyIntent({ ...sell, quantity: 100 }, none, held).startsWith('规则外'), '执行单没有这条指令 → 规则外')
+  ok(classifyIntent({ ...sell, quantity: 100 }, none, {}).includes('没有'), '账本里没有这只 → 规则外')
   ok(classifyIntent({ ...sell, quantity: 100 }, null, held).includes('无法判断'), '执行单停单时不对卖出定性，不冒充「规则外」')
-  const buy = classifyIntent({ side: 'BUY', code: '300750', name: '宁德时代', quantity: 100, reason: '' }, {}, {})
-  ok(buy.startsWith('规则外') && buy.includes('不在四条主线内') && buy.includes('已按收到时刻登记'), '买入一律规则外；主线外另行写明；照样登记')
+  const wantBuy = { side: 'BUY' as const, code: '300750', name: '宁德时代', quantity: 100, reason: '' }
+  const buy = classifyIntent(wantBuy, none, {})
+  ok(buy.startsWith('规则外') && buy.includes('记为偏离') && buy.includes('已按收到时刻登记'), '执行单上没有的买入 → 规则外，成交记为偏离；照样登记')
+  ok(classifyIntent(wantBuy, { sell: {}, buy: { '300750': 100 } }, {}).startsWith('规则内。与执行单一致：买入'), '执行单上有的买入 → 规则内')
+  ok(classifyIntent({ ...wantBuy, quantity: 300 }, { sell: {}, buy: { '300750': 100 } }, {}).includes('多出的 200 股在规则外'), '买多了 → 多出部分在规则外')
+  ok(classifyIntent(wantBuy, null, {}).includes('无法判断'), '执行单停单时不对买入定性')
 }
 
 process.stdout.write('\n【收件、确认、生效】\n')
@@ -122,7 +127,7 @@ process.stdout.write('\n【收件、确认、生效】\n')
     ok(first.summary!.includes('截图更可靠'), '文字持仓没有金额可勾稽，如实提示')
     ok(store.readLedger()?.peakVerified === false && store.readLedger()?.peakBasis === 'BROKER', '第一份账本没有峰值 → 标为未核实、口径不可比')
 
-    const intent = submitText({ store, now: at('09:25:10'), instructed: { '300308': 200 } }, '计划卖出 中际旭创 200股')
+    const intent = submitText({ store, now: at('09:25:10'), instructed: { sell: { '300308': 200 }, buy: {} } }, '计划卖出 中际旭创 200股')
     ok(intent.receivedAt === '2026-11-11 09:25:10' && intent.verdict!.startsWith('规则内'), '意向按服务器收到的时刻登记并定性')
     ok(store.readLog('intents').length === 1, '意向进入只追加的记录')
 

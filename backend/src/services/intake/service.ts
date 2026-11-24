@@ -7,10 +7,9 @@
  *   内容自相矛盾的不生效。
  * 账本只被持仓快照整份替换。成交只作记录，不用来推算账本。
  */
-import { COMMITTEE_ORDERS } from '../dailyDecision/orders'
 import { MAINLINES } from '../msr/universe'
 import { parseText, type NameBook } from './parseText'
-import { checksPassed, classifyIntent, diffLedger, reconcileHoldings, toLedger, unverifiable, type DayRange } from './reconcile'
+import { checksPassed, classifyIntent, diffLedger, reconcileHoldings, toLedger, unverifiable, type DayRange, type Instructed } from './reconcile'
 import { readFileSync } from 'node:fs'
 import { beijingStamp, decodeImage, type Store } from './store'
 import type { HoldingsSnapshot, Parsed, Submission, TradeRecord } from './types'
@@ -19,8 +18,8 @@ import { noteCodes, recognize, type VisionConfig } from './vision'
 export interface IntakeContext {
   store: Store
   now?: Date
-  /** 当前执行单上的卖出指令：代码 → 股数。用于给意向定性；执行单停单时为 null */
-  instructed?: Record<string, number> | null
+  /** 当前执行单上的指令。用于给意向定性；执行单停单时为 null */
+  instructed?: Instructed | null
   /** 当日最低价与最高价，用于核对截图上的现价 */
   ranges?: Record<string, DayRange>
 }
@@ -28,7 +27,6 @@ export interface IntakeContext {
 export function nameBook(store: Store): NameBook {
   const book: NameBook = {}
   for (const m of MAINLINES) for (const x of m.members) book[x.name] = x.code
-  for (const o of COMMITTEE_ORDERS) book[o.name] = o.code
   for (const p of store.readLedger()?.positions ?? []) book[p.name] = p.code
   return book
 }
@@ -93,7 +91,7 @@ export function submitText(ctx: IntakeContext, text: string): Submission {
   } else {
     s.summary = describe(parsed)
   }
-  if (parsed.kind === 'INTENT') s.verdict = classifyIntent(parsed.intent, ctx.instructed === undefined ? {} : ctx.instructed, heldNow(ctx.store))
+  if (parsed.kind === 'INTENT') s.verdict = classifyIntent(parsed.intent, ctx.instructed === undefined ? { sell: {}, buy: {} } : ctx.instructed, heldNow(ctx.store))
   apply(ctx, s)
   return ctx.store.save(s)
 }

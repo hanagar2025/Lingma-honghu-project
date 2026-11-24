@@ -1,4 +1,5 @@
-import type { CircuitCalc } from './rules'
+import type { BackupMode, Instruction } from './book'
+import type { LinesCalc } from './rules'
 
 export interface DecisionHolding {
   code: string
@@ -16,37 +17,83 @@ export interface DecisionSnapshot {
   cash: number
   positionsValue: number
   externalCash: number
-  /** 组合总资产 = positionsValue + cash + externalCash。所有仓位上限的分母 */
+  /** 总资产 = positionsValue + cash + externalCash。所有占比的分母 */
   portfolioTotal: number
-  peakAssets: number
-  peakBasis: 'BROKER' | 'PORTFOLIO'
-  peakVerified: boolean
 }
 
-/** 法定动作。reason 只有 POSITION_LIMIT（单票超限）与 CIRCUIT_BREAKER（熔断降仓）两种会被执行单读取 */
-export interface DecisionAction {
+/** 一只持仓的证据分读数 */
+export interface EvidenceRow {
   code: string
   name: string
-  kind: string
-  reason: string
-  /** 单票超限为股数，熔断降仓为金额；缺价格时为 null */
-  size: { value: number | null }
+  segment: string
+  /** 占总资产，小数 */
+  weight: number
+  /** 没有读数时以下各项为 null */
+  c: number | null
+  cUnknown: number
+  cUnknownWhy: string[]
+  t: number | null
+  deduction: number | null
+  deductionWhy: string | null
+  e: number | null
+  /** 融资比日线晚一天：资金分是初算 */
+  provisional: boolean
+  /** 证据分对应的加仓上限，小数；E≤3 为 0 */
+  addCap: number
+  /** 卖出条件核对的结果，一句话 */
+  sellNote: string
 }
 
-/** 执行单的全部输入。执行单不得再自行计算仓位或回撤 */
+/** 一条买入指令过规则之后的结果 */
+export interface BuyGate {
+  id: string
+  /** 可以买的股数；被挡住为 0 */
+  shares: number
+  /** 算股数用的参考价 */
+  refPrice: number | null
+  /** 被哪条规则挡住；null = 没被挡 */
+  blocked: string | null
+  /** 实际放行到占总资产多少（目标与各上限里最小的那个） */
+  allowedWeight: number
+  /** 写在清单上的附带条件与说明 */
+  notes: string[]
+}
+
+/** 《半年计划》各条规则在今天的读数。只在链上数据接入、且价格核对通过时才有 */
+export interface PlanFacts {
+  /** 证据分截至哪个收盘日 */
+  asOf: string | null
+  marginAsOf: string | null
+  /** 指令簿是否按今天的数据核对过。价格核对没通过时只把原有指令列出来 */
+  synced: boolean
+  rows: EvidenceRow[]
+  /** 相关环节（光模块加 PCB）合计占比 */
+  relatedWeight: number
+  /** 未结束的指令 */
+  instructions: Instruction[]
+  /** 每条未结束指令已顺延了几个交易日（触发日之后已收盘的交易日数） */
+  rolled: Record<string, number>
+  buys: BuyGate[]
+  events: string[]
+  notices: string[]
+  backup: BackupMode | null
+}
+
+/** 执行单的全部输入。执行单只排版，不再自行判定 */
 export interface DecisionInput {
   date: string
   ledgerAsOf: string | null
   account: { stale: boolean; staleDays: number | null; gaps: string[] }
   snapshot: DecisionSnapshot
-  circuit: CircuitCalc
   holdings: DecisionHolding[]
   priceFailed: string[]
-  actions: DecisionAction[]
-  noNewEntry: { verdict: boolean; reasons: string[] }
   dataGaps: string[]
-  /** 不在四条主线内的持仓。只提示，不产生指令 */
-  outsideMainline?: { code: string; name: string }[]
+  /** 净值指数与三条线 */
+  lines: LinesCalc & { baseAt: string | null }
+  /** null = 链上数据没有接入（命令行单独运行时），卖出条件核对不了 */
+  plan: PlanFacts | null
+  /** 不在 AI 全链名单内的持仓。只提示 */
+  outsideChain: { code: string; name: string }[]
 }
 
 export interface PriceCheck {

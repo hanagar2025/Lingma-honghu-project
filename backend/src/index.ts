@@ -27,7 +27,7 @@ import { pushAll, type PushResult } from './services/dailyDecision/notify'
 import { markdownToHtml } from './services/dailyDecision/html'
 import { beijingToday } from './services/dailyDecision/ledger'
 import { produceCard, type ProducedCard } from './services/dailyDecision/produce'
-import type { DayRange } from './services/intake/reconcile'
+import type { DayRange, Instructed } from './services/intake/reconcile'
 import { attachParsed, autoRecognize, confirm, reject, submitImage, submitText, type IntakeContext } from './services/intake/service'
 import { mountChain } from './services/chain/routes'
 import { ChainService } from './services/chain/service'
@@ -92,11 +92,12 @@ function auth(...allowed: Role[]) {
 let cached: { at: number; ledgerStamp: string; produced: ProducedCard } | null = null
 async function currentCard(): Promise<ProducedCard> {
   const ledger = store.readLedger()
-  const ledgerStamp = JSON.stringify(ledger)
+  // 策略方登记或撤销了指令，执行单也要重算
+  const ledgerStamp = `${JSON.stringify(ledger)}|${chain.book().updatedAt}`
   // 停单的执行单只缓存 20 秒：行情源恢复后要尽快重算
   const ttl = cached?.produced.card.ok ? 180_000 : 20_000
   if (cached && cached.ledgerStamp === ledgerStamp && Date.now() - cached.at < ttl) return cached.produced
-  const produced = await produceCard(ledger)
+  const produced = await produceCard(ledger, new Date(), chain.planSource())
   cached = { at: Date.now(), ledgerStamp, produced }
   return produced
 }
@@ -129,15 +130,17 @@ async function runSlot(slot: Slot, now: Date): Promise<boolean> {
   const trading = await isTradingToday(now)
   // 开盘前行情日期可能还没切到今天，窗口内再试；其余时段日期不是今天就是休市
   if (trading !== true) return slot.id !== 'pre' && trading === false
-  const produced = await produceCard(store.readLedger(), now)
+  const produced = await produceCard(store.readLedger(), now, chain.planSource())
   const daily = await runDaily(store, produced, { now })
   if (slot.always || (produced.card.ok && produced.card.lines.length > 0)) await pushDecision(slot.label, produced, daily)
   return true
 }
 
-function instructed(p: ProducedCard): Record<string, number> | null {
+function instructed(p: ProducedCard): Instructed | null {
   if (!p.card.ok) return null
-  return Object.fromEntries(p.card.lines.filter(l => l.shares !== null && l.shares > 0).map(l => [l.code, l.shares as number]))
+  const side = (s: 'SELL' | 'BUY'): Record<string, number> =>
+    Object.fromEntries(p.card.lines.filter(l => l.side === s && l.shares !== null && l.shares > 0).map(l => [l.code, l.shares as number]))
+  return { sell: side('SELL'), buy: side('BUY') }
 }
 
 /** 腾讯实时行情里的当日最低价与最高价。取不到就不核对这一项 */
@@ -263,7 +266,7 @@ app.post('/api/intake/:id/reject', auth('COMMITTEE'), (req, res) => { send(res, 
 app.get('/api/brief', auth('COMMITTEE', 'AGENT'), wrap(async (_req, res) => {
   const { brief } = await currentDaily()
   res.json({
-    asOf: brief.asOf, generatedAt: brief.generatedAt, gateOpen: brief.gateOpen, changes: brief.changes,
+    asOf: brief.asOf, generatedAt: brief.generatedAt, changes: brief.changes,
     sections: brief.sections.map(s => ({ id: s.id, title: s.title, html: markdownToHtml(s.markdown), markdown: s.markdown })),
   })
 }))

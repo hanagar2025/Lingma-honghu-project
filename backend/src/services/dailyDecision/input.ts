@@ -1,12 +1,12 @@
 /**
- * 决策输入：账本 + 持仓价格 → 仓位、回撤、法定动作。
+ * 决策输入：账本 + 持仓价格 → 占比、净值指数、三条线。
  *
- * 只取持仓的价格，只算三件事：单票是否超限、熔断处在哪一级、有没有主线外持仓。
- * 不读任何研究模块。
+ * 这里只算账户这一侧。证据分、卖出条件和指令在 plan.ts，价格两源核对通过之后才算。
  */
+import type { BaseFile } from '../chain/types'
 import { accountFreshness, type LedgerFile } from './ledger'
-import { computeCircuit, findLimitBreaches, outsideMainline, sharesToClearExcess } from './rules'
-import type { DecisionAction, DecisionInput } from './types'
+import { computeLines, outsideChain } from './rules'
+import type { DecisionInput } from './types'
 
 export interface LastBar { date: string; close: number }
 
@@ -56,47 +56,23 @@ export function buildDecisionInput(
   bars: Readonly<Record<string, LastBar | undefined>>,
   failed: readonly string[] = [],
   today?: string,
+  base: Pick<BaseFile, 'totalAssets' | 'at' | 'highIndex'> | null = null,
 ): DecisionInput {
   const account = accountFreshness(pf.asOf, today)
   const dates = pf.positions.map(p => bars[p.code]?.date).filter((d): d is string => !!d).sort()
   const date = dates[dates.length - 1] ?? today ?? new Date().toISOString().slice(0, 10)
 
   // 取不到价格的持仓按成本价估市值。它会让核对不通过，执行单因此不出股数
-  const positions = pf.positions.map(p => ({
-    code: p.code, name: p.name,
-    marketValue: (bars[p.code]?.close ?? p.cost ?? 0) * p.quantity,
-  }))
-  const positionsValue = positions.reduce((s, p) => s + p.marketValue, 0)
+  const positionsValue = pf.positions.reduce((s, p) => s + (bars[p.code]?.close ?? p.cost ?? 0) * p.quantity, 0)
   const externalCash = pf.externalCash ?? 0
   const brokerTotal = pf.cash + positionsValue
   const portfolioTotal = brokerTotal + externalCash
-  const peakBasis = pf.peakBasis ?? 'BROKER'
-  const snapshot = {
-    date, brokerTotal, cash: pf.cash, positionsValue, externalCash, portfolioTotal,
-    // 峰值只在同口径下才允许被当前值刷新
-    peakAssets: peakBasis === 'PORTFOLIO' ? Math.max(pf.peakAssets, portfolioTotal) : pf.peakAssets,
-    peakBasis,
-    peakVerified: pf.peakVerified !== false,
-  }
-  const circuit = computeCircuit(snapshot)
+  const snapshot = { date, brokerTotal, cash: pf.cash, positionsValue, externalCash, portfolioTotal }
 
-  const actions: DecisionAction[] = []
-  for (const b of findLimitBreaches(positions, portfolioTotal)) {
-    const px = bars[b.code]?.close ?? null
-    const held = pf.positions.find(p => p.code === b.code)?.quantity ?? null
-    actions.push({
-      code: b.code, name: b.name, kind: 'REDUCE', reason: 'POSITION_LIMIT',
-      size: { value: px && px > 0 ? sharesToClearExcess(b.code, b.excessValue, px, held) : null },
-    })
-  }
-  // 组合层降仓只在峰值已核实时成为指令；待核验时由执行单写成"不执行、不撤销"
-  const stockPct = portfolioTotal > 0 ? positionsValue / portfolioTotal : null
-  if (circuit.equityCap !== null && stockPct !== null && stockPct > circuit.equityCap && snapshot.peakVerified) {
-    actions.push({
-      code: 'PORTFOLIO', name: '组合整体', kind: 'REDUCE', reason: 'CIRCUIT_BREAKER',
-      size: { value: (stockPct - circuit.equityCap) * portfolioTotal },
-    })
-  }
+  // 净值指数：基准没填、或有持仓取不到价格时算不出。算不出就是“核对不了”，不当作没触线
+  const priced = pf.positions.every(p => !(p.quantity > 0) || bars[p.code]?.close !== undefined)
+  const navIndex = base && base.totalAssets > 0 && priced && portfolioTotal > 0 ? (portfolioTotal / base.totalAssets) * 100 : null
+  const navHigh = base ? Math.max(base.highIndex, navIndex ?? 0) : null
 
   const holdings = pf.positions.map(p => ({
     code: p.code, name: p.name, quantity: p.quantity,
@@ -107,12 +83,11 @@ export function buildDecisionInput(
     ledgerAsOf: pf.asOf ?? null,
     account,
     snapshot,
-    circuit,
     holdings,
     priceFailed: [...failed],
-    actions,
-    noNewEntry: { verdict: true, reasons: ['买入只通过分段重建计划，执行单不产生买入'] },
     dataGaps: account.gaps,
-    outsideMainline: outsideMainline(holdings).map(h => ({ code: h.code, name: h.name })),
+    lines: { ...computeLines(navIndex, navHigh), baseAt: base?.at ?? null },
+    plan: null,
+    outsideChain: outsideChain(holdings).map(h => ({ code: h.code, name: h.name })),
   }
 }

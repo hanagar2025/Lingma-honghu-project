@@ -8,7 +8,6 @@
     "typecheck": "tsc --noEmit",
     "decision:daily": "tsx src/services/dailyDecision/run.ts",
     "decision:daily:selftest": "tsx src/services/dailyDecision/selftest.ts",
-    "decision:regress": "tsx src/services/dailyDecision/regress.ts",
     "decision:agentpack": "tsx src/services/dailyDecision/agentPackSite.ts",
     "decision:runlog": "tsx src/services/dailyDecision/runLogReport.ts",
     "intake:selftest": "tsx src/services/intake/selftest.ts",
