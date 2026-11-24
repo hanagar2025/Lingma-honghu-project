@@ -180,6 +180,34 @@ async function main(): Promise<void> {
   ok(buildBoard({ ...weakView, segments: [{ layer: "中游", segment: "PCB", codes: ["002463"] }] })!.noCandidateDays === PLAN.backup.days, "全链连续 10 天没有 E≥5：数到 10");
   ok(buildBoard(makeView({ asOf: null })) === null, "没有日线时不打分");
 
+  process.stdout.write("\n【缺数据时不凭空造出卖出条件】\n");
+  // 当天的主力净流入全都没取到（2026-11-24 东方财富断连接时的真实情形）
+  const flowGone = Object.fromEntries(Object.entries(STOCKS).map(([c, x]) => [c, { ...x, rows: x.rows.map((r, i) => (i === N - 1 ? { ...r, main: null } : r)) }]));
+  const gone = buildBoard(makeView({}, flowGone))!;
+  const strongNow = gone.now["300308"]!;
+  ok(strongNow.c === 2 && strongNow.cUnknown === 2 && strongNow.cUnknownWhy.join() === "主力净流入" && board.now["300308"]!.cUnknown === 0, "主力净流入缺：那两条记 0 分，同时记下是取不到才没得分");
+  ok(gone.now["601138"]!.c === 0 && gone.now["601138"]!.cUnknown === 2 && board.now["601138"]!.cUnknown === 0, "不是两融标的：融资两条是确定的 0 分，不算取不到");
+  // 弱乙：融资两条是确定的 0，主力两条缺 → 已得 0 分，但补齐后最多可到 2 分
+  check = sellCheck(gone.now["002463"]!, gone.prev["002463"]);
+  ok(!check.clearByC && !check.halve && check.unsure !== null && check.unsure.includes("资金 0 分") && check.unsure.includes("缺主力净流入数据") && check.unsure.includes("核对不了"), "缺主力数据使资金分看上去是 0：不算清仓条件成立，写核对不了");
+  const lowSure = { ...board.now["300750"]!, c: 1, cUnknown: 0, cUnknownWhy: [] };
+  const lowGap = { ...lowSure, c: 0, cUnknown: 1, cUnknownWhy: ["主力净流入"] };
+  check = sellCheck(lowGap, lowSure);
+  ok(check.halve && !check.clearByC && check.unsure !== null && check.unsure.startsWith("资金 0 分"), "补齐后最多 1 分、前一天也 ≤1：减半条件照样成立；0 分那条核对不了");
+  check = sellCheck({ ...lowSure, c: 1, cUnknown: 2, cUnknownWhy: ["主力净流入"] }, lowSure);
+  ok(!check.halve && check.unsure !== null && check.unsure.startsWith("资金分连续 2 天 ≤1"), "补齐后可能超过 1 分：减半条件核对不了，不算成立");
+  check = sellCheck({ ...board.now["688981"]!, margin5: null }, board.prev["688981"]);
+  ok(!check.clearByTrend && check.unsure !== null && check.unsure.includes("5 日融资算不出"), "当天跌破 60 日线但融资算不出：核对不了");
+  ok(sellCheck(board.now["300308"]!, board.prev["300308"]).unsure === null && sellCheck(board.now["002463"]!, board.prev["002463"]).unsure === null, "数据齐的时候没有“核对不了”");
+  let dGone = compose("close", inputs({ view: makeView({}, flowGone) }));
+  ok(!dGone.markdown.includes("资金 0 分。规则：清仓") && !dGone.markdown.includes("规则：减半") && dGone.markdown.includes("卖出条件核对不了。不算成立，也不算不成立") && dGone.markdown.includes("- 弱乙：资金 0 分"), "收盘汇总：主力全缺时不报“资金 0 分”和“连续 2 天 ≤1”，逐只写核对不了");
+  ok(dGone.markdown.includes("- 破线丙：收盘跌破 60 日线，5 日融资 -2.7%。规则：清仓"), "不靠主力数据的那条（跌破 60 日线且融资在降）照常报");
+  ok(dGone.markdown.includes("（缺主力净流入，2 条算不出）") && dGone.markdown.includes("（不全）"), "持仓表里资金分和证据分标出不全");
+  ok(dGone.push!.includes("另有 2 只持仓缺数据，卖出条件核对不了：弱乙、破线丙。"), "推送里说明有几只核对不了");
+  ok((dGone.data.noCandidateDays as number) === 0 && dGone.markdown.includes("因为资金分算不全说不准，没有计入连续天数"), "全链没有 E≥5 的那天如果是缺数据造成的：不计入连续天数，写进缺口");
+  dGone = compose("weekly", inputs({ view: makeView({}, flowGone) }));
+  ok(dGone.data.rotate === false && dGone.markdown.includes("持仓里 E≤2：弱乙") && dGone.markdown.includes("候选里 E=6：没有") && dGone.markdown.includes("补齐后可能到 6：") && dGone.markdown.includes("候选丁（已得 E=4，缺主力净流入）") && dGone.markdown.includes("条件核对不了（缺数据），不算成立"), "周度：补齐后仍 ≤2 的持仓照算；候选缺数据到不了 6 的写核对不了，换仓条件不算成立");
+
   process.stdout.write("\n【三条线】\n");
   let lines = linesSection(PORTFOLIO, makeView(), LAST);
   ok(lines.breached.length === 0 && lines.stop === 85 && lines.lines.join("\n").includes("12-20 要到 110"), "净值 103.4：三条线都没触及，写出下一个进度线");

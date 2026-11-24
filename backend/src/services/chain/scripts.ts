@@ -19,8 +19,9 @@ import type { ChainStore } from './store'
 
 export type ScriptKind = 'mainline' | 'scan'
 
+// 主线脚本在东方财富全断的时候最慢：每只股票的日线和主力净流入都要试满再放弃，2026-11-24 实测约 9 分钟
 const SPEC: Record<ScriptKind, { file: string; saveDir: string[]; timeoutMs: number }> = {
-  mainline: { file: 'ai-mainline-map.py', saveDir: ['战略组合2026-2030', '数据', 'AI主线'], timeoutMs: 6 * 60_000 },
+  mainline: { file: 'ai-mainline-map.py', saveDir: ['战略组合2026-2030', '数据', 'AI主线'], timeoutMs: 15 * 60_000 },
   scan: { file: 'market-scan.py', saveDir: ['战略组合2026-2030', '数据', '全市场扫描'], timeoutMs: 25 * 60_000 },
 }
 
@@ -39,11 +40,13 @@ const realSpawn: Spawn = (command, args, opts) => new Promise(done => {
   const child = spawn(command, args, { cwd: opts.cwd, env: opts.env, stdio: ['ignore', 'pipe', 'pipe'] })
   let stdout = ''
   let stderr = ''
-  const timer = setTimeout(() => { child.kill('SIGKILL') }, opts.timeoutMs)
+  let timedOut = false
+  const timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL') }, opts.timeoutMs)
   child.stdout.on('data', d => { stdout += String(d) })
   child.stderr.on('data', d => { stderr = (stderr + String(d)).slice(-4000) })
   child.on('error', e => { clearTimeout(timer); done({ code: null, stdout, stderr: `${stderr}\n${e.message}` }) })
-  child.on('close', code => { clearTimeout(timer); done({ code, stdout, stderr }) })
+  // 超时被终止和 Python 起不来是两回事，分开报
+  child.on('close', code => { clearTimeout(timer); done(timedOut ? { code: 124, stdout, stderr: `运行超过 ${Math.round(opts.timeoutMs / 60_000)} 分钟，已终止` } : { code, stdout, stderr }) })
 })
 
 /** 脚本原件在哪里：发布包里是程序旁边的 py/，开发时是仓库根目录 */

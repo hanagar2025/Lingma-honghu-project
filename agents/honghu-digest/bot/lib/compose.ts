@@ -77,7 +77,10 @@ export function linesSection(portfolio: Portfolio, view: SeriesView, today: stri
   return { stop, breached, lines: out };
 }
 
-type HoldingRead = { rows: Record<string, unknown>[]; sells: string[]; lines: string[] };
+/** 资金分算不全时，在分数后面标出缺什么 */
+const lack = (s: Score): string => (s.cUnknown ? `（缺${s.cUnknownWhy.join("、")}，${s.cUnknown} 条算不出）` : "");
+
+type HoldingRead = { rows: Record<string, unknown>[]; sells: string[]; unsure: string[]; lines: string[] };
 
 /** 持仓的分、卖出条件、加仓空间 */
 export function holdingsSection(board: Board, portfolio: Portfolio, view: SeriesView, stop: number, earlier?: Board | null): HoldingRead {
@@ -86,6 +89,7 @@ export function holdingsSection(board: Board, portfolio: Portfolio, view: Series
   const rows: string[][] = [];
   const data: Record<string, unknown>[] = [];
   const sells: string[] = [];
+  const unsure: string[] = [];
   for (const p of portfolio.positions) {
     const s = board.now[p.code];
     if (!s) {
@@ -97,10 +101,10 @@ export function holdingsSection(board: Board, portfolio: Portfolio, view: Series
     rows.push([
       s.name,
       share(p.weight),
-      before && before.c !== s.c ? `${before.c} → ${s.c}` : `${s.c}${s.provisional ? "（初算）" : ""}`,
+      `${before && before.c !== s.c ? `${before.c} → ${s.c}` : `${s.c}${s.provisional ? "（初算）" : ""}`}${lack(s)}`,
       String(s.t),
       s.deduction ? "−1" : "0",
-      String(s.e),
+      `${s.e}${s.cUnknown ? "（不全）" : ""}`,
       `${pct(s.margin5)} / ${pct(s.market5)}`,
       s.mainDays === null ? "—" : `${s.mainDays}/5，${pct(s.main5)}`,
       pct(s.d20),
@@ -113,6 +117,7 @@ export function holdingsSection(board: Board, portfolio: Portfolio, view: Series
     if (check.clearByC) sells.push(`${s.name}：${check.note}。规则：清仓${tag}`);
     else if (check.clearByTrend) sells.push(`${s.name}：${check.note}。规则：清仓${tag}`);
     else if (check.halve) sells.push(`${s.name}：${check.note}。规则：减半${tag}`);
+    if (check.unsure) unsure.push(`${s.name}：${check.unsure}`);
     data.push({ code: s.code, name: s.name, weight: p.weight, c: s.c, t: s.t, deduction: s.deduction, e: s.e, margin5: s.margin5, market5: s.market5, mainDays: s.mainDays, main5: s.main5, d20: s.d20, d60: s.d60, provisional: s.provisional, addCap: room.cap, addRoom: room.room, blockedBy: room.blockedBy, sell: check });
   }
   if (!rows.length) out.push("账本里没有持仓。", "");
@@ -127,9 +132,10 @@ export function holdingsSection(board: Board, portfolio: Portfolio, view: Series
   }
   out.push("### 卖出条件核对", "");
   if (sells.length) out.push(...sells.map((s) => `- ${s}`));
-  else out.push("没有持仓触发卖出条件（资金分连续 2 天 ≤1；资金 0 分；收盘跌破 60 日线且 5 日融资为负）。");
+  else out.push(`${unsure.length ? "算得全的持仓里，没有触发卖出条件的" : "没有持仓触发卖出条件"}（资金分连续 2 天 ≤1；资金 0 分；收盘跌破 60 日线且 5 日融资为负）。`);
   out.push("");
-  return { rows: data, sells, lines: out };
+  if (unsure.length) out.push("下面几只缺数据，卖出条件核对不了。不算成立，也不算不成立，数据补上后重算：", "", ...unsure.map((s) => `- ${s}`), "");
+  return { rows: data, sells, unsure, lines: out };
 }
 
 type CandidateRead = { rows: Record<string, unknown>[]; eligible: string[]; lines: string[] };
@@ -147,7 +153,7 @@ export function candidatesSection(board: Board, portfolio: Portfolio, live?: Rec
     // 盘中成交额还没走完，不拿它卡准入
     const why = live ? check.why.filter((w) => !w.startsWith("成交")) : check.why;
     if (!why.length) eligible.push(s.name);
-    return [s.name, s.segment, `${s.c}${s.provisional ? "（初算）" : ""}`, String(s.t), s.deduction ? "−1" : "0", String(s.e), pct(q?.pct ?? s.pct), `${((q?.amount ?? s.amount) / 1e8).toFixed(1)} 亿`, why.length ? `不满足：${why.join("、")}` : "满足"];
+    return [s.name, s.segment, `${s.c}${s.provisional ? "（初算）" : ""}${s.cUnknown ? "（不全）" : ""}`, String(s.t), s.deduction ? "−1" : "0", String(s.e), pct(q?.pct ?? s.pct), `${((q?.amount ?? s.amount) / 1e8).toFixed(1)} 亿`, why.length ? `不满足：${why.join("、")}` : "满足"];
   });
   if (rows.length) out.push(...table(["股票", "环节", "C", "T", "扣分", "E", live ? "盘中涨幅" : "当天涨幅", live ? "盘中成交" : "日成交", "新开仓准入"], rows), "");
   else out.push("没有 E≥4 的候选。", "");
@@ -385,7 +391,8 @@ export function composePre(inputs: Inputs): Digest {
     ...gapsSection(view, board, portfolio.gaps),
   ];
   const push = [...lines.breached, ...hold.sells, ...trig.hits, ...watch.beyond];
-  return digest("pre", inputs, board.asOf, body, push.length ? ["盘前核对，以下条件成立：", ...push.map((p) => `- ${p}`)] : [], {
+  const doubt = hold.unsure.length ? [`另有 ${hold.unsure.length} 只持仓缺数据，卖出条件核对不了：${hold.unsure.map((u) => u.split("：")[0]).join("、")}。`] : [];
+  return digest("pre", inputs, board.asOf, body, [...(push.length ? ["盘前核对，以下条件成立：", ...push.map((p) => `- ${p}`)] : []), ...doubt], {
     marginFinal,
     navIndex: portfolio.navIndex,
     stop: lines.stop,
@@ -465,10 +472,12 @@ export function composeClose(inputs: Inputs): Digest {
     ...gapsSection(view, board, portfolio.gaps),
   ];
   const push = [...lines.breached, ...hold.sells, ...trig.hits, ...watch.beyond];
+  const doubt = hold.unsure.length ? [`另有 ${hold.unsure.length} 只持仓缺数据，卖出条件核对不了：${hold.unsure.map((u) => u.split("：")[0]).join("、")}。`] : [];
   const summary = [
     `净值指数 ${idx(portfolio.navIndex)}，股票 ${share(portfolio.stockWeight)}。`,
-    push.length ? "以下条件成立：" : "卖出条件、三条线、S1–S5、盯线都没有触发。",
+    push.length ? "以下条件成立：" : `${doubt.length ? "核对得了的里面，" : ""}卖出条件、三条线、S1–S5、盯线都没有触发。`,
     ...push.map((p) => `- ${p}`),
+    ...doubt,
     `满足新开仓准入：${cand.eligible.length ? cand.eligible.join("、") : "没有"}。`,
   ];
   return digest("close", inputs, board.asOf, body, summary, {
@@ -532,9 +541,14 @@ export function composeWeekly(inputs: Inputs): Digest {
   const seg = segmentsSection(board, view, inputs.mainline, inputs.mainlinePrevWeek ?? null);
 
   const held = new Set(portfolio.positions.map((p) => p.code));
-  const weak = portfolio.positions.map((p) => board.now[p.code]).filter((s): s is Score => !!s && s.e <= PLAN.rotation.holdMaxE);
+  // 缺数据时 e 是偏低的：补齐后最多到 e + cUnknown。补齐后仍 ≤2 的才算“E≤2”，其余单列为核对不了
+  const low = portfolio.positions.map((p) => board.now[p.code]).filter((s): s is Score => !!s && s.e <= PLAN.rotation.holdMaxE);
+  const weak = low.filter((s) => s.e + s.cUnknown <= PLAN.rotation.holdMaxE);
+  const weakUnsure = low.filter((s) => s.e + s.cUnknown > PLAN.rotation.holdMaxE);
   const strong = sortScores(Object.values(board.now).filter((s) => !held.has(s.code) && s.e === PLAN.rotation.candidateE));
+  const strongUnsure = sortScores(Object.values(board.now).filter((s) => !held.has(s.code) && s.e < PLAN.rotation.candidateE && s.e + s.cUnknown >= PLAN.rotation.candidateE));
   const rotate = weak.length > 0 && strong.length > 0;
+  const rotateUnsure = !rotate && weak.length + weakUnsure.length > 0 && strong.length + strongUnsure.length > 0;
   const body = [
     ...head("weekly", inputs, board.asOf, [`本周 ${weekStart} 至 ${board.asOf}。`]),
     "## 换仓条件（每周五收盘重排）",
@@ -543,7 +557,9 @@ export function composeWeekly(inputs: Inputs): Digest {
     "",
     `- 持仓里 E≤2：${weak.length ? weak.map((s) => `${s.name}（E=${s.e}，C=${s.c}，T=${s.t}）`).join("、") : "没有"}`,
     `- 候选里 E=6：${strong.length ? strong.map((s) => `${s.name}（${s.segment}）`).join("、") : "没有"}`,
-    `- 条件${rotate ? "成立" : "不成立"}${rotate ? "：按规则下周一换仓" : "：按规则不换仓"}。这是初算：周五的融资下周一早间公布，周一 08:40 盘前汇总复核。`,
+    ...(weakUnsure.length ? [`- 持仓里按已有的数 E≤2、补齐后可能超过 2：${weakUnsure.map((s) => `${s.name}（已得 E=${s.e}，缺${s.cUnknownWhy.join("、")}）`).join("、")}。核对不了，不算 E≤2`] : []),
+    ...(strongUnsure.length ? [`- 候选里按已有的数不到 6、补齐后可能到 6：${strongUnsure.map((s) => `${s.name}（已得 E=${s.e}，缺${s.cUnknownWhy.join("、")}）`).join("、")}。核对不了，不算 E=6`] : []),
+    `- 条件${rotate ? "成立：按规则下周一换仓" : rotateUnsure ? "核对不了（缺数据），不算成立；数据补上后重算" : "不成立：按规则不换仓"}。这是初算：周五的融资下周一早间公布，周一 08:40 盘前汇总复核。`,
     "",
     "## 本周环节资金与涨跌（按主力净流入占成交排序）",
     "",

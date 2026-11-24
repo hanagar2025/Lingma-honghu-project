@@ -11,6 +11,9 @@
  *   5 日融资变化 = 最新融资余额 / 5 个交易日前的融资余额 − 1；站上 N 日线 = 收盘价高于最近 N 个收盘价的均值。
  *
  * 数据缺的那一条记 0 分，并写进 gaps，不猜。
+ * 记 0 分对买入是保守的（分不够就不加、不开），对卖出却会凭空造出“资金 0 分”：
+ * 所以另记 cUnknown（有几条是取不到数才没得分的）。卖出条件只在算得全的时候才算成立，算不全就写“核对不了”。
+ * 不是两融标的的股票没有融资数据，那两条是确定的 0 分，不算取不到。
  * 融资余额次日早间才公布：收盘时点算出的资金分用的是前一交易日的融资，标为“初算”。
  */
 import { PLAN } from "./plan.js";
@@ -26,6 +29,10 @@ export type Score = {
   pct: number;
   amount: number;
   c: number;
+  /** 资金分四条里，有几条是因为取不到数才没得分的。0 = 资金分算得全 */
+  cUnknown: number;
+  /** 取不到的是哪几样：主力净流入、融资 */
+  cUnknownWhy: string[];
   marginBeatsMarket: boolean | null;
   marginUp: boolean | null;
   mainDaysOk: boolean | null;
@@ -106,6 +113,10 @@ export function scoreAt(
   const mainDaysOk = mainDays === null ? null : mainDays >= 3;
   const mainSumOk = mainSum === null ? null : mainSum > 0;
   const c = [marginBeatsMarket, marginUp, mainDaysOk, mainSumOk].filter((x) => x === true).length;
+  const noMarginTarget = m < 0;
+  const marginUnknown = noMarginTarget ? 0 : [marginBeatsMarket, marginUp].filter((x) => x === null).length;
+  const mainUnknown = [mainDaysOk, mainSumOk].filter((x) => x === null).length;
+  const cUnknownWhy = [...(mainUnknown ? ["主力净流入"] : []), ...(marginUnknown ? ["融资"] : [])];
   const t = [above20, above60].filter((x) => x === true).length;
 
   // 基本面扣分
@@ -127,6 +138,8 @@ export function scoreAt(
     pct: row.pct,
     amount: row.amount,
     c,
+    cUnknown: marginUnknown + mainUnknown,
+    cUnknownWhy,
     marginBeatsMarket,
     marginUp,
     mainDaysOk,
@@ -194,11 +207,15 @@ export function buildBoard(view: SeriesView, asOf = view.asOf): Board | null {
       }
     }
   }
+  // 某天有股票的资金分算不全、补齐后可能到 E≥5：这一天说不准，不计入也不打断，写进缺口
   let noCandidateDays = 0;
+  let unsureDays = 0;
   for (const day of history) {
     if (!day.length || day.some((s) => s.e >= PLAN.backup.minE)) break;
-    noCandidateDays++;
+    if (day.some((s) => s.e + s.cUnknown >= PLAN.backup.minE)) unsureDays++;
+    else noCandidateDays++;
   }
+  if (unsureDays) gaps.push(`“全链没有一只 E≥5”有 ${unsureDays} 天因为资金分算不全说不准，没有计入连续天数`);
   return { asOf, now, prev, noCandidateDays, gaps };
 }
 
@@ -215,6 +232,8 @@ export type SellCheck = {
   clearByTrend: boolean;
   provisional: boolean;
   note: string;
+  /** 资金分算不全，按已有的数看像是成立、但不能算成立的那几条。null = 都核对得了 */
+  unsure: string | null;
 };
 
 /**
@@ -224,15 +243,25 @@ export type SellCheck = {
  *   “融资在降” = 5 日融资变化为负。
  */
 export function sellCheck(now: Score, prev: Score | undefined): SellCheck {
-  const halve = now.c <= 1 && prev !== undefined && prev.c <= 1;
-  const clearByC = now.c === 0;
+  // 算得全才算成立：c + cUnknown 是补齐数据后资金分最多能到的数
+  const top = (s: Score): number => s.c + s.cUnknown;
+  const halve = top(now) <= 1 && prev !== undefined && top(prev) <= 1;
+  const clearByC = top(now) === 0;
   const crossed = now.above60 === false && prev?.above60 === true;
   const clearByTrend = crossed && now.margin5 !== null && now.margin5 < 0;
   const parts: string[] = [];
   if (clearByC) parts.push("资金 0 分");
   else if (halve) parts.push(`资金分连续 2 天 ≤1（前一日 ${prev!.c}，当日 ${now.c}）`);
   if (crossed) parts.push(`收盘跌破 60 日线，5 日融资 ${now.margin5 === null ? "缺" : `${(now.margin5 * 100).toFixed(1)}%`}`);
-  return { code: now.code, name: now.name, halve: halve && !clearByC, clearByC, clearByTrend, provisional: now.provisional, note: parts.join("；") };
+
+  // 按已有的数看像是成立、但缺数据的
+  const lacking = [...new Set([...now.cUnknownWhy, ...(prev && prev.c <= 1 ? prev.cUnknownWhy : [])])].join("、");
+  const doubt: string[] = [];
+  if (!clearByC && now.c === 0) doubt.push("资金 0 分");
+  if (!halve && !clearByC && now.c <= 1 && prev !== undefined && prev.c <= 1) doubt.push("资金分连续 2 天 ≤1");
+  if (crossed && now.margin5 === null && now.marginDate !== null) doubt.push("收盘跌破 60 日线且融资在降（5 日融资算不出）");
+  const unsure = doubt.length ? `${doubt.join("、")}：缺${lacking || "融资"}数据，资金分已得 ${now.c} 分、另有 ${now.cUnknown} 条算不出，核对不了` : null;
+  return { code: now.code, name: now.name, halve: halve && !clearByC, clearByC, clearByTrend, provisional: now.provisional, note: parts.join("；"), unsure };
 }
 
 export type AddRoom = {
