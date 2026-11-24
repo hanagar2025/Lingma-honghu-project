@@ -36,7 +36,7 @@ die() { printf '✗ %s\n' "$1" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "请以 root 运行"
 [[ "${DOMAIN}" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || die "域名格式不对：${DOMAIN}"
 [[ "${PORT}" =~ ^[0-9]+$ ]] || die "端口必须是数字：${PORT}"
-[ -f "${HERE}/server.mjs" ] && [ -d "${HERE}/web" ] || die "发布包不完整：${HERE} 里缺 server.mjs 或 web/"
+[ -f "${HERE}/server.mjs" ] && [ -d "${HERE}/web" ] && [ -d "${HERE}/py" ] || die "发布包不完整：${HERE} 里缺 server.mjs、web/ 或 py/"
 command -v systemctl >/dev/null 2>&1 || die "这台机器没有 systemd"
 # 系统里没有合适的 Node.js 时，给鸿鹄单独放一份在 /opt/honghu/node，不动系统里的 Node.js：
 # 同一台机器上的别的程序可能依赖它。阿里云镜像在服务器上能连上，GitHub 和 nodejs.org 不一定。
@@ -91,6 +91,12 @@ cp -r "${HERE}/web" "${APP_DIR}/web.new"
 rm -rf "${APP_DIR}/web"
 mv "${APP_DIR}/web.new" "${APP_DIR}/web"
 install -m 644 "${HERE}/server.mjs" "${APP_DIR}/server.mjs"
+# 两个扫描脚本和已有的历史读数。后端运行前会把它们拷到私有数据目录，读数在那里逐日累积
+rm -rf "${APP_DIR}/py.new"
+cp -r "${HERE}/py" "${APP_DIR}/py.new"
+rm -rf "${APP_DIR}/py"
+mv "${APP_DIR}/py.new" "${APP_DIR}/py"
+chmod -R a+rX "${APP_DIR}/py"
 install -m 644 "${HERE}/VERSION" "${APP_DIR}/VERSION"
 chmod -R a+rX "${APP_DIR}/web"
 # Node 若装在 /root 或 /home 下（例如 nvm），服务账号读不到，拷一份到程序目录
@@ -103,6 +109,12 @@ if ! runuser -u "${SERVICE_USER}" -- "${NODE_BIN}" -v >/dev/null 2>&1; then
   note "Node.js 已拷到 ${NODE_BIN}"
 fi
 note "Node.js $("${NODE_BIN}" -v)"
+# 环节排序和全市场扫描是两个 Python 脚本（只用标准库）。没有 Python 时其余功能照常，这两份读数出不来
+if runuser -u "${SERVICE_USER}" -- python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' >/dev/null 2>&1; then
+  note "$(python3 --version 2>&1)"
+else
+  TODO+=("服务器上没有 Python 3.8 以上（或服务账号运行不了它）：环节排序和全市场扫描两份读数出不来，其余照常。装好 python3 即可，不用重装鸿鹄")
+fi
 
 step "三、口令"
 if [ ! -f "${ENV_FILE}" ]; then
@@ -118,6 +130,14 @@ if [ ! -f "${ENV_FILE}" ]; then
   note "已生成两个口令，保存在 ${ENV_FILE}"
 else
   note "沿用已有口令（${ENV_FILE}）"
+fi
+# 汇总机器人的口令是后加的：老的口令文件里没有就补一行，已有的不动
+if ! grep -q '^BOT_TOKEN=' "${ENV_FILE}"; then
+  (
+    umask 077
+    echo "BOT_TOKEN=$("${NODE_BIN}" -e 'process.stdout.write(require("crypto").randomBytes(24).toString("hex"))')" >> "${ENV_FILE}"
+  )
+  note "已生成汇总机器人的口令 BOT_TOKEN"
 fi
 chmod 600 "${ENV_FILE}"
 
@@ -331,3 +351,4 @@ fi
 printf '查看口令（在服务器上）：grep TOKEN %s\n' "${ENV_FILE}"
 printf '  COMMITTEE_TOKEN 是打开页面时输入的口令。\n'
 printf '  AGENT_TOKEN 交给战略侧：在 Cursor 的 Secrets 里存为 HONGHU_AGENT_TOKEN，网址存为 HONGHU_SERVER_URL。\n'
+printf '  BOT_TOKEN 只给定时汇总机器人：部署机器人时存为它自己的密钥 HONGHU_AGENT_TOKEN。它读不到账本。\n'

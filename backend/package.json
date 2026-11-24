@@ -17,7 +17,8 @@
     "valuation:fetch": "tsx src/services/msr/valuationFetch.ts",
     "auth:selftest": "tsx src/services/auth/selftest.ts",
     "brief": "tsx src/services/insight/run.ts",
-    "insight:selftest": "tsx src/services/insight/selftest.ts"
+    "insight:selftest": "tsx src/services/insight/selftest.ts",
+    "chain:selftest": "tsx src/services/chain/selftest.ts"
   },
   "dependencies": {
     "express": "^4.18.2",

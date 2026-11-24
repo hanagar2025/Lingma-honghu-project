@@ -8,6 +8,7 @@
 2. 收件：委员会在页面上交持仓截图、成交记录、下单前的一行字。账本、成交、意向、截图只存在服务器的私有目录里，不进仓库。
 3. 规则指纹：现行规则登记成清单并取指纹，任何改动都会在基线文件的 diff 里显形。
 4. 简报：每个交易日自动取行情、融资余额、美股链条，对照已登记的研究结论，回答四个问题：哪些拿住、哪里有风险、机会闸门开没开、离目标多远。简报不产生买卖指令，指令只来自执行单。
+5. 链上数据与定时汇总：每个交易日把 AI 主线 15 个环节核心股的日线、主力资金、融资余额、最新业绩拉下来累积；到点由汇总机器人算分、排序、核对规则条件，推到页面。只算数，不做判断，不下单。见下面「链上数据与定时汇总」。
 
 ## 目录
 
@@ -19,6 +20,8 @@
 | `backend/src/services/insight/` | 简报：已登记的结论（`config.ts`）、机会闸门六项前提、目标进度、预判对照 |
 | `backend/src/services/scoreboard/` | 记分牌：净值对照不交易、执行差、交易记分 |
 | `backend/src/services/scheduler.ts` | 定时推送 |
+| `backend/src/services/chain/` | 链上数据：拉取与累积、盯线、调用两个扫描脚本、汇总的收件与留存 |
+| `agents/honghu-digest/` | 汇总机器人（Cursor 托管的 Agent SDK 项目，独立的 `package.json`） |
 | `backend/src/services/governance/` | 规则登记册与基线、峰值口径 |
 | `backend/src/services/msr/` | 四条主线名单；估值分位（只用于排序） |
 | `backend/src/index.ts` | 服务器 |
@@ -35,6 +38,7 @@ npm run selftest                          # 执行单与输入框自检
 npm -w backend run decision:regress       # 用历史执行单验收现在的代码
 npm -w backend run freeze:check           # 规则指纹与基线比对
 npm run decision                          # 出一张执行单（定时任务用）
+npm -w backend run chain:selftest         # 链上数据、盯线、汇总留存自检（离线）
 PORTFOLIO=<账本路径> npm -w backend run brief   # 在本机打印执行单推送稿与简报
 ```
 
@@ -62,7 +66,8 @@ DEPLOY_HOST=<服务器公网地址> DOMAIN=<域名> DEPLOY_KEY=<登录私钥路�
 |---|---|
 | `/opt/honghu` | 程序（一个后端文件加页面） |
 | `/var/lib/honghu` | 私有数据：账本、成交、意向、截图。只有服务账号能读 |
-| `/etc/honghu.env` | 两个口令，第一次安装时生成。只有 root 能读 |
+| `/opt/honghu/py` | 两个扫描脚本原件和已有的历史读数。需要服务器上有 Python 3.8 以上，没有时这两份读数出不来，其余照常 |
+| `/etc/honghu.env` | 三个口令（委员会、战略侧、汇总机器人），第一次安装时生成；老的口令文件里没有机器人口令时补一行。只有 root 能读 |
 | `honghu.service` | 系统服务，只监听本机端口 5080 |
 | nginx 或 Caddy 的站点配置 | 把域名接到本机端口。接到正在占用 80/443 的那一个上；两个都没有时装 Caddy |
 
@@ -92,6 +97,77 @@ DEPLOY_HOST=<服务器公网地址> DOMAIN=<域名> DEPLOY_KEY=<登录私钥路�
 截图识别的结果和人工识别走同一条路：必须过勾稽核对，并且由委员会在页面上确认，账本才更新。
 
 简报里的结论、闸门参数、预判都登记在 `backend/src/services/insight/config.ts`，写明出处与登记日期。季报后由战略侧更新，改动走 PR。闸门参数取自《分段重建计划》草案（未生效）；去杠杆三信号的阈值裁定之前，闸门不会打开。
+
+## 链上数据与定时汇总
+
+分工：后端管数据，机器人管到点汇总，判断和决定由策略方写，委员会查看和否决，下单由委员会本人操作。系统不下单。
+
+环节和核心股以 `scripts/ai-mainline-map.py` 为准，`scripts/chain-universe.py` 把它导出成 `backend/src/services/chain/data/universe.json`，CI 核对两边一致。打分口径是《半年计划》第二节，S1–S5 五个切换条件只读脚本输出的 `triggers`，汇总层不另算一套。
+
+后端自己到点做的事（北京时间，交易日）：
+
+| 时间 | 做什么 |
+|---|---|
+| 08:20 起 | 拉上一交易日的融资余额（交易所盘后公布），没出来就每 10 分钟再试 |
+| 09:30–15:00 | 每 5 分钟核一次已登记的线，第一次越线时推送一条 |
+| 11:35 | 拉午间快照：现价、成交额、上午主力净流入 |
+| 15:35 | 拉当日日线和主力资金，随后运行 `ai-mainline-map.py` |
+| 16:22 | 运行 `market-scan.py`（全市场，十来分钟） |
+| 各汇总时点后 15 分钟 | 该到的汇总没到，推送一条提醒 |
+
+数据存在私有目录 `<DATA_DIR>/chain/`，按股票逐日追加，已有的日期不改写。免费来源（东方财富、新浪、腾讯）没有服务等级保证：主力资金只有一个来源，无法交叉核对；收盘价用腾讯做第二来源，对不上的记在缺口里随汇总一起显示。
+
+汇总机器人的时点（北京时间）：
+
+| 时点 | 内容 |
+|---|---|
+| 08:40 盘前 | 融资公布后资金分定稿，持仓逐只对卖出条件，候选对入场条件，三条线 |
+| 11:40 午间 | 上午主力流向、现价对均线、已登记的线 |
+| 16:20 收盘 | 当日资金分（融资未公布，标为初算）、环节排序、S1–S5 |
+| 16:40 全市场扫描 | `market-scan.py` 的结果 |
+| 周五 16:50 周度 | 环节周度排序、换仓条件核对 |
+
+机器人在本机试跑（不需要 Cursor 凭证，只算不推）：
+
+```bash
+cd agents/honghu-digest && npm ci
+npm run selftest                          # 打分、规则核对、五份汇总，全部离线
+HONGHU_SERVER_URL=http://127.0.0.1:5000 HONGHU_AGENT_TOKEN=<本机后端的 BOT_TOKEN> npm run digest -- close --dry
+```
+
+去掉 `--dry` 就推到页面。部署到 Cursor 托管由委员会在自己的电脑上做，口令在隐藏提示里粘贴，不写进代码、日志和对话：
+
+```bash
+cd agents/honghu-digest
+npx agent-sdk login
+npx agent-sdk deploy
+npx agent-sdk secret set honghu-digest HONGHU_AGENT_TOKEN   # 粘贴服务器 /etc/honghu.env 里 BOT_TOKEN 的值
+```
+
+口令的权限：
+
+| 口令 | 能做什么 |
+|---|---|
+| `BOT_TOKEN`（机器人） | 读链上数据、仓位占比和净值指数；推汇总。读不到账本、成交、截图 |
+| `AGENT_TOKEN`（战略侧） | 另可登记盯线和供给冲击、对汇总写决定；机器人缺席时手动补推汇总 |
+| `COMMITTEE_TOKEN`（委员会） | 另可否决、设净值基准 |
+
+给机器人的接口里只有占比和净值指数，没有股数和金额；带这些字段的汇总后端拒收。净值指数的基准（100 对应的那一天）由委员会用自己的口令设一次，金额只落在服务器上：
+
+```bash
+curl -X PUT https://<域名>/api/chain/base -H "Authorization: Bearer <委员会口令>" -H 'Content-Type: application/json' -d '{"totalAssets": <基准日总资产>, "at": "<基准日>"}'
+```
+
+盯线和供给冲击由策略方登记（整组替换），每条都要写规则原文的动作和出处：
+
+```bash
+curl -X PUT https://<域名>/api/chain/watch -H "Authorization: Bearer <战略侧口令>" -H 'Content-Type: application/json' \
+  -d '{"lines":[{"code":"688981","name":"中芯国际","basis":"close","op":"below","level":"ma60","and":"margin_down","action":"清仓","source":"半年计划第三节"}]}'
+curl -X PUT https://<域名>/api/chain/flags -H "Authorization: Bearer <战略侧口令>" -H 'Content-Type: application/json' \
+  -d '{"flags":[{"code":"688041","name":"海光信息","reason":"供给冲击","source":"半年计划第二节","since":"2026-11-20"}]}'
+```
+
+已验证与未验证：拉取、打分、五份汇总、机器人定时任务到工具的调用，在开发机上对真实行情和本机后端跑通过。大陆服务器访问这几个来源、服务器上的 Python、Cursor 托管到域名的连通，没有验证过。
 
 ## 输入框怎么写
 

@@ -1,10 +1,11 @@
 /**
- * 页面登录。三把钥匙都对应委员会，另有一把给战略侧：
+ * 页面登录。三把钥匙都对应委员会，另有一把给战略侧、一把给定时汇总的 bot：
  *
  *   好记的口令   委员会在页面上自己设，至少 6 个字。只存加盐散列。
  *   登录链接     一串随机长码，放在链接 # 后面，扫码即登录。可以作废重发。
  *   安装口令     安装时生成、写在 /etc/honghu.env 里的长口令。页面上的设置弄丢时用它恢复。
  *   战略侧口令   同上，只能读取和交回识别结果。
+ *   bot 口令     服务器环境变量 BOT_TOKEN（汇总机器人那边存成 HONGHU_AGENT_TOKEN）。只能读行情类数据、占比和净值指数，写定时汇总；读不到账本、成交和截图。
  *
  * 好记的口令短，靠限次守住：所有来源合计一小时内答错满 30 次，好记的口令暂停生效，
  * 登录链接和安装口令照常可用。单一来源的限次在服务器入口另算。
@@ -12,7 +13,7 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 
-export type Role = 'COMMITTEE' | 'AGENT'
+export type Role = 'COMMITTEE' | 'AGENT' | 'BOT'
 
 export const PASSWORD_MIN = 6
 export const PASSWORD_MAX = 64
@@ -54,11 +55,12 @@ export class Auth {
 
   constructor(
     private readonly file: string,
-    tokens: { committee: string; agent?: string },
+    tokens: { committee: string; agent?: string; bot?: string },
     private readonly now: () => number = Date.now,
   ) {
     this.exact = [['COMMITTEE', digest(tokens.committee)]]
     if (tokens.agent) this.exact.push(['AGENT', digest(tokens.agent)])
+    if (tokens.bot) this.exact.push(['BOT', digest(tokens.bot)])
     if (existsSync(file)) {
       this.data = JSON.parse(readFileSync(file, 'utf-8')) as AuthFile
     } else {

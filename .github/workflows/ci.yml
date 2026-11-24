@@ -38,6 +38,12 @@ jobs:
 
       - name: Insight selftest (简报、记分牌、定时推送、自动识别)
         run: npm -w backend run insight:selftest
+      # 守：名单同 scripts/ai-mainline-map.py 一致；数据只增不改；给 bot 的只有占比和指数；
+      # bot 口令读不到账本；决定只有策略方能写、否决只有委员会能做；脚本原样调用。
+      - name: Chain selftest (链上数据、盯线、定时汇总留存)
+        run: npm -w backend run chain:selftest
+      - name: Chain universe matches scripts/ai-mainline-map.py
+        run: python3 scripts/chain-universe.py --check
       # 生产分支上已经发出的执行单，现在的代码必须逐字重现。
       # 有意修改执行单版式时这一步会失败，那时须在 PR 里写明改了什么。
       - name: Historical card regression (历史执行单逐字重现)
@@ -75,3 +81,31 @@ jobs:
       # 发布包必须不靠仓库里的 node_modules 自己跑起来：服务器上没有 npm。
       - name: Package + smoke (发布包试跑)
         run: node scripts/package-server.mjs --smoke
+
+  digest-bot:
+    name: Digest bot (typecheck + selftest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agents/honghu-digest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-22-${{ hashFiles('agents/honghu-digest/package-lock.json') }}
+      - name: Install
+        run: npm ci --no-audit --progress=false
+      - name: Typecheck
+        run: npm run check
+      # 守：打分照 half-year-plan 第二节；S1–S5 只读脚本的 triggers；汇总里没有股数和金额；休市不出；
+      # 五个定时任务换成北京时间是 08:40、11:40、16:20、16:40、周五 16:50。全部离线，不需要任何口令。
+      - name: Selftest (打分、规则核对、五份汇总)
+        run: npm run selftest
+      - name: Project layout (agent-sdk validate)
+        run: npm run validate

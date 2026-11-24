@@ -1,0 +1,21 @@
+{
+  "name": "honghu-digest",
+  "private": true,
+  "type": "module",
+  "description": "鸿鹄定时汇总：固定时点读取 muscap.me 的链上数据，算分、排序、核对触发条件，把结果推回小程序。不下单。",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "selftest": "tsx bot/lib/selftest.ts",
+    "digest": "tsx bot/lib/cli.ts",
+    "validate": "agent-sdk validate --dir .",
+    "dev": "agent-sdk dev"
+  },
+  "dependencies": {
+    "@grok/agent-sdk": "^0.7.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "6.0.3"
+  }
+}

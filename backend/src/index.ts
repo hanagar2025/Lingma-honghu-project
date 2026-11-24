@@ -8,6 +8,9 @@
  *   DATA_DIR         私有数据目录（必填，放在仓库之外）
  *   COMMITTEE_TOKEN  安装口令（必填，至少 16 位）。页面上另可设好记的口令和登录链接，见 services/auth
  *   AGENT_TOKEN      战略侧读取与交回识别结果用的口令（选填，至少 16 位）
+ *   BOT_TOKEN        汇总机器人的口令（选填，至少 32 位）。只能读链上数据、占比和净值指数，只能写汇总；读不到账本。
+ *                    在 Cursor 托管的机器人那边，它存成密钥 HONGHU_AGENT_TOKEN
+ *   HONGHU_CHAIN     设为 off 时不拉链上数据（缺省开启）
  *   PORT             缺省 5000
  *   推送通道与截图识别服务的密钥由委员会在页面「设置」里填，存在 DATA_DIR/settings.json；
  *   也可以用环境变量 PUSHPLUS_TOKEN、BARK_URL、WECOM_WEBHOOK、SERVERCHAN_SENDKEY、VISION_API_KEY 等给缺省值。
@@ -26,6 +29,8 @@ import { beijingToday } from './services/dailyDecision/ledger'
 import { produceCard, type ProducedCard } from './services/dailyDecision/produce'
 import type { DayRange } from './services/intake/reconcile'
 import { attachParsed, autoRecognize, confirm, reject, submitImage, submitText, type IntakeContext } from './services/intake/service'
+import { mountChain } from './services/chain/routes'
+import { ChainService } from './services/chain/service'
 import { beijingStamp, Store } from './services/intake/store'
 import type { Submission } from './services/intake/types'
 import { isTradingToday, SLOTS, startScheduler, type Slot } from './services/scheduler'
@@ -46,6 +51,7 @@ const settings = new Settings(store)
 const authority = new Auth(join(DATA_DIR, 'auth.json'), {
   committee: requireEnv('COMMITTEE_TOKEN', 16),
   agent: process.env.AGENT_TOKEN?.trim() ? requireEnv('AGENT_TOKEN', 16) : undefined,
+  bot: process.env.BOT_TOKEN?.trim() ? requireEnv('BOT_TOKEN', 32) : undefined,
 })
 
 /** 同一来源连续答错口令的次数。超过上限后锁 10 分钟 */
@@ -319,6 +325,23 @@ app.get('/api/records', auth('AGENT', 'COMMITTEE'), (_req, res) => {
   res.json({ ledger: store.readLedger(), trades: store.readLog('trades'), intents: store.readLog('intents') })
 })
 
+/** 链上数据与定时汇总。推送沿用页面「设置」里填的通道 */
+async function notify(title: string, body: string): Promise<void> {
+  if (!settings.pushConfigured) return
+  const site = store.readDoc<{ url: string }>('site')?.url
+  const results = await pushAll(title, site ? `${body}\n\n全文：${site}` : body, settings.pushEnv())
+  for (const r of results) process.stdout.write(`推送（${title}）${r.channel}：${r.ok ? '成功' : `失败 ${r.detail.slice(0, 120)}`}\n`)
+}
+const chain = new ChainService({
+  dataDir: DATA_DIR,
+  readLedger: () => store.readLedger(),
+  notify,
+  isTrading: now => isTradingToday(now),
+  log: line => process.stderr.write(`${line}\n`),
+})
+chain.init()
+mountChain(app, { auth, chain, isTrading: now => isTradingToday(now), notify })
+
 const WEB_DIR = resolve(process.env.WEB_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'frontend', 'dist'))
 if (existsSync(join(WEB_DIR, 'index.html'))) {
   app.use(express.static(WEB_DIR, {
@@ -346,3 +369,5 @@ startScheduler({
   run: runSlot,
   log: line => process.stderr.write(`${line}\n`),
 })
+
+if (process.env.HONGHU_CHAIN !== 'off') chain.start()

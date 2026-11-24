@@ -7,7 +7,7 @@
     "build": "npm run build --workspace frontend",
     "start": "npm run start --workspace backend",
     "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend",
-    "selftest": "npm run decision:daily:selftest --workspace backend && npm run intake:selftest --workspace backend && npm run auth:selftest --workspace backend && npm run insight:selftest --workspace backend",
+    "selftest": "npm run decision:daily:selftest --workspace backend && npm run intake:selftest --workspace backend && npm run auth:selftest --workspace backend && npm run insight:selftest --workspace backend && npm run chain:selftest --workspace backend",
     "decision": "npm run decision:daily --workspace backend"
   },
   "workspaces": [
