@@ -99,3 +99,4 @@ date,session,trigger,planned,started,delay_min,card_step,pushed,run_id
 2026-11-25,pre,schedule,07:00,2026-11-25 07:07:05,7,success,1,45507123060
 2026-11-25,intra,schedule,13:30,2026-11-25 13:31:49,2,success,1,45554204136
 2026-11-25,post,schedule,15:40,2026-11-25 15:40:56,1,success,1,45570034733
+2026-11-26,pre,schedule,07:00,2026-11-26 07:07:39,8,success,1,45718877768
