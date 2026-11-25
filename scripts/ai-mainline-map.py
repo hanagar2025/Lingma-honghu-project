@@ -15,6 +15,7 @@ import glob
 import json
 import os
 import statistics
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -72,6 +73,11 @@ def get(url, referer, tries=5):
         if 'eastmoney' in url:
             time.sleep(EM_PAUSE)
         try:
+            if '.push2' in url or '//push2' in url:
+                # 东方财富 push2 系列接口对 urllib 直接断连，curl 可用
+                out = subprocess.run(['curl', '-s', '-m', '20', '-A', 'Mozilla/5.0', '-H', 'Referer: ' + referer, url],
+                                     capture_output=True, check=False).stdout
+                return json.loads(out)
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0', 'Referer': referer})
             return json.loads(urllib.request.urlopen(req, timeout=20).read())
         except Exception as e:  # noqa: BLE001
@@ -98,6 +104,20 @@ def tencent_kline(c, n):
     name = ((d.get('qt') or {}).get(sym) or [None, c])[1]
     # 腾讯成交额单位为万元，换成元，与东方财富资金流同一单位
     return name, [(r[0], float(r[2]), float(r[8]) * 1e4) for r in rows if len(r) > 8 and r[8] and (LAST is None or r[0] <= LAST)]
+
+
+def em_flow5_batch(codes):
+    """push2his 不通时的退路：东方财富行情接口的 5 日主力累计（f164，含当天），只有 5 日，没有 20 日"""
+    out = {}
+    for i in range(0, len(codes), 50):
+        part = codes[i:i + 50]
+        try:
+            d = get('https://push2delay.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f12,f164,f124&secids=' + ','.join(secid(c) for c in part),
+                    'https://data.eastmoney.com/', tries=3)['data']['diff']
+            out.update({x['f12']: x['f164'] for x in d if isinstance(x.get('f164'), (int, float))})
+        except Exception:  # noqa: BLE001
+            pass
+    return out
 
 
 def fetch_kline(c, lmt=70):
@@ -156,6 +176,7 @@ def daily():
         K = dict(zip(codes, ex.map(fetch_kline, codes)))
         F = dict(zip(codes, ex.map(em_flow, codes)))
         M = dict(zip(codes, ex.map(margin_safe, codes)))
+    F5 = em_flow5_batch([c for c in codes if F[c] is None]) if sum(F[c] is None for c in codes) * 2 >= len(codes) else {}
     try:
         rep = em_report('RPT_LICO_FN_CPD', 'SECURITY_CODE,REPORTDATE,YSTZ,SJLTZ', '(SECURITY_CODE in ("' + '","'.join(codes) + '"))', 'REPORTDATE', 500, 3)
     except Exception:  # noqa: BLE001
@@ -166,7 +187,7 @@ def daily():
     if not any(K.values()):
         sys.exit('日线两家都取不到，停止')
     last = max(k[1][-1][0] for k in K.values() if k)
-    missing = {'kline': [], 'kline_backup': [], 'flow': [], 'margin': [], 'earnings': rep is None}
+    missing = {'kline': [], 'kline_backup': [], 'flow': [], 'flow5_only': [], 'margin': [], 'earnings': rep is None}
     stocks = {}
     for c in codes:
         if not K[c] or K[c][1][-1][0] != last:
@@ -176,7 +197,7 @@ def daily():
         if source != '东方财富':
             missing['kline_backup'].append(name)
         if F[c] is None:
-            missing['flow'].append(name)
+            (missing['flow5_only'] if c in F5 else missing['flow']).append(name)
         if M[c] is None:
             missing['margin'].append(name)
         F[c], M[c] = F[c] or {}, M[c] or {}
@@ -189,9 +210,9 @@ def daily():
         stocks[c] = {
             'name': name, 'd20': cl[-1] / ma20 - 1, 'd60': None if ma60 is None else cl[-1] / ma60 - 1,
             'r5': cl[-1] / cl[-6] - 1, 'r20': cl[-1] / cl[-21] - 1, 'vol': statistics.mean(amt[-5:]) / statistics.mean(amt[-20:]),
-            'main5': sum(x for x in fl[-5:] if x) / sum(amt[-5:]) if None not in fl[-5:] else None,
+            'main5': sum(x for x in fl[-5:] if x) / sum(amt[-5:]) if None not in fl[-5:] else (F5[c] / sum(amt[-5:]) if c in F5 else None),
             'main20': sum(x for x in fl if x) / sum(amt[-20:]) if None not in fl else None,
-            'main5_raw': sum(x for x in fl[-5:] if x) if None not in fl[-5:] else None, 'main20_raw': sum(x for x in fl if x) if None not in fl else None,
+            'main5_raw': sum(x for x in fl[-5:] if x) if None not in fl[-5:] else F5.get(c), 'main20_raw': sum(x for x in fl if x) if None not in fl else None,
             'amt5': sum(amt[-5:]), 'amt20': sum(amt[-20:]),
             'mg_now': mg[-1] if mg else None, 'mg5': mg[-6] if len(mg) >= 6 else None, 'mg20': mg[0] if len(mg) >= 21 else None,
             'margin5': mg[-1] / mg[-6] - 1 if len(mg) >= 6 else None, 'margin20': mg[-1] / mg[0] - 1 if len(mg) >= 21 else None,
@@ -207,9 +228,13 @@ def daily():
         okf = [s for s in ss if s['main20_raw'] is not None]
         if len(okf) * 2 < len(cs):
             okf = []
+        okf5 = [s for s in ss if s['main5_raw'] is not None]
+        if len(okf5) * 2 < len(cs):
+            okf5 = []
         okm = [s for s in ss if s['mg20'] and s['mg5']]
         segs[seg] = {
-            'n': len(ss), 'main_cov': f'{len(okf)}/{len(cs)}', 'main5': sum(s['main5_raw'] for s in okf) / sum(s['amt5'] for s in okf) if okf else None,
+            'n': len(ss), 'main_cov': f'{len(okf)}/{len(cs)}' + (f'（5 日 {len(okf5)}/{len(cs)}）' if len(okf5) != len(okf) else ''),
+            'main5': sum(s['main5_raw'] for s in okf5) / sum(s['amt5'] for s in okf5) if okf5 else None,
             'main20': sum(s['main20_raw'] for s in okf) / sum(s['amt20'] for s in okf) if okf else None,
             'margin5': sum(s['mg_now'] for s in okm) / sum(s['mg5'] for s in okm) - 1 if okm else None,
             'margin20': sum(s['mg_now'] for s in okm) / sum(s['mg20'] for s in okm) - 1 if okm else None,
@@ -229,7 +254,7 @@ def daily():
         rs = [v['rank_' + k] for k in keys if v['rank_' + k]]
         v['score'] = statistics.mean(rs) if rs else 99
         pos = [v[k] is not None and v[k] > 0 for k in keys]
-        v['flow'] = '缺' if v['main5'] is None and v['main20'] is None else '累积' if all(pos) else '流出' if not any(pos) else ('偏累积' if sum(pos) >= 3 else '偏流出' if sum(pos) <= 1 else '分歧')
+        v['flow'] = '缺' if v['main20'] is None else '累积' if all(pos) else '流出' if not any(pos) else ('偏累积' if sum(pos) >= 3 else '偏流出' if sum(pos) <= 1 else '分歧')
     ranking = sorted(segs, key=lambda s: segs[s]['score'])
     flow_ok = sum(1 for x in stocks.values() if x['main20'] is not None) >= len(stocks) / 2
     missing['ranking_from'], missing['flow_short'] = None, not flow_ok
@@ -297,6 +322,7 @@ def run_daily():
         ('日线两家都取不到（不计入）：' + '、'.join(missing['kline'])) if missing['kline'] else '',
         ('日线改用腾讯：' + '、'.join(missing['kline_backup'])) if missing['kline_backup'] else '',
         ('主力净流入缺：' + '、'.join(missing['flow'])) if missing['flow'] else '',
+        (f"主力日线缺 {len(missing['flow5_only'])} 只，5 日累计改用东方财富行情接口，20 日缺") if missing.get('flow5_only') else '',
         ('融资缺：' + '、'.join(missing['margin'])) if missing['margin'] else '',
         '业绩缺' if missing['earnings'] else '',
         ((f"主力数据过半缺失，排序沿用 {missing['ranking_from']} 的排序" if missing['ranking_from'] else '主力数据过半缺失，此前无存档可沿用，排序按趋势与融资')
