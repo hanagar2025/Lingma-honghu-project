@@ -29,6 +29,8 @@ import { findRenderedResearchLeaks } from './researchIsolation'
 import { LEFT_RADAR } from '../moneyRadar/config'
 import { COMBAT_MAINLINE_IDS, MAINLINES, RESEARCH_ONLY_MAINLINE_IDS, findMember } from '../msr/universe'
 import { simulationProducesAction } from '../simulation/ma60'
+import { leadLagProducesAction } from '../simulation/cycleLeadLag'
+import { cycleProducesAction } from '../cycle/package'
 import { loadLadderLedger } from '../ladder/ledger'
 import { buildLadder, buyPermissionOf, ladderProducesAction } from '../ladder/registry'
 import { renderLadder } from '../ladder/render'
@@ -228,23 +230,23 @@ export function runAudit({ portfolio, view, asOf }: AuditInput): AuditCheck[] {
     lv5Open.map(e => e.name).join('、') || '第 5 级为空（检查空转）')
   const entries = ['dailyDecision/run.ts', 'cockpit/run.ts'].map(f => join(SERVICES, f))
   const chain = new Set(entries.flatMap(e => [...closure(e)]).map(rel))
-  const forbidden = [...chain].filter(f => /^(ladder|simulation|moneyRadar)\//.test(f))
+  const forbidden = [...chain].filter(f => /^(ladder|simulation|moneyRadar|cycle)\//.test(f))
   const researchInChain = [...chain].filter(f => f.startsWith('research/')).length
-  add('NO_HIDDEN_BUY', 'STATIC', '执行单调用链（dailyDecision/run.ts 与 cockpit/run.ts 的全部传递依赖）不含名单主表、模拟层、资金哨兵',
+  add('NO_HIDDEN_BUY', 'STATIC', '执行单调用链（dailyDecision/run.ts 与 cockpit/run.ts 的全部传递依赖）不含名单主表、模拟层、资金哨兵、周期监控',
     forbidden.length === 0, forbidden.length ? forbidden.join('、')
       : `调用链 ${chain.size} 个模块；其中 ${researchInChain} 个研究模块是驾驶舱的阅读区，由 8/16 研究层隔离的行为证明覆盖（audit:selftest）`)
   const actionDirs = ['dailyDecision', 'cockpit', 'decision', 'tios', 'msr']
   const leaks = actionDirs.flatMap(d => tsFiles(join(SERVICES, d)))
-    .filter(f => localImports(f).some(i => /^(ladder|simulation)\//.test(rel(i))))
-  add('NO_HIDDEN_BUY', 'STATIC', '执行单、驾驶舱、决策层、交易操作系统、MSR 都不 import 名单主表与模拟层', leaks.length === 0, leaks.map(rel).join('、'))
+    .filter(f => localImports(f).some(i => /^(ladder|simulation|cycle)\//.test(rel(i))))
+  add('NO_HIDDEN_BUY', 'STATIC', '执行单、驾驶舱、决策层、交易操作系统、MSR 都不 import 名单主表、模拟层与周期监控', leaks.length === 0, leaks.map(rel).join('、'))
   const buyIn = cardInput({ actions: [action('300394', '天孚通信', 'BUY', 'NEW_ENTRY'), action('688256', '寒武纪', 'BUY', 'NEW_ENTRY')] })
   const buyCard = buildCard(buyIn, verified(buyIn), 'POST_CLOSE', { orders: [] })
   add('NO_HIDDEN_BUY', 'BEHAVIOR', '即使驾驶舱给出买入动作且买入未锁，执行单也不出买入行（只写「规模由委员会定，未定前不买」）',
     buyCard.lines.every(l => l.side === 'SELL') && !/买入 \S+ \d+ 股/.test(buyCard.markdown))
   const outputs = ['share/decision/latest.md', 'share/decision/latest.json'].map(f => join(ROOT, f)).filter(existsSync)
-  const markers = ['名单主表', 'L-01', 'SIM-MA60', 'MA60 模拟对照', '只观察，不具备建仓权限', '战略冻结期', '左侧雷达', '资金哨兵']
+  const markers = ['名单主表', 'L-01', 'SIM-MA60', 'MA60 模拟对照', '只观察，不具备建仓权限', '战略冻结期', '左侧雷达', '资金哨兵', 'CY-01', '周期拐点', 'SIM-LEADLAG']
   const hit = outputs.flatMap(f => markers.filter(m => readFileSync(f, 'utf-8').includes(m)).map(m => `${relative(ROOT, f)}:${m}`))
-  add('NO_HIDDEN_BUY', 'DATA', '最近一次执行单输出不含名单主表、模拟层、雷达锁的字样', outputs.length > 0 && hit.length === 0,
+  add('NO_HIDDEN_BUY', 'DATA', '最近一次执行单输出不含名单主表、模拟层、雷达锁、周期监控的字样', outputs.length > 0 && hit.length === 0,
     outputs.length ? (hit.join('、') || `${outputs.length} 个文件`) : '找不到执行单输出')
   add('NO_HIDDEN_BUY', 'STATIC', '隔离表已登记名单主表与模拟层的字样，执行单出现即判泄漏',
     findRenderedResearchLeaks('{"x":"名单主表"}').length > 0 && findRenderedResearchLeaks('{"x":"MA60 模拟对照"}').length > 0)
@@ -271,7 +273,8 @@ export function runAudit({ portfolio, view, asOf }: AuditInput): AuditCheck[] {
   const simUsers = tsFiles(SERVICES).filter(f => !rel(f).startsWith('simulation/') && rel(f) !== 'governance/ladderAudit.ts')
     .filter(f => localImports(f).some(i => rel(i).startsWith('simulation/'))).map(rel)
   add('NO_AUTO_SELL', 'STATIC', 'MA60 模拟层没有被任何业务模块引用', simUsers.length === 0, simUsers.join('、'))
-  add('NO_AUTO_SELL', 'STATIC', '模拟层、名单主表声明不产生动作', simulationProducesAction() === false && ladderProducesAction() === false)
+  add('NO_AUTO_SELL', 'STATIC', '模拟层（MA60、领先期检验）、名单主表、周期监控声明不产生动作',
+    simulationProducesAction() === false && leadLagProducesAction() === false && ladderProducesAction() === false && cycleProducesAction() === false)
   const momentum = readFileSync(join(SERVICES, 'cockpit', 'momentum.ts'), 'utf-8')
   add('NO_AUTO_SELL', 'STATIC', '8/13 裁定仍生效：持仓势能模块不 import 动作构造器',
     !/import[^\n]*\b(makeAction|evaluateActions)\b/.test(momentum))

@@ -83,6 +83,13 @@ jobs:
         run: npm -w backend run sim:selftest
       - name: Money sentinel selftest (左侧雷达权限锁)
         run: npm -w backend run money:selftest
+      # 守 CY-01：证据包不给 C0–C3、节点独立、缺数据中性、事实与解读分栏；研判八项齐全、先落档后看结果、只增不改。
+      - name: Cycle monitor selftest (CY-01 证据包与研判记录)
+        run: npm -w backend run cycle:selftest
+      - name: Cycle archive check (指纹、哈希链、引用、时序、git 只增不改)
+        run: npm -w backend run cycle:check
+      - name: Lead-lag simulation selftest (领先期检验不宣布规律)
+        run: npm -w backend run sim:leadlag:selftest
       - name: Full-chain audit (无重复名单、无越级、无隐藏买入权限、无未批准自动卖出)
         run: npm -w backend run ladder:audit
       # 打印规则指纹并与冻结基线比对。漂移时**不失败** —— 否则会有人顺手更新基线
