@@ -8,11 +8,12 @@
 //   node scripts/package-server.mjs --smoke   打包后在本机起一次服务，确认包能跑
 //
 // 包里有：server.mjs（后端）、web/（页面）、install.sh（服务器上的安装脚本）、
-// seed-ledger.json（仓库里的旧账本，首次安装时作为峰值与口径的种子）、VERSION。
+// seed-ledger.json（仓库里的旧账本，首次安装时作为峰值与口径的种子）、VERSION、
+// py/（两个扫描脚本原件和已有的历史读数；后端到点调用它们，需要服务器上有 Python 3.8 以上）。
 
 import { build } from 'esbuild'
 import { execFileSync, spawn } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -65,6 +66,18 @@ const seed = join(ROOT, 'backend', 'src', 'services', 'dailyDecision', 'data', '
 if (existsSync(seed)) cpSync(seed, join(OUT, 'seed-ledger.json'))
 writeFileSync(join(OUT, 'VERSION'), `${version}\n`)
 
+// 扫描脚本原样带上，一个字不改；历史读数只带按日期存的那些，连续天数靠它们接续
+const PY_SCRIPTS = ['ai-mainline-map.py', 'market-scan.py']
+const PY_DATA = [['战略组合2026-2030', '数据', 'AI主线'], ['战略组合2026-2030', '数据', '全市场扫描']]
+mkdirSync(join(OUT, 'py', 'scripts'), { recursive: true })
+for (const f of PY_SCRIPTS) cpSync(join(ROOT, 'scripts', f), join(OUT, 'py', 'scripts', f))
+for (const parts of PY_DATA) {
+  const from = join(ROOT, ...parts)
+  mkdirSync(join(OUT, 'py', ...parts), { recursive: true })
+  if (!existsSync(from)) continue
+  for (const f of readdirSync(from).filter(n => /^\d{4}-\d{2}-\d{2}\.json$/.test(n))) cpSync(join(from, f), join(OUT, 'py', ...parts, f))
+}
+
 const tarball = join(RELEASE, `honghu-${version}.tar.gz`)
 // COPYFILE_DISABLE 和 --no-xattrs：不让 macOS 的 tar 往包里塞 ._ 属性文件和扩展属性，
 // 否则服务器上解包时每个文件报一行 Ignoring unknown extended header keyword
@@ -75,10 +88,12 @@ if (process.argv.includes('--smoke')) {
   const data = mkdtempSync(join(tmpdir(), 'honghu-smoke-'))
   const port = 20000 + Math.floor(Math.random() * 20000)
   const token = 'smoke-test-token-0000000001'
+  const botToken = 'smoke-test-bot-token-000000000000000001'
   // 从包目录之外启动，且不带仓库的 node_modules：确认这个文件自己就能跑
   const child = spawn(process.execPath, [join(OUT, 'server.mjs')], {
     cwd: data,
-    env: { PATH: process.env.PATH, DATA_DIR: data, COMMITTEE_TOKEN: token, PORT: String(port), WEB_DIR: join(OUT, 'web') },
+    // HONGHU_CHAIN=off：试跑不去拉行情，只确认接口和随包的脚本在
+    env: { PATH: process.env.PATH, DATA_DIR: data, COMMITTEE_TOKEN: token, BOT_TOKEN: botToken, HONGHU_CHAIN: 'off', PORT: String(port), WEB_DIR: join(OUT, 'web') },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   let log = ''
@@ -106,6 +121,12 @@ if (process.argv.includes('--smoke')) {
       body: JSON.stringify({ text: '冒烟测试留言' }),
     })
     if (!sent.ok || (await sent.json()).submission?.status !== 'RECORDED') problems.push('提交文字失败')
+    const bot = { Authorization: `Bearer ${botToken}` }
+    if ((await fetch(`${base}/api/records`, { headers: bot })).status !== 403) problems.push('汇总机器人的口令读得到账本')
+    const series = await fetch(`${base}/api/chain/series`, { headers: bot })
+    if (!series.ok || (await series.json()).segments?.length < 15) problems.push('汇总机器人读不到环节名单')
+    const mainline = await (await fetch(`${base}/api/chain/mainline?text=0`, { headers: bot })).json()
+    if (mainline.state !== 'ready' || !mainline.data?.triggers) problems.push('随包的扫描脚本或历史读数没有就位')
   } catch (e) {
     problems.push(e instanceof Error ? e.message : String(e))
   } finally {
@@ -116,5 +137,5 @@ if (process.argv.includes('--smoke')) {
     console.error(`✗ 包不能用：${problems.join('；')}\n${log}`)
     process.exit(1)
   }
-  console.log('✓ 包在本机起得来：健康检查、页面、口令、读执行单、提交文字均正常')
+  console.log('✓ 包在本机起得来：健康检查、页面、口令、读执行单、提交文字、汇总接口与随包脚本均正常')
 }

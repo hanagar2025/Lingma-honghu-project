@@ -256,7 +256,7 @@ for (const f of files) {
 //
 // 教训是"验证等价命令不算验证"，而这件事可以机械化：
 // 凡文档与脚本里出现的 npm run X，X 必须在某个 package.json 的 scripts 里。
-const PKGS = ['package.json', 'backend/package.json', 'frontend/package.json']
+const PKGS = ['package.json', 'backend/package.json', 'frontend/package.json', 'agents/honghu-digest/package.json']
 const known = new Set()
 for (const rel of PKGS) {
   const p = join(HERE, '..', rel)
