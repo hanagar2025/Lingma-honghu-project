@@ -1,5 +1,5 @@
 /**
- * 执行单网页：手机打开第一屏就是执行单，完整驾驶舱在下一页。
+ * 执行单网页：手机打开第一屏就是执行单。
  *
  * 执行单 Markdown 只用到标题、列表、表格、分隔线与段落，这里只认这几种，
  * 不引入 Markdown 库 —— 页面必须自包含、无外部请求，弱网与微信内置浏览器都能开。
@@ -81,13 +81,10 @@ function copyAgent(){
 
 export function renderCardPage(
   markdown: string,
-  opts: { ok: boolean; title: string; generatedAt: string; cockpitHref?: string; agentText?: string; agentHref?: string },
+  opts: { ok: boolean; title: string; generatedAt: string; agentText?: string; agentHref?: string },
 ): string {
-  const nav = opts.cockpitHref
-    ? `<a class="btn" href="${esc(opts.cockpitHref)}">打开完整驾驶舱 →</a>`
-    : ''
   const copy = opts.agentText
-    ? `<button class="btn copy" type="button" onclick="copyAgent()">一键复制给 Agent（执行单 + 核对明细 + 驾驶舱摘要）</button>
+    ? `<button class="btn copy" type="button" onclick="copyAgent()">一键复制给 Agent（执行单 + 核对明细）</button>
 <p id="cs" class="meta">${opts.agentHref ? `Agent 能联网时，也可以直接给它这个地址：<a href="${esc(opts.agentHref)}">${esc(opts.agentHref)}</a>` : ''}</p>
 <textarea id="agent" readonly>${esc(opts.agentText)}</textarea>
 ${COPY_SCRIPT}`
@@ -123,7 +120,6 @@ ${copy}
 <div class="card">
 ${markdownToHtml(markdown)}
 </div>
-${nav}
 <p class="meta">生成于 ${esc(opts.generatedAt)}（北京时间）</p>
 </main></body></html>
 `

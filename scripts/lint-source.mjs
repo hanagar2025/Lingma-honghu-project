@@ -222,8 +222,9 @@ for (const f of files) {
   }
 
   // 使用：$VAR 与 ${VAR}。带默认值/替换的形式（${VAR:-x} 等）在 set -u 下安全，故排除。
+  // 前面带反斜杠的 \$name 是字面量，不是变量：安装脚本往 nginx 配置里写 \$host 就是这种情形。
   const used = new Map()
-  for (const m of src.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g)) {
+  for (const m of src.matchAll(/(?<!\\)(?:\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*))/g)) {
     const name = m[1] ?? m[2]
     // ${VAR:-...} / ${VAR:?...} / ${VAR#...} 之类：前面已被 ${VAR} 分支排除，
     // 这里再挡一次带修饰符的情况

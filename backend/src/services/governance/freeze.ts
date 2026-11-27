@@ -1,13 +1,12 @@
-// 冻结期检查器
+// 规则基线检查
 //
 // 用法：
-//   npm run freeze:check        与基线比对，打印漂移
-//   npm run freeze:baseline     重新生成基线（**须经委员会授权，且会留下 git 记录**）
+//   npm run freeze:check        与基线比对，打印变动
+//   npm run freeze:baseline     重新生成基线（须经委员会授权，且会留下 git 记录）
 //
-// 设计取舍：`freeze:check` 在漂移时**返回 0 而不是 1**。
-// 理由：漂移本身不是罪，偷偷漂移才是。若让 CI 因规则改动而失败，
-// 结果只会是有人顺手更新基线以让 CI 变绿 —— 那就把审计变成了盖章。
-// 现在的做法是让漂移必须显式地出现在基线文件的 git diff 与每日审计里。
+// freeze:check 在规则变动时返回 0 而不是 1：变动本身不是错，没有记录的变动才是。
+// 若让 CI 因规则改动而失败，结果只会是有人顺手更新基线让 CI 变绿。
+// 现在的做法是让变动必须出现在基线文件的 git diff 里。
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -25,27 +24,17 @@ export function loadBaseline(file = BASELINE_FILE): FreezeBaseline | null {
   }
 }
 
-/**
- * 重新生成基线。
- *
- * 冻结起始日默认沿用上一版：修 Bug、补数据属于冻结期允许的事，不应让 30 个交易日重新计时。
- * 只有显式给出 FROZEN_AT 才会改起始日。
- * 授权说明必须经 BASELINE_NOTE 给出 —— 没有说明的基线更新就是"偷偷漂移"。
- */
+/** 重新生成基线。授权说明必须经 BASELINE_NOTE 给出 */
 function writeBaseline(file = BASELINE_FILE): FreezeBaseline {
   const note = process.env.BASELINE_NOTE?.trim()
-  if (!note) {
-    throw new Error('重新生成基线须以 BASELINE_NOTE 写明授权来源与变更内容')
-  }
+  if (!note) throw new Error('重新生成基线须以 BASELINE_NOTE 写明授权来源与变更内容')
   const prev = loadBaseline(file)
   const f = fingerprint()
   const b: FreezeBaseline = {
-    frozenAt: process.env.FROZEN_AT ?? prev?.frozenAt ?? new Date().toISOString().slice(0, 10),
-    tradingDays: Number(process.env.TRADING_DAYS ?? prev?.tradingDays ?? 30),
+    frozenAt: process.env.FROZEN_AT ?? new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     hash: f.hash,
     entryCount: f.entryCount,
     byDomain: f.byDomain,
-    tierCounts: f.tierCounts,
     note,
     ...(prev && prev.hash !== f.hash ? { supersedes: { hash: prev.hash, note: prev.note } } : {}),
   }
@@ -54,48 +43,29 @@ function writeBaseline(file = BASELINE_FILE): FreezeBaseline {
 }
 
 function main(): void {
-  const mode = process.argv[2] ?? 'check'
   const out = process.stdout
-
-  if (mode === 'baseline') {
+  if ((process.argv[2] ?? 'check') === 'baseline') {
     const b = writeBaseline()
-    out.write(`已写入冻结基线：${BASELINE_FILE}\n`)
-    out.write(`  指纹 ${b.hash}｜${b.entryCount} 条规则｜冻结自 ${b.frozenAt} 起 ${b.tradingDays} 个交易日\n`)
-    out.write(`  等级分布：${Object.entries(b.tierCounts).map(([t, n]) => `${t}=${n}`).join(' ')}\n`)
-    out.write(`\n⚠ 重新生成基线等于宣布"规则已授权变更"。请在提交信息中写明授权来源。\n`)
+    out.write(`已写入规则基线：指纹 ${b.hash}，${b.entryCount} 条，自 ${b.frozenAt} 起\n`)
     return
   }
 
   const reg = buildRuleRegistry()
   const cur = fingerprint(reg)
   out.write(`\n规则登记册：${cur.entryCount} 条，指纹 ${cur.hash}\n`)
-  out.write(`等级分布：${Object.entries(cur.tierCounts).map(([t, n]) => `${t}=${n}`).join(' ')}\n`)
-  out.write(`分域指纹：\n`)
-  for (const [d, h] of Object.entries(cur.byDomain)) out.write(`  ${d.padEnd(16)} ${h}\n`)
+  for (const e of reg) out.write(`  ${e.domain.padEnd(15)} ${e.key.padEnd(34)} ${JSON.stringify(e.value)}\n`)
 
   const baseline = loadBaseline()
   if (!baseline) {
-    out.write(`\n未找到冻结基线。先跑 npm run freeze:baseline 建立基线。\n`)
+    out.write('\n未找到基线。先跑 npm run freeze:baseline 建立基线。\n')
     return
   }
-
   const drift = detectDrift(baseline, cur)
-  out.write(`\n${'─'.repeat(90)}\n`)
-  out.write(drift.drifted ? `⚠ 规则已漂移\n` : `✓ 规则未漂移\n`)
-  out.write(`${drift.detail}\n`)
+  out.write(`\n${drift.drifted ? '⚠ 规则已变动' : '✓ 规则未变动'}\n${drift.detail}\n`)
   if (drift.drifted) {
-    out.write(`\n基线 ${drift.baselineHash} → 当前 ${drift.currentHash}\n`)
-    out.write(`变动域：${drift.changedDomains.join('、')}\n`)
-    if ((drift.tierDelta.OBSERVATION ?? 0) > 0) {
-      out.write(
-        `\n⚠⚠ OBSERVATION 等级规则增加 ${drift.tierDelta.OBSERVATION} 条。\n` +
-        `   委员会 2026-08-13：「现在,我不会再给它增加任何『聪明』的东西。」\n` +
-        `   新增观察指标不违规，但若它开始影响动作，则违反证据等级条款。\n`
-      )
-    }
-    out.write(`\n若本次变更已获授权：跑 npm run freeze:baseline 并在提交信息中写明授权来源。\n`)
+    out.write(`基线 ${drift.baselineHash} → 当前 ${drift.currentHash}；变动域：${drift.changedDomains.join('、')}\n`)
+    out.write('若本次变更已获授权：跑 npm run freeze:baseline，并在 BASELINE_NOTE 里写明授权来源。\n')
   }
-  out.write(`${'─'.repeat(90)}\n`)
 }
 
 main()
