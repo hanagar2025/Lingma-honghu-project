@@ -1,0 +1,390 @@
+[
+ {
+  "round": "2023 年 AI 第一轮",
+  "start": "2023-01-03",
+  "end": "2023-08-31",
+  "segments": {
+   "芯片设计": {
+    "price_launch": "2023-02-02",
+    "margin_launch": "2023-02-01",
+    "round_return": 0.7117767257666183,
+    "members_with_data": 3
+   },
+   "晶圆代工": {
+    "price_launch": "2023-03-16",
+    "margin_launch": "2023-03-17",
+    "round_return": 0.3100445766992881,
+    "members_with_data": 3
+   },
+   "半导体设备": {
+    "price_launch": "2023-02-15",
+    "margin_launch": "2023-04-04",
+    "round_return": 0.3256454294421458,
+    "members_with_data": 6
+   },
+   "半导体材料": {
+    "price_launch": "2023-03-09",
+    "margin_launch": "2023-03-22",
+    "round_return": 0.0930624564038609,
+    "members_with_data": 5
+   },
+   "存储": {
+    "price_launch": "2023-01-05",
+    "margin_launch": "2023-02-22",
+    "round_return": 0.6326317399650114,
+    "members_with_data": 5
+   },
+   "先进封装": {
+    "price_launch": "2023-01-20",
+    "margin_launch": null,
+    "round_return": 0.441078423353767,
+    "members_with_data": 3
+   },
+   "服务器、算力": {
+    "price_launch": "2023-01-04",
+    "margin_launch": "2023-02-14",
+    "round_return": 0.7958401200043956,
+    "members_with_data": 5
+   },
+   "光模块": {
+    "price_launch": "2023-02-03",
+    "margin_launch": "2023-02-10",
+    "round_return": 1.991829125938259,
+    "members_with_data": 5
+   },
+   "PCB": {
+    "price_launch": "2023-02-09",
+    "margin_launch": "2023-04-06",
+    "round_return": 0.3666715971288874,
+    "members_with_data": 4
+   },
+   "液冷、电源": {
+    "price_launch": "2023-01-06",
+    "margin_launch": "2023-02-01",
+    "round_return": -0.11485476492609281,
+    "members_with_data": 4
+   },
+   "运营商": {
+    "price_launch": "2023-01-03",
+    "margin_launch": "2023-01-16",
+    "round_return": 0.3732372823879757,
+    "members_with_data": 3
+   },
+   "软件、应用": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2023-02-15",
+    "round_return": 0.45974888385531076,
+    "members_with_data": 5
+   },
+   "机器人": {
+    "price_launch": "2023-01-30",
+    "margin_launch": "2023-02-07",
+    "round_return": 0.21679029959842366,
+    "members_with_data": 7
+   },
+   "商业航天、星上算力": {
+    "price_launch": "2023-01-03",
+    "margin_launch": "2023-02-22",
+    "round_return": 0.1934070819992515,
+    "members_with_data": 6
+   },
+   "AI 医疗、制药": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": null,
+    "round_return": -0.06212883482756304,
+    "members_with_data": 7
+   }
+  }
+ },
+ {
+  "round": "2024-09 政策行情",
+  "start": "2024-09-02",
+  "end": "2025-03-31",
+  "segments": {
+   "芯片设计": {
+    "price_launch": "2024-09-27",
+    "margin_launch": "2024-09-30",
+    "round_return": 0.9049348045873291,
+    "members_with_data": 3
+   },
+   "晶圆代工": {
+    "price_launch": "2024-09-30",
+    "margin_launch": "2024-10-08",
+    "round_return": 0.6791730621754679,
+    "members_with_data": 3
+   },
+   "半导体设备": {
+    "price_launch": "2024-09-30",
+    "margin_launch": "2024-10-08",
+    "round_return": 0.35698223102400783,
+    "members_with_data": 6
+   },
+   "半导体材料": {
+    "price_launch": "2024-09-30",
+    "margin_launch": "2024-10-08",
+    "round_return": 0.44863390381004,
+    "members_with_data": 5
+   },
+   "存储": {
+    "price_launch": "2024-09-27",
+    "margin_launch": "2024-10-08",
+    "round_return": 0.6698435309371231,
+    "members_with_data": 5
+   },
+   "先进封装": {
+    "price_launch": "2024-09-30",
+    "margin_launch": "2024-10-18",
+    "round_return": 0.5120269661349288,
+    "members_with_data": 3
+   },
+   "服务器、算力": {
+    "price_launch": "2024-09-27",
+    "margin_launch": "2024-10-18",
+    "round_return": 0.7078533219899481,
+    "members_with_data": 5
+   },
+   "光模块": {
+    "price_launch": "2024-09-26",
+    "margin_launch": "2024-10-08",
+    "round_return": 0.28404157507259975,
+    "members_with_data": 5
+   },
+   "PCB": {
+    "price_launch": "2024-09-30",
+    "margin_launch": "2024-09-30",
+    "round_return": 0.5882836215907938,
+    "members_with_data": 4
+   },
+   "液冷、电源": {
+    "price_launch": "2024-09-27",
+    "margin_launch": "2024-10-21",
+    "round_return": 1.2717579285369327,
+    "members_with_data": 4
+   },
+   "运营商": {
+    "price_launch": "2024-10-08",
+    "margin_launch": "2024-09-30",
+    "round_return": 0.2080395375071613,
+    "members_with_data": 3
+   },
+   "软件、应用": {
+    "price_launch": "2024-09-26",
+    "margin_launch": "2024-11-08",
+    "round_return": 0.9519134336985142,
+    "members_with_data": 5
+   },
+   "机器人": {
+    "price_launch": "2024-09-26",
+    "margin_launch": "2024-10-10",
+    "round_return": 0.8677512089513191,
+    "members_with_data": 7
+   },
+   "商业航天、星上算力": {
+    "price_launch": "2024-09-30",
+    "margin_launch": "2024-10-21",
+    "round_return": 0.42691674346172936,
+    "members_with_data": 6
+   },
+   "AI 医疗、制药": {
+    "price_launch": "2024-09-27",
+    "margin_launch": "2024-10-23",
+    "round_return": 0.5176927456092113,
+    "members_with_data": 7
+   }
+  }
+ },
+ {
+  "round": "2025 海外算力行情",
+  "start": "2025-04-08",
+  "end": "2025-09-30",
+  "segments": {
+   "芯片设计": {
+    "price_launch": "2025-04-21",
+    "margin_launch": "2025-08-07",
+    "round_return": 0.7794906194530007,
+    "members_with_data": 3
+   },
+   "晶圆代工": {
+    "price_launch": "2025-08-07",
+    "margin_launch": "2025-08-14",
+    "round_return": 1.0827750852902929,
+    "members_with_data": 3
+   },
+   "半导体设备": {
+    "price_launch": "2025-08-22",
+    "margin_launch": "2025-08-14",
+    "round_return": 0.8556963725796036,
+    "members_with_data": 6
+   },
+   "半导体材料": {
+    "price_launch": "2025-08-28",
+    "margin_launch": "2025-08-20",
+    "round_return": 0.5787614005889441,
+    "members_with_data": 5
+   },
+   "存储": {
+    "price_launch": "2025-06-25",
+    "margin_launch": "2025-08-01",
+    "round_return": 1.3517094229828612,
+    "members_with_data": 5
+   },
+   "先进封装": {
+    "price_launch": "2025-08-14",
+    "margin_launch": "2025-08-22",
+    "round_return": 0.632757211332734,
+    "members_with_data": 3
+   },
+   "服务器、算力": {
+    "price_launch": "2025-07-25",
+    "margin_launch": "2025-08-14",
+    "round_return": 0.8634138545072549,
+    "members_with_data": 5
+   },
+   "光模块": {
+    "price_launch": "2025-05-08",
+    "margin_launch": "2025-07-10",
+    "round_return": 3.3755486197707434,
+    "members_with_data": 5
+   },
+   "PCB": {
+    "price_launch": "2025-05-08",
+    "margin_launch": "2025-07-15",
+    "round_return": 2.3116699722821523,
+    "members_with_data": 4
+   },
+   "液冷、电源": {
+    "price_launch": "2025-06-25",
+    "margin_launch": "2025-07-24",
+    "round_return": 1.3722752888993246,
+    "members_with_data": 4
+   },
+   "运营商": {
+    "price_launch": null,
+    "margin_launch": "2025-07-28",
+    "round_return": -0.0492509179783337,
+    "members_with_data": 3
+   },
+   "软件、应用": {
+    "price_launch": "2025-08-15",
+    "margin_launch": "2025-08-22",
+    "round_return": 0.28190156257860677,
+    "members_with_data": 5
+   },
+   "机器人": {
+    "price_launch": "2025-08-18",
+    "margin_launch": "2025-08-19",
+    "round_return": 0.6448913024910465,
+    "members_with_data": 7
+   },
+   "商业航天、星上算力": {
+    "price_launch": "2025-05-08",
+    "margin_launch": "2025-08-11",
+    "round_return": 0.40205849560751683,
+    "members_with_data": 6
+   },
+   "AI 医疗、制药": {
+    "price_launch": "2025-07-15",
+    "margin_launch": "2025-07-30",
+    "round_return": 0.40503310190564257,
+    "members_with_data": 7
+   }
+  }
+ },
+ {
+  "round": "2025-10 起国产链与存储行情",
+  "start": "2025-10-09",
+  "end": "2026-06-25",
+  "segments": {
+   "芯片设计": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-10",
+    "round_return": 0.20503827580084444,
+    "members_with_data": 5
+   },
+   "晶圆代工": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "窗口前已启动",
+    "round_return": 0.6718242483094456,
+    "members_with_data": 3
+   },
+   "半导体设备": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "窗口前已启动",
+    "round_return": 1.3418732305903252,
+    "members_with_data": 6
+   },
+   "半导体材料": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-13",
+    "round_return": 1.0670910704543437,
+    "members_with_data": 5
+   },
+   "存储": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-09",
+    "round_return": 2.852509338376152,
+    "members_with_data": 6
+   },
+   "先进封装": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-10",
+    "round_return": 1.3354340639822815,
+    "members_with_data": 4
+   },
+   "服务器、算力": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "窗口前已启动",
+    "round_return": 0.052355237489347894,
+    "members_with_data": 5
+   },
+   "光模块": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-10",
+    "round_return": 2.894242381124481,
+    "members_with_data": 5
+   },
+   "PCB": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-10",
+    "round_return": 1.0996902440480145,
+    "members_with_data": 4
+   },
+   "液冷、电源": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2025-10-09",
+    "round_return": 0.6862850155319031,
+    "members_with_data": 4
+   },
+   "运营商": {
+    "price_launch": null,
+    "margin_launch": "2025-12-24",
+    "round_return": -0.19908444199605868,
+    "members_with_data": 3
+   },
+   "软件、应用": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": null,
+    "round_return": -0.26091509641404576,
+    "members_with_data": 5
+   },
+   "机器人": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "窗口前已启动",
+    "round_return": 0.0638639883749823,
+    "members_with_data": 7
+   },
+   "商业航天、星上算力": {
+    "price_launch": "2025-10-15",
+    "margin_launch": "2025-12-04",
+    "round_return": 0.6203186738353075,
+    "members_with_data": 6
+   },
+   "AI 医疗、制药": {
+    "price_launch": "窗口前已启动",
+    "margin_launch": "2026-05-11",
+    "round_return": -0.2153546331851296,
+    "members_with_data": 7
+   }
+  }
+ }
+]
