@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 累计提醒
+ * 资金哨兵（R-01）· 累计提醒
  *
  * 每天的小变动看不出来，所以系统替人记账：把资金变化按 5 / 10 / 20 / 60 日累计，
  * 和每个对象自己的历史比；累计到"数量级"就单独拿出来，一句话说清：
@@ -13,6 +13,7 @@
  */
 
 import { createHash } from 'node:crypto'
+import { radarLockOf } from './config'
 import { checkCoreSwitch, checkMigration } from './signals'
 import { STATE_TEXT, type MoneyState } from './stateMachine'
 import type { EvalObject } from './backtest'
@@ -366,6 +367,8 @@ export interface AlertCard {
   series: { dates: string[]; e20: Num[]; close: Num[]; marginYi: Num[]; p15: Num; p85: Num }
   column: 'LEFT' | 'RIGHT'
   expanded: boolean
+  /** 左侧雷达权限锁；机会类提醒对它只意味着研究优先级上升 */
+  permissionLock: string | null
 }
 
 const pctS = (v: Num, d = 1) => (v === null ? '—' : `${v > 0 ? '+' : ''}${(v * 100).toFixed(d)}%`)
@@ -486,6 +489,7 @@ export function buildAlerts(
       },
       column: o.entry === 1 ? 'LEFT' : 'RIGHT',
       expanded: false,
+      permissionLock: radarLockOf(o),
     })
   }
 
@@ -581,5 +585,6 @@ export function buildAlertContext(ds: DataSet, objs: readonly EvalObject[]): Ale
 /** 一行文字版，供 Agent 文件、通知与 Obsidian 使用 */
 export function cardLine(c: AlertCard): string {
   const ev = ({ NEW: '新增', UP: '升级', DOWN: '降级', CONTINUE: '持续', RESOLVED: '解除' } as const)[c.event]
-  return `[${CATEGORY_TEXT[c.category]}·${LEVEL_TEXT[c.level]}] ${c.name}：${c.title}。${c.detail}。第 ${c.days} 天（${ev}）｜证据：${c.evidence}`
+  const lock = c.permissionLock ? `｜${c.permissionLock}｜资金信号只改变研究优先级` : ''
+  return `[${CATEGORY_TEXT[c.category]}·${LEVEL_TEXT[c.level]}] ${c.name}：${c.title}。${c.detail}。第 ${c.days} 天（${ev}）｜证据：${c.evidence}${lock}`
 }

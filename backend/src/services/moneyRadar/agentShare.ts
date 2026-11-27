@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 给其他 Agent 读的同一份结果
+ * 资金哨兵（R-01）· 给其他 Agent 读的同一份结果
  *
  * 人看网页驾驶舱；模型读 data/money.agent.md 这个稳定链接。
  * 内容和网页是同一份已经算好的数据，没有给人看的装饰。
@@ -20,7 +20,7 @@ function row(o: ObjectView): string {
   return `| ${o.name} | ${o.id} | ${o.state ?? 'NA'} ${o.stateText} | ${o.stateSince ?? 'NA'} | ${o.stateDays ?? 'NA'} | ${o.stateLongestDays ?? 'NA'} `
     + `| ${num(o.level20Yi, 2)} | ${num(o.base20Yi, 2)} | ${yi(o.excessDailyYi, 2)} `
     + `| ${o.persist ?? 'NA'} | ${o.maxPersistBefore ?? 'NA'} | ${pct(o.dev5)} | ${pct(o.ret20)} `
-    + `| ${yi(a2.marginDelta10Yi, 2)} | ${yi(a2.instNet10Yi, 2)} | ${o.divergence ?? 'NA'} | ${o.standing ?? '-'} |`
+    + `| ${yi(a2.marginDelta10Yi, 2)} | ${yi(a2.instNet10Yi, 2)} | ${o.divergence ?? 'NA'} | ${o.standing ?? '-'} | ${o.permissionLock ? '只观察，不具备建仓权限' : '-'} |`
 }
 
 /** 已知偏差：不改变算法，但限定结论的解释力度 */
@@ -32,8 +32,8 @@ export const KNOWN_BIASES: readonly string[] = [
   '深市个股历史成交额只有腾讯一个来源（当日值已与新浪逐只核对）；深市 ETF 份额历史从 2026-09-23 起积累',
 ]
 
-const HEAD = '| 名称 | id | 状态 | 状态起始 | 状态天数 | 该状态此前最长(日) | 20日均成交额(亿/日) | 水位(亿/日) | 日均超额(亿/日) | 高于水位连续(日) | 高于水位此前最长(日) | 5日偏离 | 20日涨幅 | 融资10日变化(亿) | 机构10日净买(亿) | 背离 | 在册 |'
-const SEP = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'
+const HEAD = '| 名称 | id | 状态 | 状态起始 | 状态天数 | 该状态此前最长(日) | 20日均成交额(亿/日) | 水位(亿/日) | 日均超额(亿/日) | 高于水位连续(日) | 高于水位此前最长(日) | 5日偏离 | 20日涨幅 | 融资10日变化(亿) | 机构10日净买(亿) | 背离 | 在册 | 权限 |'
+const SEP = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'
 
 export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boolean; commit?: string } = {}): string {
   const L: string[] = []
@@ -69,6 +69,10 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
   if (ll) {
     w(`- 时效检验（${ll.runOn}）：${ll.verdict}资金信号主要跟着价格走；横截面上资金越热之后 20 日反而略弱；大盘成交额与融资余额没有择时能力。不要把"放量 / 融资增加 / ETF 申购 / 基金加仓"解读为"之后会涨"。`)
   }
+  if (v.radarLock) {
+    w(`- 左侧雷达（${v.radarLock.groups.map(g => `${g.name}：${g.scope}`).join('；')}）：${v.radarLock.label}。${v.radarLock.freeze}。`)
+    w(`- ${v.radarLock.signalEffect}。即使状态是 BURST（爆发），也只能写成观察状态或复核提示，不要写成买点、备选、建仓申请或执行建议；解除只能来自正式战略评审，雷达信号不能解除。`)
+  }
   w('- 不要输出综合评分、总分或排名。"不可判断"是合法结论，数据不足时不要补一个答案。')
   w('- 你的任务：找矛盾、验算术、指出证据不足、提出需要补的数据，并说明你的推论依赖哪几行数据。')
   w('')
@@ -83,7 +87,8 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
       const cat = ({ RISK: '风险', OPP: '机会', NOTE: '注意', DATA: '数据' } as Record<string, string>)[c.category]
       const lv = ({ 1: '关注', 2: '警示', 3: '重大' } as Record<number, string>)[c.level]
       const tags = c.tags?.length ? `｜另：${c.tags.map((x: any) => x.text).join('、')}` : ''
-      return `- [${cat}·${lv}] ${c.name}（${c.objectId}，入口${c.entry ?? '-'}）：${c.title}。${c.detail}。第 ${c.days} 天（${ev}，自 ${c.firstDate}）｜证据：${c.evidence}${tags}`
+      const lock = c.permissionLock ? `｜${c.permissionLock}｜资金信号只改变研究优先级` : ''
+      return `- [${cat}·${lv}] ${c.name}（${c.objectId}，入口${c.entry ?? '-'}）：${c.title}。${c.detail}。第 ${c.days} 天（${ev}，自 ${c.firstDate}）｜证据：${c.evidence}${tags}${lock}`
     }
     w('## 持仓（入口①）')
     const left = cards.filter(c => c.column === 'LEFT')
@@ -151,13 +156,14 @@ export function buildMoneyAgentShare(v: MoneyCockpitView, opts: { intraday?: boo
 
   w('# 复核顺序（按类别，不打分）')
   if (!v.reviewQueue.length) w('无')
-  v.reviewQueue.forEach((r, i) => w(`${i + 1}. [${ENTRY_TEXT[r.entry]}] ${r.name}（${r.id}）：${r.text}`))
+  v.reviewQueue.forEach((r, i) => w(`${i + 1}. [${ENTRY_TEXT[r.entry]}] ${r.name}（${r.id}）：${r.text}${r.permissionLock ? `｜${r.permissionLock}` : ''}`))
   w('')
 
   for (const e of v.entries) {
     const objs = e.entry === 3 ? e.objects.slice(0, 30) : e.objects
     w(`# ${e.title}（${e.objects.length}${e.entry === 3 ? '，列出日均超额前 30' : ''}）`)
     w(e.note)
+    if (v.radarLock && e.objects.some(o => o.permissionLock)) w(`左侧雷达权限锁：${v.radarLock.label}｜${v.radarLock.freeze}`)
     w('')
     w(HEAD)
     w(SEP)

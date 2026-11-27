@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 每日运行
+ * 资金哨兵（R-01）· 每日运行
  *
  *   npm run money
  *
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { buildMoneyAgentShare } from './agentShare'
 import { ALERT_RULES, alertRulesHash, buildAlertContext, buildAlerts, cardLine } from './alerts'
 import { appendEvents, emptyLedger, loadAlertLedger, saveAlertLedger, updateFailures } from './alertLedger'
-import { CALIBRATION, THRESHOLDS, WATCHLIST, holdingCodes } from './config'
+import { CALIBRATION, THRESHOLDS, holdingCodes, watchlistAll } from './config'
 import { loadLatestLeadLag, slowGroups, summarizeLeadLag } from './leadlag'
 import { buildSlowView, loadSlowData } from './slowMoney'
 import { runCrossCheck } from './crossCheck'
@@ -39,7 +39,7 @@ export const MONEY_SNAPSHOT_FILE = process.env.MONEY_SNAPSHOT_FILE
 async function main(): Promise<void> {
   const t0 = Date.now()
   const log = (s: string) => process.stderr.write(`${s}\n`)
-  log('资金驾驶舱：装载公开数据')
+  log('资金哨兵：装载公开数据')
   const live = await loadLiveDataSet({ ...DEFAULT_LIVE, log })
 
   const unusable = live.industries.filter(i => !i.usable)
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
     const boardOf: Record<string, string> = {}
     for (const i of live.industries) for (const c of i.members) boardOf[c] = i.name
     const sd = await loadSlowData(live.ds, log, { etfDays: DEFAULT_LIVE.etfDays, marketCap: live.marketCap })
-    const focus = [...holdingCodes(), ...WATCHLIST.filter(w => !holdingCodes().some(h => h.code === w.code))]
+    const focus = [...holdingCodes(), ...watchlistAll().filter(w => !holdingCodes().some(h => h.code === w.code))]
     const slow = buildSlowView(sd, live.ds, focus, slowGroups(live.ds, live.names, boardOf))
     if (leadlag?.slow) slow.evidence = leadlag.slow
     view.slow = slow
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
       const d = days.at(-1)
       if (d && d.date === lastDate && (d.amount ?? 0) > 0) primaryToday[code] = { close: d.close, amount: d.amount }
     }
-    const focus = [...holdingCodes(), ...WATCHLIST.filter(w => !holdingCodes().some(h => h.code === w.code))]
+    const focus = [...holdingCodes(), ...watchlistAll().filter(w => !holdingCodes().some(h => h.code === w.code))]
     const cc = await runCrossCheck({
       asOf: lastDate, intraday, primaryToday, focus, names: live.names,
       marketPrimary: live.ds.market.at(-1)?.totalAmount ?? null, log,
@@ -178,6 +178,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(e => {
-  process.stderr.write(`资金驾驶舱运行失败：${e instanceof Error ? e.stack : String(e)}\n`)
+  process.stderr.write(`资金哨兵运行失败：${e instanceof Error ? e.stack : String(e)}\n`)
   process.exit(1)
 })

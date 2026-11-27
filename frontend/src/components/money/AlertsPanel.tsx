@@ -34,6 +34,7 @@ const CSS = `
 .al-mini { font-size:12px; color:#c9d1d9; padding:4px 0; border-bottom:1px dashed #262d36; cursor:pointer; }
 .al-kv td, .al-kv th { padding:5px 6px; border-bottom:1px solid #1f252d; text-align:left; font-size:12px; }
 .al-kv th { color:#8b96a5; font-weight:normal; }
+.al-lock { font-size:11px; color:#f0b429; margin-top:3px; line-height:1.6; }
 `
 
 const pct = (v: Num, d = 1) => (v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${(v * 100).toFixed(d)}%`)
@@ -52,6 +53,7 @@ const Card: React.FC<{ c: any; onOpen: (c: any) => void }> = ({ c, onOpen }) => 
           证据：{c.evidence}
           {c.tags?.length > 0 && <>　|　另：{c.tags.map((x: any) => x.text).join('、')}</>}
         </div>
+        {c.permissionLock && <div className="al-lock">{c.permissionLock}｜资金信号只改变研究优先级</div>}
       </div>
       <div className="al-day">
         第 <b>{c.days}</b> 天<br />{EVENT[c.event]}<br />
@@ -75,7 +77,7 @@ const Column: React.FC<{ title: string; sub: string; cards: any[]; onOpen: (c: a
           {rest.map(c => (
             <div key={c.objectId} className="al-mini" onClick={() => onOpen(c)}>
               <span style={{ color: STYLE[c.category]![c.level]!.fg }}>{CAT[c.category]}·{LEVEL[c.level]}</span>　
-              <b>{c.name}</b>　{c.title}<span className="mc-note">　第 {c.days} 天</span>
+              <b>{c.name}</b>　{c.title}{c.permissionLock && <span style={{ color: '#f0b429' }}>　只观察，不具备建仓权限</span>}<span className="mc-note">　第 {c.days} 天</span>
             </div>
           ))}
         </div>
@@ -125,6 +127,7 @@ const Cumulative: React.FC<{ c: any }> = ({ c }) => {
         ))}
         {String(c.firstDate).startsWith('≤') && <div className="mc-note">起点早于回放窗口（120 个交易日），实际持续时间更长</div>}
       </div>
+      {c.permissionLock && <div className="al-lock" style={{ marginTop: 10, fontSize: 12 }}>{c.permissionLock}｜资金信号只改变研究优先级</div>}
       <div className="mc-note" style={{ marginTop: 10 }}>证据：{c.evidence}。提醒只决定先复核谁，不是买卖指令。</div>
     </div>
   )

@@ -1,5 +1,5 @@
 /**
- * 资金驾驶舱（R-01）· 发布到仓库，供其他 Agent 通过公开链接读取
+ * 资金哨兵（R-01）· 发布到仓库，供其他 Agent 通过公开链接读取
  *
  *   npm run money:publish
  *
@@ -46,7 +46,7 @@ function main(): void {
     execSync('git add share/money', { cwd: ROOT, stdio: 'inherit' })
     const changed = execSync('git diff --cached --name-only -- share/money', { cwd: ROOT }).toString().trim()
     if (changed) {
-      execSync(`git commit -m "资金驾驶舱发布：${view.asOf} 收盘结果" -- share/money`, { cwd: ROOT, stdio: 'inherit' })
+      execSync(`git commit -m "资金哨兵发布：${view.asOf} 收盘结果" -- share/money`, { cwd: ROOT, stdio: 'inherit' })
       execSync(`git push origin ${branch}`, { cwd: ROOT, stdio: 'inherit' })
     } else {
       process.stdout.write('share/money 没有变化，无需提交。\n')
